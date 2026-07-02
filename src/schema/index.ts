@@ -27,7 +27,8 @@ const BaseShape = {
   id: z.string().default(() => uid()),
   name: z.string().optional(),
   title: z.string().optional(),
-  description: z.string().optional().describe("human label or storyboard description"),
+  description: z.string().optional().describe("human label for UI/organization (not rendered)"),
+  script: z.string().optional().describe("narration/dialogue text for this node; agents write storyboard text here, later TTS'd to audio and STT'd to VTT subtitles"),
   src: z.string().optional(),
   style: z.string().optional().describe("inline css"),
   visible: z.boolean().default(true),
@@ -219,8 +220,11 @@ export const mapStream = base.extend({
   waypoints: z.array(mapWaypoint).default(() => []),
   routeColor: z.string().default("#4285F4"),
   routeWeight: z.number().default(4),
-  markerSrc: z.string().optional().describe("custom marker image"),
-  zoom: z.number().default(12),
+  zoom: z.number().default(10),
+  center: z.object({ lat: z.number(), lng: z.number() }).optional().describe("map view center (defaults to first waypoint)"),
+  mapType: z.enum(["roadmap", "satellite", "hybrid", "terrain"]).default("roadmap").describe("Google Maps style"),
+  travelMode: z.enum(["DRIVING", "WALKING", "BICYCLING", "TRANSIT"]).default("DRIVING").describe("Directions API travel mode"),
+  routeMarker: z.string().default("🚗").describe("emoji/character for the animated traveling marker"),
   actions: z.array(action).min(1).default(() => [action.parse({})]),
 });
 export type MapStream = z.infer<typeof mapStream>;

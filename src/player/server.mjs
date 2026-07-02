@@ -157,10 +157,12 @@ function resolveAsset(urlPath) {
   if (urlPath === "/") return join(ROOT, "src", "player", "index.html");
   // Bundle dir for the Remotion Player
   if (urlPath === "/player.js") return join(ROOT, "src", "player", "bundle", "player.js");
-  // Serve from ROOT/public or ROOT
+  // Serve from ROOT/public, ROOT, or relative to the video.json directory
+  const jsonDir = dirname(VIDEO_JSON);
   const candidates = [
     join(ROOT, "public", urlPath),
     join(ROOT, urlPath),
+    join(jsonDir, urlPath),
   ];
   for (const c of candidates) {
     if (existsSync(c)) return c;

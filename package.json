@@ -42,6 +42,7 @@
     "@remotion/media-utils": "4.0.469",
     "@remotion/player": "^4.0.469",
     "@remotion/transitions": "4.0.469",
+    "@vis.gl/react-google-maps": "^1.8.3",
     "immer": "^10.1.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

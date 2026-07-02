@@ -1,246 +1,249 @@
 /**
- * Map stream type — animated route on a static map canvas.
+ * Map stream type — animated route on Google Maps.
  *
- * Renders a route between waypoints with an animated marker that
- * travels along the path in sync with the current frame.
- * Uses HTML Canvas for rendering — no Google Maps API key required.
+ * Renders a Google Map with Directions API route between waypoints and an
+ * animated marker that travels along the path in sync with the current frame.
+ * Uses @vis.gl/react-google-maps (Google Maps JS API wrapper) — no separate
+ * API key management needed beyond what's embedded in the engine build.
  *
- * For full Google Maps integration (DirectionsService, satellite tiles),
- * register a custom component via ComposeContext instead.
+ * Adapted from qili-ai studio's map component.
  *
  * Usage in stream tree:
  *   {
  *     type: "map",
- *     waypoints: [
- *       { lat: 37.7749, lng: -122.4194, label: "SF" },
- *       { lat: 34.0522, lng: -118.2437, label: "LA" }
- *     ],
+ *     waypoints: [{ lat, lng, label? }],
+ *     travelMode: "DRIVING",        // DRIVING | WALKING | BICYCLING
+ *     mapType: "roadmap",           // roadmap | satellite | hybrid | terrain
+ *     routeMarker: "🚗",            // emoji/char for animated pin
  *     actions: [{ start: 0, end: 5 }]
  *   }
  */
-import * as React from "react";
-import { useCurrentFrame, useVideoConfig, Sequence } from "remotion";
+import React from "react";
+import { Sequence, useCurrentFrame, useVideoConfig, delayRender, continueRender } from "remotion";
+import {
+  APIProvider, Map as GoogleMap, useMap, useMapsLibrary,
+  AdvancedMarker, Pin,
+} from "@vis.gl/react-google-maps";
 import type { MapStream } from "../schema/index";
 
-interface Point {
-  x: number;
-  y: number;
-}
+const GM_API_KEY = "AIzaSyC6x4jghg5ZggV5VTThu9JE4DwX9NlbN9U";
 
-function latLngToCanvas(
-  lat: number,
-  lng: number,
-  bounds: { minLat: number; maxLat: number; minLng: number; maxLng: number },
-  width: number,
-  height: number,
-  padding: number,
-): Point {
-  const usableW = width - padding * 2;
-  const usableH = height - padding * 2;
-  const x = padding + ((lng - bounds.minLng) / (bounds.maxLng - bounds.minLng || 1)) * usableW;
-  // lat is inverted (higher lat = higher on screen)
-  const y = padding + ((bounds.maxLat - lat) / (bounds.maxLat - bounds.minLat || 1)) * usableH;
-  return { x, y };
-}
-
-function getBounds(waypoints: Array<{ lat: number; lng: number }>) {
-  let minLat = Infinity,
-    maxLat = -Infinity,
-    minLng = Infinity,
-    maxLng = -Infinity;
-  for (const wp of waypoints) {
-    minLat = Math.min(minLat, wp.lat);
-    maxLat = Math.max(maxLat, wp.lat);
-    minLng = Math.min(minLng, wp.lng);
-    maxLng = Math.max(maxLng, wp.lng);
-  }
-  // Add some padding to bounds
-  const latPad = (maxLat - minLat) * 0.15 || 0.01;
-  const lngPad = (maxLng - minLng) * 0.15 || 0.01;
-  return {
-    minLat: minLat - latPad,
-    maxLat: maxLat + latPad,
-    minLng: minLng - lngPad,
-    maxLng: maxLng + lngPad,
-  };
-}
-
-function getPointOnPath(points: Point[], progress: number): Point {
-  if (points.length === 0) return { x: 0, y: 0 };
-  if (points.length === 1) return points[0]!;
-
-  // Calculate total path length
-  const segments: number[] = [];
-  let totalLen = 0;
-  for (let i = 1; i < points.length; i++) {
-    const cur = points[i]!;
-    const prev = points[i - 1]!;
-    const dx = cur.x - prev.x;
-    const dy = cur.y - prev.y;
-    const len = Math.sqrt(dx * dx + dy * dy);
-    segments.push(len);
-    totalLen += len;
-  }
-
-  const targetDist = progress * totalLen;
-  let accumulated = 0;
-  for (let i = 0; i < segments.length; i++) {
-    const seg = segments[i]!;
-    if (accumulated + seg >= targetDist) {
-      const t = (targetDist - accumulated) / (seg || 1);
-      const p0 = points[i]!;
-      const p1 = points[i + 1]!;
-      return {
-        x: p0.x + (p1.x - p0.x) * t,
-        y: p0.y + (p1.y - p0.y) * t,
-      };
-    }
-    accumulated += seg;
-  }
-  return points[points.length - 1]!;
-}
-
-function MapCanvas({
-  stream,
-  actionStart,
-  actionDuration,
-}: {
-  stream: MapStream;
-  actionStart: number;
-  actionDuration: number;
-}) {
-  const frame = useCurrentFrame();
-  const { fps, width, height } = useVideoConfig();
-  const canvasRef = React.useRef<HTMLCanvasElement>(null);
-
-  const waypoints = stream.waypoints ?? [];
-  const routeColor = stream.routeColor ?? "#4285F4";
-  const routeWeight = stream.routeWeight ?? 4;
-  const padding = 60;
-
-  React.useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || waypoints.length === 0) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    canvas.width = width;
-    canvas.height = height;
-    ctx.clearRect(0, 0, width, height);
-
-    // Background
-    ctx.fillStyle = "#e8e8e8";
-    ctx.fillRect(0, 0, width, height);
-
-    // Grid lines for map feel
-    ctx.strokeStyle = "#d0d0d0";
-    ctx.lineWidth = 0.5;
-    for (let x = 0; x < width; x += 50) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, height);
-      ctx.stroke();
-    }
-    for (let y = 0; y < height; y += 50) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(width, y);
-      ctx.stroke();
-    }
-
-    const bounds = getBounds(waypoints);
-    const points = waypoints.map((wp) => latLngToCanvas(wp.lat, wp.lng, bounds, width, height, padding));
-
-    // Draw route line
-    if (points.length > 1) {
-      ctx.strokeStyle = routeColor;
-      ctx.lineWidth = routeWeight;
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
-      ctx.beginPath();
-      ctx.moveTo(points[0]!.x, points[0]!.y);
-      for (let i = 1; i < points.length; i++) {
-        ctx.lineTo(points[i]!.x, points[i]!.y);
-      }
-      ctx.stroke();
-    }
-
-    // Draw waypoint markers
-    for (let i = 0; i < waypoints.length; i++) {
-      const p = points[i]!;
-      const wp = waypoints[i]!;
-
-      // Outer circle
-      ctx.fillStyle = i === 0 ? "#34A853" : i === waypoints.length - 1 ? "#EA4335" : "#FBBC05";
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, 12, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Inner circle
-      ctx.fillStyle = "#fff";
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Label
-      if (wp.label) {
-        ctx.fillStyle = "#333";
-        ctx.font = "bold 16px sans-serif";
-        ctx.textAlign = "center";
-        ctx.fillText(wp.label, p.x, p.y - 20);
-      }
-    }
-
-    // Animated marker
-    const durationFrames = actionDuration * fps;
-    const progress = Math.min(1, Math.max(0, frame / (durationFrames || 1)));
-    const markerPos = getPointOnPath(points, progress);
-
-    // Marker shadow
-    ctx.fillStyle = "rgba(0,0,0,0.2)";
-    ctx.beginPath();
-    ctx.ellipse(markerPos.x, markerPos.y + 14, 10, 4, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Marker pin
-    ctx.fillStyle = routeColor;
-    ctx.beginPath();
-    ctx.arc(markerPos.x, markerPos.y, 10, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#fff";
-    ctx.beginPath();
-    ctx.arc(markerPos.x, markerPos.y, 4, 0, Math.PI * 2);
-    ctx.fill();
-  }, [frame, width, height, waypoints, routeColor, routeWeight, fps, actionDuration, padding]);
-
-  return (
-    <canvas
-      ref={canvasRef}
-      style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
-    />
-  );
-}
-
+// ============================================================
+// MapLeaf — entry point, renders each action as a Sequence
+// ============================================================
 export function MapLeaf({ stream }: { stream: MapStream }) {
   const { fps } = useVideoConfig();
-  if (!stream.waypoints || stream.waypoints.length === 0) return null;
+  const waypoints = stream.waypoints ?? [];
+  if (waypoints.length === 0) return null;
 
   return (
     <>
-      {stream.actions.map((a) => {
+      {stream.actions?.map((a, i) => {
         const start = a.start ?? 0;
         const end = a.end ?? start + 1;
+        const durFrames = Math.max(1, Math.floor(fps * (end - start)));
+        const center = stream.center ?? { lat: waypoints[0].lat, lng: waypoints[0].lng };
+        const zoom = stream.zoom ?? 10;
+        const mapType = stream.mapType ?? "roadmap";
+        const travelMode = stream.travelMode ?? "DRIVING";
+        const markerEmoji = stream.routeMarker ?? "🚗";
         return (
           <Sequence
-            key={a.id}
-            durationInFrames={Math.max(1, Math.floor(fps * (end - start)))}
+            key={a.id ?? i}
+            durationInFrames={durFrames}
             from={Math.floor(fps * start)}
             layout="none"
           >
-            <MapCanvas stream={stream} actionStart={start} actionDuration={end - start} />
+            <APIProvider apiKey={GM_API_KEY}>
+              <GoogleMap
+                mapId={String(stream.id ?? i)}
+                defaultCenter={center}
+                defaultZoom={zoom}
+                defaultOptions={{
+                  mapTypeId: mapType,
+                  disableDefaultUI: true,
+                  zoomControl: false,
+                }}
+                style={{ width: "100%", height: "100%", position: "absolute" }}
+              >
+                <RouteWithMarker
+                  waypoints={waypoints}
+                  travelMode={travelMode}
+                  markerEmoji={markerEmoji}
+                  actionDuration={end - start}
+                />
+              </GoogleMap>
+            </APIProvider>
           </Sequence>
         );
       })}
     </>
   );
+}
+
+// ============================================================
+// RouteWithMarker — gets the route via DirectionsService, then
+// renders an animated marker that follows the route path
+// ============================================================
+function RouteWithMarker({
+  waypoints, travelMode, markerEmoji, actionDuration,
+}: {
+  waypoints: { lat: number; lng: number; label?: string }[];
+  travelMode: string;
+  markerEmoji: string;
+  actionDuration: number;
+}) {
+  const map = useMap();
+  const routesLibrary = useMapsLibrary("routes");
+  const [leg, setLeg] = React.useState<google.maps.DirectionsLeg | null>(null);
+  const [routeIndex, setRouteIndex] = React.useState(0);
+  const handle = React.useRef<number | null>(null);
+
+  // Load directions
+  React.useEffect(() => {
+    if (!routesLibrary || !map || waypoints.length < 2) return;
+    const renderHandle = delayRender("Loading map directions...");
+    handle.current = renderHandle;
+
+    const renderer = new routesLibrary.DirectionsRenderer({ map, suppressMarkers: true });
+    const service = new routesLibrary.DirectionsService();
+
+    service
+      .route({
+        origin: waypoints[0],
+        destination: waypoints[waypoints.length - 1],
+        waypoints: waypoints.slice(1, -1).map((wp) => ({ location: wp, stopover: true })),
+        travelMode: google.maps.TravelMode[travelMode as keyof typeof google.maps.TravelMode],
+        provideRouteAlternatives: false,
+      })
+      .then((response) => {
+        renderer.setDirections(response);
+        setRouteIndex(0);
+        setLeg(response.routes[0]?.legs[0] ?? null);
+        if (handle.current !== null) continueRender(handle.current);
+      })
+      .catch(() => {
+        if (handle.current !== null) continueRender(handle.current);
+      });
+
+    return () => {
+      renderer.setMap(null);
+    };
+  }, [routesLibrary, map, waypoints, travelMode]);
+
+  // Update route index
+  React.useEffect(() => {
+    setRouteIndex((prev) => prev);
+  }, [routeIndex]);
+
+  // Compute animated marker position
+  const position = useAnimatedPosition({ leg, actionDuration, waypoints });
+
+  return (
+    <>
+      {waypoints.map((wp, i) => (
+        <AdvancedMarker key={i} position={wp}>
+          {wp.label ? (
+            <div
+              style={{
+                background: "rgba(255,255,255,0.9)",
+                borderRadius: "4px",
+                padding: "2px 6px",
+                fontSize: "12px",
+                fontWeight: 700,
+                color: "#333",
+                whiteSpace: "nowrap",
+                position: "relative",
+                top: "-24px",
+              }}
+            >
+              {wp.label}
+            </div>
+          ) : null}
+        </AdvancedMarker>
+      ))}
+      {position ? (
+        <AdvancedMarker position={position}>
+          <Pin glyphText={markerEmoji} scale={4} />
+        </AdvancedMarker>
+      ) : null}
+    </>
+  );
+}
+
+// ============================================================
+// useAnimatedPosition — returns the current lat/lng of the
+// animated marker along the route path
+// ============================================================
+function useAnimatedPosition({
+  leg, actionDuration, waypoints,
+}: {
+  leg: google.maps.DirectionsLeg | null;
+  actionDuration: number;
+  waypoints: { lat: number; lng: number }[];
+}) {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+
+  return React.useMemo(() => {
+    if (!leg || !leg.duration?.value) {
+      // Fallback: linear interpolation between waypoints
+      if (waypoints.length < 2) return null;
+      const t = Math.min(frame / (actionDuration * fps), 1);
+      const total = waypoints.length - 1;
+      const segI = Math.min(Math.floor(t * total), total - 1);
+      const segT = (t * total) - segI;
+      const a = waypoints[segI];
+      const b = waypoints[segI + 1];
+      if (!a || !b) return null;
+      return {
+        lat: a.lat + (b.lat - a.lat) * segT,
+        lng: a.lng + (b.lng - a.lng) * segT,
+      };
+    }
+
+    // Follow the route path using leg steps
+    const currentInSecond = (frame / fps) * (leg.duration.value / actionDuration);
+    const { step, elapsedInSeconds } = getCurrentStep(leg, currentInSecond);
+    if (!step || !step.path) {
+      // Fallback to linear
+      const t = Math.min(frame / (actionDuration * fps), 1);
+      const total = waypoints.length - 1;
+      const segI = Math.min(Math.floor(t * total), total - 1);
+      const segT = (t * total) - segI;
+      const a = waypoints[segI];
+      const b = waypoints[segI + 1];
+      if (!a || !b) return null;
+      return {
+        lat: a.lat + (b.lat - a.lat) * segT,
+        lng: a.lng + (b.lng - a.lng) * segT,
+      };
+    }
+
+    const stepElapsed = currentInSecond - elapsedInSeconds;
+    const stepProgress = stepElapsed / (step.duration?.value ?? 1);
+    const pathIdx = Math.min(
+      Math.max(0, Math.floor(stepProgress * step.path.length)),
+      step.path.length - 1,
+    );
+    const pt = step.path[pathIdx];
+    if (!pt) return null;
+    return { lat: pt.lat(), lng: pt.lng() };
+  }, [leg, frame, fps, actionDuration, waypoints]);
+}
+
+// ============================================================
+// getCurrentStep — finds which step of a DirectionsLeg the
+// current time falls into
+// ============================================================
+function getCurrentStep(leg: google.maps.DirectionsLeg, currentInSecond: number) {
+  let elapsedInSeconds = 0;
+  for (const step of leg.steps ?? []) {
+    const stepDur = step.duration?.value ?? 0;
+    if (elapsedInSeconds <= currentInSecond && currentInSecond < elapsedInSeconds + stepDur) {
+      return { step, elapsedInSeconds };
+    }
+    elapsedInSeconds += stepDur;
+  }
+  return { step: null, elapsedInSeconds: 0 };
 }

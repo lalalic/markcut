@@ -130,18 +130,18 @@ export function SubtitleLeaf({ stream }: { stream: Subtitle }) {
       durationInFrames={Math.max(1, Math.floor((cue.endAt - cue.startFrom) * fps))}
       from={Math.floor(start * fps) + Math.floor(cue.startFrom * fps)}
     >
-      <div className={`caption-overlay ${stream.name ?? ""}`} style={DEFAULT_BOX_STYLE}>
+      <div className={`caption-overlay ${stream.name ?? ""}`} style={{ ...DEFAULT_BOX_STYLE, ...css }}>
         {wordEls ? (
           <span
             className={`caption ${cue.className ?? ""}`}
-            style={{ ...DEFAULT_TEXT_STYLE, fontSize: stream.fontSize ?? DEFAULT_TEXT_STYLE.fontSize, fontStyle: stream.fontStyle, ...css }}
+            style={{ ...DEFAULT_TEXT_STYLE, fontSize: stream.fontSize ?? DEFAULT_TEXT_STYLE.fontSize, fontStyle: stream.fontStyle }}
           >
             {wordEls}
           </span>
         ) : (
           <span
             className={`caption ${cue.className ?? ""}`}
-            style={{ ...DEFAULT_TEXT_STYLE, fontSize: stream.fontSize ?? DEFAULT_TEXT_STYLE.fontSize, fontStyle: stream.fontStyle, ...css }}
+            style={{ ...DEFAULT_TEXT_STYLE, fontSize: stream.fontSize ?? DEFAULT_TEXT_STYLE.fontSize, fontStyle: stream.fontStyle }}
             dangerouslySetInnerHTML={{ __html: cue.text }}
           />
         )}

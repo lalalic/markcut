@@ -924,3 +924,41 @@ describe("Scene as Folder Alias", () => {
     try { rmSync(tmpFixture); } catch {}
   });
 });
+
+// ───────────────────────────────────────────────────────────────────────────
+// 16. Video startFrom/endAt Trimming + Photo in Series
+// ───────────────────────────────────────────────────────────────────────────
+
+describe("Video startFrom/endAt Trimming", () => {
+  it("renders a video trimmed with startFrom/endAt followed by a photo in series", async () => {
+    const output = renderFixture(fixturePath("video-series.json"), {
+      outputName: "video-series.mp4",
+      timeout: RENDER_TIMEOUT,
+    });
+
+    const info = getVideoInfo(output);
+    expect(info.width).toBe(640);
+    expect(info.height).toBe(480);
+    expect(info.fps).toBe(30);
+
+    // video-scene: 6s, photo-scene: 3s, transition: 0.3s → ~8.7s
+    expect(info.durationSec).toBeGreaterThanOrEqual(8);
+    expect(info.durationSec).toBeLessThanOrEqual(10);
+
+    // Extract frame at 3s — should be in video-scene (trimmed clip01.mp4, 2s-8s region)
+    const frameVideo = outPath("frames/video-series-3s.png");
+    extractFrame(output, 3, frameVideo);
+    expect(existsSync(frameVideo)).toBe(true);
+    expect(isFrameNonBlank(frameVideo)).toBe(true);
+
+    // Extract frame at 7s — should be in photo-scene (image card)
+    const framePhoto = outPath("frames/video-series-7s.png");
+    extractFrame(output, 7, framePhoto);
+    expect(existsSync(framePhoto)).toBe(true);
+    expect(isFrameNonBlank(framePhoto)).toBe(true);
+
+    // Verify both frames have meaningful content
+    expect(getFrameFileSize(frameVideo)).toBeGreaterThan(5000);
+    expect(getFrameFileSize(framePhoto)).toBeGreaterThan(5000);
+  });
+});

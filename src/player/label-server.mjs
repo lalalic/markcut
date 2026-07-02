@@ -4,13 +4,14 @@
  *
  * Usage:
  *   node src/player/label-server.mjs <video.json> [--port 3031]
- *   node src/player/label-server.mjs <media-folder> [--port 3031]
  *
  * Shows a player with thumbnail strip and label input.
  * Labels are saved to labels.json alongside the source.
+ *
+ * Only stream tree JSON files are supported (no media folder mode).
  */
 import { createServer } from "node:http";
-import { readFileSync, writeFileSync, existsSync, statSync, createReadStream, readdirSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, statSync, createReadStream } from "node:fs";
 import { resolve, dirname, join, extname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -18,7 +19,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, "..", "..");
 const PORT = parseInt(process.argv.find(a => a.startsWith("--port="))?.split("=")[1] || "3031", 10);
 
-// Determine source: JSON file or media folder (3rd+ arg, skip --flags)
+// Determine source: JSON file (3rd+ arg, skip --flags)
 const sourceArg = process.argv.slice(2).find(a => !a.startsWith("--"));
 const SOURCE = sourceArg ? resolve(sourceArg) : resolve(".");
 
@@ -27,58 +28,8 @@ let scenes = [];
 let totalDuration = 0;
 let videoData = null; // raw JSON to serve to the player
 const LABELS_PATH = join(dirname(SOURCE), "labels.json");
-const isFolder = existsSync(SOURCE) && statSync(SOURCE).isDirectory();
 
-if (isFolder) {
-  // Read media files from folder, sorted alphabetically
-  const mediaExts = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif", ".mp4", ".webm", ".mov"]);
-  const files = readdirSync(SOURCE)
-    .filter(f => mediaExts.has(extname(f).toLowerCase()))
-    .sort()
-    .map(f => join(SOURCE, f));
-
-  let offset = 0;
-  files.forEach((f, i) => {
-    const ext = extname(f).toLowerCase();
-    const isVideo = ext === ".mp4" || ext === ".webm" || ext === ".mov";
-    const dur = 5; // default 5s per scene
-    scenes.push({
-      name: `scene-${i + 1}`,
-      start: offset,
-      end: offset + dur,
-      duration: dur,
-      src: `/media/${encodeURIComponent(f)}`,
-      mediaType: isVideo ? "video" : "image",
-    });
-    offset += dur;
-  });
-  totalDuration = offset;
-
-  // Build a bare stream-tree so the Remotion player can render
-  videoData = {
-    id: "root",
-    type: "root",
-    width: 1080,
-    height: 1920,
-    fps: 30,
-    isSeries: true,
-    transition: "fade",
-    theme: "cinematic",
-    children: scenes.map((s, i) => ({
-      id: s.name,
-      name: s.name,
-      type: "folder",
-      isSeries: false,
-      children: [{
-        id: `${s.name}-media`,
-        type: s.mediaType,
-        src: s.src,
-        fit: "cover",
-        actions: [{ start: 0, end: s.duration }],
-      }],
-    })),
-  };
-} else if (existsSync(SOURCE)) {
+if (existsSync(SOURCE)) {
   // Parse JSON file (stream tree or labels.json format)
   try {
     const raw = readFileSync(SOURCE, "utf-8");
@@ -510,40 +461,6 @@ const server = createServer((req, res) => {
       process.exit(0);
     }
 
-    // Serve media files (when source is a folder, with range support)
-    if (path.startsWith("/media/")) {
-      const mediaPath = decodeURIComponent(path.replace("/media/", ""));
-      if (existsSync(mediaPath)) {
-        const ext = extname(mediaPath).toLowerCase();
-        const mime = MIME[ext] || "application/octet-stream";
-        const fileSize = statSync(mediaPath).size;
-        const range = req.headers.range;
-        if (range) {
-          const parts = range.replace(/bytes=/, "").split("-");
-          const start = parseInt(parts[0], 10);
-          const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-          const chunkSize = end - start + 1;
-          const stream = createReadStream(mediaPath, { start, end });
-          res.writeHead(206, {
-            "Content-Range": `bytes ${start}-${end}/${fileSize}`,
-            "Accept-Ranges": "bytes",
-            "Content-Length": chunkSize,
-            "Content-Type": mime,
-            "Cache-Control": "max-age=3600",
-          });
-          stream.pipe(res);
-        } else {
-          const data = readFileSync(mediaPath);
-          res.writeHead(200, { "Content-Type": mime, "Accept-Ranges": "bytes", "Content-Length": fileSize, "Cache-Control": "max-age=3600" });
-          res.end(data);
-        }
-        return;
-      }
-      res.writeHead(404);
-      res.end("Not found");
-      return;
-    }
-
     // Serve player bundle
     if (path === "/player.js") {
       const bundlePath = join(ROOT, "src", "player", "bundle", "player.js");
@@ -608,7 +525,7 @@ const server = createServer((req, res) => {
 
 server.listen(PORT, () => {
   console.log(`\\n🏷️  Label Preview at http://localhost:${PORT}`);
-  console.log(`   Source: ${isFolder ? "📁 " + SOURCE : "📄 " + SOURCE}`);
+  console.log(`   Source: 📄 ${SOURCE}`);
   console.log(`   Scenes: ${scenes.length}`);
   console.log(`   Labels: ${LABELS_PATH}`);
   console.log("");

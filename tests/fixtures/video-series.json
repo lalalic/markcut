@@ -1,0 +1,54 @@
+{
+  "id": "root",
+  "type": "root",
+  "width": 640,
+  "height": 480,
+  "fps": 30,
+  "isSeries": true,
+  "transition": "fade",
+  "transitionTime": 0.3,
+  "children": [
+    {
+      "id": "video-scene",
+      "type": "folder",
+      "isSeries": false,
+      "children": [
+        {
+          "id": "test-video",
+          "type": "video",
+          "src": "clip01.mp4",
+          "volume": 0,
+          "width": 640,
+          "height": 480,
+          "actions": [
+            {
+              "start": 0,
+              "end": 6,
+              "startFrom": 2,
+              "endAt": 8
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "photo-scene",
+      "type": "folder",
+      "isSeries": false,
+      "children": [
+        {
+          "id": "test-photo",
+          "type": "image",
+          "src": "https://picsum.photos/seed/video-series-photo/640/480",
+          "fit": "cover",
+          "actions": [
+            {
+              "start": 0,
+              "end": 3
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
