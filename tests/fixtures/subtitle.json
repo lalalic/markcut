@@ -7,7 +7,11 @@
   "isSeries": true,
   "transition": "fade",
   "transitionTime": 0.3,
-  "stylesheet": ".caption { background: rgba(0,0,0,0.4); padding: 12px 24px; border-radius: 12px; } .word-active { color: #f97316; }",
+  "stylesheet": ".caption { background: rgba(0,0,0,0.4); padding: 12px 24px; border-radius: 12px; }",
+  "subtitle": {
+    "src": "WEBVTT\n\n00:00:00.500 --> 00:00:03.500\nRoot-level subtitle overlay\n\n00:00:04.500 --> 00:00:07.500\nSecond scene caption\n\n00:00:08.500 --> 00:00:12.000\nThird scene caption",
+    "fontSize": 48
+  },
   "children": [
     {
       "id": "scene-1",
@@ -20,14 +24,6 @@
           "src": "https://picsum.photos/seed/sub1/640/480",
           "fit": "cover",
           "actions": [{ "start": 0, "end": 4 }]
-        },
-        {
-          "id": "inline-caption",
-          "type": "subtitle",
-          "src": "Inline subtitle text works",
-          "fontSize": 48,
-          "style": "color: #ffffff; text-shadow: 0 4px 20px rgba(0,0,0,0.8);",
-          "actions": [{ "start": 0.3, "end": 3.7 }]
         }
       ]
     },
@@ -42,14 +38,6 @@
           "src": "https://picsum.photos/seed/sub2/640/480",
           "fit": "cover",
           "actions": [{ "start": 0, "end": 4 }]
-        },
-        {
-          "id": "vtt-caption",
-          "type": "subtitle",
-          "src": "WEBVTT\n\n00:00:00.500 --> 00:00:02.000\nVTT subtitle renders\n\n00:00:02.500 --> 00:00:04.000\nSecond VTT cue",
-          "fontSize": 48,
-          "style": "color: #00ff88; font-style: italic;",
-          "actions": [{ "start": 0, "end": 4 }]
         }
       ]
     },
@@ -63,25 +51,6 @@
           "type": "image",
           "src": "https://picsum.photos/seed/sub3/640/480",
           "fit": "cover",
-          "actions": [{ "start": 0, "end": 5 }]
-        },
-        {
-          "id": "karaoke",
-          "type": "subtitle",
-          "cues": [
-            {
-              "startFrom": 0, "endAt": 5,
-              "text": "Karaoke word highlight works",
-              "className": "karaoke",
-              "words": [
-                { "text": "Karaoke", "start": 0, "end": 1.25 },
-                { "text": "word", "start": 1.25, "end": 2.5 },
-                { "text": "highlight", "start": 2.5, "end": 3.75 },
-                { "text": "works", "start": 3.75, "end": 5 }
-              ]
-            }
-          ],
-          "fontSize": 48,
           "actions": [{ "start": 0, "end": 5 }]
         }
       ]

@@ -30,7 +30,7 @@ export function AudioLeaf({ stream }: { stream: Audio }) {
         return (
           <Sequence
             key={a.id}
-            name={stream.title ?? stream.name ?? stream.src}
+            name={stream.src ?? "audio"}
             durationInFrames={Math.max(1, Math.floor(fps * (end - start)))}
             from={Math.floor(fps * start)}
             layout="none"

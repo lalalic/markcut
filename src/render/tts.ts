@@ -1,81 +1,115 @@
 /**
- * TTS integration using edge-tts (Microsoft Edge TTS).
- * Generates WAV voiceover files from text.
+ * Flexible TTS integration via CLI template + variable substitution.
  *
- * Prerequisites: pip install edge-tts
+ * Define a CLI command template with {var} placeholders:
+ *
+ *   default (edge-tts):
+ *     edge-tts --voice "{voice}" --text "{text}" --write-media "{output}"
+ *
+ *   mlx-audio with voice cloning:
+ *     mlx-audio tts --model "{voice}" --text "{text}" --ref-audio "{refAudio}" --output "{output}"
+ *
+ *   Any custom engine:
+ *     {cli} --text "{text}" --output "{output}"
+ *
+ * Built-in variables:  {text} {output} {voice} {rate} {refAudio}
+ * Extra variables come from TtsConfig.options.
+ *
+ * Special cli value "copy" copies refAudio to output (no generation).
  */
 import { execSync } from "node:child_process";
-import { existsSync, mkdirSync } from "node:fs";
-import { join, dirname } from "node:path";
+import { existsSync, mkdirSync, copyFileSync } from "node:fs";
+import { dirname } from "node:path";
 
 export interface TTSOptions {
+  /** CLI command template with {var} placeholders */
+  cli?: string;
+  /** Voice name or model path */
   voice?: string;
-  rate?: string;  // e.g., "+20%", "-10%"
-  volume?: string; // e.g., "+50%"
+  /** Speech rate percentage string e.g. "+20%", "-10%" */
+  rate?: string;
+  /** Reference audio path for voice cloning */
+  refAudio?: string;
+  /** Extra variables for CLI template substitution */
+  options?: Record<string, string>;
 }
 
-const DEFAULT_VOICE = "en-US-GuyNeural";
+const DEFAULT_CLI = 'edge-tts --voice "{voice}" --text "{text}" --write-media "{output}"';
 
 /**
- * Generate a WAV file from text using edge-tts.
- * Returns the output file path.
+ * Generate a WAV file from text using CLI template substitution.
+ * Returns the output file path, or empty string on failure.
  */
 export function generateTTS(
   text: string,
   outputPath: string,
   options: TTSOptions = {},
 ): string {
-  const voice = options.voice ?? DEFAULT_VOICE;
-  const rateFlag = options.rate ? `--rate="${options.rate}"` : "";
-  const volumeFlag = options.volume ? `--volume="${options.volume}"` : "";
-
   mkdirSync(dirname(outputPath), { recursive: true });
 
-  // edge-tts outputs mp3 by default, we'll convert to wav for Remotion compatibility
-  const mp3Path = outputPath.replace(/\.wav$/, ".mp3");
+  const cli = options.cli ?? DEFAULT_CLI;
 
-  const cmd = `edge-tts --voice "${voice}" --text "${text.replace(/"/g, '\\"')}" ${rateFlag} ${volumeFlag} --write-media "${mp3Path}"`;
+  // Special: "copy" mode — just copy refAudio to output
+  if (cli === "copy") {
+    if (!options.refAudio) {
+      console.warn("copy TTS mode requires refAudio path. Skipping.");
+      return "";
+    }
+    if (!existsSync(options.refAudio)) {
+      console.warn(`refAudio not found: ${options.refAudio}. Skipping.`);
+      return "";
+    }
+    try {
+      copyFileSync(options.refAudio, outputPath);
+      return outputPath;
+    } catch (e: any) {
+      console.warn(`copy TTS failed: ${e.message}. Skipping.`);
+      return "";
+    }
+  }
 
+  // Build variable map
+  const vars: Record<string, string> = {
+    text,
+    output: outputPath,
+    voice: options.voice ?? "en-US-GuyNeural",
+    rate: options.rate ?? "",
+    refAudio: options.refAudio ?? "",
+    ...(options.options ?? {}),
+  };
+
+  // Substitute {var} placeholders
+  let cmd = cli;
+  for (const [key, val] of Object.entries(vars)) {
+    if (!val) continue;
+    cmd = cmd.replaceAll(`{${key}}`, val);
+  }
+
+  // Execute
   try {
     execSync(cmd, { stdio: "pipe" });
   } catch (e: any) {
-    console.warn(`TTS failed: ${e.message}. Skipping voiceover.`);
+    console.warn(`TTS failed: ${e.message}.\nCommand: ${cmd}\nSkipping voiceover.`);
     return "";
   }
 
-  // Convert to WAV using ffmpeg if available
+  // If output isn't WAV, try converting with ffmpeg
+  if (existsSync(outputPath)) return outputPath;
+  // Check if a non-wav file was generated (e.g., edge-tts creates .mp3)
+  const mp3Path = outputPath.replace(/\.wav$/, ".mp3");
   if (existsSync(mp3Path)) {
     try {
       execSync(`ffmpeg -y -i "${mp3Path}" "${outputPath}" 2>/dev/null`, { stdio: "pipe" });
       execSync(`rm "${mp3Path}"`, { stdio: "pipe" });
-    } catch {
-      // Keep mp3 if ffmpeg not available
-      return mp3Path;
-    }
+      return outputPath;
+    } catch { return mp3Path; }
   }
 
-  return existsSync(outputPath) ? outputPath : mp3Path;
+  return "";
 }
 
 /**
- * Generate TTS for multiple segments and return an array of file paths.
- */
-export function generateTTSBatch(
-  segments: Array<{ text: string; id: string }>,
-  outputDir: string,
-  options: TTSOptions = {},
-): Array<{ id: string; path: string }> {
-  mkdirSync(outputDir, { recursive: true });
-
-  return segments.map(({ text, id }) => {
-    const path = join(outputDir, `${id}.wav`);
-    const result = generateTTS(text, path, options);
-    return { id, path: result };
-  });
-}
-
-/**
- * List available TTS voices.
+ * List available edge-tts voices (convenience helper).
  */
 export function listVoices(): string[] {
   try {

@@ -22,10 +22,9 @@
         },
         {
           "id": "title-intro",
-          "type": "subtitle",
-          "src": "Main Video",
-          "fontSize": 48,
-          "style": "color: #ffffff; font-weight: bold;",
+          "type": "component",
+          "componentName": "AnimatedHeadline",
+          "props": { "text": "Main Video" },
           "actions": [{ "start": 0, "end": 2 }]
         }
       ]
@@ -34,7 +33,7 @@
       "id": "subvideo-chapter",
       "type": "include",
       "name": "Embedded Reel",
-      "src": "data:application/json;base64,eyJpZCI6ICJyb290IiwgInR5cGUiOiAicm9vdCIsICJ3aWR0aCI6IDY0MCwgImhlaWdodCI6IDQ4MCwgImZwcyI6IDMwLCAiaXNTZXJpZXMiOiB0cnVlLCAidHJhbnNpdGlvbiI6ICJmYWRlIiwgInRyYW5zaXRpb25UaW1lIjogMC4zLCAiY2hpbGRyZW4iOiBbeyJpZCI6ICJzdWItc2NlbmUtMSIsICJ0eXBlIjogImZvbGRlciIsICJpc1NlcmllcyI6IGZhbHNlLCAiY2hpbGRyZW4iOiBbeyJpZCI6ICJzdWItYmctMSIsICJ0eXBlIjogImltYWdlIiwgInNyYyI6ICJodHRwczovL3BpY3N1bS5waG90b3Mvc2VlZC9zdWJ2LWlubmVyMS82NDAvNDgwIiwgImZpdCI6ICJjb3ZlciIsICJhY3Rpb25zIjogW3sic3RhcnQiOiAwLCAiZW5kIjogMn1dfSwgeyJpZCI6ICJzdWItdGl0bGUtMSIsICJ0eXBlIjogInN1YnRpdGxlIiwgInNyYyI6ICJTdWJ2aWRlbyBTY2VuZSAxIiwgImZvbnRTaXplIjogMzYsICJzdHlsZSI6ICJjb2xvcjogI2ZmZmZmZjsgZm9udC13ZWlnaHQ6IGJvbGQ7IiwgImFjdGlvbnMiOiBbeyJzdGFydCI6IDAsICJlbmQiOiAyfV19XX0sIHsiaWQiOiAic3ViLXNjZW5lLTIiLCAidHlwZSI6ICJmb2xkZXIiLCAiaXNTZXJpZXMiOiBmYWxzZSwgImNoaWxkcmVuIjogW3siaWQiOiAic3ViLWJnLTIiLCAidHlwZSI6ICJpbWFnZSIsICJzcmMiOiAiaHR0cHM6Ly9waWNzdW0ucGhvdG9zL3NlZWQvc3Vidi1pbm5lcjIvNjQwLzQ4MCIsICJmaXQiOiAiY292ZXIiLCAiYWN0aW9ucyI6IFt7InN0YXJ0IjogMCwgImVuZCI6IDJ9XX0sIHsiaWQiOiAic3ViLXRpdGxlLTIiLCAidHlwZSI6ICJzdWJ0aXRsZSIsICJzcmMiOiAiU3VidmlkZW8gU2NlbmUgMiIsICJmb250U2l6ZSI6IDM2LCAic3R5bGUiOiAiY29sb3I6ICNmZmZmZmY7IGZvbnQtd2VpZ2h0OiBib2xkOyIsICJhY3Rpb25zIjogW3sic3RhcnQiOiAwLCAiZW5kIjogMn1dfV19XX0=",
+      "src": "data:application/json;base64,eyJpZCI6InJvb3QiLCJ0eXBlIjoicm9vdCIsIndpZHRoIjo2NDAsImhlaWdodCI6NDgwLCJmcHMiOjMwLCJpc1NlcmllcyI6dHJ1ZSwidHJhbnNpdGlvbiI6ImZhZGUiLCJ0cmFuc2l0aW9uVGltZSI6MC4zLCJjaGlsZHJlbiI6W3siaWQiOiJzdWItc2NlbmUtMSIsInR5cGUiOiJmb2xkZXIiLCJpc1NlcmllcyI6ZmFsc2UsImNoaWxkcmVuIjpbeyJpZCI6InN1Yi1iZy0xIiwidHlwZSI6ImltYWdlIiwic3JjIjoiaHR0cHM6Ly9waWNzdW0ucGhvdG9zL3NlZWQvc3Vidi1pbm5lcjEvNjQwLzQ4MCIsImZpdCI6ImNvdmVyIiwiYWN0aW9ucyI6W3sic3RhcnQiOjAsImVuZCI6Mn1dfV19LHsiaWQiOiJzdWItc2NlbmUtMiIsInR5cGUiOiJmb2xkZXIiLCJpc1NlcmllcyI6ZmFsc2UsImNoaWxkcmVuIjpbeyJpZCI6InN1Yi1iZy0yIiwidHlwZSI6ImltYWdlIiwic3JjIjoiaHR0cHM6Ly9waWNzdW0ucGhvdG9zL3NlZWQvc3Vidi1pbm5lcjIvNjQwLzQ4MCIsImZpdCI6ImNvdmVyIiwiYWN0aW9ucyI6W3sic3RhcnQiOjAsImVuZCI6Mn1dfV19XX0=",
       "actions": [{ "start": 0, "end": 4 }]
     },
     {
@@ -51,10 +50,9 @@
         },
         {
           "id": "title-outro",
-          "type": "subtitle",
-          "src": "Back to Main",
-          "fontSize": 48,
-          "style": "color: #ffffff; font-weight: bold;",
+          "type": "component",
+          "componentName": "AnimatedHeadline",
+          "props": { "text": "Back to Main" },
           "actions": [{ "start": 0, "end": 2 }]
         }
       ]

@@ -20,7 +20,8 @@ export function ThemeProvider({
 }
 
 /**
- * Resolve a theme from a preset name, inline JSON string, or Theme object.
+ * Resolve a theme from a preset name, inline JSON string, Theme object,
+ * or {base, ...overrides} object (start from a preset, override specific keys).
  * Falls back to "cinematic" if unresolvable.
  */
 export function resolveTheme(input?: string | Theme | Record<string, unknown>): Theme {
@@ -36,6 +37,20 @@ export function resolveTheme(input?: string | Theme | Record<string, unknown>): 
     } catch {
       return themePresets.cinematic!;
     }
+  }
+
+  // { base: "neon", colors: { primary: "#ff0000" }, ...overrides }
+  if ("base" in input && typeof input.base === "string" && themePresets[input.base]) {
+    const base = themePresets[input.base]!;
+    const { base: _base, ...overrides } = input;
+    const merged = { ...base, ...overrides };
+    // Deep-merge colors, fonts, timing, effects if overrides provide partials
+    for (const section of ["colors", "fonts", "timing", "effects"] as const) {
+      if (overrides[section] && typeof overrides[section] === "object") {
+        merged[section] = { ...base[section], ...(overrides[section] as any) };
+      }
+    }
+    return merged as Theme;
   }
 
   // Theme object or partial

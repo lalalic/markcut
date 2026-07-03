@@ -34,7 +34,7 @@ export function RhythmLeaf({ stream }: { stream: Rhythm }) {
         return (
           <Sequence
             key={a.id}
-            name={stream.title ?? stream.name ?? "rhythm"}
+            name={stream.src ?? "rhythm"}
             durationInFrames={Math.max(1, Math.floor(fps * (end - start)))}
             from={Math.floor(fps * start)}
             layout="none"

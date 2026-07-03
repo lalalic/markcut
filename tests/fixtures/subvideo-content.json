@@ -19,14 +19,6 @@
           "src": "https://picsum.photos/seed/subv-inner1/640/480",
           "fit": "cover",
           "actions": [{ "start": 0, "end": 2 }]
-        },
-        {
-          "id": "sub-title-1",
-          "type": "subtitle",
-          "src": "Subvideo Scene 1",
-          "fontSize": 36,
-          "style": "color: #ffffff; font-weight: bold;",
-          "actions": [{ "start": 0, "end": 2 }]
         }
       ]
     },
@@ -40,14 +32,6 @@
           "type": "image",
           "src": "https://picsum.photos/seed/subv-inner2/640/480",
           "fit": "cover",
-          "actions": [{ "start": 0, "end": 2 }]
-        },
-        {
-          "id": "sub-title-2",
-          "type": "subtitle",
-          "src": "Subvideo Scene 2",
-          "fontSize": 36,
-          "style": "color: #ffffff; font-weight: bold;",
           "actions": [{ "start": 0, "end": 2 }]
         }
       ]

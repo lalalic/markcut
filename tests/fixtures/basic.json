@@ -20,14 +20,6 @@
           "src": "https://picsum.photos/seed/test-basic/640/480",
           "fit": "cover",
           "actions": [{ "start": 0, "end": 2 }]
-        },
-        {
-          "id": "title",
-          "type": "subtitle",
-          "src": "Basic Render Test",
-          "fontSize": 48,
-          "style": "color: #ffffff; font-weight: bold; text-shadow: 0 2px 12px rgba(0,0,0,0.8);",
-          "actions": [{ "start": 0.2, "end": 1.8 }]
         }
       ]
     }

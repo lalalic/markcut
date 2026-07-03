@@ -18,14 +18,6 @@
       "routeColor": "#4285F4",
       "routeWeight": 5,
       "actions": [{ "start": 0, "end": 3 }]
-    },
-    {
-      "id": "map-title",
-      "type": "subtitle",
-      "src": "Map: SF to LA",
-      "fontSize": 36,
-      "style": "color: #ffffff; font-weight: bold; text-shadow: 0 2px 8px rgba(0,0,0,0.6);",
-      "actions": [{ "start": 0.3, "end": 2.7 }]
     }
   ]
 }

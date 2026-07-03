@@ -14,7 +14,6 @@ import type { Folder as FolderStream, Stream } from "../schema/index";
 import { VideoLeaf } from "./Video";
 import { AudioLeaf } from "./Audio";
 import { ImageLeaf } from "./Image";
-import { SubtitleLeaf } from "./Subtitle";
 import { ComponentLeaf } from "./Component";
 import { RhythmLeaf } from "./Rhythm";
 import { MapLeaf } from "./Map";
@@ -26,7 +25,6 @@ const Leaves: Record<string, React.ComponentType<{ stream: any }>> = {
   video: VideoLeaf,
   audio: AudioLeaf,
   image: ImageLeaf,
-  subtitle: SubtitleLeaf,
   component: ComponentLeaf,
   rhythm: RhythmLeaf,
   map: MapLeaf,
@@ -88,14 +86,12 @@ export function FolderLeaf({ stream }: { stream: FolderStream }) {
         : child.type === "effect"
           ? <EffectWrapper stream={child as any}><FolderLeaf stream={child as any} /></EffectWrapper>
           : React.createElement(FolderLeaf, { stream: child as FolderStream });
-      const wrapped = child.type === "subtitle"
-        ? childContent
-        : (
+      const wrapped = (
           <Container
             id={child.id}
             type={child.type}
             style={cssJS(child.style) as React.CSSProperties}
-            className={`${child.type} ${toClassName(child.name ?? "")}`}
+            className={`${child.type} ${toClassName(child.id ?? "")}`}
           >
             {childContent}
           </Container>
@@ -144,7 +140,7 @@ export function FolderLeaf({ stream }: { stream: FolderStream }) {
         id={stream.id}
         type={stream.type}
         style={containerStyle}
-        className={`${orientation} ${stream.type} ${stream.name ?? ""}`.trim()}
+        className={`${orientation} ${stream.type}`.trim()}
       >
         {isSeries ? <TypedSeries>{sequences}</TypedSeries> : sequences}
       </Container>

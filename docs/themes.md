@@ -14,17 +14,17 @@ Set via the `theme` field at root level. Controls colors, fonts, and visual styl
 ## Usage
 
 ```json
-{
-  "id": "root",
-  "type": "root",
-  "theme": "neon",
-  "children": [...]
-}
+// Preset name
+{ "theme": "neon" }
+
+// Base preset with overrides (deep-merges colors/fonts/timing/effects)
+{ "theme": { "base": "neon", "colors": { "primary": "#ff0000" } } }
+
+// Full inline theme object (all fields optional, defaults from cinematic)
+{ "theme": { "colors": { "primary": "#ff0000", "background": "#000" } } }
 ```
 
-Can also pass:
-- A JSON string: `"theme": "{ \"colors\": { \"primary\": \"#ff0000\" } }"`
-- A partial theme object: `"theme": { "colors": { "primary": "#ff0000" } }`
+Can also pass as a JSON string (for programmatic use): `"theme": "{ \"colors\": { \"primary\": \"#ff0000\" } }"
 
 ## Theme Object Structure
 

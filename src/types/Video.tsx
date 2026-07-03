@@ -39,7 +39,6 @@ export function VideoLeaf({ stream }: { stream: Video }) {
               <FrameSyncStyle style={actionStyle}>
                 <OffthreadVideo
                   src={resolvedSrc}
-                  className={stream.name}
                   startFrom={Math.floor(startFrom * fps)}
                   endAt={Math.floor(startFrom * fps) + Math.floor(((endAt - startFrom) * fps) / playbackRate)}
                   muted={volume === 0 || !!audio?.foreground}
@@ -52,7 +51,6 @@ export function VideoLeaf({ stream }: { stream: Video }) {
             ) : (
               <OffthreadVideo
                 src={resolvedSrc}
-                className={stream.name}
                 startFrom={Math.floor(startFrom * fps)}
                 endAt={Math.floor(startFrom * fps) + Math.floor(((endAt - startFrom) * fps) / playbackRate)}
                 muted={volume === 0 || !!audio?.foreground}

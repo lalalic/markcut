@@ -29,7 +29,6 @@ export function ImageLeaf({ stream }: { stream: Image }) {
             <FrameSyncStyle style={cssJS(a.style)}>
               <Img
                 src={resolvedSrc}
-                className={stream.name}
                 style={{
                   width: "100%",
                   height: "100%",

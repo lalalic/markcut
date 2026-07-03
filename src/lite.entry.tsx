@@ -3,8 +3,14 @@ import { AbsoluteFill } from "remotion";
 import { ComposeContext, type ComposeContextValue } from "./context/index";
 import { ThemeProvider, resolveTheme, type Theme } from "./themes";
 import { FolderLeaf } from "./types/Folder";
+import { SubtitleOverlay } from "./types/Subtitle";
 import { getDurationInSeconds } from "./utils/index";
 import { root as rootSchema, type Root } from "./schema/index";
+import {
+  compileDescriptiveRoot,
+  type CompileOptions,
+  type DescriptiveRoot,
+} from "./descriptive/compiler";
 
 export interface RemotionEngineProps {
   /** Stream tree. Will be parsed by zod (defaults applied). */
@@ -13,8 +19,13 @@ export interface RemotionEngineProps {
   compose?: Partial<ComposeContextValue>;
   /** Background of the canvas. Defaults to black. */
   background?: string;
-  /** Theme preset name, theme object, or JSON string. */
-  theme?: string | Theme;
+  /** Theme preset name, theme object, {base, ...overrides}, or JSON string. */
+  theme?: string | Theme | Record<string, unknown>;
+}
+
+export interface DescriptiveCompositionProps extends Omit<RemotionEngineProps, "root"> {
+  root: DescriptiveRoot;
+  compileOptions?: CompileOptions;
 }
 
 const DefaultContainer: ComposeContextValue["Container"] = ({ children, style, className }) => (
@@ -48,15 +59,50 @@ export function RemotionEngine({ root, compose, background = "#000", theme }: Re
       <ThemeProvider theme={resolvedTheme}>
         <AbsoluteFill style={{ background: background || resolvedTheme.colors.background }}>
           <FolderLeaf stream={parsed as any} />
+          {parsed.subtitle && <SubtitleOverlay subtitle={parsed.subtitle} />}
         </AbsoluteFill>
       </ThemeProvider>
     </ComposeContext.Provider>
   );
 }
 
+export function DescriptiveComposition({
+  root,
+  compose,
+  background = "#000",
+  theme,
+  compileOptions,
+}: DescriptiveCompositionProps) {
+  const compiled = React.useMemo(
+    () => compileDescriptiveRoot(root, compileOptions),
+    [root, compileOptions],
+  );
+
+  return (
+    <RemotionEngine
+      root={compiled}
+      compose={compose}
+      background={background}
+      theme={theme}
+    />
+  );
+}
+
 export { rootSchema, FolderLeaf };
 export * from "./schema/index";
 export * from "./context/index";
+export * from "./descriptive/compiler";
+export * from "./descriptive/markdown";
+export {
+  resolveMediaDurations,
+  resolveScripts,
+  resolveAll,
+} from "./descriptive/resolve";
+export type {
+  ResolveMediaOptions,
+  ResolveScriptOptions,
+  ResolveAllOptions,
+} from "./descriptive/resolve";
 export { getDurationInSeconds } from "./utils/index";
 export { preloadComponents } from "./types/DynamicLoader";
 export { builtinAnimations } from "./types/keyframes";

@@ -97,13 +97,13 @@ describe("Basic Rendering", () => {
 });
 
 // ───────────────────────────────────────────────────────────────────────────
-// 2. Image + Subtitle Rendering
+// 2. Image + Root Subtitle Overlay Rendering
 // ───────────────────────────────────────────────────────────────────────────
 
-describe("Image + Subtitle Rendering", () => {
-  it("renders an image with subtitle overlay", async () => {
+describe("Image + Root Subtitle Overlay Rendering", () => {
+  it("renders an image scene correctly", async () => {
     const output = renderFixture(fixturePath("basic.json"), {
-      outputName: "basic-image-subtitle.mp4",
+      outputName: "basic-image.mp4",
       timeout: RENDER_TIMEOUT,
     });
 
@@ -124,26 +124,31 @@ describe("Image + Subtitle Rendering", () => {
     expect(frameSize).toBeGreaterThan(5000);
   });
 
-  it("renders subtitle with karaoke word highlighting", async () => {
+  it("renders root-level subtitle overlay from inline VTT", async () => {
     const output = renderFixture(fixturePath("subtitle.json"), {
-      outputName: "subtitle-karaoke.mp4",
+      outputName: "subtitle-overlay.mp4",
       timeout: RENDER_TIMEOUT,
     });
 
     const info = getVideoInfo(output);
     expect(info.width).toBe(640);
 
-    // Extract frames at different points to verify karaoke scene exists
-    // Scene 3 (karaoke) starts at ~8s (scene1:4s + scene2:4s)
-    const frameKaraoke = outPath("frames/karaoke-9s.png");
-    extractFrame(output, 9, frameKaraoke);
-    expect(existsSync(frameKaraoke)).toBe(true);
-    expect(isFrameNonBlank(frameKaraoke)).toBe(true);
+    // Extract frame at 1s — subtitle cue active (0.5–3.5s)
+    const frameWithSub = outPath("frames/subtitle-1s.png");
+    extractFrame(output, 1, frameWithSub);
+    expect(existsSync(frameWithSub)).toBe(true);
+    expect(isFrameNonBlank(frameWithSub)).toBe(true);
+
+    // Extract frame at 5s (between cues in scene-2)
+    const frameSilent = outPath("frames/subtitle-5s.png");
+    extractFrame(output, 5, frameSilent);
+    expect(existsSync(frameSilent)).toBe(true);
+    expect(isFrameNonBlank(frameSilent)).toBe(true);
   });
 
-  it("renders inline subtitle text correctly", async () => {
+  it("renders image scene with no subtitle node (basic fixture)", async () => {
     const output = renderFixture(fixturePath("basic.json"), {
-      outputName: "subtitle-inline.mp4",
+      outputName: "basic-no-subtitle.mp4",
       timeout: RENDER_TIMEOUT,
     });
 
@@ -689,62 +694,52 @@ describe("Frame-Accurate Verification", () => {
 // 14. Description Field (label/storyboard metadata on any stream type)
 // ───────────────────────────────────────────────────────────────────────────
 
-describe("Description Field", () => {
-  it("validates description on image nodes via schema", async () => {
-    // Import schema directly to validate
-    const { image, folder, root } = await import("../src/schema/index");
+describe("Instruction Field", () => {
+  it("validates instruction on image nodes via schema", async () => {
+    const { image } = await import("../src/schema/index");
 
-    const withDesc = image.parse({
+    const withInst = image.parse({
       id: "test-img",
       type: "image",
       src: "https://picsum.photos/seed/desc/640/480",
-      description: "A beautiful sunset",
+      instruction: "A beautiful sunset",
       actions: [{ start: 0, end: 3 }],
     });
-    expect(withDesc.description).toBe("A beautiful sunset");
+    expect(withInst.instruction).toBe("A beautiful sunset");
 
-    const withoutDesc = image.parse({
+    const withoutInst = image.parse({
       id: "test-img-2",
       type: "image",
       src: "https://picsum.photos/seed/no-desc/640/480",
       actions: [{ start: 0, end: 3 }],
     });
-    expect(withoutDesc.description).toBeUndefined();
+    expect(withoutInst.instruction).toBeUndefined();
   });
 
-  it("validates description on video/subtitle/component nodes via schema", async () => {
-    const { video, subtitle, component } = await import("../src/schema/index");
+  it("validates instruction on video/component nodes via schema", async () => {
+    const { video, component } = await import("../src/schema/index");
 
     const v = video.parse({
       id: "test-vid",
       type: "video",
       src: "test.mp4",
-      description: "label for video clip",
+      instruction: "label for video clip",
       actions: [{ start: 0, end: 5 }],
     });
-    expect(v.description).toBe("label for video clip");
-
-    const s = subtitle.parse({
-      id: "test-sub",
-      type: "subtitle",
-      src: "Hello",
-      description: "overlay text label",
-      actions: [{ start: 0, end: 3 }],
-    });
-    expect(s.description).toBe("overlay text label");
+    expect(v.instruction).toBe("label for video clip");
 
     const c = component.parse({
       id: "test-comp",
       type: "component",
       componentName: "StatCounter",
-      description: "stats component label",
+      instruction: "stats component label",
       props: { value: 100 },
       actions: [{ start: 0, end: 3 }],
     });
-    expect(c.description).toBe("stats component label");
+    expect(c.instruction).toBe("stats component label");
   });
 
-  it("preserves description through render pipeline", async () => {
+  it("preserves instruction through render pipeline", async () => {
     // Render a fixture where image has a description — the engine should not strip it
     const fixture = {
       root: {
@@ -759,7 +754,7 @@ describe("Description Field", () => {
             id: "desc-img",
             type: "image",
             src: "https://picsum.photos/seed/desc-render/640/480",
-            description: "Preserved description",
+            instruction: "Preserved instruction",
             fit: "cover",
             actions: [{ start: 0, end: 2 }],
           },
@@ -768,11 +763,11 @@ describe("Description Field", () => {
     };
 
     const { writeFileSync } = await import("node:fs");
-    const tmpFixture = outPath("_description.json");
+    const tmpFixture = outPath("_instruction.json");
     writeFileSync(tmpFixture, JSON.stringify(fixture));
 
     const output = renderFixture(tmpFixture, {
-      outputName: "description.mp4",
+      outputName: "instruction.mp4",
       timeout: RENDER_TIMEOUT,
     });
 

@@ -49,21 +49,6 @@
           "actions": [{ "start": 0.5, "end": 4.5 }]
         }
       ]
-    },
-    {
-      "id": "scene-3",
-      "type": "folder",
-      "isSeries": false,
-      "children": [
-        {
-          "id": "caption",
-          "type": "subtitle",
-          "src": "Subtitle overlay works",
-          "fontSize": 40,
-          "style": "color: #ffffff; font-weight: bold;",
-          "actions": [{ "start": 0.3, "end": 4.5 }]
-        }
-      ]
     }
   ]
 }

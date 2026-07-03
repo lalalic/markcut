@@ -249,7 +249,7 @@ export function IncludeLeaf({ stream }: { stream: IncludeStream }) {
               overflow: "hidden",
               position: "relative",
             }}
-            className={`include ${toClassName(stream.name ?? "")}`}
+            className={`include ${toClassName(stream.id ?? "")}`}
           >
             <FolderLeaf stream={stream as any} />
           </Container>

@@ -21,14 +21,6 @@
           "src": "https://picsum.photos/seed/effect-fade/640/480",
           "fit": "cover",
           "actions": [{ "start": 0, "end": 2 }]
-        },
-        {
-          "id": "title-fade",
-          "type": "subtitle",
-          "src": "Fade In Effect",
-          "fontSize": 48,
-          "style": "color: #ffffff; font-weight: bold;",
-          "actions": [{ "start": 0, "end": 2 }]
         }
       ],
       "actions": [{ "start": 0, "end": 2 }]
@@ -43,14 +35,6 @@
           "type": "image",
           "src": "https://picsum.photos/seed/effect-bounce/640/480",
           "fit": "cover",
-          "actions": [{ "start": 0, "end": 2 }]
-        },
-        {
-          "id": "title-bounce",
-          "type": "subtitle",
-          "src": "Bounce In",
-          "fontSize": 48,
-          "style": "color: #ffffff; font-weight: bold;",
           "actions": [{ "start": 0, "end": 2 }]
         }
       ],
@@ -71,14 +55,6 @@
           "type": "image",
           "src": "https://picsum.photos/seed/effect-custom/640/480",
           "fit": "cover",
-          "actions": [{ "start": 0, "end": 2 }]
-        },
-        {
-          "id": "title-custom",
-          "type": "subtitle",
-          "src": "Custom Keyframes",
-          "fontSize": 48,
-          "style": "color: #ffffff; font-weight: bold;",
           "actions": [{ "start": 0, "end": 2 }]
         }
       ],
