@@ -140,6 +140,35 @@ function parseWaypoints(raw: string): DescriptiveMapWaypoint[] {
   });
 }
 
+/**
+ * Parse a JSON-like props string into an object.
+ * Handles unquoted keys and single-quoted strings.
+ */
+function parseProps(raw: string): Record<string, unknown> {
+  const s = raw.trim();
+  if (!s.startsWith("{") || !s.endsWith("}")) return {};
+  try {
+    return JSON.parse(s);
+  } catch {
+    // Try lenient parse: add quotes around unquoted keys
+    const normalized = s.replace(
+      /([{,]\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:(?=\s*["{[]?)/g,
+      '$1"$2":',
+    );
+    try {
+      return JSON.parse(normalized);
+    } catch {
+      // Last resort: eval (safe since this is a CLI tool)
+      try {
+        const result = (0, eval)("(" + s + ")");
+        return typeof result === "object" && result !== null ? result : {};
+      } catch {
+        return {};
+      }
+    }
+  }
+}
+
 function inferTypeFromSrc(src: string): string | null {
   const m = /\.([a-zA-Z0-9]+)(?:[?#].*)?$/.exec(src);
   const ext = m?.[1]?.toLowerCase();
@@ -180,7 +209,8 @@ function parseKeyValueTokens(tokens: string[], mode: "strict" | "compatible"): R
       }
 
       if (key === "waypoints") val = parseWaypoints(String(val));
-      else if (key !== "theme" && key !== "instruction" && key !== "script" && key !== "props" && key !== "tts" && key !== "stt") {
+      else if (key === "props") val = parseProps(String(val));
+      else if (key !== "theme" && key !== "instruction" && key !== "script" && key !== "tts" && key !== "stt") {
         val = parseNumberMaybe(String(val));
       }
       out[key] = val;
@@ -316,11 +346,13 @@ function parseNodeLine(content: string, mode: "strict" | "compatible"): Descript
   // Effect can be container-like.
   if (type === "effect") {
     const attrs = parseKeyValueTokens(tokens, mode);
+    // Compat: first positional token is the animation name
+    const animation = attrs.animation as string | undefined ?? firstPositional;
     const node: DescriptiveEffect = {
       type: "effect",
       instruction: attrs.instruction as any,
       script: attrs.script as any,
-      animation: attrs.animation as any,
+      animation,
       animationTimingFunction: attrs.animationTimingFunction as any,
       animationIterationCount: attrs.animationIterationCount as any,
       customKeyframes: attrs.customKeyframes as any,
@@ -581,6 +613,12 @@ export function parseMarkdownDescriptive(markdown: string, options: MarkdownPars
 
         case "script":
           (root as any).script = String(v);
+          break;
+        case "instruction":
+          root.instruction = String(v);
+          break;
+        case "metadata":
+          root.metadata = String(v);
           break;
         case "tts":
           root.tts = v as any;

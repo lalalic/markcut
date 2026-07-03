@@ -43,11 +43,14 @@ Commands:
     --edit                             Auto-reload on file change
     --label                           Open label input overlay
     --port <num>                        Port for the player server (default: 3001)
+
+  verify <file.json|.md>                Parse and validate a descriptive file without rendering
+    --strict                           Use strict mode parsing (error on unknowns)
 `);
 }
 
 function parseArgs(argv) {
-  const args = { command: "", file: "", aspect: "16x9", output: "", forceNew: false, verbose: false, label: false, chat: false, port: 3001 };
+  const args = { command: "", file: "", aspect: "16x9", output: "", forceNew: false, verbose: false, label: false, strict: false, chat: false, port: 3001 };
   let i = 2;
   if (argv[i]) args.command = argv[i++];
   if (argv[i] && !argv[i].startsWith("--")) args.file = argv[i++];
@@ -55,6 +58,7 @@ function parseArgs(argv) {
     const flag = argv[i++];
     if (flag === "--aspect" && argv[i]) args.aspect = argv[i++];
     else if (flag === "--output" && argv[i]) args.output = argv[i++];
+    else if (flag === "--strict") args.strict = true;
     else if (flag === "--force-new") args.forceNew = true;
     else if (flag === "--verbose") args.verbose = true;
     else if (flag === "--label") args.label = true;
@@ -238,6 +242,75 @@ async function main() {
 
     console.log("\n✅ All renders complete.");
     process.exit(0);
+  }
+
+  if (args.command === "verify") {
+    if (!args.file) {
+      console.error("Error: provide a descriptive file (.json or .md)");
+      process.exit(1);
+    }
+
+    const filePath = resolve(args.file);
+    if (!existsSync(filePath)) {
+      console.error(`Error: file not found: ${filePath}`);
+      process.exit(1);
+    }
+
+    const raw = readFileSync(filePath, "utf-8");
+    const isMarkdown = filePath.endsWith(".md");
+    const mode = args.strict ? "strict" : "compatible";
+
+    console.log(`\n📄 File: ${filePath}`);
+    console.log(`📋 Format: ${isMarkdown ? "Markdown" : "JSON"}`);
+    console.log(`⚙️  Mode: ${mode}\n`);
+
+    const { compileDescriptiveRoot, parseMarkdownDescriptive, isDescriptiveRoot, resolveAndCompile } = await import("../player/pipeline.mjs");
+
+    let descriptive;
+    if (isMarkdown) {
+      descriptive = parseMarkdownDescriptive(raw, { mode });
+    } else {
+      const parsed = JSON.parse(raw);
+      const root = parsed.root ?? parsed;
+
+      // Accept any object that can compile as descriptive root
+      // If it fails, it might be a compiled stream tree
+      try {
+        // Quick sanity: compiled trees have `type: "root"` at top level
+        // while descriptive roots have `children` but no `type` or `type` is something else
+        if (root.type === "root" && root.isSeries !== undefined && !root.layout) {
+          console.error("✗ This looks like a compiled stream tree (has type:'root' and isSeries).");
+          console.error("  Use 'markcut render' to render a compiled tree.");
+          process.exit(1);
+        }
+        descriptive = root;
+        // Try compiling to validate it's a valid descriptive root
+        compileDescriptiveRoot(descriptive, { mode: "draft" });
+      } catch (compileErr) {
+        // If compile fails but it has standard stream tree fields, suggest render
+        if (root.type === "root" || root.type === "folder" || root.actions) {
+          console.error("✗ This looks like a compiled stream tree (use 'render' instead of 'verify').");
+        } else {
+          console.error(`✗ Parse error: ${compileErr.message}`);
+        }
+        process.exit(1);
+      }
+    }
+
+    console.log("── Descriptive Root ──────────────────────────────");
+    console.log(JSON.stringify(descriptive, null, 2));
+
+    try {
+      const compiled = compileDescriptiveRoot(descriptive, { mode: "draft" });
+      console.log("\n── Compiled Stream Tree ──────────────────────────");
+      console.log(JSON.stringify(compiled, null, 2));
+
+      console.log(`\n✅ Valid. Duration: ${compiled.durationInSeconds ?? "?"}s, Children: ${compiled.children?.length ?? 0}`);
+      process.exit(0);
+    } catch (err) {
+      console.error(`\n❌ Compilation error: ${err.message}`);
+      process.exit(1);
+    }
   }
 
   console.error(`Unknown command: ${args.command}`);

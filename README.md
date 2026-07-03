@@ -1,78 +1,103 @@
 # markcut — Markdown-to-Video Engine
 
-Render-only Remotion engine. Stream-typed timeline kernel.
+Write a storyboard in markdown, get a rendered video with TTS narration and subtitles.
 
-Two distribution targets:
+```bash
+# Render a storyboard to MP4
+npx markcut render storyboard.md --aspect 9x16
 
-| Bundle | Entry | Stream types | Target |
-| --- | --- | --- | --- |
-| **lite** | `src/lite.entry.tsx` | `root`, `folder`, `video`, `audio`, `image`, `subtitle`, `component` (host-registered only) | iOS WKWebView |
-| **full** | `src/full.entry.tsx` | lite + `effect`, `rhythm`, `map`, built-in components, themes, templates | Desktop rendering |
+# Preview with live edit (edit .md file, player auto-reloads)
+npx markcut preview storyboard.md --edit
 
-The engine is **render-only**:
+# Label clips in a stream tree
+npx markcut preview labels.json --label --port=3031
+```
 
-- No `prompts.*` fields on streams. Host pushes pure media URLs / cues / props.
-- No `compose/` providers. Host provides a `Container` component + a `components` registry via React context.
-- No `eval/`, `chatflow/`. Stream tree is a pure data structure validated by Zod.
-- Mutations are immer JSON Patches pushed from the host.
+## How it works
 
-## Layout
+```
+storyboard.md  ──[parse]──▶  DescriptiveRoot  ──[compile]──▶  Stream Tree  ──[Remotion]──▶  MP4
+                                  │                                  │
+                             resolveMediaDurations()             <Sequence>
+                             resolveScripts() → TTS              <Series>
+                             resolveSubtitles() → VTT            <Img>, <OffthreadVideo>
+```
+
+1. **Write** a storyboard in markdown (scenes with `## headings`, media with `-` bullets)
+2. **Parse** the markdown into a descriptive tree
+3. **Resolve** media durations (ffprobe), generate TTS narration (edge-tts), transcribe to VTT (whisper)
+4. **Compile** the descriptive tree into a stream tree (the low-level Remotion JSON)
+5. **Render** with Remotion — no React code needed
+
+## Features
+
+| Feature | Description |
+|---|---|
+| **Markdown input** | Write `## Scene` headings, `- image src:... dr:3` bullets, `script:"narration"` |
+| **JSON input** | Same descriptive schema, expressed as JSON |
+| **Compiled input** | Pre-compiled stream tree for direct Remotion rendering |
+| **TTS narration** | `script` field → edge-tts CLI → WAV audio. Configurable engine (mlx-audio, custom) |
+| **STT subtitles** | TTS audio → whisper → VTT → root subtitle overlay |
+| **Theme system** | Presets: cinematic, neon, minimal, corporate. `{base, ...overrides}` pattern |
+| **Live edit** | `--edit` watches the input file, re-runs pipeline, auto-reloads player |
+| **Label mode** | `--label` interactive player with per-scene label input, saves to labels.json |
+| **CLI** | `render`, `preview` commands for MP4 export and Remotion Studio |
+| **Programmatic** | `RemotionEngine` / `DescriptiveComposition` React components for embedding |
+
+## Example
+
+```md
+# video
+width:1080 height:1920 fps:30 layout:series theme:neon
+
+## Hook
+layout:parallel script:"Set the mood with a beautiful landscape"
+- image src:cover.jpg duration:3
+
+## Features
+layout:transitionSeries transition:fade transitionTime:0.4 script:"Show what we built"
+- component componentName:DeviceMockup duration:6 props:{src:"screenshot.png"}
+- component componentName:StatCounter duration:4 props:{value:100,suffix:"K",label:"Users"}
+```
+
+## Docs
+
+| Document | What it covers |
+|---|---|
+| [docs/json-descriptive.md](docs/json-descriptive.md) | Full JSON descriptive schema reference |
+| [docs/markdown-strict-descriptive.md](docs/markdown-strict-descriptive.md) | Markdown descriptive syntax reference |
+| [docs/label-mode.md](docs/label-mode.md) | Label mode player and workflow |
+| [docs/edit-mode.md](docs/edit-mode.md) | Live edit mode with SSE reload |
+| [docs/themes.md](docs/themes.md) | Theme system presets and customization |
+
+## Architecture
 
 ```
 src/
-  schema/        Zod schemas for streams
-  types/         React renderers (one per stream type)
-  context/       Compose + Audio React contexts
-  utils/         Pure helpers (duration math, css<->js, vtt parser, hash, walkDown/Up)
-  lite.entry.tsx Lite Remotion <Composition>
-  full.entry.tsx Full Remotion <Composition>
-  sample.json    Sample stream tree for headless render smoke test
-  remotion.config.ts Remotion Root component
+├── entry.tsx              ← Library entry: RemotionEngine + DescriptiveComposition
+├── index.ts               ← Remotion registerRoot (for studio/render CLI)
+├── Root.tsx               ← Remotion Composition wrapper
+├── schema/                ← Zod schemas for all stream types
+├── types/                 ← React renderers (Folder, Video, Image, Audio, etc.)
+├── descriptive/           ← Compiler, markdown parser, resolve pipeline
+├── themes/                ← Theme presets + ThemeProvider
+├── render/
+│   ├── cli.mjs            ← CLI entry point
+│   └── tts.ts             ← TTS via CLI template + variable substitution
+├── player/
+│   ├── server.mjs         ← --edit player server
+│   ├── label-server.mjs   ← --label player server
+│   ├── pipeline.ts        ← Pipeline entry (bundled to pipeline.mjs)
+│   └── browser.tsx        ← Browser player (bundled with esbuild)
+├── utils/                 ← Duration calc, VTT parser, helpers
+└── tests/                 ← Vitest integration tests
 ```
 
-## Smoke test
+## Scripts
 
 ```bash
-cd markcut
-pnpm install
-pnpm render          # renders sample.json -> out/preview.mp4
+npm run render      # render a JSON stream tree to MP4
+npm run preview     # open Remotion Studio
+npm run typecheck   # TypeScript type check
+npm test            # run unit + integration tests
 ```
-
-# descriptive
-```
-# opening
-this is a opening description
-- a.jpg 5 
-- a.mov 5-7
-- "hello"
-
-# feature
-## overlay
-- a.mov 5-7
-  - a.jpg 
-
-- "hello"
-
-
-```
-
-## DescriptiveComposition
-
-`DescriptiveComposition` is a high-level sugar layer that compiles a descriptive tree into the current legacy stream tree (`root`/`folder` + `actions`).
-
-Key behavior:
-
-- Supports three container modes: `series`, `parallel`, `transitionSeries`
-- Auto-constructs legacy `actions` from concise keys like `duration`, `startFrom`, `endAt`
-- Keeps `subtitle`, `component` (dynamic), and `rhythm` support in the compiled output
-- Enforces `start` only in `parallel` containers (strict mode)
-
-API exports:
-
-- `DescriptiveComposition` from `markcut` (lite entry)
-- `compileDescriptiveRoot` from `markcut/descriptive`
-- `parseMarkdownDescriptive` from `markcut/descriptive-markdown`
-
-Markdown DSL spec for agent-friendly descriptive authoring:
-
-- [docs/markdown-descriptive.md](docs/markdown-descriptive.md)

@@ -37,4 +37,31 @@ describe("resolveMediaDurations", () => {
     expect(result.children[0]!.endAt).toBe(5);
     expect(result.children[0]!.duration).toBeUndefined();
   });
+
+  it("handles skip regex", async () => {
+    const root: DescriptiveRoot = {
+      layout: "series",
+      children: [
+        { type: "video", src: "nonexistent.mp4" },
+        { type: "image", src: "photo.jpg" },
+      ],
+    };
+    const result = await resolveMediaDurations(root, { skip: /\.jpg$/ });
+    // .jpg skipped, .mp4 tried but file doesn't exist so duration stays undefined
+    expect(result.children[0]!.duration).toBeUndefined();
+    expect(result.children[1]!.duration).toBeUndefined();
+  });
+
+  it("does not mutate original tree", async () => {
+    const root: DescriptiveRoot = {
+      layout: "series",
+      children: [
+        { type: "video", src: "nonexistent.mp4", duration: 5 },
+      ],
+    };
+    const originalChildren = root.children[0];
+    const result = await resolveMediaDurations(root);
+    expect(result).not.toBe(root);
+    expect(root.children[0]).toBe(originalChildren);
+  });
 });

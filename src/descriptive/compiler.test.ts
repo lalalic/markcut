@@ -371,4 +371,201 @@ describe("compileDescriptiveRoot", () => {
     expect(sceneLayoutFolder.transition).toBe("fade");
     expect(sceneLayoutFolder.durationInSeconds).toBeCloseTo(3.5);
   });
+
+  it("compiles audio node with volume and foreground", () => {
+    const compiled = compileDescriptiveRoot({
+      layout: "parallel",
+      children: [
+        { id: "bgm", type: "audio", src: "bg.mp3", duration: 5, volume: 0.3, foreground: false },
+        { id: "sfx", type: "audio", src: "sfx.wav", duration: 1, volume: 1, start: 2 },
+      ],
+    });
+
+    const bgm = compiled.children.find((c: any) => c.id === "bgm") as any;
+    expect(bgm.type).toBe("audio");
+    expect(bgm.volume).toBe(0.3);
+    expect(bgm.foreground).toBe(false);
+    expect(bgm.actions[0].end).toBe(5);
+
+    const sfx = compiled.children.find((c: any) => c.id === "sfx") as any;
+    expect(sfx.actions[0].start).toBe(2);
+    expect(sfx.actions[0].end).toBe(3);
+  });
+
+  it("compiles component node with props", () => {
+    const compiled = compileDescriptiveRoot({
+      layout: "series",
+      children: [
+        {
+          id: "headline",
+          type: "component",
+          componentName: "AnimatedHeadline",
+          duration: 3,
+          props: { text: "Hello", gradient: true },
+        },
+      ],
+    });
+
+    const c = compiled.children[0] as any;
+    expect(c.type).toBe("component");
+    expect(c.componentName).toBe("AnimatedHeadline");
+    expect(c.props).toEqual({ text: "Hello", gradient: true });
+    expect(c.actions[0].end).toBe(3);
+  });
+
+  it("compiles rhythm without children as audio leaf", () => {
+    const compiled = compileDescriptiveRoot({
+      layout: "series",
+      children: [
+        { id: "beat", type: "rhythm", src: "beat.mp3", spots: [0.5, 2.5] },
+      ],
+    }, { mode: "draft" });
+
+    const r = compiled.children[0] as any;
+    expect(r.type).toBe("rhythm");
+    expect(r.src).toBe("beat.mp3");
+    expect(r.children).toEqual([]);
+    // rhythm duration = last spot + avg gap = 2.5 + 2.0 = 4.5
+    expect(r.actions[0].end).toBeCloseTo(4.5);
+  });
+
+  it("compiles include with src as leaf", () => {
+    const compiled = compileDescriptiveRoot({
+      layout: "series",
+      children: [
+        { id: "inc", type: "include", src: "./child.json", duration: 3 },
+      ],
+    });
+
+    const inc = compiled.children[0] as any;
+    expect(inc.type).toBe("include");
+    expect(inc.src).toBe("./child.json");
+    expect(inc.actions[0].end).toBe(3);
+  });
+
+  it("compiles effect wrapping children", () => {
+    const compiled = compileDescriptiveRoot({
+      layout: "series",
+      children: [
+        {
+          id: "fx-wrap",
+          type: "effect",
+          animation: "fadeIn",
+          duration: 3,
+          children: [
+            { id: "inner", type: "image", src: "inner.jpg", duration: 2 },
+          ],
+        },
+      ],
+    });
+
+    const fx = compiled.children[0] as any;
+    expect(fx.type).toBe("effect");
+    expect(fx.animation).toBe("fadeIn");
+    expect(fx.children).toHaveLength(1);
+    expect(fx.children[0].type).toBe("image");
+  });
+
+  it("uses draft mode defaults when duration is missing", () => {
+    const compiled = compileDescriptiveRoot({
+      layout: "series",
+      children: [
+        { id: "no-dr", type: "image", src: "x.jpg" },
+        { id: "no-dr-vid", type: "video", src: "x.mp4" },
+      ],
+    }, { mode: "draft" });
+
+    const img = compiled.children[0] as any;
+    expect(img.actions[0].end).toBe(3); // image default is 3s
+
+    const vid = compiled.children[1] as any;
+    expect(vid.actions[0].end).toBe(3); // video default is 3s
+  });
+
+  it("throws in strict mode when duration is missing", () => {
+    expect(() =>
+      compileDescriptiveRoot({
+        layout: "series",
+        children: [
+          { id: "no-dr", type: "image", src: "x.jpg" },
+        ],
+      }, { mode: "strict" }),
+    ).toThrow(/cannot resolve duration/i);
+  });
+
+  it("preserves root-level theme, instruction, and stylesheet", () => {
+    const compiled = compileDescriptiveRoot({
+      theme: "cinematic",
+      instruction: "A stylish promo",
+      stylesheet: "body { font-family: sans-serif; }",
+      children: [
+        { id: "a", type: "image", src: "a.jpg", duration: 2 },
+      ],
+    });
+
+    expect((compiled as any).theme).toBe("cinematic");
+    expect((compiled as any).instruction).toBe("A stylish promo");
+    expect(compiled.stylesheet).toBe("body { font-family: sans-serif; }");
+  });
+
+  it("compiles map with waypoints", () => {
+    const compiled = compileDescriptiveRoot({
+      layout: "series",
+      children: [
+        {
+          id: "route",
+          type: "map",
+          duration: 5,
+          waypoints: [
+            { lat: 48.8566, lng: 2.3522, label: "Paris" },
+            { lat: 51.5074, lng: -0.1278, label: "London" },
+          ],
+          travelMode: "DRIVING",
+        },
+      ],
+    });
+
+    const m = compiled.children[0] as any;
+    expect(m.type).toBe("map");
+    expect(m.waypoints).toHaveLength(2);
+    expect(m.travelMode).toBe("DRIVING");
+    expect(m.actions[0].end).toBe(5);
+  });
+
+  it("filters invisible children", () => {
+    const compiled = compileDescriptiveRoot({
+      layout: "series",
+      children: [
+        { id: "visible", type: "image", src: "a.jpg", duration: 2 },
+        { id: "hidden", type: "image", src: "b.jpg", duration: 2, visible: false },
+      ],
+    });
+
+    expect(compiled.children).toHaveLength(1);
+    expect(compiled.children[0].id).toBe("visible");
+  });
+
+  it("compiles empty children array", () => {
+    const compiled = compileDescriptiveRoot({
+      layout: "series",
+      children: [],
+    });
+
+    expect(compiled.children).toHaveLength(0);
+    expect(compiled.durationInSeconds).toBe(0);
+  });
+
+  it("generates unique ids for nodes without id", () => {
+    const compiled = compileDescriptiveRoot({
+      children: [
+        { type: "image", src: "a.jpg", duration: 1 },
+        { type: "image", src: "b.jpg", duration: 1 },
+      ],
+    });
+
+    const [a, b] = compiled.children as any[];
+    expect(a.id).toBeTruthy();
+    expect(b.id).toBeTruthy();
+    expect(a.id).not.toBe(b.id);
+  });
 });

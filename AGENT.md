@@ -1,82 +1,91 @@
-# Remotion Engine — AGENT.md
+# markcut — AGENT.md
 
-> Render-only Remotion engine. Compose and render videos from JSON stream trees.
-> Stream-typed timeline kernel with 12 node types, 20 built-in React components,
-> 4 theme presets, 15 templates, and a CLI/player server.
+> Markdown-to-video engine. Describe scenes in markdown, get a rendered video with TTS narration.
 
 ## Quick Start
 
 ```bash
-npm install
-npm run render          # renders sample.json → out/preview.mp4
-npm run studio          # open Remotion Studio
-npm test                # run all tests
-npm run test:integration  # run render integration tests only
+npm run render storyboard.md      # render markdown → MP4 (9x16 default)
+npm run preview storyboard.md --edit  # live preview with auto-reload
+npm test                           # unit + integration tests
+npm run typecheck                  # TypeScript type check
 ```
 
-## Project Structure
+## Input formats
+
+| Format | CLI | Description |
+|---|---|---|
+| Markdown | `markcut render storyboard.md` | `## Scene` headings, `- image src:...` bullets, `script:"narration"` |
+| Descriptive JSON | `markcut render video.json` | Same schema as markdown, JSON syntax |
+| Compiled JSON | `markcut render tree.json` | Pre-compiled stream tree (no pipeline needed) |
+
+See [docs/markdown-strict-descriptive.md](docs/markdown-strict-descriptive.md) for the complete markdown syntax reference.
+
+## Key concepts
+
+- **Scene** — narrative unit with `name`, `script` (TTS), `instruction` (visual intent), `children`
+- **Layout** — `parallel` (simultaneous), `series` (sequential), `transitionSeries` (sequential with transitions)
+- **Script → TTS → STT** — `script` field generates edge-tts audio, whisper transcribes to VTT subtitles
+- **Theme** — preset colors/fonts/effects: `cinematic`, `neon`, `minimal`, `corporate`
+- **TTL config** — root-level `tts.cli`, `tts.voice`, `tts.rate` with per-scene `tts` overrides
+- **Subtitle** — root-level VTT overlay from merged per-clip STT. Not a tree node.
+
+## Stream types
+
+| Type | Purpose |
+|---|---|
+| `root` | Canvas config: width, height, fps, theme, subtitle, stylesheet |
+| `scene` | Storyboard container: name, layout, script, children |
+| `folder` | Internal container (series/parallel) |
+| `image` | Still photo with fit mode |
+| `video` | Video clip with startFrom/endAt trimming, playbackRate |
+| `audio` | Soundtrack/SFX with foreground ducking, loop |
+| `component` | External React component by componentName + props |
+| `effect` | CSS keyframe animation wrapper (fadeIn, zoomIn, bounceIn, etc.) |
+| `include` | Embed external video JSON (file, URL, or data URI) |
+
+## CLI
+
+```bash
+markcut render <file.json|.md> [--aspect 16x9|9x16|1x1|all] [--output path]
+markcut preview <file.json|.md> [--edit] [--label] [--port 3001]
+```
+
+## Project structure
 
 ```
-markcut/
-├── src/
-│   ├── schema/index.ts      — Zod schemas for all 12 stream types
-│   ├── types/               — React renderers (one per stream type)
-│   │   ├── Folder.tsx       — Series/Parallel/TransitionSeries container
-│   │   ├── Video.tsx        — OffthreadVideo with startFrom/endAt trimming
-│   │   ├── Image.tsx        — Still images with fit modes
-│   │   ├── Audio.tsx        — Audio playback (background loops, foreground ducking)
-│   │   ├── Subtitle.tsx     — Text overlay (inline, VTT, karaoke cues[])
-│   │   ├── Component.tsx    — Registered/built-in components + remote ESM
-│   │   ├── Effect.tsx       — CSS keyframe animation wrapper
-│   │   ├── Include.tsx      — Embed external video JSON (data URI/file/URL)
-│   │   ├── Map.tsx          — Canvas route visualization
-│   │   ├── Rhythm.tsx       — Beat-synced audio + timed children
-│   │   └── Scene.tsx        — Scene alias (pass-through to FolderLeaf)
-│   ├── components/          — 20 built-in React components
-│   │   ├── text/            — AnimatedHeadline, TypewriterText, GlitchReveal, TextCard, CalloutBox, EndTag
-│   │   ├── media/           — DeviceMockup, CursorFlyover, ComparisonSlider
-│   │   ├── data/            — StatCounter, ProgressBar, BarChart, LineChart, PieChart, ComparisonCard
-│   │   ├── atmosphere/      — GradientBackground, ParticleField, LightLeak
-│   │   └── layout/          — SplitScreen, SpotlightReveal
-│   ├── themes/              — Theme system (cinematic/minimal/neon/corporate)
-│   │   ├── schema.ts        — Zod theme schema (colors, fonts, timing, effects)
-│   │   ├── presets.ts       — 4 theme presets
-│   │   └── index.tsx        — ThemeContext + resolveTheme() + ThemeProvider
-│   ├── templates/           — 15 pre-built video templates with slot system
-│   │   ├── schema.ts        — Template slot schema + resolver
-│   │   ├── marketing/       — product-hero, feature-showcase, before-after, social-clip, cinematic-intro
-│   │   ├── demo/            — demo-walkthrough
-│   │   ├── social/          — announcement, glow-up, quote-card, roast-list, stat-reveal, top5-countdown, year-recap, beat-drop
-│   │   └── presentation/    — journey-map
-│   ├── context/index.tsx    — ComposeContext (Container + components registry) + AudioContext
-│   ├── utils/index.ts       — Pure helpers: getDurationInSeconds, cssJS, toPlaybackRate, walkDown, VTT parser
-│   ├── render/
-│   │   ├── cli.mjs          — CLI: render, templates, preview commands
-│   │   ├── pipeline.ts      — ASPECTS constant + adaptAspect()
-│   │   ├── tts.ts           — edge-tts wrapper for TTS narration
-│   │   └── sfx.ts           — Sound effect presets
-│   ├── player/              — Preview/label/edit server
-│   │   ├── server.mjs       — Express server for Remotion Player
-│   │   ├── browser.tsx      — Browser-based player entry
-│   │   └── label-server.mjs — Label editing server
-│   ├── lite.entry.tsx       — Lite bundle entry (core renderer)
-│   ├── full.entry.tsx       — Full bundle (lite + components + themes + templates)
-│   ├── player.entry.tsx     — Player bundle for app embedding
-│   └── Root.tsx             — Remotion Composition root (parses props, computes duration)
-├── tests/
-│   ├── render.test.ts       — 30 integration tests
-│   ├── utils.ts             — Test helpers: renderFixture, extractFrame, isFrameNonBlank, STT
-│   ├── vitest.config.ts     — Long timeouts, non-parallel, verbose reporter
-│   └── fixtures/            — 12 JSON test fixtures
-├── public/                  — Static assets (video clips, audio, bgm)
-├── docs/                    — Documentation
-│   ├── dynamic-components.md
-│   ├── edit-mode.md
-│   ├── templates.md
-│   └── themes.md
-├── SKILL.md                 — Agent skill: 3-level workflow (Label → Storyboard → Assemble)
-├── DESIGN.md                — Full architecture design doc
-└── remotion.config.ts       — Remotion config
+src/
+├── entry.tsx              → RemotionEngine + DescriptiveComposition
+├── descriptive/           → Compiler, markdown parser, resolve pipeline
+├── types/                 → React renderers (one per stream type)
+├── schema/                → Zod stream tree schemas
+├── themes/                → Theme presets + ThemeProvider
+├── render/cli.mjs         → CLI entry
+├── render/tts.ts          → TTS via CLI template + variable substitution
+├── player/pipeline.mjs    → Bundled pipeline (server imports this)
+├── player/server.mjs      → --edit server
+├── player/label-server.mjs→ --label server
+└── tests/                 → Vitest integration tests
+```
+
+## External component contract
+
+Register components at render time:
+
+```tsx
+<RemotionEngine
+  root={descriptiveJson}
+  compose={{ components: { AnimatedHeadline, StatCounter } }}
+/>
+```
+
+In descriptive markdown:
+
+```md
+- component componentName:StatCounter duration:3 props:{value:42}
+```
+
+Components receive props as defined in the descriptive JSON. No eval, no JSX parsing — just `React.createElement(registry[name], props)`.
 ```
 
 ## Stream Tree Architecture
