@@ -8,11 +8,69 @@
  * has complete duration and renderable children.
  */
 import { execSync } from "node:child_process";
-import { existsSync, mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, statSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { join, dirname, resolve as resolvePath } from "node:path";
 import { generateTTS } from "../render/tts";
 import { walkDown } from "../utils";
 import type { DescriptiveNode, DescriptiveRoot } from "./compiler";
+
+// ── Content-hash cache for expensive operations (TTS, STT) ────────────────
+// Skips regeneration when input hasn't changed. Cache key is a hash of all
+// inputs that affect the output (script text + voice + rate + refAudio + cli).
+
+interface CacheEntry {
+  hash: string;
+  output: string;
+}
+
+function computeCacheKey(parts: Record<string, unknown>): string {
+  const json = JSON.stringify(parts);
+  return createHash("sha1").update(json).digest("hex").slice(0, 12);
+}
+
+function readCacheManifest(outputDir: string): Record<string, CacheEntry> {
+  const manifestPath = join(outputDir, ".cache.json");
+  try {
+    return JSON.parse(readFileSync(manifestPath, "utf-8"));
+  } catch {
+    return {};
+  }
+}
+
+function writeCacheManifest(outputDir: string, manifest: Record<string, CacheEntry>): void {
+  const manifestPath = join(outputDir, ".cache.json");
+  try {
+    writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), "utf-8");
+  } catch {
+    // best-effort
+  }
+}
+
+/**
+ * Returns cached output path if inputs unchanged AND output file still exists.
+ * Otherwise returns null (caller should regenerate).
+ */
+function checkCache(
+  manifest: Record<string, CacheEntry>,
+  key: string,
+  cacheKey: string,
+): string | null {
+  const entry = manifest[key];
+  if (entry?.hash === cacheKey && entry.output && existsSync(entry.output)) {
+    return entry.output;
+  }
+  return null;
+}
+
+function updateCache(
+  manifest: Record<string, CacheEntry>,
+  key: string,
+  cacheKey: string,
+  output: string,
+): void {
+  manifest[key] = { hash: cacheKey, output };
+}
 
 // ── Media Duration ─────────────────────────────────────────────────────────
 
@@ -149,6 +207,8 @@ export async function resolveScripts(
 ): Promise<DescriptiveRoot> {
   const clone: DescriptiveRoot = JSON.parse(JSON.stringify(root));
   mkdirSync(options.outputDir, { recursive: true });
+  const cache = readCacheManifest(options.outputDir);
+  let cacheDirty = false;
 
   // First pass: collect all scenes that have script
   const allScenes: Array<{ node: any; id: string }> = [];
@@ -186,19 +246,41 @@ export async function resolveScripts(
     const ttsRefAudio = sceneTts.refAudio ?? rootTts.refAudio ?? options.refAudio;
     const ttsOpts = { ...(rootTts.options ?? {}), ...(sceneTts.options ?? {}), ...(options.ttsOptions ?? {}) };
 
-    const generated = generateTTS(node.script, audioPath, {
+    // Cache key includes everything that affects TTS output
+    const cacheKey = computeCacheKey({
+      script: node.script,
       cli: ttsCli,
       voice: ttsVoice,
       rate: ttsRate,
       refAudio: ttsRefAudio,
-      options: Object.keys(ttsOpts).length > 0 ? ttsOpts : undefined,
+      options: ttsOpts,
     });
+
+    // Check cache — skip TTS if script + config unchanged AND audio file exists
+    const cached = checkCache(cache, `tts:${safeId}`, cacheKey);
+    let generated: string;
+    if (cached) {
+      generated = cached;
+    } else {
+      generated = generateTTS(node.script, audioPath, {
+        cli: ttsCli,
+        voice: ttsVoice,
+        rate: ttsRate,
+        refAudio: ttsRefAudio,
+        options: Object.keys(ttsOpts).length > 0 ? ttsOpts : undefined,
+      });
+      if (generated) {
+        updateCache(cache, `tts:${safeId}`, cacheKey, generated);
+        cacheDirty = true;
+      }
+    }
     if (!generated) continue;
 
     if (!node.children) node.children = [];
     node.children.push({ type: "audio", src: generated, volume: 1 });
   }
 
+  if (cacheDirty) writeCacheManifest(options.outputDir, cache);
   return clone;
 }
 
@@ -224,6 +306,8 @@ export async function resolveSubtitles(
   const sttLanguage = rootStt.language ?? options.sttLanguage;
 
   mkdirSync(options.outputDir, { recursive: true });
+  const cache = readCacheManifest(options.outputDir);
+  let cacheDirty = false;
 
   // Collect { audioSrc, absoluteOffset } from the compiled tree
   const clips: Array<{ audioSrc: string; offset: number }> = [];
@@ -244,9 +328,27 @@ export async function resolveSubtitles(
   let cueIndex = 1;
 
   for (const { audioSrc, offset } of clips) {
-    const vttPath = transcribeToVTT(audioSrc, options.outputDir, whisperBin, sttModel, sttLanguage);
-    if (!vttPath) continue;
-    const vttText = (await import("node:fs")).readFileSync(vttPath, "utf-8");
+    // Cache key: audio file content hash + STT config
+    const audioHash = existsSync(audioSrc)
+      ? createHash("sha1").update(readFileSync(audioSrc)).digest("hex").slice(0, 12)
+      : audioSrc;
+    const sttCacheKey = computeCacheKey({ audioHash, model: sttModel, language: sttLanguage });
+    const sttKey = `stt:${audioSrc.split("/").pop()}`;
+
+    let vttPath: string | null = null;
+    const cachedVtt = checkCache(cache, sttKey, sttCacheKey);
+    if (cachedVtt) {
+      vttPath = cachedVtt;
+    } else {
+      vttPath = transcribeToVTT(audioSrc, options.outputDir, whisperBin, sttModel, sttLanguage);
+      if (vttPath) {
+        updateCache(cache, sttKey, sttCacheKey, vttPath);
+        cacheDirty = true;
+      }
+    }
+
+    if (!vttPath || !existsSync(vttPath)) continue;
+    const vttText = readFileSync(vttPath, "utf-8");
     const blocks = vttText.replace(/\r\n/g, "\n").split(/\n\n+/);
     for (const block of blocks) {
       const lines = block.split("\n").filter(Boolean);
@@ -274,10 +376,11 @@ export async function resolveSubtitles(
 
   if (cueIndex > 1) {
     const mergedPath = join(options.outputDir, "subtitles.vtt");
-    (await import("node:fs")).writeFileSync(mergedPath, mergedLines.join("\n"), "utf-8");
+    writeFileSync(mergedPath, mergedLines.join("\n"), "utf-8");
     clone.subtitle = { src: mergedPath };
   }
 
+  if (cacheDirty) writeCacheManifest(options.outputDir, cache);
   return clone;
 }
 

@@ -14,14 +14,16 @@ import { createServer } from "node:http";
 import { readFileSync, writeFileSync, watchFile, existsSync, statSync, createReadStream } from "node:fs";
 import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { isDescriptiveRoot, resolveAndCompile, resolveAndCompileMarkdown } from "./pipeline.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, "..", "..");
 const PORT = parseInt(process.argv.find(a => a.startsWith("--port="))?.split("=")[1] || process.argv[process.argv.indexOf("--port") + 1] || "3001", 10);
 
-// Find video.json path
-const jsonArg = process.argv.find(a => a.endsWith(".json") && !a.startsWith("--"));
-const VIDEO_JSON = jsonArg ? resolve(jsonArg) : join(ROOT, "video.json");
+// Find video input path (.json or .md)
+const inputArg = process.argv.find(a => (a.endsWith(".json") || a.endsWith(".md")) && !a.startsWith("--"));
+const VIDEO_JSON = inputArg ? resolve(inputArg) : join(ROOT, "video.json");
+const IS_MARKDOWN = VIDEO_JSON.endsWith(".md");
 const MODE_LABEL = process.argv.includes("--label");
 const MODE_EDIT = process.argv.includes("--edit");
 
@@ -35,110 +37,154 @@ let labels = [];
 // ─── Edit history for context ─────────────────────────────────────────────
 let editHistory = [];
 
-// ─── Parse video.json for scene info ─────────────────────────────────────
-// Supports two JSON formats:
-//   1. Stream tree: root → scene folders (type:"folder") → media children
-//   2. scenes folder: root → "scenes" folder → scene objects with media src
-let scenes = [];
-let totalDuration = 0;
-try {
-  const raw = readFileSync(VIDEO_JSON, "utf-8");
-  const parsed = JSON.parse(raw);
-  const root = parsed.root || parsed;
+// ─── TTS/STT output directory (relative to video.json) ────────────────────
+const TTS_OUTPUT_DIR = join(dirname(VIDEO_JSON), "assets", "tts");
+const WHISPER_BIN = process.env.WHISPER_BIN || "/Users/lir/Library/Python/3.9/bin/whisper";
 
-  // Try format 1: scenes are direct children of root (stream tree)
-  // Root children that are folders with their own children are scenes
+// ─── Extract scene info from compiled root ───────────────────────────────
+function extractScenes(root) {
+  const scenes = [];
+  let totalDuration = 0;
+
+  // Format 1: scenes as direct children of root
   if (root.children?.length && !root.children.find(c => c.name === "scenes" || c.id === "scenes")) {
     let offset = 0;
-    scenes = root.children
-      .filter(c => c.type === "folder" || c.type === "scene" || c.children?.length)
-      .filter(c => !c.isBackground)
-      .map(s => {
-        // Find first leaf child with a src (image/video) for playback
-        const leaf = (s.children || []).find(c => c.src && (c.type === "image" || c.type === "video"));
-        const action = leaf?.actions?.[0] || s.actions?.[0] || {};
-        const dur = (action.end || 5) - (action.start || 0);
-        const src = leaf?.src || "";
-        const mediaType = leaf?.type || "unknown";
-        const scene = {
-          name: s.name || s.id || "scene",
-          start: offset,
-          end: offset + dur,
-          duration: dur,
-          src,
-          mediaType,
-        };
-        offset += dur;
-        return scene;
+    for (const s of root.children) {
+      if (!(s.type === "folder" || s.type === "scene" || s.children?.length)) continue;
+      if (s.isBackground) continue;
+      const leaf = (s.children || []).find(c => c.src && (c.type === "image" || c.type === "video"));
+      const action = leaf?.actions?.[0] || s.actions?.[0] || {};
+      const dur = (action.end || 5) - (action.start || 0);
+      scenes.push({
+        name: s.name || s.id || "scene",
+        start: offset,
+        end: offset + dur,
+        duration: dur,
+        src: leaf?.src || "",
+        mediaType: leaf?.type || "unknown",
       });
+      offset += dur;
+    }
     totalDuration = offset;
   }
 
-  // Try format 2: scenes wrapped in a "scenes" folder
+  // Format 2: scenes wrapped in a "scenes" folder
   const scenesFolder = root.children?.find(c => c.name === "scenes" || c.id === "scenes");
   if (scenesFolder?.children && scenes.length === 0) {
     let offset = 0;
-    scenes = scenesFolder.children.map(s => {
+    for (const s of scenesFolder.children) {
       const child = s.children?.[0] || {};
       const action = child?.actions?.[0];
       const dur = action ? (action.end - action.start) : 5;
-      const src = child.src || "";
-      const mediaType = child.type || "unknown";
-      const scene = {
+      scenes.push({
         name: s.name,
         start: offset,
         end: offset + dur,
         duration: dur,
-        src,
-        mediaType,
-      };
+        src: child.src || "",
+        mediaType: child.type || "unknown",
+      });
       offset += dur;
-      return scene;
-    });
+    }
     totalDuration = offset;
   }
-} catch (e) {
-  console.error("Warning: could not parse video.json for scene info:", e.message);
+
+  return { scenes, totalDuration };
 }
+
+// ─── Compiled root cache (avoids re-running pipeline on every fetch) ─────
+let compiledRootCache = null;
+let compiledRootIsDescriptive = false;
+let pipelineRunning = false;
+
+/**
+ * Read the input file (.json or .md), detect format, run pipeline,
+ * extract scenes. Caches the result until the file changes.
+ */
+async function loadCompiledRoot() {
+  if (compiledRootCache) return compiledRootCache;
+
+  const raw = readFileSync(VIDEO_JSON, "utf-8");
+
+  if (IS_MARKDOWN) {
+    // Markdown → descriptive root → compiled stream tree
+    console.log("  📝 Detected markdown input — parsing + running pipeline...");
+    const compiled = await resolveAndCompileMarkdown(raw, {
+      baseDir: dirname(VIDEO_JSON),
+      scriptOutputDir: TTS_OUTPUT_DIR,
+      whisperBin: existsSync(WHISPER_BIN) ? WHISPER_BIN : undefined,
+      mode: "draft",
+    });
+    compiledRootIsDescriptive = true;
+    compiledRootCache = compiled;
+    return compiled;
+  }
+
+  const parsed = JSON.parse(raw);
+  const root = parsed.root || parsed;
+
+  if (isDescriptiveRoot(root)) {
+    compiledRootIsDescriptive = true;
+    console.log("  🔍 Detected descriptive JSON — running resolve + compile pipeline...");
+    const compiled = await resolveAndCompile(root, {
+      baseDir: dirname(VIDEO_JSON),
+      scriptOutputDir: TTS_OUTPUT_DIR,
+      whisperBin: existsSync(WHISPER_BIN) ? WHISPER_BIN : undefined,
+      mode: "draft",
+    });
+    compiledRootCache = compiled;
+  } else {
+    compiledRootIsDescriptive = false;
+    compiledRootCache = root;
+  }
+
+  return compiledRootCache;
+}
+
+// ─── Initial scene info ──────────────────────────────────────────────────
+let scenes = [];
+let totalDuration = 0;
+
+async function initScenes() {
+  try {
+    const root = await loadCompiledRoot();
+    const extracted = extractScenes(root);
+    scenes = extracted.scenes;
+    totalDuration = extracted.totalDuration;
+  } catch (e) {
+    console.error("Warning: could not parse video.json for scene info:", e.message);
+  }
+}
+
+// Fire and forget — scenes get populated asynchronously
+initScenes();
 
 // ─── Watch file for changes (--edit mode) ───────────────────────────────
 if (MODE_EDIT) {
-  watchFile(VIDEO_JSON, { interval: 500 }, (curr, prev) => {
+  watchFile(VIDEO_JSON, { interval: 500 }, async (curr, prev) => {
     if (curr.mtimeMs === prev.mtimeMs) return;
-    console.log(`  📁 ${VIDEO_JSON} changed, notifying clients...`);
-    // Re-parse scenes
+    if (pipelineRunning) return; // skip overlapping runs
+    pipelineRunning = true;
+    console.log(`  📁 ${VIDEO_JSON} changed, re-running pipeline...`);
+
     try {
-      const raw = readFileSync(VIDEO_JSON, "utf-8");
-      const parsed = JSON.parse(raw);
-      const root = parsed.root || parsed;
-      scenes = [];
-      totalDuration = 0;
-      if (root.children?.length && !root.children.find(c => c.name === "scenes" || c.id === "scenes")) {
-        let offset = 0;
-        scenes = root.children
-          .filter(c => c.type === "folder" || c.type === "scene" || c.children?.length)
-          .filter(c => !c.isBackground)
-          .map(s => {
-            const leaf = (s.children || []).find(c => c.src && (c.type === "image" || c.type === "video"));
-            const action = leaf?.actions?.[0] || s.actions?.[0] || {};
-            const dur = (action.end || 5) - (action.start || 0);
-            const src = leaf?.src || "";
-            const mediaType = leaf?.type || "unknown";
-            const scene = { name: s.name || s.id || "scene", start: offset, end: offset + dur, duration: dur, src, mediaType };
-            offset += dur;
-            return scene;
-          });
-        totalDuration = offset;
-      }
+      // Invalidate cache so loadCompiledRoot re-reads the file
+      compiledRootCache = null;
+      const root = await loadCompiledRoot();
+      const extracted = extractScenes(root);
+      scenes = extracted.scenes;
+      totalDuration = extracted.totalDuration;
+
       for (const client of sseClients) {
         client.write("data: " + JSON.stringify({ type: "reload", scenes, totalDuration }) + "\n\n");
       }
     } catch (e) {
-      console.error("  ⚠️  Failed to re-parse after change:", e.message);
+      console.error("  ⚠️  Failed to re-process after change:", e.message);
+    } finally {
+      pipelineRunning = false;
     }
   });
 }
-
 // ─── MIME types ──────────────────────────────────────────────────────────
 const MIME = {
   ".html": "text/html; charset=utf-8",
@@ -149,6 +195,8 @@ const MIME = {
   ".jpg": "image/jpeg",
   ".mp4": "video/mp4",
   ".mp3": "audio/mpeg",
+  ".wav": "audio/wav",
+  ".vtt": "text/vtt",
   ".wasm": "application/wasm",
 };
 
@@ -284,7 +332,7 @@ editInput?.addEventListener("keydown", (e) => {
 }
 
 // ─── HTTP Server ──────────────────────────────────────────────────────────
-const server = createServer((req, res) => {
+const server = createServer(async (req, res) => {
   const url = new URL(req.url, "http://localhost");
   const path = url.pathname;
 
@@ -557,12 +605,14 @@ IMPORTANT: Read the full existing JSON file before editing. Only edit the JSON f
       return;
     }
 
-    // API: Get video.json raw data (browser fetches this instead of embedded JSON)
+    // API: Get video.json data (browser fetches this)
+    // If descriptive JSON: returns the compiled stream tree
+    // If compiled stream tree: returns as-is
     if (path === "/api/video-data") {
       try {
-        const data = readFileSync(VIDEO_JSON, "utf-8");
+        const root = await loadCompiledRoot();
         res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(data);
+        res.end(JSON.stringify(root));
       } catch (e) {
         res.writeHead(500, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: e.message }));
