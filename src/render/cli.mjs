@@ -9,7 +9,7 @@
  *   node render/cli.mjs preview <stream.json> [--force-new]  — open Remotion Studio
  */
 import { execSync, spawn } from "node:child_process";
-import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -34,60 +34,20 @@ function usage() {
 markcut CLI
 
 Commands:
-  render <file.json>                    Render a stream tree to MP4
+  render <file.json|.md>                Render a stream tree or markdown to MP4
     --aspect <16x9|9x16|1x1|all>       Aspect ratio (default: 16x9)
     --output <path>                     Output path (default: out/video-{aspect}.mp4)
-    --template <id>                     Use a template instead of raw stream tree
-    --data <data.json>                  Data for template slots
     --verbose                           Show full per-frame progress (default: compact)
 
-  templates                             List available templates
-  preview <file.json>                   Open Remotion Studio with the stream tree
-    --force-new                         Start a new Studio instance even if another is running
-    --label                           Open player with label input overlay
-    --edit                             Auto-reload player when JSON file changes (edit file, player refreshes)
+  preview <file.json|.md>               Open player with live preview
+    --edit                             Auto-reload on file change
+    --label                           Open label input overlay
     --port <num>                        Port for the player server (default: 3001)
 `);
 }
 
-// Minimal template resolver (avoids importing TSX in Node)
-function resolveTemplatePlaceholders(tree, data) {
-  if (typeof tree === "string") {
-    if (/^\$\{[^}]+\}$/.test(tree)) {
-      const key = tree.slice(2, -1);
-      return data[key] !== undefined ? data[key] : tree;
-    }
-    return tree.replace(/\$\{([^}]+)\}/g, (_, key) => {
-      const val = data[key];
-      return val !== undefined ? String(val) : `\${${key}}`;
-    });
-  }
-  if (Array.isArray(tree)) return tree.map((item) => resolveTemplatePlaceholders(item, data));
-  if (tree !== null && typeof tree === "object") {
-    const result = {};
-    for (const [k, v] of Object.entries(tree)) {
-      result[k] = resolveTemplatePlaceholders(v, data);
-    }
-    return result;
-  }
-  return tree;
-}
-
-function loadTemplate(id) {
-  const paths = [
-    join(ROOT, "src", "templates", "marketing", `${id}.json`),
-    join(ROOT, "src", "templates", "demo", `${id}.json`),
-    join(ROOT, "src", "templates", "social", `${id}.json`),
-    join(ROOT, "src", "templates", "personal", `${id}.json`),
-  ];
-  for (const p of paths) {
-    if (existsSync(p)) return JSON.parse(readFileSync(p, "utf-8"));
-  }
-  throw new Error(`Template "${id}" not found. Searched: ${paths.join(", ")}`);
-}
-
 function parseArgs(argv) {
-  const args = { command: "", file: "", aspect: "16x9", output: "", template: "", data: "", forceNew: false, verbose: false, label: false, chat: false, port: 3001 };
+  const args = { command: "", file: "", aspect: "16x9", output: "", forceNew: false, verbose: false, label: false, chat: false, port: 3001 };
   let i = 2;
   if (argv[i]) args.command = argv[i++];
   if (argv[i] && !argv[i].startsWith("--")) args.file = argv[i++];
@@ -95,8 +55,6 @@ function parseArgs(argv) {
     const flag = argv[i++];
     if (flag === "--aspect" && argv[i]) args.aspect = argv[i++];
     else if (flag === "--output" && argv[i]) args.output = argv[i++];
-    else if (flag === "--template" && argv[i]) args.template = argv[i++];
-    else if (flag === "--data" && argv[i]) args.data = argv[i++];
     else if (flag === "--force-new") args.forceNew = true;
     else if (flag === "--verbose") args.verbose = true;
     else if (flag === "--label") args.label = true;
@@ -202,22 +160,6 @@ async function main() {
     process.exit(0);
   }
 
-  if (args.command === "templates") {
-    const dir = join(ROOT, "src", "templates");
-    console.log("\nAvailable templates:\n");
-    for (const category of ["marketing", "demo", "social", "personal"]) {
-      const catDir = join(dir, category);
-      if (!existsSync(catDir)) continue;
-      for (const f of readdirSync(catDir)) {
-        if (!f.endsWith(".json")) continue;
-        const t = JSON.parse(readFileSync(join(catDir, f), "utf-8"));
-        console.log(`  ${t.id.padEnd(20)} ${t.name} — ${t.description}`);
-      }
-    }
-    console.log("");
-    process.exit(0);
-  }
-
   if (args.command === "preview") {
     // Custom player modes
     if (args.label || args.edit) {
@@ -260,28 +202,28 @@ async function main() {
   if (args.command === "render") {
     let streamTree;
 
-    if (args.template) {
-      const tmpl = loadTemplate(args.template);
-      const data = args.data ? JSON.parse(readFileSync(resolve(args.data), "utf-8")) : {};
+    if (args.file) {
+      const filePath = resolve(args.file);
+      const raw = readFileSync(filePath, "utf-8");
 
-      if (tmpl.markdown) {
-        // Descriptive markdown template: resolve placeholders in the string,
-        // then parse and compile via the pipeline bundle
-        const resolvedMd = tmpl.markdown.replace(/\$\{([^}]+)\}/g, (_, key) => {
-          const val = data[key];
-          return val !== undefined ? String(val) : `\${${key}}`;
-        });
+      if (filePath.endsWith(".md")) {
+        // Markdown descriptive → parse + compile
         const { compileDescriptiveRoot, parseMarkdownDescriptive } = await import("../player/pipeline.mjs");
-        const descriptive = parseMarkdownDescriptive(resolvedMd, { mode: "compatible" });
+        const descriptive = parseMarkdownDescriptive(raw, { mode: "compatible" });
         streamTree = compileDescriptiveRoot(descriptive, { mode: "draft" });
       } else {
-        streamTree = resolveTemplatePlaceholders(tmpl.streamTree, data);
+        const parsed = JSON.parse(raw);
+        const root = parsed.root ?? parsed;
+        // Check if descriptive JSON
+        const { isDescriptiveRoot, resolveAndCompile } = await import("../player/pipeline.mjs");
+        if (isDescriptiveRoot(root)) {
+          streamTree = await resolveAndCompile(root, { baseDir: dirname(filePath), mode: "draft" });
+        } else {
+          streamTree = root;
+        }
       }
-    } else if (args.file) {
-      const raw = JSON.parse(readFileSync(resolve(args.file), "utf-8"));
-      streamTree = raw.root ?? raw;
     } else {
-      console.error("Error: provide a stream tree file or --template <id>");
+      console.error("Error: provide a stream tree file (.json or .md)");
       process.exit(1);
     }
 

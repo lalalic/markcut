@@ -6,7 +6,7 @@
 import React, { useRef, useEffect, useCallback } from "react";
 import { createRoot } from "react-dom/client";
 import { Player } from "@remotion/player";
-import { RemotionEngine, builtinComponents, resolveTheme, getDurationInSeconds } from "../full.entry";
+import { RemotionEngine, resolveTheme, getDurationInSeconds } from "../entry";
 
 function PlayerApp() {
   const playerRef = useRef<any>(null);
@@ -74,7 +74,7 @@ function PlayerApp() {
       component: RemotionEngine,
       inputProps: {
         root: data,
-        compose: { components: builtinComponents },
+        compose: {},
         theme,
       },
       durationInFrames,

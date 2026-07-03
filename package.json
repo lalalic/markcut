@@ -7,21 +7,14 @@
     "markcut": "./src/render/cli.mjs"
   },
   "type": "module",
-  "main": "./src/lite.entry.tsx",
+  "main": "./src/entry.tsx",
   "exports": {
-    ".": "./src/lite.entry.tsx",
-    "./lite": "./src/lite.entry.tsx",
-    "./full": "./src/full.entry.tsx",
-    "./player": "./src/player.entry.tsx",
+    ".": "./src/entry.tsx",
     "./schema": "./src/schema/index.ts",
-    "./components": "./src/components/index.ts",
     "./themes": "./src/themes/index.tsx",
-    "./templates": "./src/templates/index.ts",
     "./descriptive": "./src/descriptive/compiler.ts",
     "./descriptive-markdown": "./src/descriptive/markdown.ts",
-    "./descriptive-resolve": "./src/descriptive/resolve.ts",
-    "./scenes": "./src/scenes/index.ts",
-    "./remotion": "./src/remotion.config.ts"
+    "./descriptive-resolve": "./src/descriptive/resolve.ts"
   },
   "scripts": {
     "render": "node src/render/cli.mjs render",
