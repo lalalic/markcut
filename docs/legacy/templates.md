@@ -16,10 +16,10 @@ Pass data via `--data data.json` to fill slots.
 
 ```bash
 # List templates
-npx lalalic/remotion-engine templates
+npx markcut templates
 
 # Render with data
-npx lalalic/remotion-engine render --template product-hero --data data.json --aspect all
+npx markcut render --template product-hero --data data.json --aspect all
 ```
 
 ## Slot Schema

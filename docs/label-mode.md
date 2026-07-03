@@ -12,10 +12,10 @@ The output is an updated `labels.json` file with `description` fields populated.
 
 ```bash
 # Label from a stream tree JSON or labels.json
-npx lalalic/remotion-engine preview labels.json --label
+npx markcut preview labels.json --label
 
 # Specify port
-npx lalalic/remotion-engine preview labels.json --label --port 3031
+npx markcut preview labels.json --label --port 3031
 ```
 
 ### Labels Persistence

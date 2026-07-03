@@ -17,7 +17,7 @@ npm run test:integration  # run render integration tests only
 ## Project Structure
 
 ```
-remotion-engine/
+markcut/
 ├── src/
 │   ├── schema/index.ts      — Zod schemas for all 12 stream types
 │   ├── types/               — React renderers (one per stream type)

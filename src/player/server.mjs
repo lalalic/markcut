@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Custom player server for remotion-engine.
+ * Custom player server for markcut.
  *
  * Modes:
  *   --label   – playback with label input overlay; labels map to media timestamps

@@ -1,4 +1,4 @@
-# remotion-engine — Agent Guide
+# markcut — Agent Guide
 
 ## Project layout
 

@@ -159,10 +159,10 @@ Replace `scene` containers with a flat list of `folder` nodes. This is optional 
 
 ```bash
 # Render a storyboard JSON directly (scenes work as folders)
-npx lalalic/remotion-engine render storyboard.json --aspect 9x16
+npx markcut render storyboard.json --aspect 9x16
 
 # Preview in edit mode
-npx lalalic/remotion-engine preview storyboard.json --edit
+npx markcut preview storyboard.json --edit
 ```
 
 ## Best Practices for Agents

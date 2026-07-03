@@ -15,7 +15,7 @@ One engine. Three surfaces.
 ## Current State (implemented)
 
 ```
-remotion-engine/src/
+markcut/src/
   schema/index.ts          — 7 stream types (root, folder, video, audio, image, subtitle, component)
   types/*.tsx               — React renderers per type
   context/index.tsx         — ComposeContext (Container + components registry) + AudioContext
@@ -57,7 +57,7 @@ remotion-engine/src/
 ## Architecture
 
 ```
-@neox/remotion-engine/
+@neox/markcut/
 ├── core/                    ← EXISTING (refined)
 │   ├── schema/              Zod schemas for stream types
 │   ├── types/               React renderers per stream type
@@ -117,7 +117,7 @@ remotion-engine/src/
 │   ├── pipeline.ts          Render pipeline (validate → resolve assets → render)
 │   ├── aspects.ts           Aspect ratio adapters (16x9, 9x16, 1x1)
 │   ├── tts.ts               TTS integration (edge-tts)
-│   └── cli.ts               CLI entry point: `remotion-engine render <template>`
+│   └── cli.ts               CLI entry point: `markcut render <template>`
 │
 ├── lite.entry.tsx           Lite bundle (core + utils)
 ├── full.entry.tsx           Full bundle (core + components + themes)
@@ -457,19 +457,19 @@ Structure:
 ### CLI
 ```bash
 # Render from stream tree JSON
-remotion-engine render stream.json --aspect 16x9 --output out.mp4
+markcut render stream.json --aspect 16x9 --output out.mp4
 
 # Render from template + data
-remotion-engine render --template product-hero --data data.json --aspect 16x9
+markcut render --template product-hero --data data.json --aspect 16x9
 
 # Render all aspects
-remotion-engine render stream.json --aspect all
+markcut render stream.json --aspect all
 
 # With TTS voiceover generation
-remotion-engine render stream.json --tts --voice en-US-GuyNeural
+markcut render stream.json --tts --voice en-US-GuyNeural
 
 # Preview in browser
-remotion-engine preview stream.json
+markcut preview stream.json
 ```
 
 ### Pipeline Steps
@@ -504,7 +504,7 @@ const ASPECTS = {
 ### Embed in CCM Harness or any React app
 
 ```tsx
-import { RemotionEngine, builtinComponents, themes } from "@neox/remotion-engine/player";
+import { RemotionEngine, builtinComponents, themes } from "@neox/markcut/player";
 import { Player } from "@remotion/player";
 
 function VideoPreview({ streamTree, theme = "cinematic" }) {
@@ -720,7 +720,7 @@ A future `studio:template` script could auto-resolve and hot-reload, but for Pha
 
 ## Naming Convention
 
-- Package: `@neox/remotion-engine`
+- Package: `markcut`
 - Components: PascalCase, descriptive (`AnimatedHeadline` not `BigStatement`)
 - Stream types: lowercase (`component`, `effect`, `rhythm`)
 - Templates: kebab-case (`product-hero`, `feature-showcase`)

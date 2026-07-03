@@ -2,7 +2,7 @@
  * Player bundle entry. For embedding in React apps.
  *
  * Usage:
- *   import { RemotionEngine, builtinComponents, resolveTheme } from "@neox/remotion-engine/player";
+ *   import { RemotionEngine, builtinComponents, resolveTheme } from "markcut/player";
  *   import { Player } from "@remotion/player";
  *
  *   <Player

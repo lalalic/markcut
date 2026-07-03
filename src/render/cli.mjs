@@ -31,7 +31,7 @@ const PROGRESS_INTERVAL = 50;
 
 function usage() {
   console.log(`
-remotion-engine CLI
+markcut CLI
 
 Commands:
   render <file.json>                    Render a stream tree to MP4

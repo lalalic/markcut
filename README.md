@@ -1,4 +1,4 @@
-# @neox/remotion-engine
+# markcut — Markdown-to-Video Engine
 
 Render-only Remotion engine. Stream-typed timeline kernel.
 
@@ -33,7 +33,46 @@ src/
 ## Smoke test
 
 ```bash
-cd remotion-engine
+cd markcut
 pnpm install
 pnpm render          # renders sample.json -> out/preview.mp4
 ```
+
+# descriptive
+```
+# opening
+this is a opening description
+- a.jpg 5 
+- a.mov 5-7
+- "hello"
+
+# feature
+## overlay
+- a.mov 5-7
+  - a.jpg 
+
+- "hello"
+
+
+```
+
+## DescriptiveComposition
+
+`DescriptiveComposition` is a high-level sugar layer that compiles a descriptive tree into the current legacy stream tree (`root`/`folder` + `actions`).
+
+Key behavior:
+
+- Supports three container modes: `series`, `parallel`, `transitionSeries`
+- Auto-constructs legacy `actions` from concise keys like `duration`, `startFrom`, `endAt`
+- Keeps `subtitle`, `component` (dynamic), and `rhythm` support in the compiled output
+- Enforces `start` only in `parallel` containers (strict mode)
+
+API exports:
+
+- `DescriptiveComposition` from `markcut` (lite entry)
+- `compileDescriptiveRoot` from `markcut/descriptive`
+- `parseMarkdownDescriptive` from `markcut/descriptive-markdown`
+
+Markdown DSL spec for agent-friendly descriptive authoring:
+
+- [docs/markdown-descriptive.md](docs/markdown-descriptive.md)

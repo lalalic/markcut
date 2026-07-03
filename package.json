@@ -1,10 +1,10 @@
 {
-  "name": "@lalalic/remotion-engine",
+  "name": "markcut",
   "version": "0.1.0",
   "private": true,
-  "description": "Render-only Remotion engine. Stream-typed timeline kernel.",
+  "description": "Markdown-to-video engine. Describe scenes in markdown, get a rendered video with TTS narration.",
   "bin": {
-    "remotion-engine": "./src/render/cli.mjs"
+    "markcut": "./src/render/cli.mjs"
   },
   "type": "module",
   "main": "./src/lite.entry.tsx",
@@ -17,6 +17,9 @@
     "./components": "./src/components/index.ts",
     "./themes": "./src/themes/index.tsx",
     "./templates": "./src/templates/index.ts",
+    "./descriptive": "./src/descriptive/compiler.ts",
+    "./descriptive-markdown": "./src/descriptive/markdown.ts",
+    "./descriptive-resolve": "./src/descriptive/resolve.ts",
     "./scenes": "./src/scenes/index.ts",
     "./remotion": "./src/remotion.config.ts"
   },
