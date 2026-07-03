@@ -1,107 +1,185 @@
 #!/usr/bin/env node
 /**
- * Label preview server — simplified standalone player for scene labeling.
+ * Label preview server — player for scene labeling.
  *
  * Usage:
- *   node src/player/label-server.mjs <video.json> [--port 3031]
+ *   node src/player/label-server.mjs <input.json|.md> [--port 3031]
  *
- * Shows a player with thumbnail strip and label input.
+ * Supports compiled stream trees, descriptive JSON, and markdown.
  * Labels are saved to labels.json alongside the source.
- *
- * Only stream tree JSON files are supported (no media folder mode).
  */
 import { createServer } from "node:http";
 import { readFileSync, writeFileSync, existsSync, statSync, createReadStream } from "node:fs";
 import { resolve, dirname, join, extname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { isDescriptiveRoot, resolveAndCompile, resolveAndCompileMarkdown } from "./pipeline.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, "..", "..");
 const PORT = parseInt(process.argv.find(a => a.startsWith("--port="))?.split("=")[1] || "3031", 10);
 
-// Determine source: JSON file (3rd+ arg, skip --flags)
+// Determine source: JSON or MD file (3rd+ arg, skip --flags)
 const sourceArg = process.argv.slice(2).find(a => !a.startsWith("--"));
 const SOURCE = sourceArg ? resolve(sourceArg) : resolve(".");
+const IS_MARKDOWN = SOURCE.endsWith(".md");
+
+// ─── Scene extraction (same logic as server.mjs) ───────────────────────
+function extractScenes(root) {
+  const scenes = [];
+  let totalDuration = 0;
+
+  if (root.children?.length && !root.children.find(c => c.name === "scenes" || c.id === "scenes")) {
+    let offset = 0;
+    for (const s of root.children) {
+      if (!(s.type === "folder" || s.type === "scene" || s.children?.length)) continue;
+      if (s.isBackground) continue;
+      const leaf = (s.children || []).find(c => c.src && (c.type === "image" || c.type === "video"));
+      const action = leaf?.actions?.[0] || s.actions?.[0] || {};
+      const dur = (action.end || 5) - (action.start || 0);
+      scenes.push({
+        name: s.name || s.id || "scene",
+        start: offset,
+        end: offset + dur,
+        duration: dur,
+        src: leaf?.src || "",
+        mediaType: leaf?.type || "unknown",
+      });
+      offset += dur;
+    }
+    totalDuration = offset;
+  }
+
+  const scenesFolder = root.children?.find(c => c.name === "scenes" || c.id === "scenes");
+  if (scenesFolder?.children && scenes.length === 0) {
+    let offset = 0;
+    for (const s of scenesFolder.children) {
+      const child = s.children?.[0] || {};
+      const action = child?.actions?.[0];
+      const dur = action ? (action.end - action.start) : 5;
+      scenes.push({
+        name: s.name,
+        start: offset,
+        end: offset + dur,
+        duration: dur,
+        src: child.src || "",
+        mediaType: child.type || "unknown",
+      });
+      offset += dur;
+    }
+    totalDuration = offset;
+  }
+
+  // Flat scenes array (labels.json format)
+  if (scenes.length === 0 && Array.isArray(root.scenes)) {
+    let offset = 0;
+    for (const s of root.scenes) {
+      const dur = (s.end ?? (s.start ?? 0) + 5) - (s.start ?? 0);
+      scenes.push({
+        name: s.name || "scene",
+        start: offset,
+        end: offset + dur,
+        duration: dur,
+        src: s.src || "",
+        mediaType: s.mediaType || "unknown",
+      });
+      offset += dur;
+    }
+    totalDuration = offset;
+  }
+
+  return { scenes, totalDuration };
+}
+
+// ─── Load + compile (handles compiled JSON, descriptive JSON, markdown) ──
+async function loadSource() {
+  const raw = readFileSync(SOURCE, "utf-8");
+
+  if (IS_MARKDOWN) {
+    console.log("  📝 Detected markdown — parsing + compiling...");
+    return await resolveAndCompileMarkdown(raw, {
+      baseDir: dirname(SOURCE),
+      mode: "draft",
+    });
+  }
+
+  const parsed = JSON.parse(raw);
+  const root = parsed.root || parsed;
+
+  if (isDescriptiveRoot(root)) {
+    console.log("  🔍 Detected descriptive JSON — running pipeline...");
+    return await resolveAndCompile(root, {
+      baseDir: dirname(SOURCE),
+      mode: "draft",
+    });
+  }
+
+  return root;
+}
 
 // ─── Scene parsing ─────────────────────────────────────────────────────
 let scenes = [];
 let totalDuration = 0;
-let videoData = null; // raw JSON to serve to the player
+let videoData = null;
 const LABELS_PATH = join(dirname(SOURCE), "labels.json");
 
 if (existsSync(SOURCE)) {
-  // Parse JSON file (stream tree or labels.json format)
   try {
-    const raw = readFileSync(SOURCE, "utf-8");
-    const parsed = JSON.parse(raw);
-    videoData = parsed;
+    // async bootstrap — we inline the promise since the server starts synchronously
+    const bootstrap = loadSource().then((compiled) => {
+      videoData = compiled;
+      const extracted = extractScenes(compiled);
+      scenes = extracted.scenes;
+      totalDuration = extracted.totalDuration;
 
-    // Try to extract scenes
-    const root = parsed.root || parsed;
+      // If only scenes metadata (no compiled tree from labels.json), build a player tree
+      if (scenes.length > 0 && (!videoData.type || videoData.type !== "root")) {
+        videoData = {
+          id: "root",
+          type: "root",
+          width: 1080,
+          height: 1920,
+          fps: 30,
+          isSeries: true,
+          transition: "fade",
+          theme: "cinematic",
+          children: scenes.map((s, i) => ({
+            id: s.name || ("scene-" + (i+1)),
+            name: s.name || ("scene-" + (i+1)),
+            type: "folder",
+            isSeries: false,
+            children: [{
+              id: (s.name || "scene-"+(i+1)) + "-media",
+              type: s.mediaType === "video" ? "video" : "image",
+              src: s.src,
+              fit: "cover",
+              actions: [{ start: 0, end: s.duration }],
+            }],
+          })),
+        };
+      }
 
-    // Format 1: stream tree — folders/scenes as scenes
-    if (root.children?.length && !root.children.find(c => c.name === "scenes" || c.id === "scenes")) {
-      let offset = 0;
-      scenes = root.children
-        .filter(c => c.type === "folder" || c.type === "scene" || c.children?.length)
-        .filter(c => !c.isBackground)
-        .map(s => {
-          const leaf = (s.children || []).find(c => c.src && (c.type === "image" || c.type === "video"));
-          const action = leaf?.actions?.[0] || s.actions?.[0] || {};
-          const dur = (action.end || 5) - (action.start || 0);
-          const scene = {
-            name: s.name || s.id || "scene",
-            start: offset,
-            end: offset + dur,
-            duration: dur,
-            src: leaf?.src || "",
-            mediaType: leaf?.type || "unknown",
-          };
-          offset += dur;
-          return scene;
-        });
-      totalDuration = offset;
-    }
-
-    // Format 2: flat scenes array (labels.json format)
-    if (scenes.length === 0 && Array.isArray(root.scenes)) {
-      scenes = root.scenes.map(s => ({
-        name: s.name || "scene",
-        start: s.start ?? 0,
-        end: s.end ?? (s.start ?? 0) + 5,
-        duration: (s.end ?? (s.start ?? 0) + 5) - (s.start ?? 0),
-        src: s.src || "",
-        mediaType: s.mediaType || "unknown",
-      }));
-      totalDuration = scenes.reduce((max, s) => Math.max(max, s.end), 0);
-    }
-
-    // Build stream tree for the player if we have scenes
-    if (scenes.length > 0 && (!videoData.type || videoData.type !== "root")) {
-      videoData = {
-        id: "root",
-        type: "root",
-        width: 1080,
-        height: 1920,
-        fps: 30,
-        isSeries: true,
-        transition: "fade",
-        theme: "cinematic",
-        children: scenes.map((s, i) => ({
-          id: s.name || ("scene-" + (i+1)),
-          name: s.name || ("scene-" + (i+1)),
-          type: "folder",
-          isSeries: false,
-          children: [{
-            id: (s.name || "scene-"+(i+1)) + "-media",
-            type: s.mediaType === "video" ? "video" : "image",
-            src: s.src,
-            fit: "cover",
-            actions: [{ start: 0, end: s.duration }],
-          }],
-        })),
-      };
-    }
+      // Merge existing labels from labels.json into videoData
+      try {
+        const labelsRaw = readFileSync(LABELS_PATH, "utf-8");
+        const labelsData = JSON.parse(labelsRaw);
+        const labelsRoot = labelsData.root || labelsData;
+        if (labelsRoot.children) {
+          for (let i = 0; i < Math.min(labelsRoot.children.length, videoData.children.length); i++) {
+            const labelMedia = labelsRoot.children[i]?.children?.[0];
+            const targetMedia = videoData.children[i]?.children?.[0];
+            if (labelMedia && targetMedia && labelMedia.description) {
+              targetMedia.description = labelMedia.description;
+            }
+          }
+        }
+      } catch {
+        // No existing labels file — that's fine
+      }
+    }).catch(e => {
+      console.error("Failed to load source:", e.message);
+      // Fallback: minimal data so the server starts
+      videoData = { id: "root", type: "root", width: 1080, height: 1920, fps: 30, isSeries: false, children: [] };
+    });
   } catch (e) {
     console.error("Warning: could not parse source:", e.message);
   }
@@ -109,7 +187,6 @@ if (existsSync(SOURCE)) {
   console.error(`Source not found: ${SOURCE}`);
   process.exit(1);
 }
-
 // ─── MIME types ────────────────────────────────────────────────────────
 const MIME = {
   ".html": "text/html; charset=utf-8",
