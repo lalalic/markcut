@@ -26,7 +26,8 @@ export const templateMeta = z.object({
   duration: z.number().describe("estimated seconds"),
   theme: z.string().default("cinematic"),
   slots: z.array(templateSlot),
-  streamTree: z.unknown().describe("stream tree JSON with ${slot.name} placeholders"),
+  streamTree: z.unknown().optional().describe("compiled stream tree JSON with ${slot.name} placeholders"),
+  markdown: z.string().optional().describe("descriptive markdown source with ${slot.name} placeholders"),
 });
 export type TemplateMeta = z.infer<typeof templateMeta>;
 

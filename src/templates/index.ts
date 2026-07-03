@@ -1,6 +1,12 @@
+import { readFileSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { TemplateMeta } from "./schema";
 export { resolveTemplate, validateSlots, applyDefaults, templateMeta, templateSlot } from "./schema";
 export type { TemplateMeta, TemplateSlot } from "./schema";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Marketing
 import productHero from "./marketing/product-hero.json";
@@ -22,26 +28,44 @@ import beatDrop from "./social/beat-drop.json";
 // Presentation
 import journeyMap from "./presentation/journey-map.json";
 
+/** Load descriptive markdown content for a template, if a .md file exists. */
+function loadMarkdown(category: string, id: string): string | undefined {
+  try {
+    const path = join(__dirname, category, `${id}.md`);
+    return readFileSync(path, "utf-8");
+  } catch {
+    return undefined;
+  }
+}
+
+/** Helper to attach markdown to a template import. */
+function tmpl(id: string, category: string, json: any): TemplateMeta {
+  return {
+    ...(json as any),
+    markdown: loadMarkdown(category, id),
+  } as unknown as TemplateMeta;
+}
+
 export const templates: Record<string, TemplateMeta> = {
   // Marketing
-  "product-hero": productHero as unknown as TemplateMeta,
-  "feature-showcase": featureShowcase as unknown as TemplateMeta,
-  "before-after": beforeAfter as unknown as TemplateMeta,
-  "social-clip": socialClip as unknown as TemplateMeta,
-  "cinematic-intro": cinematicIntro as unknown as TemplateMeta,
+  "product-hero": tmpl("product-hero", "marketing", productHero),
+  "feature-showcase": tmpl("feature-showcase", "marketing", featureShowcase),
+  "before-after": tmpl("before-after", "marketing", beforeAfter),
+  "social-clip": tmpl("social-clip", "marketing", socialClip),
+  "cinematic-intro": tmpl("cinematic-intro", "marketing", cinematicIntro),
   // Demo
-  "demo-walkthrough": demoWalkthrough as unknown as TemplateMeta,
+  "demo-walkthrough": tmpl("demo-walkthrough", "demo", demoWalkthrough),
   // Social
-  "announcement": announcement as unknown as TemplateMeta,
-  "glow-up": glowUp as unknown as TemplateMeta,
-  "quote-card": quoteCard as unknown as TemplateMeta,
-  "roast-list": roastList as unknown as TemplateMeta,
-  "stat-reveal": statReveal as unknown as TemplateMeta,
-  "top5-countdown": top5Countdown as unknown as TemplateMeta,
-  "year-recap": yearRecap as unknown as TemplateMeta,
-  "beat-drop": beatDrop as unknown as TemplateMeta,
+  "announcement": tmpl("announcement", "social", announcement),
+  "glow-up": tmpl("glow-up", "social", glowUp),
+  "quote-card": tmpl("quote-card", "social", quoteCard),
+  "roast-list": tmpl("roast-list", "social", roastList),
+  "stat-reveal": tmpl("stat-reveal", "social", statReveal),
+  "top5-countdown": tmpl("top5-countdown", "social", top5Countdown),
+  "year-recap": tmpl("year-recap", "social", yearRecap),
+  "beat-drop": tmpl("beat-drop", "social", beatDrop),
   // Presentation
-  "journey-map": journeyMap as unknown as TemplateMeta,
+  "journey-map": tmpl("journey-map", "presentation", journeyMap),
 };
 
 /**
