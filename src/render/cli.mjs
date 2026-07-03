@@ -263,7 +263,20 @@ async function main() {
     if (args.template) {
       const tmpl = loadTemplate(args.template);
       const data = args.data ? JSON.parse(readFileSync(resolve(args.data), "utf-8")) : {};
-      streamTree = resolveTemplatePlaceholders(tmpl.streamTree, data);
+
+      if (tmpl.markdown) {
+        // Descriptive markdown template: resolve placeholders in the string,
+        // then parse and compile via the pipeline bundle
+        const resolvedMd = tmpl.markdown.replace(/\$\{([^}]+)\}/g, (_, key) => {
+          const val = data[key];
+          return val !== undefined ? String(val) : `\${${key}}`;
+        });
+        const { compileDescriptiveRoot, parseMarkdownDescriptive } = await import("../player/pipeline.mjs");
+        const descriptive = parseMarkdownDescriptive(resolvedMd, { mode: "compatible" });
+        streamTree = compileDescriptiveRoot(descriptive, { mode: "draft" });
+      } else {
+        streamTree = resolveTemplatePlaceholders(tmpl.streamTree, data);
+      }
     } else if (args.file) {
       const raw = JSON.parse(readFileSync(resolve(args.file), "utf-8"));
       streamTree = raw.root ?? raw;
