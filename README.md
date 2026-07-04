@@ -33,11 +33,12 @@ storyboard.md  ──[parse]──▶  DescriptiveRoot  ──[compile]──▶
 
 | Feature | Description |
 |---|---|
-| **Markdown input** | Write `## Scene` headings, `- image src:... dr:3` bullets, `script:"narration"` |
-| **JSON input** | Same descriptive schema, expressed as JSON |
+| **Markdown input** | Write `## Scene` headings, `- bullet` leaves. Components via `jsx:"<Tag />"` syntax |
+| **JS imports block** | `` ```js imports `` code fence with real ESM `import` statements instead of YAML |
 | **Compiled input** | Pre-compiled stream tree for direct Remotion rendering |
 | **TTS narration** | `script` field → edge-tts CLI → WAV audio. Configurable engine (mlx-audio, custom) |
 | **STT subtitles** | TTS audio → whisper → VTT → root subtitle overlay |
+| **Tween animation** | `tween(from, to)` function calls in JSX for frame-accurate numeric animation |
 | **Theme system** | Presets: cinematic, neon, minimal, corporate. `{base, ...overrides}` pattern |
 | **Live edit** | `--edit` watches the input file, re-runs pipeline, auto-reloads player |
 | **Label mode** | `--label` interactive player with per-scene label input, saves to labels.json |
@@ -56,9 +57,18 @@ layout:parallel script:"Set the mood with a beautiful landscape"
 
 ## Features
 layout:transitionSeries transition:fade transitionTime:0.4 script:"Show what we built"
-- component componentName:DeviceMockup duration:6 props:{src:"screenshot.png"}
-- component componentName:StatCounter duration:4 props:{value:100,suffix:"K",label:"Users"}
+- component duration:6 jsx:"<DeviceMockup src='screenshot.png' />"
+- component duration:4 jsx:"<StatCounter value={100} suffix='K' label='Users' />"
 ```
+
+Components are registered via frontmatter `imports:` or a `` ```js imports `` code block:
+
+````
+```js imports
+import { DeviceMockup } from "npm:mockup-component"
+import { StatCounter } from "npm:stat-counter"
+```
+````
 
 ## Docs
 
