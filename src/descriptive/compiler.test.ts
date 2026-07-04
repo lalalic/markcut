@@ -101,13 +101,48 @@ export function Hello() {
     expect(parseImportsBlock("")).toEqual([]);
   });
 
-  it("ignores import statements and other non-export lines", () => {
+  it("parses import statements and export declarations", () => {
     const entries = parseImportsBlock(`import { something } from "other"
 // comment
 export { PieChart } from "npm:recharts"
 `);
+    expect(entries).toHaveLength(2);
+    expect(entries[0]).toEqual({ name: "something", from: "other" });
+    expect(entries[1]).toEqual({ name: "PieChart", from: "npm:recharts" });
+  });
+
+  it("parses import { Name as Alias } from \"spec\"", () => {
+    const entries = parseImportsBlock(`import { PieChart as MyPie } from "npm:recharts"`);
     expect(entries).toHaveLength(1);
+    expect(entries[0]).toEqual({ name: "MyPie", from: "npm:recharts" });
+  });
+
+  it("parses import DefaultName from \"spec\"", () => {
+    const entries = parseImportsBlock(`import Recharts from "npm:recharts"`);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toEqual({ name: "Recharts", from: "npm:recharts" });
+  });
+
+  it("parses real-world JS imports block", () => {
+    const block = `import { PieChart } from "npm:recharts"
+import { BarChart, LineChart } from "npm:recharts"
+import { StatCounter as Counter } from "npm:stat-counter"
+
+export { PieChart }
+export { BarChart, LineChart }
+export { Counter }
+
+export function Hello({ name }) {
+  return <div>Hello {name}</div>
+}`;
+    const entries = parseImportsBlock(block);
+    expect(entries).toHaveLength(5);
     expect(entries[0]).toEqual({ name: "PieChart", from: "npm:recharts" });
+    expect(entries[1]).toEqual({ name: "BarChart", from: "npm:recharts" });
+    expect(entries[2]).toEqual({ name: "LineChart", from: "npm:recharts" });
+    expect(entries[3]).toEqual({ name: "Counter", from: "npm:stat-counter" });
+    expect(entries[4].name).toBe("Hello");
+    expect(entries[4].jsx).toContain("export function Hello");
   });
 
   it("importsBlock overrides frontmatter imports when both present", () => {

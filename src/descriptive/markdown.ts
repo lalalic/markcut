@@ -530,8 +530,9 @@ export function parseMarkdownDescriptive(markdown: string, options: MarkdownPars
         if (!root.imports) root.imports = [];
         root.imports.push({ name, jsx: source });
       }
-      // lang "imports" → store raw source for compiler to parse
-      if (lang === "imports") {
+      // lang "js" with meta "imports" → store raw source for compiler to parse
+      // Also handles bare "imports" language for backward compat
+      if ((lang === "js" && meta === "imports") || lang === "imports") {
         root.importsBlock = buf.join("\n");
       }
       // Skip past closing fence (or to end if none found)

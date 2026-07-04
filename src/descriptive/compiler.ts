@@ -745,6 +745,7 @@ interface ResolvedImport {
  *   export function Name(...) { ... }       — inline component definition
  *   export default function Name(...) { ... } — inline default definition
  */
+
 export function parseImportsBlock(source: string): ImportEntry[] {
   const entries: ImportEntry[] = [];
   const lines = source.split("\n");
@@ -753,13 +754,36 @@ export function parseImportsBlock(source: string): ImportEntry[] {
   while (i < lines.length) {
     const line = lines[i]!.trim();
 
-    // export { Name } from "spec"  — single or multiple
-    // export { Name as Alias } from "spec"
+    // import { Name } from "spec"
+    // import { Name as Alias } from "spec"
+    // import { Name1, Name2 } from "spec"
+    const namedImport = /^import\s+\{\s*([^}]+)\}\s+from\s+["'`](.+?)["'`]\s*;?\s*$/.exec(line);
+    if (namedImport) {
+      const namesStr = namedImport[1]!;
+      const fromSpec = namedImport[2]!;
+      for (const part of namesStr.split(",")) {
+        const trimmed = part.trim();
+        const asMatch = /^(.+?)\s+as\s+(.+)$/i.exec(trimmed);
+        const name = asMatch ? asMatch[2]!.trim() : trimmed;
+        entries.push({ name, from: fromSpec });
+      }
+      i++;
+      continue;
+    }
+
+    // import DefaultName from "spec"
+    const defaultImport = /^import\s+(\w+)\s+from\s+["'`](.+?)["'`]\s*;?\s*$/.exec(line);
+    if (defaultImport) {
+      entries.push({ name: defaultImport[1]!, from: defaultImport[2]! });
+      i++;
+      continue;
+    }
+
+    // export { Name } from "spec"  (re-export syntax, same as named import)
     const namedReExport = /^export\s+\{\s*([^}]+)\}\s+from\s+["'`](.+?)["'`]\s*;?\s*$/.exec(line);
     if (namedReExport) {
       const namesStr = namedReExport[1]!;
       const fromSpec = namedReExport[2]!;
-      // Parse each name (handles "Name" and "Name as Alias")
       for (const part of namesStr.split(",")) {
         const trimmed = part.trim();
         const asMatch = /^(.+?)\s+as\s+(.+)$/i.exec(trimmed);
@@ -774,7 +798,6 @@ export function parseImportsBlock(source: string): ImportEntry[] {
     const funcExport = /^export(?:\s+default)?\s+function\s+(\w+)\s*\(/.exec(line);
     if (funcExport) {
       const name = funcExport[1]!;
-      // Collect the full function body
       const bodyLines: string[] = [line];
       let braceDepth = (line.match(/{/g) || []).length - (line.match(/}/g) || []).length;
       i++;
@@ -794,7 +817,6 @@ export function parseImportsBlock(source: string): ImportEntry[] {
 
   return entries;
 }
-
 export function resolveComponentImportSpec(spec: string): string {
   const s = spec.trim();
   if (s.startsWith("npm:")) return `https://esm.sh/${s.slice(4)}`;

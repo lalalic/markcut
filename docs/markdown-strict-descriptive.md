@@ -47,13 +47,14 @@ Each import entry has:
 
 ### Imports block (preferred)
 
-Instead of YAML `imports:` in frontmatter, use a `` ```imports `` code block anywhere in the document. The block contains JavaScript `export` statements that register components. This is simpler for LLMs to generate and avoids YAML syntax issues.
+Instead of YAML `imports:` in frontmatter, use a `` ```js imports `` code fence anywhere in the document. The block contains real JavaScript module code with `import` and `export` statements that register components. This is simpler for LLMs to generate and avoids YAML syntax issues.
 
 ````
-```imports
-export { PieChart } from "npm:recharts"
-export { BarChart, LineChart } from "npm:recharts"
-export { StatCounter as Counter } from "npm:stat-counter"
+```js imports
+import { PieChart } from "npm:recharts"
+import { BarChart, LineChart } from "npm:recharts"
+import { StatCounter as Counter } from "npm:stat-counter"
+
 export function Hello({ name }) {
   return <div style={{color: '#fff'}}>Hello {name}</div>;
 }
@@ -66,11 +67,14 @@ Supported patterns inside the block:
 
 | Pattern | Effect |
 |---|---|
-| `export { Name } from "spec"` | Registers `Name` from the resolved source |
-| `export { Name as Alias } from "spec"` | Registers under `Alias` instead |
-| `export { N1, N2 } from "spec"` | Registers multiple from the same source |
+| `import { Name } from "spec"` | Registers `Name` from the resolved source |
+| `import { Name as Alias } from "spec"` | Registers under `Alias` instead |
+| `import { N1, N2 } from "spec"` | Registers multiple from the same source |
+| `import Default from "spec"` | Registers default import |
 | `export function Name(...) { ... }` | Inline component definition |
 | `export default function Name(...) { ... }` | Inline component definition (default) |
+
+The `export { Name }` lines are optional — the `import` already registers the name. They're useful for readability.
 
 `from:` spec forms:
 
