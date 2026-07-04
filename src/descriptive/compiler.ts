@@ -185,7 +185,6 @@ export interface DescriptiveRoot {
   instruction?: string;
   metadata?: string;
   stylesheet?: string;
-  theme?: string;
   tts?: TtsConfig;
   stt?: SttConfig;
   layout?: "series" | "parallel" | "transitionSeries";
@@ -898,7 +897,6 @@ export function compileDescriptiveRoot(input: DescriptiveRoot, options: CompileO
     instruction: input.instruction,
     metadata: input.metadata,
     stylesheet: input.stylesheet,
-    theme: input.theme,
     subtitle: input.subtitle,
     isSeries: rootKind !== "parallel",
     transition: rootKind === "transitionSeries" ? input.transition ?? "fade" : undefined,

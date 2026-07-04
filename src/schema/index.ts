@@ -64,7 +64,6 @@ export const root = folder.extend({
   instruction: z.string().optional(),
   metadata: z.string().optional(),
   stylesheet: z.string().optional().describe("global css; selectors use .type and .name"),
-  theme: z.union([z.string(), z.record(z.string(), z.unknown())]).optional().describe("theme preset name, inline JSON string, or {base, ...overrides} object"),
   subtitle: subtitleOverlay.optional().describe("global subtitle overlay; src is a VTT file with absolute timestamps"),
 });
 export type Root = z.infer<typeof root>;

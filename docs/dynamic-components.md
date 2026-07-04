@@ -106,7 +106,6 @@ Create a React component file in `src/components/`, register in `builtinComponen
 
 Props the engine injects automatically:
 - `action: { start: number; end: number }` — action timing from the stream node
-- `theme: Theme` — resolved theme object (colors, fonts, etc.)
 
 Use `useCurrentFrame()` for frame-accurate animation, `useVideoConfig()` for canvas size.
 
@@ -117,8 +116,8 @@ Use `useCurrentFrame()` for frame-accurate animation, `useVideoConfig()` for can
 import React from "react";
 import { useCurrentFrame, interpolate } from "remotion";
 
-export const Badge: React.FC<{text: string; color?: string; action: any; theme: any}> =
-  ({ text, color, action, theme }) => {
+export const Badge: React.FC<{text: string; color?: string; action: any}> =
+  ({ text, color, action }) => {
     const frame = useCurrentFrame();
     const local = frame - action.start * 30;
     const opacity = interpolate(local, [0, 15], [0, 1]);

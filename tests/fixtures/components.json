@@ -7,7 +7,6 @@
   "isSeries": true,
   "transition": "fade",
   "transitionTime": 0.3,
-  "theme": "cinematic",
   "children": [
     {
       "id": "scene-1",

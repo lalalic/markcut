@@ -54,7 +54,6 @@ const KEY_ALIASES: Record<string, string> = {
   w: "width",
   h: "height",
   lo: "layout",
-  th: "theme",
   dsc: "instruction",
   inst: "instruction",
   q: "script",
@@ -212,7 +211,7 @@ function parseKeyValueTokens(tokens: string[], mode: "strict" | "compatible"): R
 
       if (key === "waypoints") val = parseWaypoints(String(val));
       else if (key === "props" || key === "imports" || key === "components") val = parseProps(String(val));
-      else if (key !== "theme" && key !== "instruction" && key !== "script" && key !== "tts" && key !== "stt" && key !== "jsx") {
+      else if (key !== "instruction" && key !== "script" && key !== "tts" && key !== "stt" && key !== "jsx") {
         val = parseNumberMaybe(String(val));
       }
       out[key] = val;
@@ -872,9 +871,6 @@ function applyRootAttrs(root: DescriptiveRoot, attrs: Record<string, unknown>, m
         break;
       case "stt":
         root.stt = v as any;
-        break;
-      case "theme":
-        root.theme = String(v);
         break;
       case "imports":
         if (Array.isArray(v)) {

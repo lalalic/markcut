@@ -260,24 +260,11 @@ Available on every node:
 4. `transitionTime` subtracted between items in `transitionSeries`.
 5. `isBackground` children do not contribute to parent duration.
 
-## Theme
+## Style
 
-Set at root level. Three forms:
+Each node accepts a `style` string for inline CSS on its container div. Available on every node:
 
-```json
-// Preset name
-{ "theme": "neon" }
-
-// Base preset with overrides
-{ "theme": { "base": "neon", "colors": { "primary": "#ff0000" } } }
-
-// Full inline theme object
-{ "theme": { "colors": { "primary": "#ff0000", "background": "#000" } } }
-```
-
-Built-in presets: `cinematic` (default), `minimal`, `neon`, `corporate`, `cleanProfessional`, `flatMotionGraphics`, `minimalistDiagram`, `animeGhibli`.
-
-## TTS / STT Configuration
+| Field | Type | Purpose |
 
 TTS (text-to-speech) and STT (speech-to-text) can be configured globally at root level, and TTS can be overridden per scene.
 

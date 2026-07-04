@@ -124,7 +124,7 @@ describe("parseMarkdownDescriptive", () => {
     expect(leaf.duration).toBe(2);
   });
 
-  it("parses root metadata: width, height, fps, theme", () => {
+  it("parses root metadata: width, height, fps, layout", () => {
     const doc = `# video
 w:1920 h:1080 fps:30 theme:neon lo:ser
 ## Scene
@@ -134,7 +134,7 @@ w:1920 h:1080 fps:30 theme:neon lo:ser
     expect(parsed.width).toBe(1920);
     expect(parsed.height).toBe(1080);
     expect(parsed.fps).toBe(30);
-    expect(parsed.theme).toBe("neon");
+    expect((parsed as any).theme).toBeUndefined();
     expect(parsed.layout).toBe("series");
   });
 
@@ -292,7 +292,7 @@ w:1080 h:1920 fps:30 theme:minimal lo:ser
     expect(compiled.type).toBe("root");
     expect(compiled.width).toBe(1080);
     expect(compiled.height).toBe(1920);
-    expect((compiled as any).theme).toBe("minimal");
+    expect((compiled as any).theme).toBeUndefined();
     expect(compiled.isSeries).toBe(true);
     expect(compiled.children).toHaveLength(2);
 
@@ -312,7 +312,6 @@ w:1080 h:1920 fps:30 theme:minimal lo:ser
 width: 1080
 height: 1920
 fps: 30
-theme: neon
 ---
 # video
 ## Scene
@@ -321,7 +320,6 @@ theme: neon
       expect(parsed.width).toBe(1080);
       expect(parsed.height).toBe(1920);
       expect(parsed.fps).toBe(30);
-      expect(parsed.theme).toBe("neon");
     });
 
     it("parses YAML array imports with from: and exports:", () => {

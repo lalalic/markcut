@@ -6,7 +6,7 @@
 import React, { useRef, useEffect, useCallback } from "react";
 import { createRoot } from "react-dom/client";
 import { Player } from "@remotion/player";
-import { RemotionEngine, resolveTheme, getDurationInSeconds } from "../entry";
+import { RemotionEngine, getDurationInSeconds } from "../entry";
 
 function PlayerApp() {
   const playerRef = useRef<any>(null);
@@ -64,7 +64,6 @@ function PlayerApp() {
   const height = data.height || 1920;
   const durationInSeconds = getDurationInSeconds(data, true) || 5;
   const durationInFrames = Math.max(1, Math.ceil(durationInSeconds * fps));
-  const theme = resolveTheme(data.theme);
 
   return React.createElement("div", {
     style: { width: "100%", height: "100%", background: "#000" },
@@ -75,7 +74,6 @@ function PlayerApp() {
       inputProps: {
         root: data,
         compose: {},
-        theme,
       },
       durationInFrames,
       fps,

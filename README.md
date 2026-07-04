@@ -41,7 +41,7 @@ storyboard.md  ──[parse]──▶  DescriptiveRoot  ──[compile]──▶
 | **TTS narration** | `script` field → edge-tts CLI → WAV audio. Configurable engine (mlx-audio, custom) |
 | **STT subtitles** | TTS audio → whisper → VTT → root subtitle overlay |
 | **Tween animation** | `tween(from, to)` function calls in JSX for frame-accurate numeric animation |
-| **Theme system** | Presets: cinematic, neon, minimal, corporate. `{base, ...overrides}` pattern |
+| **Styling** | Inline `style` strings on any node for CSS. JSX components use inline React styles |
 | **Live edit** | `--edit` watches the input file, re-runs pipeline, auto-reloads player |
 | **Label mode** | `--label` interactive player with per-scene label input, saves to labels.json |
 | **CLI** | `render`, `preview` commands for MP4 export and Remotion Studio |
@@ -51,7 +51,7 @@ storyboard.md  ──[parse]──▶  DescriptiveRoot  ──[compile]──▶
 
 ```md
 # video
-width:1080 height:1920 fps:30 layout:series theme:neon
+width:1080 height:1920 fps:30 layout:series
 
 ## Hook
 layout:parallel script:"Set the mood with a beautiful landscape"
@@ -95,7 +95,7 @@ Inline components can be defined entirely in the imports block using `export fun
 | [docs/markdown-strict-descriptive.md](docs/markdown-strict-descriptive.md) | Markdown descriptive syntax reference |
 | [docs/label-mode.md](docs/label-mode.md) | Label mode player and workflow |
 | [docs/edit-mode.md](docs/edit-mode.md) | Live edit mode with SSE reload |
-| [docs/themes.md](docs/themes.md) | Theme system presets and customization |
+
 
 ## Architecture
 

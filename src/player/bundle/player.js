@@ -772,7 +772,7 @@ var require_scheduler = __commonJS({
 var require_react_dom_production = __commonJS({
   "node_modules/react-dom/cjs/react-dom.production.js"(exports) {
     "use strict";
-    var React46 = require_react();
+    var React45 = require_react();
     function formatProdErrorMessage(code) {
       var url2 = "https://react.dev/errors/" + code;
       if (1 < arguments.length) {
@@ -812,7 +812,7 @@ var require_react_dom_production = __commonJS({
         implementation
       };
     }
-    var ReactSharedInternals = React46.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
+    var ReactSharedInternals = React45.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
     function getCrossOriginStringAs(as, input) {
       if ("font" === as) return "";
       if ("string" === typeof input)
@@ -948,7 +948,7 @@ var require_react_dom_client_production = __commonJS({
   "node_modules/react-dom/cjs/react-dom-client.production.js"(exports) {
     "use strict";
     var Scheduler = require_scheduler();
-    var React46 = require_react();
+    var React45 = require_react();
     var ReactDOM = require_react_dom();
     function formatProdErrorMessage(code) {
       var url2 = "https://react.dev/errors/" + code;
@@ -1139,7 +1139,7 @@ var require_react_dom_client_production = __commonJS({
       return null;
     }
     var isArrayImpl = Array.isArray;
-    var ReactSharedInternals = React46.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
+    var ReactSharedInternals = React45.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
     var ReactDOMSharedInternals = ReactDOM.__DOM_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
     var sharedNotPendingObject = {
       pending: false,
@@ -12585,7 +12585,7 @@ var require_react_dom_client_production = __commonJS({
         0 === i && attemptExplicitHydrationTarget(target);
       }
     };
-    var isomorphicReactPackageVersion$jscomp$inline_1840 = React46.version;
+    var isomorphicReactPackageVersion$jscomp$inline_1840 = React45.version;
     if ("19.2.5" !== isomorphicReactPackageVersion$jscomp$inline_1840)
       throw Error(
         formatProdErrorMessage(
@@ -27931,7 +27931,7 @@ var forward2 = import_react110.forwardRef;
 var Thumbnail = forward2(ThumbnailFn);
 
 // src/entry.tsx
-var React44 = __toESM(require_react(), 1);
+var React43 = __toESM(require_react(), 1);
 
 // src/context/index.tsx
 var React8 = __toESM(require_react(), 1);
@@ -27942,260 +27942,6203 @@ var ComposeContext = React8.createContext({
 });
 var AudioContext2 = React8.createContext(null);
 
-// src/themes/index.tsx
-var React9 = __toESM(require_react(), 1);
+// src/types/Folder.tsx
+var React39 = __toESM(require_react(), 1);
 
-// src/themes/presets.ts
-var cinematic = {
-  name: "cinematic",
-  colors: {
-    background: "#050505",
-    surface: "#161618",
-    primary: "#f97316",
-    secondary: "#ec4899",
-    text: "#fafafa",
-    textMuted: "#a1a1aa",
-    border: "#27272a",
-    gradient: ["#f97316", "#ec4899"],
-    chart: ["#f97316", "#ec4899", "#3b82f6", "#10b981", "#f59e0b", "#8b5cf6"]
-  },
-  fonts: {
-    heading: "'SF Pro Display', 'Inter', sans-serif",
-    body: "'SF Pro Text', 'Inter', sans-serif",
-    mono: "'SF Mono', 'JetBrains Mono', monospace"
-  },
-  timing: {
-    spring: { damping: 12, stiffness: 180, mass: 0.8 },
-    stagger: 4,
-    transitionDuration: 0.5
-  },
-  effects: {
-    particles: true,
-    gradientBg: true,
-    motionBlur: false,
-    grain: 0.03
+// node_modules/@remotion/transitions/dist/esm/index.mjs
+var import_react113 = __toESM(require_react(), 1);
+var import_jsx_runtime57 = __toESM(require_jsx_runtime(), 1);
+var import_react114 = __toESM(require_react(), 1);
+var import_jsx_runtime58 = __toESM(require_jsx_runtime(), 1);
+var import_react115 = __toESM(require_react(), 1);
+var import_react116 = __toESM(require_react(), 1);
+var import_jsx_runtime59 = __toESM(require_jsx_runtime(), 1);
+var import_react117 = __toESM(require_react(), 1);
+var import_jsx_runtime60 = __toESM(require_jsx_runtime(), 1);
+var import_react118 = __toESM(require_react(), 1);
+var epsilon = 0.01;
+var SlidePresentation = ({
+  children,
+  presentationProgress,
+  presentationDirection,
+  passedProps: { direction = "from-left", enterStyle, exitStyle }
+}) => {
+  const directionStyle = (0, import_react113.useMemo)(() => {
+    const presentationProgressWithEpsilonCorrection = presentationProgress === 1 ? presentationProgress * 100 : presentationProgress * 100 - epsilon;
+    if (presentationDirection === "exiting") {
+      switch (direction) {
+        case "from-left":
+          return {
+            transform: `translateX(${presentationProgressWithEpsilonCorrection}%)`
+          };
+        case "from-right":
+          return {
+            transform: `translateX(${-presentationProgress * 100}%)`
+          };
+        case "from-top":
+          return {
+            transform: `translateY(${presentationProgressWithEpsilonCorrection}%)`
+          };
+        case "from-bottom":
+          return {
+            transform: `translateY(${-presentationProgress * 100}%)`
+          };
+        default:
+          throw new Error(`Invalid direction: ${direction}`);
+      }
+    }
+    switch (direction) {
+      case "from-left":
+        return {
+          transform: `translateX(${-100 + presentationProgress * 100}%)`
+        };
+      case "from-right":
+        return {
+          transform: `translateX(${100 - presentationProgressWithEpsilonCorrection}%)`
+        };
+      case "from-top":
+        return {
+          transform: `translateY(${-100 + presentationProgress * 100}%)`
+        };
+      case "from-bottom":
+        return {
+          transform: `translateY(${100 - presentationProgressWithEpsilonCorrection}%)`
+        };
+      default:
+        throw new Error(`Invalid direction: ${direction}`);
+    }
+  }, [presentationDirection, presentationProgress, direction]);
+  const style2 = (0, import_react113.useMemo)(() => {
+    return {
+      width: "100%",
+      height: "100%",
+      justifyContent: "center",
+      alignItems: "center",
+      ...directionStyle,
+      ...presentationDirection === "entering" ? enterStyle : exitStyle
+    };
+  }, [directionStyle, enterStyle, exitStyle, presentationDirection]);
+  return /* @__PURE__ */ (0, import_jsx_runtime57.jsx)(AbsoluteFill, {
+    style: style2,
+    children
+  });
+};
+var slide = (props) => {
+  return {
+    component: SlidePresentation,
+    props: props ?? {}
+  };
+};
+var HtmlInCanvasPresentation = ({
+  children,
+  onElementImage,
+  onUnmount,
+  presentationProgress,
+  presentationDirection,
+  shader,
+  effects,
+  passedProps,
+  bothEnteringAndExiting
+}) => {
+  if (!HtmlInCanvas.isSupported()) {
+    throw new Error(HTML_IN_CANVAS_UNSUPPORTED_MESSAGE);
+  }
+  const canvasRef = (0, import_react114.useRef)(null);
+  const canvasSubtreeStyle = (0, import_react114.useMemo)(() => {
+    return {
+      width: "100%",
+      height: "100%",
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0
+    };
+  }, []);
+  const [offscreenCanvas] = (0, import_react114.useState)(() => new OffscreenCanvas(1, 1));
+  const passedPropsRef = (0, import_react114.useRef)(passedProps);
+  passedPropsRef.current = passedProps;
+  const memoizedEffects = Internals.useMemoizedEffects({
+    effects: effects ?? [],
+    overrideId: null
+  });
+  const effectsRef = (0, import_react114.useRef)(memoizedEffects);
+  effectsRef.current = memoizedEffects;
+  const [instance] = (0, import_react114.useState)(() => shader(offscreenCanvas));
+  (0, import_react114.useLayoutEffect)(() => {
+    return () => {
+      instance.cleanup();
+    };
+  }, [offscreenCanvas, instance]);
+  const chainState = Internals.useEffectChainState();
+  const { delayRender: delayRender2, continueRender: continueRender2 } = useDelayRender();
+  const draw = (0, import_react114.useCallback)(async (prevImage, nextImage, progress) => {
+    if (!canvasRef.current) {
+      throw new Error("Canvas not found");
+    }
+    const handle = delayRender2("onPaint");
+    if (!prevImage && !nextImage) {
+      continueRender2(handle);
+      instance.clear();
+      return;
+    }
+    const width = prevImage?.width ?? nextImage?.width ?? 0;
+    const height = prevImage?.height ?? nextImage?.height ?? 0;
+    if (width === 0 || height === 0) {
+      continueRender2(handle);
+      instance.clear();
+      return;
+    }
+    offscreenCanvas.width = width;
+    offscreenCanvas.height = height;
+    instance.draw({
+      prevImage,
+      nextImage,
+      width,
+      height,
+      time: progress,
+      passedProps: passedPropsRef.current
+    });
+    await Internals.runEffectChain({
+      state: chainState.get(width, height),
+      source: offscreenCanvas,
+      effects: effectsRef.current ?? [],
+      width,
+      height,
+      output: canvasRef.current
+    });
+    continueRender2(handle);
+  }, [chainState, instance, offscreenCanvas, continueRender2, delayRender2]);
+  const passThrough = bothEnteringAndExiting && presentationDirection === "exiting";
+  (0, import_react114.useLayoutEffect)(() => {
+    if (passThrough) {
+      return;
+    }
+    const canvas = canvasRef.current;
+    if (!canvas) {
+      throw new Error("Canvas not found");
+    }
+    canvas.layoutSubtree = true;
+    const onPaint = () => {
+      const firstChild = canvas.firstChild;
+      if (!firstChild) {
+        return;
+      }
+      const elementImage = canvas.captureElementImage(firstChild);
+      onElementImage(elementImage, draw);
+    };
+    canvas.addEventListener("paint", onPaint);
+    return () => {
+      canvas.removeEventListener("paint", onPaint);
+    };
+  }, [onElementImage, presentationDirection, draw, passThrough]);
+  (0, import_react114.useLayoutEffect)(() => {
+    if (passThrough) {
+      return;
+    }
+    const canvas = canvasRef.current;
+    if (!canvas) {
+      throw new Error("Canvas not found");
+    }
+    canvas.requestPaint?.();
+  }, [presentationProgress, passThrough, memoizedEffects]);
+  (0, import_react114.useLayoutEffect)(() => {
+    if (passThrough) {
+      return;
+    }
+    return () => {
+      onUnmount();
+    };
+  }, [onUnmount, passThrough]);
+  (0, import_react114.useLayoutEffect)(() => {
+    if (passThrough) {
+      return;
+    }
+    const canvas = canvasRef.current;
+    if (!canvas) {
+      return;
+    }
+    const observer = new ResizeObserver(([entry]) => {
+      canvas.width = entry.devicePixelContentBoxSize[0].inlineSize;
+      canvas.height = entry.devicePixelContentBoxSize[0].blockSize;
+    });
+    observer.observe(canvas, { box: "device-pixel-content-box" });
+  }, [passThrough]);
+  if (passThrough) {
+    return children;
+  }
+  return /* @__PURE__ */ (0, import_jsx_runtime58.jsx)(AbsoluteFill, {
+    children: /* @__PURE__ */ (0, import_jsx_runtime58.jsx)("canvas", {
+      ref: canvasRef,
+      style: canvasSubtreeStyle,
+      children
+    })
+  });
+};
+var makeHtmlInCanvasPresentation = (shader) => {
+  const CompWithShader = (props) => {
+    const { passedProps, ...otherProps } = props;
+    const { effects, ...restPassedProps } = props.passedProps;
+    return /* @__PURE__ */ (0, import_jsx_runtime58.jsx)(HtmlInCanvasPresentation, {
+      shader,
+      passedProps: restPassedProps,
+      effects,
+      ...otherProps
+    });
+  };
+  return (props) => {
+    return {
+      component: CompWithShader,
+      props
+    };
+  };
+};
+var DEFAULT_STRENGTH = 0.4;
+var VERTEX_SHADER = `#version 300 es
+in vec2 a_pos;
+out vec2 v_uv;
+void main() {
+	v_uv = vec2(a_pos.x * 0.5 + 0.5, 0.5 - a_pos.y * 0.5);
+	gl_Position = vec4(a_pos, 0.0, 1.0);
+}`;
+var FRAGMENT_SHADER = `#version 300 es
+precision highp float;
+
+uniform sampler2D u_prev;
+uniform sampler2D u_next;
+uniform float u_time;
+uniform float u_strength;
+
+in vec2 v_uv;
+out vec4 outColor;
+
+const float PI = 3.141592653589793;
+
+float linearEase(float begin, float change, float duration, float time) {
+	return change * time / duration + begin;
+}
+
+float exponentialEaseInOut(float begin, float change, float duration, float time) {
+	if (time == 0.0) {
+		return begin;
+	}
+
+	if (time == duration) {
+		return begin + change;
+	}
+
+	float t = time / (duration / 2.0);
+	if (t < 1.0) {
+		return change / 2.0 * pow(2.0, 10.0 * (t - 1.0)) + begin;
+	}
+
+	return change / 2.0 * (-pow(2.0, -10.0 * (t - 1.0)) + 2.0) + begin;
+}
+
+float sinusoidalEaseInOut(float begin, float change, float duration, float time) {
+	return -change / 2.0 * (cos(PI * time / duration) - 1.0) + begin;
+}
+
+float random(vec2 co) {
+	return fract(sin(dot(co.xy, vec2(12.9898, 78.233))) * 43758.5453);
+}
+
+vec4 crossFade(vec2 uv, float dissolve) {
+	return mix(texture(u_prev, uv), texture(u_next, uv), dissolve);
+}
+
+vec4 transition(vec2 uv, float progress) {
+	vec2 center = vec2(linearEase(0.25, 0.5, 1.0, progress), 0.5);
+	float dissolve = exponentialEaseInOut(0.0, 1.0, 1.0, progress);
+	float strength = sinusoidalEaseInOut(0.0, u_strength, 0.5, progress);
+
+	vec4 color = vec4(0.0);
+	float total = 0.0;
+	vec2 toCenter = center - uv;
+	float offset = random(uv);
+
+	for (int i = 0; i <= 40; i++) {
+		float percent = (float(i) + offset) / 40.0;
+		float weight = 4.0 * (percent - percent * percent);
+		color += crossFade(uv + toCenter * percent * strength, dissolve) * weight;
+		total += weight;
+	}
+
+	return color / total;
+}
+
+void main() {
+	float progress = 1.0 - u_time;
+	outColor = transition(v_uv, progress);
+}`;
+var compileShader = (gl, source, type) => {
+  const shader = gl.createShader(type);
+  if (!shader) {
+    throw new Error("Failed to create shader");
+  }
+  gl.shaderSource(shader, source);
+  gl.compileShader(shader);
+  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+    const log = gl.getShaderInfoLog(shader);
+    gl.deleteShader(shader);
+    throw new Error(`Failed to compile shader: ${log}`);
+  }
+  return shader;
+};
+var createProgram = (gl) => {
+  const program = gl.createProgram();
+  if (!program) {
+    throw new Error("Failed to create WebGL program");
+  }
+  const vs = compileShader(gl, VERTEX_SHADER, gl.VERTEX_SHADER);
+  const fs = compileShader(gl, FRAGMENT_SHADER, gl.FRAGMENT_SHADER);
+  gl.attachShader(program, vs);
+  gl.attachShader(program, fs);
+  gl.linkProgram(program);
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+    const log = gl.getProgramInfoLog(program);
+    gl.deleteProgram(program);
+    throw new Error(`Failed to link program: ${log}`);
+  }
+  return program;
+};
+var createTexture = (gl) => {
+  const tex = gl.createTexture();
+  if (!tex) {
+    throw new Error("Failed to create texture");
+  }
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 0]));
+  return tex;
+};
+var crossZoomShader = (canvas) => {
+  const gl = canvas.getContext("webgl2", { premultipliedAlpha: true });
+  if (!gl) {
+    throw new Error("Failed to create WebGL2 context");
+  }
+  const program = createProgram(gl);
+  const prevTex = createTexture(gl);
+  const nextTex = createTexture(gl);
+  const vao = gl.createVertexArray();
+  gl.bindVertexArray(vao);
+  const buffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+  const aPos = gl.getAttribLocation(program, "a_pos");
+  gl.enableVertexAttribArray(aPos);
+  gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+  const uTime = gl.getUniformLocation(program, "u_time");
+  const uPrev = gl.getUniformLocation(program, "u_prev");
+  const uNext = gl.getUniformLocation(program, "u_next");
+  const uStrength = gl.getUniformLocation(program, "u_strength");
+  const cleanup = () => {
+    gl.deleteProgram(program);
+    gl.deleteTexture(prevTex);
+    gl.deleteTexture(nextTex);
+  };
+  const clear = () => {
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+  };
+  const draw = ({
+    prevImage,
+    nextImage,
+    width,
+    height,
+    time: time3,
+    passedProps
+  }) => {
+    const { strength = DEFAULT_STRENGTH } = passedProps;
+    if (!prevImage && !nextImage) {
+      return;
+    }
+    if (prevImage && (prevImage.width === 0 || prevImage.height === 0)) {
+      return;
+    }
+    if (nextImage && (nextImage.width === 0 || nextImage.height === 0)) {
+      return;
+    }
+    const effectiveTime = !prevImage ? 0 : !nextImage ? 1 : time3;
+    gl.viewport(0, 0, width, height);
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.useProgram(program);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, prevTex);
+    if (prevImage) {
+      gl.texElementImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, prevImage);
+    }
+    gl.uniform1i(uPrev, 0);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, nextTex);
+    if (nextImage) {
+      gl.texElementImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, nextImage);
+    }
+    gl.uniform1i(uNext, 1);
+    gl.uniform1f(uTime, effectiveTime);
+    gl.uniform1f(uStrength, strength);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  };
+  return {
+    clear,
+    cleanup,
+    draw
+  };
+};
+var crossZoom = makeHtmlInCanvasPresentation(crossZoomShader);
+var DEFAULT_ROTATION = 6;
+var DEFAULT_SCALE = 1.2;
+var VERTEX_SHADER2 = `#version 300 es
+in vec2 a_pos;
+out vec2 v_uv;
+void main() {
+	v_uv = vec2(a_pos.x * 0.5 + 0.5, 0.5 - a_pos.y * 0.5);
+	gl_Position = vec4(a_pos, 0.0, 1.0);
+}`;
+var FRAGMENT_SHADER2 = `#version 300 es
+precision highp float;
+
+uniform sampler2D u_prev;
+uniform sampler2D u_next;
+uniform float u_time;
+uniform float u_rotation;
+uniform float u_scale;
+uniform float u_ratio;
+
+in vec2 v_uv;
+out vec4 outColor;
+
+const float DEG2RAD = 0.03926990816987241548078304229099;
+
+vec4 transition(vec2 uv, float progress) {
+	float phase = progress < 0.5 ? progress * 2.0 : (progress - 0.5) * 2.0;
+	float angleOffset = progress < 0.5 ? mix(0.0, u_rotation * DEG2RAD, phase) : mix(-u_rotation * DEG2RAD, 0.0, phase);
+	float newScale = progress < 0.5 ? mix(1.0, u_scale, phase) : mix(u_scale, 1.0, phase);
+
+	vec2 center = vec2(0.0, 0.0);
+	vec2 p = (uv.xy - vec2(0.5, 0.5)) / newScale * vec2(u_ratio, 1.0);
+	float angle = atan(p.y, p.x) + angleOffset;
+	float dist = distance(center, p);
+
+	p.x = cos(angle) * dist / u_ratio + 0.5;
+	p.y = sin(angle) * dist + 0.5;
+
+	vec4 c = progress < 0.5 ? texture(u_prev, p) : texture(u_next, p);
+	return c + (progress < 0.5 ? mix(0.0, 1.0, phase) : mix(1.0, 0.0, phase));
+}
+
+void main() {
+	float progress = 1.0 - u_time;
+	outColor = transition(v_uv, progress);
+}`;
+var compileShader2 = (gl, source, type) => {
+  const shader = gl.createShader(type);
+  if (!shader) {
+    throw new Error("Failed to create shader");
+  }
+  gl.shaderSource(shader, source);
+  gl.compileShader(shader);
+  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+    const log = gl.getShaderInfoLog(shader);
+    gl.deleteShader(shader);
+    throw new Error(`Failed to compile shader: ${log}`);
+  }
+  return shader;
+};
+var createProgram2 = (gl) => {
+  const program = gl.createProgram();
+  if (!program) {
+    throw new Error("Failed to create WebGL program");
+  }
+  const vs = compileShader2(gl, VERTEX_SHADER2, gl.VERTEX_SHADER);
+  const fs = compileShader2(gl, FRAGMENT_SHADER2, gl.FRAGMENT_SHADER);
+  gl.attachShader(program, vs);
+  gl.attachShader(program, fs);
+  gl.linkProgram(program);
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+    const log = gl.getProgramInfoLog(program);
+    gl.deleteProgram(program);
+    throw new Error(`Failed to link program: ${log}`);
+  }
+  return program;
+};
+var createTexture2 = (gl) => {
+  const tex = gl.createTexture();
+  if (!tex) {
+    throw new Error("Failed to create texture");
+  }
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 0]));
+  return tex;
+};
+var dreamyZoomShader = (canvas) => {
+  const gl = canvas.getContext("webgl2", { premultipliedAlpha: true });
+  if (!gl) {
+    throw new Error("Failed to create WebGL2 context");
+  }
+  const program = createProgram2(gl);
+  const prevTex = createTexture2(gl);
+  const nextTex = createTexture2(gl);
+  const vao = gl.createVertexArray();
+  gl.bindVertexArray(vao);
+  const buffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+  const aPos = gl.getAttribLocation(program, "a_pos");
+  gl.enableVertexAttribArray(aPos);
+  gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+  const uTime = gl.getUniformLocation(program, "u_time");
+  const uPrev = gl.getUniformLocation(program, "u_prev");
+  const uNext = gl.getUniformLocation(program, "u_next");
+  const uRotation = gl.getUniformLocation(program, "u_rotation");
+  const uScale = gl.getUniformLocation(program, "u_scale");
+  const uRatio = gl.getUniformLocation(program, "u_ratio");
+  const cleanup = () => {
+    gl.deleteProgram(program);
+    gl.deleteTexture(prevTex);
+    gl.deleteTexture(nextTex);
+  };
+  const clear = () => {
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+  };
+  const draw = ({
+    prevImage,
+    nextImage,
+    width,
+    height,
+    time: time3,
+    passedProps
+  }) => {
+    const { rotation = DEFAULT_ROTATION, scale = DEFAULT_SCALE } = passedProps;
+    if (!prevImage && !nextImage) {
+      return;
+    }
+    if (prevImage && (prevImage.width === 0 || prevImage.height === 0)) {
+      return;
+    }
+    if (nextImage && (nextImage.width === 0 || nextImage.height === 0)) {
+      return;
+    }
+    const effectiveTime = !prevImage ? 0 : !nextImage ? 1 : time3;
+    gl.viewport(0, 0, width, height);
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.useProgram(program);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, prevTex);
+    if (prevImage) {
+      gl.texElementImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, prevImage);
+    }
+    gl.uniform1i(uPrev, 0);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, nextTex);
+    if (nextImage) {
+      gl.texElementImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, nextImage);
+    }
+    gl.uniform1i(uNext, 1);
+    gl.uniform1f(uTime, effectiveTime);
+    gl.uniform1f(uRotation, rotation);
+    gl.uniform1f(uScale, scale);
+    gl.uniform1f(uRatio, width / height);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  };
+  return {
+    clear,
+    cleanup,
+    draw
+  };
+};
+var dreamyZoom = makeHtmlInCanvasPresentation(dreamyZoomShader);
+var DEFAULT_SEED = 2.31;
+var VERTEX_SHADER3 = `#version 300 es
+in vec2 a_pos;
+out vec2 v_uv;
+void main() {
+	v_uv = vec2(a_pos.x * 0.5 + 0.5, 0.5 - a_pos.y * 0.5);
+	gl_Position = vec4(a_pos, 0.0, 1.0);
+}`;
+var FRAGMENT_SHADER3 = `#version 300 es
+precision highp float;
+
+uniform sampler2D u_prev;
+uniform sampler2D u_next;
+uniform float u_time;
+uniform float u_seed;
+
+in vec2 v_uv;
+out vec4 outColor;
+
+#define PI 3.14159265358979323
+#define CLAMPS(x) clamp(x, 0.0, 1.0)
+#define REPEATS 50.0
+
+float sigmoid(float x, float a) {
+	float b = pow(x * 2.0, a) / 2.0;
+	if (x > 0.5) {
+		b = 1.0 - pow(2.0 - (x * 2.0), a) / 2.0;
+	}
+	return b;
+}
+
+float rand(float co) {
+	return fract(sin((co * 24.9898) + u_seed) * 43758.5453);
+}
+
+float rand(vec2 co) {
+	return fract(sin(dot(co.xy, vec2(12.9898, 78.233))) * 43758.5453);
+}
+
+float apow(float a, float b) {
+	return pow(abs(a), b) * sign(b);
+}
+
+vec3 pow3(vec3 a, vec3 b) {
+	return vec3(apow(a.r, b.r), apow(a.g, b.g), apow(a.b, b.b));
+}
+
+float smoothMix(float a, float b, float c) {
+	return mix(a, b, sigmoid(c, 2.0));
+}
+
+float random(vec2 co, float shft) {
+	co += 10.0;
+	return smoothMix(
+		fract(
+			sin(
+				dot(
+					co.xy,
+					vec2(12.9898 + (floor(shft) * 0.5), 78.233 + u_seed)
+				)
+			) * 43758.5453
+		),
+		fract(
+			sin(
+				dot(
+					co.xy,
+					vec2(12.9898 + (floor(shft + 1.0) * 0.5), 78.233 + u_seed)
+				)
+			) * 43758.5453
+		),
+		fract(shft)
+	);
+}
+
+float smoothRandom(vec2 co, float shft) {
+	return smoothMix(
+		smoothMix(
+			random(floor(co), shft),
+			random(floor(co + vec2(1.0, 0.0)), shft),
+			fract(co.x)
+		),
+		smoothMix(
+			random(floor(co + vec2(0.0, 1.0)), shft),
+			random(floor(co + vec2(1.0, 1.0)), shft),
+			fract(co.x)
+		),
+		fract(co.y)
+	);
+}
+
+vec4 sampleTexture(vec2 p, float progress) {
+	return mix(texture(u_prev, p), texture(u_next, p), sigmoid(progress, 10.0));
+}
+
+vec4 transition(vec2 p, float progress) {
+	vec3 f = vec3(0.0);
+	for (float i = 0.0; i < 13.0; i++) {
+		f += sin(((p.x * rand(i) * 6.0) + (progress * 8.0)) + rand(i + 1.43)) *
+			sin(
+				((p.y * rand(i + 4.4) * 6.0) + (progress * 6.0)) +
+					rand(i + 2.4)
+			);
+		f += 1.0 - CLAMPS(
+			length(
+				p -
+					vec2(
+						smoothRandom(vec2(progress * 1.3), i + 1.0),
+						smoothRandom(vec2(progress * 0.5), i + 6.25)
+					)
+			) * mix(20.0, 70.0, rand(i))
+		);
+	}
+
+	f += 4.0;
+	f /= 11.0;
+	f = pow3(
+		f * vec3(1.0, 0.7, 0.6),
+		vec3(1.0, 2.0 - sin(progress * PI), 1.3)
+	);
+	f *= sin(progress * PI);
+
+	p -= 0.5;
+	p *= 1.0 + (smoothRandom(vec2(progress * 5.0), 6.3) * sin(progress * PI) * 0.05);
+	p += 0.5;
+
+	vec4 blurredImage = vec4(0.0);
+	float blurAmount = sin(progress * PI) * 0.03;
+	for (float i = 0.0; i < REPEATS; i++) {
+		vec2 q = vec2(
+			cos(degrees((i / REPEATS) * 360.0)),
+			sin(degrees((i / REPEATS) * 360.0))
+		) * (rand(vec2(i, p.x + p.y)) + blurAmount);
+		vec2 uv2 = p + (q * blurAmount);
+		blurredImage += sampleTexture(uv2, progress);
+	}
+
+	blurredImage /= REPEATS;
+	return blurredImage + vec4(f, 0.0);
+}
+
+void main() {
+	float progress = 1.0 - u_time;
+	outColor = transition(v_uv, progress);
+}`;
+var compileShader3 = (gl, source, type) => {
+  const shader = gl.createShader(type);
+  if (!shader) {
+    throw new Error("Failed to create shader");
+  }
+  gl.shaderSource(shader, source);
+  gl.compileShader(shader);
+  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+    const log = gl.getShaderInfoLog(shader);
+    gl.deleteShader(shader);
+    throw new Error(`Failed to compile shader: ${log}`);
+  }
+  return shader;
+};
+var createProgram3 = (gl) => {
+  const program = gl.createProgram();
+  if (!program) {
+    throw new Error("Failed to create WebGL program");
+  }
+  const vs = compileShader3(gl, VERTEX_SHADER3, gl.VERTEX_SHADER);
+  const fs = compileShader3(gl, FRAGMENT_SHADER3, gl.FRAGMENT_SHADER);
+  gl.attachShader(program, vs);
+  gl.attachShader(program, fs);
+  gl.linkProgram(program);
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+    const log = gl.getProgramInfoLog(program);
+    gl.deleteProgram(program);
+    throw new Error(`Failed to link program: ${log}`);
+  }
+  return program;
+};
+var createTexture3 = (gl) => {
+  const tex = gl.createTexture();
+  if (!tex) {
+    throw new Error("Failed to create texture");
+  }
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 0]));
+  return tex;
+};
+var filmBurnShader = (canvas) => {
+  const gl = canvas.getContext("webgl2", { premultipliedAlpha: true });
+  if (!gl) {
+    throw new Error("Failed to create WebGL2 context");
+  }
+  const program = createProgram3(gl);
+  const prevTex = createTexture3(gl);
+  const nextTex = createTexture3(gl);
+  const vao = gl.createVertexArray();
+  gl.bindVertexArray(vao);
+  const buffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+  const aPos = gl.getAttribLocation(program, "a_pos");
+  gl.enableVertexAttribArray(aPos);
+  gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+  const uTime = gl.getUniformLocation(program, "u_time");
+  const uPrev = gl.getUniformLocation(program, "u_prev");
+  const uNext = gl.getUniformLocation(program, "u_next");
+  const uSeed = gl.getUniformLocation(program, "u_seed");
+  const cleanup = () => {
+    gl.deleteProgram(program);
+    gl.deleteTexture(prevTex);
+    gl.deleteTexture(nextTex);
+  };
+  const clear = () => {
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+  };
+  const draw = ({
+    prevImage,
+    nextImage,
+    width,
+    height,
+    time: time3,
+    passedProps
+  }) => {
+    const { seed = DEFAULT_SEED } = passedProps;
+    if (!prevImage && !nextImage) {
+      return;
+    }
+    if (prevImage && (prevImage.width === 0 || prevImage.height === 0)) {
+      return;
+    }
+    if (nextImage && (nextImage.width === 0 || nextImage.height === 0)) {
+      return;
+    }
+    const effectiveTime = !prevImage ? 0 : !nextImage ? 1 : time3;
+    gl.viewport(0, 0, width, height);
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.useProgram(program);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, prevTex);
+    if (prevImage) {
+      gl.texElementImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, prevImage);
+    }
+    gl.uniform1i(uPrev, 0);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, nextTex);
+    if (nextImage) {
+      gl.texElementImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, nextImage);
+    }
+    gl.uniform1i(uNext, 1);
+    gl.uniform1f(uTime, effectiveTime);
+    gl.uniform1f(uSeed, seed);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  };
+  return {
+    clear,
+    cleanup,
+    draw
+  };
+};
+var filmBurn = makeHtmlInCanvasPresentation(filmBurnShader);
+var VERTEX_SHADER4 = `#version 300 es
+in vec2 a_pos;
+out vec2 v_uv;
+void main() {
+	v_uv = vec2(a_pos.x * 0.5 + 0.5, 0.5 - a_pos.y * 0.5);
+	gl_Position = vec4(a_pos, 0.0, 1.0);
+}`;
+var FRAGMENT_SHADER4 = `#version 300 es
+precision highp float;
+
+uniform sampler2D u_prev;
+uniform sampler2D u_next;
+uniform float u_time;
+uniform float u_intensity;
+
+in vec2 v_uv;
+out vec4 outColor;
+
+const int PASSES = 6;
+
+vec4 transition(vec2 uv, float progress) {
+	vec4 c1 = vec4(0.0);
+	vec4 c2 = vec4(0.0);
+
+	float disp = u_intensity * (0.5 - distance(0.5, progress));
+	for (int xi = 0; xi < PASSES; xi++) {
+		float x = float(xi) / float(PASSES) - 0.5;
+		for (int yi = 0; yi < PASSES; yi++) {
+			float y = float(yi) / float(PASSES) - 0.5;
+			vec2 v = vec2(x, y);
+			c1 += texture(u_prev, uv + disp * v);
+			c2 += texture(u_next, uv + disp * v);
+		}
+	}
+
+	c1 /= float(PASSES * PASSES);
+	c2 /= float(PASSES * PASSES);
+	return mix(c1, c2, progress);
+}
+
+void main() {
+	float progress = 1.0 - u_time;
+	outColor = transition(v_uv, progress);
+}`;
+var compileShader4 = (gl, source, type) => {
+  const shader = gl.createShader(type);
+  if (!shader) {
+    throw new Error("Failed to create shader");
+  }
+  gl.shaderSource(shader, source);
+  gl.compileShader(shader);
+  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+    const log = gl.getShaderInfoLog(shader);
+    gl.deleteShader(shader);
+    throw new Error(`Failed to compile shader: ${log}`);
+  }
+  return shader;
+};
+var createProgram4 = (gl) => {
+  const program = gl.createProgram();
+  if (!program) {
+    throw new Error("Failed to create WebGL program");
+  }
+  const vs = compileShader4(gl, VERTEX_SHADER4, gl.VERTEX_SHADER);
+  const fs = compileShader4(gl, FRAGMENT_SHADER4, gl.FRAGMENT_SHADER);
+  gl.attachShader(program, vs);
+  gl.attachShader(program, fs);
+  gl.linkProgram(program);
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+    const log = gl.getProgramInfoLog(program);
+    gl.deleteProgram(program);
+    throw new Error(`Failed to link program: ${log}`);
+  }
+  return program;
+};
+var createTexture4 = (gl) => {
+  const tex = gl.createTexture();
+  if (!tex) {
+    throw new Error("Failed to create texture");
+  }
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 0]));
+  return tex;
+};
+var linearBlurShader = (canvas) => {
+  const gl = canvas.getContext("webgl2", { premultipliedAlpha: true });
+  if (!gl) {
+    throw new Error("Failed to create WebGL2 context");
+  }
+  const program = createProgram4(gl);
+  const prevTex = createTexture4(gl);
+  const nextTex = createTexture4(gl);
+  const vao = gl.createVertexArray();
+  gl.bindVertexArray(vao);
+  const buffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+  const aPos = gl.getAttribLocation(program, "a_pos");
+  gl.enableVertexAttribArray(aPos);
+  gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+  const uTime = gl.getUniformLocation(program, "u_time");
+  const uPrev = gl.getUniformLocation(program, "u_prev");
+  const uNext = gl.getUniformLocation(program, "u_next");
+  const uIntensity = gl.getUniformLocation(program, "u_intensity");
+  const cleanup = () => {
+    gl.deleteProgram(program);
+    gl.deleteTexture(prevTex);
+    gl.deleteTexture(nextTex);
+  };
+  const clear = () => {
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+  };
+  const draw = ({
+    prevImage,
+    nextImage,
+    width,
+    height,
+    time: time3,
+    passedProps
+  }) => {
+    const { intensity = 0.1 } = passedProps;
+    if (!prevImage && !nextImage) {
+      return;
+    }
+    if (prevImage && (prevImage.width === 0 || prevImage.height === 0)) {
+      return;
+    }
+    if (nextImage && (nextImage.width === 0 || nextImage.height === 0)) {
+      return;
+    }
+    const effectiveTime = !prevImage ? 0 : !nextImage ? 1 : time3;
+    gl.viewport(0, 0, width, height);
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.useProgram(program);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, prevTex);
+    if (prevImage) {
+      gl.texElementImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, prevImage);
+    }
+    gl.uniform1i(uPrev, 0);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, nextTex);
+    if (nextImage) {
+      gl.texElementImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, nextImage);
+    }
+    gl.uniform1i(uNext, 1);
+    gl.uniform1f(uTime, effectiveTime);
+    gl.uniform1f(uIntensity, intensity);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  };
+  return {
+    clear,
+    cleanup,
+    draw
+  };
+};
+var linearBlur = makeHtmlInCanvasPresentation(linearBlurShader);
+var linearTiming = (options) => {
+  return {
+    getDurationInFrames: () => {
+      return options.durationInFrames;
+    },
+    getProgress: ({ frame }) => {
+      return interpolate(frame, [0, options.durationInFrames], [0, 1], {
+        easing: options.easing,
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp"
+      });
+    }
+  };
+};
+var EnteringContext = import_react116.default.createContext(null);
+var ExitingContext = import_react116.default.createContext(null);
+var WrapInEnteringProgressContext = ({ presentationProgress, children }) => {
+  const value = (0, import_react116.useMemo)(() => {
+    return {
+      enteringProgress: presentationProgress
+    };
+  }, [presentationProgress]);
+  return /* @__PURE__ */ (0, import_jsx_runtime59.jsx)(EnteringContext.Provider, {
+    value,
+    children
+  });
+};
+var WrapInExitingProgressContext = ({ presentationProgress, children }) => {
+  const value = (0, import_react116.useMemo)(() => {
+    return {
+      exitingProgress: presentationProgress
+    };
+  }, [presentationProgress]);
+  return /* @__PURE__ */ (0, import_jsx_runtime59.jsx)(ExitingContext.Provider, {
+    value,
+    children
+  });
+};
+var flattenChildren2 = (children) => {
+  const childrenArray = import_react117.default.Children.toArray(children);
+  return childrenArray.reduce((flatChildren, child) => {
+    if (child.type === import_react117.default.Fragment) {
+      return flatChildren.concat(flattenChildren2(child.props.children));
+    }
+    flatChildren.push(child);
+    return flatChildren;
+  }, []);
+};
+var validateDurationInFrames4 = NoReactInternals.validateDurationInFrames;
+var TransitionSeriesTransition = function(_props) {
+  return null;
+};
+var SeriesOverlay = () => {
+  return null;
+};
+var SeriesSequence2 = ({ children }) => {
+  return /* @__PURE__ */ (0, import_jsx_runtime60.jsx)(import_jsx_runtime60.Fragment, {
+    children
+  });
+};
+var TransitionSeriesChildren = ({
+  children
+}) => {
+  const { fps } = useVideoConfig();
+  const frame = useCurrentFrame();
+  const prevImageRef = (0, import_react115.useRef)({});
+  const nextImageRef = (0, import_react115.useRef)({});
+  const flattedChildren = (0, import_react115.useMemo)(() => {
+    return flattenChildren2(children);
+  }, [children]);
+  const drawIfSynced = (0, import_react115.useCallback)((index) => {
+    const prevImage = prevImageRef?.current?.[index];
+    const nextImage = nextImageRef?.current?.[index];
+    if (!nextImage?.elementImage && prevImage?.elementImage) {
+      nextImage?.draw?.(null, null, 0);
+      prevImage?.draw?.(prevImage?.elementImage ?? null, null, 0);
+      return;
+    }
+    if (!prevImage?.elementImage && nextImage?.elementImage) {
+      prevImage?.draw?.(null, null, 0);
+      nextImage?.draw?.(null, nextImage?.elementImage ?? null, 0);
+      return;
+    }
+    if (prevImage && nextImage && prevImage.progress === nextImage.progress || !prevImage?.elementImage || !nextImage?.elementImage) {
+      prevImage?.draw?.(prevImage?.elementImage ?? null, nextImage?.elementImage ?? null, prevImage?.progress ?? nextImage?.progress ?? 0);
+      nextImage?.draw?.(null, null, 0);
+    }
+  }, []);
+  const onNextElementImage = (0, import_react115.useCallback)((elementImage, progress, draw, index) => {
+    prevImageRef.current[index] = { elementImage, progress, draw };
+    drawIfSynced(index);
+  }, [drawIfSynced]);
+  const onPrevElementImage = (0, import_react115.useCallback)((elementImage, progress, draw, index) => {
+    nextImageRef.current[index] = { elementImage, progress, draw };
+    drawIfSynced(index);
+  }, [drawIfSynced]);
+  const childrenValue = (0, import_react115.useMemo)(() => {
+    let transitionOffsets = 0;
+    let startFrame = 0;
+    const overlayRenders = [];
+    const sequenceDurations = [];
+    let pendingOverlayValidation = false;
+    const mainChildren = import_react115.Children.map(flattedChildren, (child, i) => {
+      const current = child;
+      if (typeof current === "string") {
+        if (current.trim() === "") {
+          return null;
+        }
+        throw new TypeError(`The <TransitionSeries /> component only accepts a list of <TransitionSeries.Sequence /> components as its children, but you passed a string "${current}"`);
+      }
+      const hasPrev = flattedChildren[i - 1];
+      const nextPrev = flattedChildren[i + 1];
+      const prevIsTransition = typeof hasPrev === "string" || typeof hasPrev === "undefined" ? false : hasPrev.type === TransitionSeriesTransition;
+      const prevIsOverlay = typeof hasPrev === "string" || typeof hasPrev === "undefined" ? false : hasPrev.type === SeriesOverlay;
+      if (current.type === SeriesOverlay) {
+        if (prevIsOverlay) {
+          throw new TypeError(`A <TransitionSeries.Overlay /> component must not be followed by another <TransitionSeries.Overlay /> component (nth children = ${i - 1} and ${i})`);
+        }
+        if (prevIsTransition) {
+          throw new TypeError(`A <TransitionSeries.Transition /> component must not be followed by a <TransitionSeries.Overlay /> component (nth children = ${i - 1} and ${i})`);
+        }
+        const nextIsTransition = typeof nextPrev === "string" || typeof nextPrev === "undefined" ? false : nextPrev.type === TransitionSeriesTransition;
+        if (nextIsTransition) {
+          throw new TypeError(`A <TransitionSeries.Overlay /> component must not be followed by a <TransitionSeries.Transition /> component (nth children = ${i} and ${i + 1})`);
+        }
+        const overlayProps = current.props;
+        validateDurationInFrames4(overlayProps.durationInFrames, {
+          component: `of a <TransitionSeries.Overlay /> component`,
+          allowFloats: false
+        });
+        const overlayOffset = overlayProps.offset ?? 0;
+        if (Number.isNaN(overlayOffset)) {
+          throw new TypeError(`The "offset" property of a <TransitionSeries.Overlay /> must not be NaN, but got NaN.`);
+        }
+        if (!Number.isFinite(overlayOffset)) {
+          throw new TypeError(`The "offset" property of a <TransitionSeries.Overlay /> must be finite, but got ${overlayOffset}.`);
+        }
+        if (overlayOffset % 1 !== 0) {
+          throw new TypeError(`The "offset" property of a <TransitionSeries.Overlay /> must be an integer, but got ${overlayOffset}.`);
+        }
+        const cutPoint = startFrame + transitionOffsets;
+        const halfDuration = overlayProps.durationInFrames / 2;
+        const overlayFrom = cutPoint - halfDuration + overlayOffset;
+        if (overlayFrom < 0) {
+          throw new TypeError(`A <TransitionSeries.Overlay /> extends before frame 0. The overlay starts at frame ${overlayFrom}. Reduce the duration or adjust the offset.`);
+        }
+        const prevSeqIdx = sequenceDurations.length - 1;
+        if (prevSeqIdx >= 0) {
+          const overlayStartInPrev = halfDuration - overlayOffset;
+          if (overlayStartInPrev > sequenceDurations[prevSeqIdx]) {
+            throw new TypeError(`A <TransitionSeries.Overlay /> extends beyond the previous sequence. The overlay needs ${overlayStartInPrev} frames before the cut, but the previous sequence is only ${sequenceDurations[prevSeqIdx]} frames long.`);
+          }
+        }
+        pendingOverlayValidation = true;
+        overlayRenders.push({
+          cutPoint,
+          overlayFrom,
+          durationInFrames: overlayProps.durationInFrames,
+          overlayOffset,
+          halfDuration,
+          children: overlayProps.children,
+          index: i,
+          stack: overlayProps.stack
+        });
+        return null;
+      }
+      if (current.type === TransitionSeriesTransition) {
+        if (prevIsTransition) {
+          throw new TypeError(`A <TransitionSeries.Transition /> component must not be followed by another <TransitionSeries.Transition /> component (nth children = ${i - 1} and ${i})`);
+        }
+        if (prevIsOverlay) {
+          throw new TypeError(`A <TransitionSeries.Overlay /> component must not be followed by a <TransitionSeries.Transition /> component (nth children = ${i - 1} and ${i})`);
+        }
+        return null;
+      }
+      if (current.type !== SeriesSequence2) {
+        throw new TypeError(`The <TransitionSeries /> component only accepts a list of <TransitionSeries.Sequence />, <TransitionSeries.Transition />, and <TransitionSeries.Overlay /> components as its children, but got ${current} instead`);
+      }
+      const prev = typeof hasPrev === "string" || typeof hasPrev === "undefined" ? null : hasPrev.type === TransitionSeriesTransition ? hasPrev : null;
+      const next = typeof nextPrev === "string" || typeof nextPrev === "undefined" ? null : nextPrev.type === TransitionSeriesTransition ? nextPrev : null;
+      const castedChildAgain = current;
+      const debugInfo = `index = ${i}, duration = ${castedChildAgain.props.durationInFrames}`;
+      const durationInFramesProp = castedChildAgain.props.durationInFrames;
+      const {
+        durationInFrames,
+        children: _children,
+        ...passedProps
+      } = castedChildAgain.props;
+      validateDurationInFrames4(durationInFramesProp, {
+        component: `of a <TransitionSeries.Sequence /> component`,
+        allowFloats: true
+      });
+      const offset = castedChildAgain.props.offset ?? 0;
+      if (Number.isNaN(offset)) {
+        throw new TypeError(`The "offset" property of a <TransitionSeries.Sequence /> must not be NaN, but got NaN (${debugInfo}).`);
+      }
+      if (!Number.isFinite(offset)) {
+        throw new TypeError(`The "offset" property of a <TransitionSeries.Sequence /> must be finite, but got ${offset} (${debugInfo}).`);
+      }
+      if (offset % 1 !== 0) {
+        throw new TypeError(`The "offset" property of a <TransitionSeries.Sequence /> must be finite, but got ${offset} (${debugInfo}).`);
+      }
+      const currentStartFrame = startFrame + offset;
+      let duration3 = 0;
+      if (prev) {
+        duration3 = prev.props.timing.getDurationInFrames({
+          fps
+        });
+        transitionOffsets -= duration3;
+      }
+      let actualStartFrame = currentStartFrame + transitionOffsets;
+      startFrame += durationInFramesProp + offset;
+      if (actualStartFrame < 0) {
+        startFrame -= actualStartFrame;
+        actualStartFrame = 0;
+      }
+      sequenceDurations.push(durationInFramesProp);
+      if (pendingOverlayValidation) {
+        pendingOverlayValidation = false;
+        const lastOverlay = overlayRenders[overlayRenders.length - 1];
+        const framesAfterCut = lastOverlay.halfDuration + lastOverlay.overlayOffset;
+        if (framesAfterCut > durationInFramesProp) {
+          throw new TypeError(`A <TransitionSeries.Overlay /> extends beyond the next sequence. The overlay needs ${framesAfterCut} frames after the cut, but the next sequence is only ${durationInFramesProp} frames long.`);
+        }
+      }
+      const nextProgress = next ? next.props.timing.getProgress({
+        frame: frame - actualStartFrame - durationInFrames + next.props.timing.getDurationInFrames({ fps }),
+        fps
+      }) : null;
+      const prevProgress = prev ? prev.props.timing.getProgress({
+        frame: frame - actualStartFrame,
+        fps
+      }) : null;
+      if (next && durationInFramesProp < next.props.timing.getDurationInFrames({ fps })) {
+        throw new Error(`The duration of a <TransitionSeries.Sequence /> must not be shorter than the duration of the next <TransitionSeries.Transition />. The transition is ${next.props.timing.getDurationInFrames({ fps })} frames long, but the sequence is only ${durationInFramesProp} frames long (${debugInfo})`);
+      }
+      if (prev && durationInFramesProp < prev.props.timing.getDurationInFrames({ fps })) {
+        throw new Error(`The duration of a <TransitionSeries.Sequence /> must not be shorter than the duration of the previous <TransitionSeries.Transition />. The transition is ${prev.props.timing.getDurationInFrames({ fps })} frames long, but the sequence is only ${durationInFramesProp} frames long (${debugInfo})`);
+      }
+      if (next && prev && nextProgress !== null && prevProgress !== null) {
+        const nextPresentation = next.props.presentation ?? slide();
+        const prevPresentation = prev.props.presentation ?? slide();
+        const UppercaseNextPresentation = nextPresentation.component;
+        const UppercasePrevPresentation = prevPresentation.component;
+        return /* @__PURE__ */ (0, import_jsx_runtime60.jsx)(Sequence, {
+          from: actualStartFrame,
+          durationInFrames: durationInFramesProp,
+          ...passedProps,
+          name: passedProps.name || "<TS.Sequence>",
+          _remotionInternalDocumentationLink: passedProps.name ? void 0 : "https://www.remotion.dev/docs/transitions/transitionseries",
+          children: /* @__PURE__ */ (0, import_jsx_runtime60.jsx)(UppercaseNextPresentation, {
+            passedProps: nextPresentation.props ?? {},
+            presentationDirection: "exiting",
+            presentationProgress: nextProgress,
+            presentationDurationInFrames: next.props.timing.getDurationInFrames({ fps }),
+            onElementImage: () => {
+              throw new Error("Should not call when exiting");
+            },
+            onUnmount: () => {
+              throw new Error("Should not call when exiting");
+            },
+            bothEnteringAndExiting: true,
+            children: /* @__PURE__ */ (0, import_jsx_runtime60.jsx)(WrapInExitingProgressContext, {
+              presentationProgress: nextProgress,
+              children: /* @__PURE__ */ (0, import_jsx_runtime60.jsx)(UppercasePrevPresentation, {
+                passedProps: prevPresentation.props ?? {},
+                presentationDirection: "entering",
+                presentationProgress: prevProgress,
+                presentationDurationInFrames: prev.props.timing.getDurationInFrames({ fps }),
+                onElementImage: (elementImage, draw) => {
+                  onPrevElementImage(elementImage, nextProgress, draw, i + 1);
+                  onNextElementImage(elementImage, prevProgress, draw, i - 1);
+                },
+                onUnmount: () => {
+                  onPrevElementImage(null, null, null, i + 1);
+                  onNextElementImage(null, null, null, i - 1);
+                },
+                bothEnteringAndExiting: true,
+                children: /* @__PURE__ */ (0, import_jsx_runtime60.jsx)(WrapInEnteringProgressContext, {
+                  presentationProgress: prevProgress,
+                  children: child
+                })
+              })
+            })
+          })
+        }, i);
+      }
+      if (prevProgress !== null && prev) {
+        const prevPresentation = prev.props.presentation ?? slide();
+        const UppercasePrevPresentation = prevPresentation.component;
+        return /* @__PURE__ */ (0, import_jsx_runtime60.jsx)(Sequence, {
+          from: actualStartFrame,
+          durationInFrames: durationInFramesProp,
+          ...passedProps,
+          name: passedProps.name || "<TS.Sequence>",
+          _remotionInternalDocumentationLink: passedProps.name ? void 0 : "https://www.remotion.dev/docs/transitions/transitionseries",
+          children: /* @__PURE__ */ (0, import_jsx_runtime60.jsx)(UppercasePrevPresentation, {
+            passedProps: prevPresentation.props ?? {},
+            presentationDirection: "entering",
+            presentationProgress: prevProgress,
+            presentationDurationInFrames: prev.props.timing.getDurationInFrames({ fps }),
+            onElementImage: (elementImage, draw) => onNextElementImage(elementImage, prevProgress, draw, i - 1),
+            onUnmount: () => {
+              onNextElementImage(null, null, null, i - 1);
+            },
+            bothEnteringAndExiting: false,
+            children: /* @__PURE__ */ (0, import_jsx_runtime60.jsx)(WrapInEnteringProgressContext, {
+              presentationProgress: prevProgress,
+              children: child
+            })
+          })
+        }, i);
+      }
+      if (nextProgress !== null && next) {
+        const nextPresentation = next.props.presentation ?? slide();
+        const UppercaseNextPresentation = nextPresentation.component;
+        return /* @__PURE__ */ (0, import_jsx_runtime60.jsx)(Sequence, {
+          from: actualStartFrame,
+          durationInFrames: durationInFramesProp,
+          ...passedProps,
+          name: passedProps.name || "<TS.Sequence>",
+          _remotionInternalDocumentationLink: passedProps.name ? void 0 : "https://www.remotion.dev/docs/transitions/transitionseries",
+          children: /* @__PURE__ */ (0, import_jsx_runtime60.jsx)(UppercaseNextPresentation, {
+            passedProps: nextPresentation.props ?? {},
+            presentationDirection: "exiting",
+            presentationProgress: nextProgress,
+            presentationDurationInFrames: next.props.timing.getDurationInFrames({ fps }),
+            onElementImage: (elementImage, draw) => onPrevElementImage(elementImage, nextProgress, draw, i + 1),
+            onUnmount: () => {
+              onPrevElementImage(null, null, null, i + 1);
+            },
+            bothEnteringAndExiting: false,
+            children: /* @__PURE__ */ (0, import_jsx_runtime60.jsx)(WrapInExitingProgressContext, {
+              presentationProgress: nextProgress,
+              children: child
+            })
+          })
+        }, i);
+      }
+      return /* @__PURE__ */ (0, import_jsx_runtime60.jsx)(Sequence, {
+        from: actualStartFrame,
+        durationInFrames: durationInFramesProp,
+        ...passedProps,
+        name: passedProps.name || "<TS.Sequence>",
+        _remotionInternalDocumentationLink: passedProps.name ? void 0 : "https://www.remotion.dev/docs/transitions/transitionseries",
+        children: child
+      }, i);
+    });
+    const overlayElements = overlayRenders.map((overlayInfo) => {
+      const info2 = overlayInfo;
+      return /* @__PURE__ */ (0, import_jsx_runtime60.jsx)(Sequence, {
+        from: Math.round(info2.overlayFrom),
+        durationInFrames: info2.durationInFrames,
+        name: "<TS.Overlay>",
+        _remotionInternalDocumentationLink: "https://www.remotion.dev/docs/transitions/transitionseries",
+        layout: "absolute-fill",
+        ...info2.stack ? { stack: info2.stack } : {},
+        children: info2.children
+      }, `overlay-${info2.index}`);
+    });
+    return [...mainChildren || [], ...overlayElements];
+  }, [flattedChildren, fps, frame, onPrevElementImage, onNextElementImage]);
+  return /* @__PURE__ */ (0, import_jsx_runtime60.jsx)(import_jsx_runtime60.Fragment, {
+    children: childrenValue
+  });
+};
+var TransitionSeries = ({ children, name, layout: passedLayout, ...otherProps }) => {
+  const displayName = name ?? "<TransitionSeries>";
+  const layout = passedLayout ?? "absolute-fill";
+  if (NoReactInternals.ENABLE_V5_BREAKING_CHANGES && layout !== "absolute-fill") {
+    throw new TypeError(`The "layout" prop of <TransitionSeries /> is not supported anymore in v5. TransitionSeries' must be absolutely positioned.`);
+  }
+  return /* @__PURE__ */ (0, import_jsx_runtime60.jsx)(Sequence, {
+    name: displayName,
+    layout,
+    _remotionInternalDocumentationLink: name === void 0 ? "https://www.remotion.dev/docs/transitions/transitionseries" : void 0,
+    ...otherProps,
+    children: /* @__PURE__ */ (0, import_jsx_runtime60.jsx)(TransitionSeriesChildren, {
+      children
+    })
+  });
+};
+TransitionSeries.Sequence = SeriesSequence2;
+TransitionSeries.Transition = TransitionSeriesTransition;
+TransitionSeries.Overlay = SeriesOverlay;
+Internals.addSequenceStackTraces(TransitionSeries);
+Internals.addSequenceStackTraces(SeriesSequence2);
+Internals.addSequenceStackTraces(SeriesOverlay);
+
+// node_modules/@remotion/transitions/dist/esm/fade.mjs
+var import_react119 = __toESM(require_react(), 1);
+var import_jsx_runtime61 = __toESM(require_jsx_runtime(), 1);
+var FadePresentation = ({ children, presentationDirection, presentationProgress, passedProps }) => {
+  const isEntering = presentationDirection === "entering";
+  const style2 = (0, import_react119.useMemo)(() => {
+    return {
+      opacity: isEntering ? presentationProgress : passedProps.shouldFadeOutExitingScene ? 1 - presentationProgress : 1,
+      ...presentationDirection === "entering" ? passedProps.enterStyle : passedProps.exitStyle
+    };
+  }, [
+    isEntering,
+    passedProps.enterStyle,
+    passedProps.exitStyle,
+    passedProps.shouldFadeOutExitingScene,
+    presentationDirection,
+    presentationProgress
+  ]);
+  return /* @__PURE__ */ (0, import_jsx_runtime61.jsx)(AbsoluteFill, {
+    style: style2,
+    children
+  });
+};
+var fade = (props) => {
+  return {
+    component: FadePresentation,
+    props: props ?? {}
+  };
+};
+
+// node_modules/@remotion/transitions/dist/esm/slide.mjs
+var import_react120 = __toESM(require_react(), 1);
+var import_jsx_runtime62 = __toESM(require_jsx_runtime(), 1);
+var epsilon2 = 0.01;
+var SlidePresentation2 = ({
+  children,
+  presentationProgress,
+  presentationDirection,
+  passedProps: { direction = "from-left", enterStyle, exitStyle }
+}) => {
+  const directionStyle = (0, import_react120.useMemo)(() => {
+    const presentationProgressWithEpsilonCorrection = presentationProgress === 1 ? presentationProgress * 100 : presentationProgress * 100 - epsilon2;
+    if (presentationDirection === "exiting") {
+      switch (direction) {
+        case "from-left":
+          return {
+            transform: `translateX(${presentationProgressWithEpsilonCorrection}%)`
+          };
+        case "from-right":
+          return {
+            transform: `translateX(${-presentationProgress * 100}%)`
+          };
+        case "from-top":
+          return {
+            transform: `translateY(${presentationProgressWithEpsilonCorrection}%)`
+          };
+        case "from-bottom":
+          return {
+            transform: `translateY(${-presentationProgress * 100}%)`
+          };
+        default:
+          throw new Error(`Invalid direction: ${direction}`);
+      }
+    }
+    switch (direction) {
+      case "from-left":
+        return {
+          transform: `translateX(${-100 + presentationProgress * 100}%)`
+        };
+      case "from-right":
+        return {
+          transform: `translateX(${100 - presentationProgressWithEpsilonCorrection}%)`
+        };
+      case "from-top":
+        return {
+          transform: `translateY(${-100 + presentationProgress * 100}%)`
+        };
+      case "from-bottom":
+        return {
+          transform: `translateY(${100 - presentationProgressWithEpsilonCorrection}%)`
+        };
+      default:
+        throw new Error(`Invalid direction: ${direction}`);
+    }
+  }, [presentationDirection, presentationProgress, direction]);
+  const style2 = (0, import_react120.useMemo)(() => {
+    return {
+      width: "100%",
+      height: "100%",
+      justifyContent: "center",
+      alignItems: "center",
+      ...directionStyle,
+      ...presentationDirection === "entering" ? enterStyle : exitStyle
+    };
+  }, [directionStyle, enterStyle, exitStyle, presentationDirection]);
+  return /* @__PURE__ */ (0, import_jsx_runtime62.jsx)(AbsoluteFill, {
+    style: style2,
+    children
+  });
+};
+var slide2 = (props) => {
+  return {
+    component: SlidePresentation2,
+    props: props ?? {}
+  };
+};
+
+// node_modules/@remotion/transitions/dist/esm/wipe.mjs
+var import_react121 = __toESM(require_react(), 1);
+var import_jsx_runtime63 = __toESM(require_jsx_runtime(), 1);
+var makePolygonIn = (progress, direction) => {
+  const p = progress * 100;
+  switch (direction) {
+    case "from-left":
+      return `polygon(0% 0%, ${p}% 0%, ${p}% 100%, 0% 100%)`;
+    case "from-top-left":
+      return `polygon(0% 0%, ${p * 2}% 0%, 0% ${p * 2}%)`;
+    case "from-top":
+      return `polygon(0% 0%, 100% 0%, 100% ${p}%, 0% ${p}%)`;
+    case "from-top-right":
+      return `polygon(100% 0%, ${100 - p * 2}% 0%, 100% ${p * 2}%)`;
+    case "from-right":
+      return `polygon(100% 0%, 100% 100%, ${100 - p}% 100%, ${100 - p}% 0%)`;
+    case "from-bottom-right":
+      return `polygon(100% 100%, ${100 - p * 2}% 100%, 100% ${100 - p * 2}%)`;
+    case "from-bottom":
+      return `polygon(0% 100%, 100% 100%, 100% ${100 - p}%, 0% ${100 - p}%)`;
+    case "from-bottom-left":
+      return `polygon(0% 100%, 0% ${100 - p * 2}%, ${p * 2}% 100%)`;
+    default:
+      throw new Error(`Unknown direction ${JSON.stringify(direction)}`);
   }
 };
-var minimal = {
-  name: "minimal",
-  colors: {
-    background: "#ffffff",
-    surface: "#f4f4f5",
-    primary: "#18181b",
-    secondary: "#3b82f6",
-    text: "#18181b",
-    textMuted: "#71717a",
-    border: "#e4e4e7",
-    gradient: ["#18181b", "#3b82f6"],
-    chart: ["#18181b", "#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"]
-  },
-  fonts: {
-    heading: "'Inter', 'Helvetica Neue', sans-serif",
-    body: "'Inter', 'Helvetica Neue', sans-serif",
-    mono: "'JetBrains Mono', 'Fira Code', monospace"
-  },
-  timing: {
-    spring: { damping: 15, stiffness: 200, mass: 0.6 },
-    stagger: 3,
-    transitionDuration: 0.4
-  },
-  effects: {
-    particles: false,
-    gradientBg: false,
-    motionBlur: false,
-    grain: 0
+var makePolygonOut = (progress, direction) => {
+  const p = progress * 100;
+  switch (direction) {
+    case "from-left":
+      return `polygon(100% 100%, ${100 - p}% 100%, ${100 - p}% 0%, 100% 0%)`;
+    case "from-top-left":
+      return `polygon(100% 100%, ${100 - p * 2}% 100%, 100% ${100 - p * 2}%)`;
+    case "from-top":
+      return `polygon(100% 100%, 0% 100%, 0% ${100 - p}%, 100% ${100 - p}%)`;
+    case "from-top-right":
+      return `polygon(0% 100%, ${p * 2}% 100%, 0% ${100 - p * 2}%)`;
+    case "from-right":
+      return `polygon(0% 0%, ${p}% 0%, ${p}% 100%, 0% 100%)`;
+    case "from-bottom-right":
+      return `polygon(0% 0%, ${p * 2}% 0%, 0% ${p * 2}%)`;
+    case "from-bottom":
+      return `polygon(100% 0%, 0% 0%, 0% ${p}%, 100% ${p}%)`;
+    case "from-bottom-left":
+      return `polygon(100% 0%, ${100 - p * 2}% 0%, 100% ${p * 2}%)`;
+    default:
+      throw new Error(`Unknown direction ${JSON.stringify(direction)}`);
   }
 };
-var neon = {
-  name: "neon",
-  colors: {
-    background: "#0a0a0a",
-    surface: "#1a1a2e",
-    primary: "#00ff88",
-    secondary: "#00d4ff",
-    text: "#e0e0e0",
-    textMuted: "#888888",
-    border: "#1a1a2e",
-    gradient: ["#00ff88", "#00d4ff"],
-    chart: ["#00ff88", "#00d4ff", "#ff00ff", "#ffff00", "#ff6600", "#ff0066"]
-  },
-  fonts: {
-    heading: "'Space Grotesk', 'Inter', sans-serif",
-    body: "'Inter', sans-serif",
-    mono: "'Fira Code', 'JetBrains Mono', monospace"
-  },
-  timing: {
-    spring: { damping: 10, stiffness: 220, mass: 0.7 },
-    stagger: 3,
-    transitionDuration: 0.3
-  },
-  effects: {
-    particles: true,
-    gradientBg: true,
-    motionBlur: true,
-    grain: 0.02
+var WipePresentation = ({
+  children,
+  presentationProgress,
+  presentationDirection,
+  passedProps: {
+    direction = "from-left",
+    innerEnterStyle,
+    innerExitStyle,
+    outerEnterStyle,
+    outerExitStyle
+  }
+}) => {
+  const progressInDirection = presentationDirection === "entering" ? presentationProgress : 1 - presentationProgress;
+  const clipPath = presentationDirection === "entering" ? makePolygonIn(progressInDirection, direction) : makePolygonOut(progressInDirection, direction);
+  const style2 = (0, import_react121.useMemo)(() => {
+    return {
+      width: "100%",
+      height: "100%",
+      justifyContent: "center",
+      alignItems: "center",
+      clipPath,
+      ...presentationDirection === "entering" ? innerEnterStyle : innerExitStyle
+    };
+  }, [clipPath, innerEnterStyle, innerExitStyle, presentationDirection]);
+  const outerStyle = (0, import_react121.useMemo)(() => {
+    return presentationDirection === "entering" ? outerEnterStyle : outerExitStyle;
+  }, [outerEnterStyle, outerExitStyle, presentationDirection]);
+  return /* @__PURE__ */ (0, import_jsx_runtime63.jsx)(AbsoluteFill, {
+    style: outerStyle,
+    children: /* @__PURE__ */ (0, import_jsx_runtime63.jsx)(AbsoluteFill, {
+      style: style2,
+      children
+    })
+  });
+};
+var wipe = (props) => {
+  return {
+    component: WipePresentation,
+    props: props ?? {}
+  };
+};
+
+// node_modules/@remotion/transitions/dist/esm/flip.mjs
+var import_react122 = __toESM(require_react(), 1);
+var import_jsx_runtime64 = __toESM(require_jsx_runtime(), 1);
+var Flip = ({
+  children,
+  presentationDirection,
+  presentationProgress,
+  passedProps: {
+    direction = "from-left",
+    perspective = 1e3,
+    innerEnterStyle,
+    innerExitStyle,
+    outerEnterStyle,
+    outerExitStyle
+  }
+}) => {
+  const style2 = (0, import_react122.useMemo)(() => {
+    const startRotationEntering = direction === "from-right" || direction === "from-top" ? 180 : -180;
+    const endRotationEntering = direction === "from-right" || direction === "from-top" ? -180 : 180;
+    const rotation = presentationDirection === "entering" ? interpolate(presentationProgress, [0, 1], [startRotationEntering, 0]) : interpolate(presentationProgress, [0, 1], [0, endRotationEntering]);
+    const rotateProperty = direction === "from-top" || direction === "from-bottom" ? "rotateX" : "rotateY";
+    return {
+      width: "100%",
+      height: "100%",
+      transform: `${rotateProperty}(${rotation}deg)`,
+      backfaceVisibility: "hidden",
+      WebkitBackfaceVisibility: "hidden",
+      ...presentationDirection === "entering" ? innerEnterStyle : innerExitStyle
+    };
+  }, [
+    direction,
+    innerEnterStyle,
+    innerExitStyle,
+    presentationDirection,
+    presentationProgress
+  ]);
+  const outer = (0, import_react122.useMemo)(() => {
+    return {
+      perspective,
+      transformStyle: "preserve-3d",
+      ...presentationDirection === "entering" ? outerEnterStyle : outerExitStyle
+    };
+  }, [outerEnterStyle, outerExitStyle, perspective, presentationDirection]);
+  return /* @__PURE__ */ (0, import_jsx_runtime64.jsx)(AbsoluteFill, {
+    style: outer,
+    children: /* @__PURE__ */ (0, import_jsx_runtime64.jsx)(AbsoluteFill, {
+      style: style2,
+      children
+    })
+  });
+};
+var flip = (props) => {
+  return { component: Flip, props: props ?? {} };
+};
+
+// node_modules/@remotion/paths/dist/esm/index.mjs
+var length = {
+  a: 7,
+  A: 7,
+  C: 6,
+  c: 6,
+  H: 1,
+  h: 1,
+  L: 2,
+  l: 2,
+  M: 2,
+  m: 2,
+  Q: 4,
+  q: 4,
+  S: 4,
+  s: 4,
+  T: 2,
+  t: 2,
+  V: 1,
+  v: 1,
+  Z: 0,
+  z: 0
+};
+var chunkExact = (array2, instruction) => {
+  const chunks = [];
+  const expectedSize = length[instruction];
+  if (array2.length % expectedSize !== 0) {
+    throw new Error(`Expected number of arguments of SVG instruction "${instruction} ${array2.join(" ")}" to be a multiple of ${expectedSize}`);
+  }
+  for (let i = 0; i < array2.length; i += expectedSize) {
+    chunks.push(array2.slice(i, i + expectedSize));
+  }
+  return chunks;
+};
+var makeInstructions = (arr, instruction, cb) => {
+  return chunkExact(arr, instruction).map((args) => {
+    return cb(args);
+  });
+};
+var segmentRegExp = /([astvzqmhlc])([^astvzqmhlc]*)/gi;
+var numberRegExp = /-?[0-9]*\.?[0-9]+(?:e[-+]?\d+)?/gi;
+var parseValues = (args, instructionType) => {
+  const numbers = args.match(numberRegExp);
+  if (!numbers) {
+    if (instructionType === "Z" || instructionType === "z") {
+      return [];
+    }
+    throw new Error(`Malformed path data: ${instructionType} was expected to have numbers afterwards`);
+  }
+  const expectedArguments = length[instructionType];
+  if (numbers.length % expectedArguments !== 0) {
+    throw new Error(`Malformed path data: ${instructionType} was expected to have a multiple of ${expectedArguments} numbers, but got "${instructionType} ${numbers.join(" ")} instead"`);
+  }
+  return numbers.map(Number);
+};
+var parsePath = (path) => {
+  if (!path) {
+    throw new Error("No path provided");
+  }
+  const segments = path.match(segmentRegExp);
+  if (!segments) {
+    throw new Error(`No path elements found in string ${path}`);
+  }
+  return segments.map((segmentString) => {
+    const command = segmentString.charAt(0);
+    const args = parseValues(segmentString.substring(1), command);
+    if (command === "M" && args.length > 2) {
+      const segmentsArray = [];
+      segmentsArray.push({
+        type: command,
+        x: args[0],
+        y: args[1]
+      });
+      segmentsArray.push(...makeInstructions(args.slice(2), "L", (numbers) => ({
+        type: "L",
+        x: numbers[0],
+        y: numbers[1]
+      })));
+      return segmentsArray;
+    }
+    if (command === "m" && args.length > 2) {
+      const segmentsArray = [];
+      segmentsArray.push({
+        type: command,
+        dx: args[0],
+        dy: args[1]
+      });
+      segmentsArray.push(...makeInstructions(args.slice(2), "l", (numbers) => ({
+        type: "l",
+        dx: numbers[0],
+        dy: numbers[1]
+      })));
+      return segmentsArray;
+    }
+    if (command === "Z" || command === "z") {
+      return [
+        {
+          type: "Z"
+        }
+      ];
+    }
+    if (command === "A") {
+      return makeInstructions(args, command, (numbers) => ({
+        type: command,
+        rx: numbers[0],
+        ry: numbers[1],
+        xAxisRotation: numbers[2],
+        largeArcFlag: numbers[3] === 1,
+        sweepFlag: numbers[4] === 1,
+        x: numbers[5],
+        y: numbers[6]
+      }));
+    }
+    if (command === "a") {
+      return makeInstructions(args, command, (numbers) => ({
+        type: command,
+        rx: numbers[0],
+        ry: numbers[1],
+        xAxisRotation: numbers[2],
+        largeArcFlag: numbers[3] === 1,
+        sweepFlag: numbers[4] === 1,
+        dx: numbers[5],
+        dy: numbers[6]
+      }));
+    }
+    if (command === "C") {
+      return makeInstructions(args, command, (numbers) => ({
+        type: command,
+        cp1x: numbers[0],
+        cp1y: numbers[1],
+        cp2x: numbers[2],
+        cp2y: numbers[3],
+        x: numbers[4],
+        y: numbers[5]
+      }));
+    }
+    if (command === "c") {
+      return makeInstructions(args, command, (numbers) => ({
+        type: command,
+        cp1dx: numbers[0],
+        cp1dy: numbers[1],
+        cp2dx: numbers[2],
+        cp2dy: numbers[3],
+        dx: numbers[4],
+        dy: numbers[5]
+      }));
+    }
+    if (command === "S") {
+      return makeInstructions(args, command, (numbers) => ({
+        type: command,
+        cpx: numbers[0],
+        cpy: numbers[1],
+        x: numbers[2],
+        y: numbers[3]
+      }));
+    }
+    if (command === "s") {
+      return makeInstructions(args, command, (numbers) => ({
+        type: command,
+        cpdx: numbers[0],
+        cpdy: numbers[1],
+        dx: numbers[2],
+        dy: numbers[3]
+      }));
+    }
+    if (command === "H") {
+      return makeInstructions(args, command, (numbers) => ({
+        type: command,
+        x: numbers[0]
+      }));
+    }
+    if (command === "h") {
+      return makeInstructions(args, command, (numbers) => ({
+        type: command,
+        dx: numbers[0]
+      }));
+    }
+    if (command === "V") {
+      return makeInstructions(args, command, (numbers) => ({
+        type: command,
+        y: numbers[0]
+      }));
+    }
+    if (command === "v") {
+      return makeInstructions(args, command, (numbers) => ({
+        type: command,
+        dy: numbers[0]
+      }));
+    }
+    if (command === "L") {
+      return makeInstructions(args, command, (numbers) => ({
+        type: command,
+        x: numbers[0],
+        y: numbers[1]
+      }));
+    }
+    if (command === "M") {
+      return makeInstructions(args, command, (numbers) => ({
+        type: command,
+        x: numbers[0],
+        y: numbers[1]
+      }));
+    }
+    if (command === "m") {
+      return makeInstructions(args, command, (numbers) => ({
+        type: command,
+        dx: numbers[0],
+        dy: numbers[1]
+      }));
+    }
+    if (command === "l") {
+      return makeInstructions(args, command, (numbers) => ({
+        type: command,
+        dx: numbers[0],
+        dy: numbers[1]
+      }));
+    }
+    if (command === "Q") {
+      return makeInstructions(args, command, (numbers) => ({
+        type: command,
+        cpx: numbers[0],
+        cpy: numbers[1],
+        x: numbers[2],
+        y: numbers[3]
+      }));
+    }
+    if (command === "q") {
+      return makeInstructions(args, command, (numbers) => ({
+        type: command,
+        cpdx: numbers[0],
+        cpdy: numbers[1],
+        dx: numbers[2],
+        dy: numbers[3]
+      }));
+    }
+    if (command === "T") {
+      return makeInstructions(args, command, (numbers) => ({
+        type: command,
+        x: numbers[0],
+        y: numbers[1]
+      }));
+    }
+    if (command === "t") {
+      return makeInstructions(args, command, (numbers) => ({
+        type: command,
+        dx: numbers[0],
+        dy: numbers[1]
+      }));
+    }
+    throw new Error(`Invalid path element ${segmentString}`);
+  }, []).flat(1);
+};
+var TAU = Math.PI * 2;
+var serializeInstruction = (instruction) => {
+  if (instruction.type === "A") {
+    return `A ${instruction.rx} ${instruction.ry} ${instruction.xAxisRotation} ${Number(instruction.largeArcFlag)} ${Number(instruction.sweepFlag)} ${instruction.x} ${instruction.y}`;
+  }
+  if (instruction.type === "a") {
+    return `a ${instruction.rx} ${instruction.ry} ${instruction.xAxisRotation} ${Number(instruction.largeArcFlag)} ${Number(instruction.sweepFlag)} ${instruction.dx} ${instruction.dy}`;
+  }
+  if (instruction.type === "C") {
+    return `C ${instruction.cp1x} ${instruction.cp1y} ${instruction.cp2x} ${instruction.cp2y} ${instruction.x} ${instruction.y}`;
+  }
+  if (instruction.type === "c") {
+    return `c ${instruction.cp1dx} ${instruction.cp1dy} ${instruction.cp2dx} ${instruction.cp2dy} ${instruction.dx} ${instruction.dy}`;
+  }
+  if (instruction.type === "S") {
+    return `S ${instruction.cpx} ${instruction.cpy} ${instruction.x} ${instruction.y}`;
+  }
+  if (instruction.type === "s") {
+    return `s ${instruction.cpdx} ${instruction.cpdy} ${instruction.dx} ${instruction.dy}`;
+  }
+  if (instruction.type === "Q") {
+    return `Q ${instruction.cpx} ${instruction.cpy} ${instruction.x} ${instruction.y}`;
+  }
+  if (instruction.type === "q") {
+    return `q ${instruction.cpdx} ${instruction.cpdy} ${instruction.dx} ${instruction.dy}`;
+  }
+  if (instruction.type === "Z") {
+    return "Z";
+  }
+  if (instruction.type === "H") {
+    return `H ${instruction.x}`;
+  }
+  if (instruction.type === "h") {
+    return `h ${instruction.dx}`;
+  }
+  if (instruction.type === "V") {
+    return `V ${instruction.y}`;
+  }
+  if (instruction.type === "v") {
+    return `v ${instruction.dy}`;
+  }
+  if (instruction.type === "L") {
+    return `L ${instruction.x} ${instruction.y}`;
+  }
+  if (instruction.type === "l") {
+    return `l ${instruction.dx} ${instruction.dy}`;
+  }
+  if (instruction.type === "M") {
+    return `M ${instruction.x} ${instruction.y}`;
+  }
+  if (instruction.type === "m") {
+    return `m ${instruction.dx} ${instruction.dy}`;
+  }
+  if (instruction.type === "T") {
+    return `T ${instruction.x} ${instruction.y}`;
+  }
+  if (instruction.type === "t") {
+    return `t ${instruction.dx} ${instruction.dy}`;
+  }
+  throw new Error(`Unknown instruction type: ${instruction.type}`);
+};
+var serializeInstructions = (path) => {
+  return path.map((p) => {
+    return serializeInstruction(p);
+  }).join(" ");
+};
+var translateSegments = (segments, x, y) => {
+  return segments.map((segment) => {
+    if (segment.type === "a" || segment.type === "c" || segment.type === "v" || segment.type === "s" || segment.type === "h" || segment.type === "l" || segment.type === "m" || segment.type === "q" || segment.type === "t") {
+      return segment;
+    }
+    if (segment.type === "V") {
+      return {
+        type: "V",
+        y: segment.y + y
+      };
+    }
+    if (segment.type === "H") {
+      return {
+        type: "H",
+        x: segment.x + x
+      };
+    }
+    if (segment.type === "A") {
+      return {
+        type: "A",
+        rx: segment.rx,
+        ry: segment.ry,
+        largeArcFlag: segment.largeArcFlag,
+        sweepFlag: segment.sweepFlag,
+        xAxisRotation: segment.xAxisRotation,
+        x: segment.x + x,
+        y: segment.y + y
+      };
+    }
+    if (segment.type === "Z") {
+      return segment;
+    }
+    if (segment.type === "C") {
+      return {
+        type: "C",
+        cp1x: segment.cp1x + x,
+        cp1y: segment.cp1y + y,
+        cp2x: segment.cp2x + x,
+        cp2y: segment.cp2y + y,
+        x: segment.x + x,
+        y: segment.y + y
+      };
+    }
+    if (segment.type === "Q") {
+      return {
+        type: "Q",
+        cpx: segment.cpx + x,
+        cpy: segment.cpy + y,
+        x: segment.x + x,
+        y: segment.y + y
+      };
+    }
+    if (segment.type === "S") {
+      return {
+        type: "S",
+        cpx: segment.cpx + x,
+        cpy: segment.cpy + y,
+        x: segment.x + x,
+        y: segment.y + y
+      };
+    }
+    if (segment.type === "T") {
+      return {
+        type: "T",
+        x: segment.x + x,
+        y: segment.y + y
+      };
+    }
+    if (segment.type === "L") {
+      return {
+        type: "L",
+        x: segment.x + x,
+        y: segment.y + y
+      };
+    }
+    if (segment.type === "M") {
+      return {
+        type: "M",
+        x: segment.x + x,
+        y: segment.y + y
+      };
+    }
+    throw new Error(`Unknown segment type: ${segment.type}`);
+  });
+};
+var translatePath = (path, x, y) => {
+  return serializeInstructions(translateSegments(parsePath(path), x, y));
+};
+
+// node_modules/@remotion/shapes/dist/esm/index.mjs
+var import_react123 = __toESM(require_react(), 1);
+var import_react_dom2 = __toESM(require_react_dom(), 1);
+var import_jsx_runtime65 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime66 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime67 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime68 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime69 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime70 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime71 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime72 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime73 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime74 = __toESM(require_jsx_runtime(), 1);
+var getCoord = ({
+  counterClockwise,
+  actualProgress,
+  rotation,
+  radius,
+  coord
+}) => {
+  const factor = counterClockwise ? -1 : 1;
+  const val = Math[coord === "x" ? "cos" : "sin"](factor * actualProgress * Math.PI * 2 + Math.PI * 1.5 + rotation) * radius + radius;
+  const rounded = Math.round(val * 1e5) / 1e5;
+  return rounded;
+};
+var makePie = ({
+  progress,
+  radius,
+  closePath = true,
+  counterClockwise = false,
+  rotation = 0
+}) => {
+  const actualProgress = Math.min(Math.max(progress, 0), 1);
+  const endAngleX = getCoord({
+    actualProgress,
+    coord: "x",
+    counterClockwise,
+    radius,
+    rotation
+  });
+  const endAngleY = getCoord({
+    actualProgress,
+    coord: "y",
+    counterClockwise,
+    radius,
+    rotation
+  });
+  const start = {
+    x: getCoord({
+      actualProgress: 0,
+      coord: "x",
+      counterClockwise,
+      radius,
+      rotation
+    }),
+    y: getCoord({
+      actualProgress: 0,
+      coord: "y",
+      counterClockwise,
+      radius,
+      rotation
+    })
+  };
+  const end = { x: endAngleX, y: endAngleY };
+  const instructions = [
+    {
+      type: "M",
+      ...start
+    },
+    {
+      type: "A",
+      rx: radius,
+      ry: radius,
+      xAxisRotation: 0,
+      largeArcFlag: false,
+      sweepFlag: !counterClockwise,
+      x: actualProgress <= 0.5 ? endAngleX : getCoord({
+        actualProgress: 0.5,
+        coord: "x",
+        counterClockwise,
+        radius,
+        rotation
+      }),
+      y: actualProgress <= 0.5 ? endAngleY : getCoord({
+        actualProgress: 0.5,
+        coord: "y",
+        counterClockwise,
+        radius,
+        rotation
+      })
+    },
+    actualProgress > 0.5 ? {
+      type: "A",
+      rx: radius,
+      ry: radius,
+      xAxisRotation: 0,
+      largeArcFlag: false,
+      sweepFlag: !counterClockwise,
+      ...end
+    } : null,
+    actualProgress > 0 && actualProgress < 1 && closePath ? {
+      type: "L",
+      x: radius,
+      y: radius
+    } : null,
+    closePath ? {
+      type: "Z"
+    } : null
+  ].filter(Boolean);
+  const path = serializeInstructions(instructions);
+  return {
+    height: radius * 2,
+    width: radius * 2,
+    path,
+    instructions,
+    transformOrigin: `${radius} ${radius}`
+  };
+};
+
+// node_modules/@remotion/transitions/dist/esm/clock-wipe.mjs
+var import_react124 = __toESM(require_react(), 1);
+var import_jsx_runtime75 = __toESM(require_jsx_runtime(), 1);
+var ClockWipePresentation = ({ children, presentationDirection, presentationProgress, passedProps }) => {
+  const finishedRadius = Math.sqrt(passedProps.width ** 2 + passedProps.height ** 2) / 2;
+  const { path } = makePie({
+    radius: finishedRadius,
+    progress: presentationProgress
+  });
+  const translatedPath = translatePath(path, -(finishedRadius * 2 - passedProps.width) / 2, -(finishedRadius * 2 - passedProps.height) / 2);
+  const style2 = (0, import_react124.useMemo)(() => {
+    return {
+      width: "100%",
+      height: "100%",
+      clipPath: presentationDirection === "exiting" ? void 0 : `path("${translatedPath}")`,
+      ...presentationDirection === "entering" ? passedProps.innerEnterStyle : passedProps.innerExitStyle
+    };
+  }, [
+    translatedPath,
+    passedProps.innerEnterStyle,
+    passedProps.innerExitStyle,
+    presentationDirection
+  ]);
+  const outerStyle = (0, import_react124.useMemo)(() => {
+    return presentationDirection === "entering" ? passedProps.outerEnterStyle : passedProps.outerExitStyle;
+  }, [
+    passedProps.outerEnterStyle,
+    passedProps.outerExitStyle,
+    presentationDirection
+  ]);
+  return /* @__PURE__ */ (0, import_jsx_runtime75.jsx)(AbsoluteFill, {
+    style: outerStyle,
+    children: /* @__PURE__ */ (0, import_jsx_runtime75.jsx)(AbsoluteFill, {
+      style: style2,
+      children
+    })
+  });
+};
+var clockWipe = (props) => {
+  return { component: ClockWipePresentation, props: props ?? {} };
+};
+
+// src/utils/index.ts
+function uid() {
+  return Math.random().toString(36).slice(2, 10);
+}
+var KEBAB = /[^a-zA-Z0-9_-]+/g;
+function toClassName(s) {
+  return (s || "").replace(KEBAB, "-").replace(/^-+|-+$/g, "");
+}
+function toPlaybackRate(rate) {
+  if (!isFinite(rate) || rate <= 0) return 1;
+  return Math.min(16, Math.max(0.0625, rate));
+}
+function cssJS(css) {
+  if (!css) return {};
+  if (typeof css === "object") return css;
+  const out = {};
+  for (const decl of css.split(";")) {
+    const i = decl.indexOf(":");
+    if (i < 0) continue;
+    const k = decl.slice(0, i).trim();
+    const v = decl.slice(i + 1).trim();
+    if (!k) continue;
+    const camel = k.replace(/-([a-z])/g, (_, c2) => c2.toUpperCase());
+    out[camel] = v;
+  }
+  return out;
+}
+function getDurationInSeconds(stream2, update = true) {
+  if (!stream2) return 0;
+  if (stream2.type === "rhythm") {
+    return stream2.durationInSeconds ?? 0;
+  }
+  if (stream2.type === "include") {
+    if (stream2.src) {
+      const last = stream2.actions?.[stream2.actions.length - 1];
+      const d = last?.end ?? 0;
+      if (update) stream2.durationInSeconds = d;
+      return d;
+    }
+    const children = stream2.children ?? [];
+    if (children.length && update) {
+      for (const child of children) {
+        getDurationInSeconds(child, update);
+      }
+    }
+    const visible2 = children.filter((c2) => !c2.isBackground);
+    let total2 = 0;
+    for (const c2 of visible2) {
+      const d = c2.durationInSeconds ?? 0;
+      if (d > total2) total2 = d;
+    }
+    if (update) stream2.durationInSeconds = total2;
+    return total2;
+  }
+  if (!stream2.children?.length) {
+    const last = stream2.actions?.[stream2.actions.length - 1];
+    const d = last?.end ?? 0;
+    if (update) stream2.durationInSeconds = d;
+    return d;
+  }
+  let total = 0;
+  for (const child of stream2.children) {
+    getDurationInSeconds(child, update);
+  }
+  const visible = stream2.children.filter((c2) => !c2.isBackground);
+  if (stream2.isSeries) {
+    const overlap = stream2.transition ? stream2.transitionTime ?? 0.5 : 0;
+    for (let i = 0; i < visible.length; i++) {
+      const c2 = visible[i];
+      const d = c2.durationInSeconds ?? 0;
+      total += d;
+      if (i > 0 && overlap > 0) total -= overlap;
+    }
+  } else {
+    for (const c2 of visible) {
+      const d = c2.durationInSeconds ?? 0;
+      if (d > total) total = d;
+    }
+  }
+  if (update) stream2.durationInSeconds = total;
+  return total;
+}
+var VTT_REG = /^(?:(\d+):)?(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?$/;
+function vttSecond(t) {
+  const m = VTT_REG.exec(t.trim());
+  if (!m) return 0;
+  const [, h = "0", mm = "0", ss = "0", ms = "0"] = m;
+  return Number(h) * 3600 + Number(mm) * 60 + Number(ss) + Number(ms.padEnd(3, "0")) / 1e3;
+}
+function parseVTT(src) {
+  const cues = [];
+  const blocks = src.replace(/\r\n/g, "\n").split(/\n\n+/);
+  for (const b2 of blocks) {
+    const lines = b2.split("\n").filter(Boolean);
+    const tline = lines.find((l) => l.includes("-->"));
+    if (!tline) continue;
+    const [a2, z2] = tline.split("-->").map((s) => s.trim());
+    if (!a2 || !z2) continue;
+    const text = lines.slice(lines.indexOf(tline) + 1).join("\n").trim();
+    cues.push({ startFrom: vttSecond(a2), endAt: vttSecond(z2), text });
+  }
+  return cues;
+}
+
+// src/types/Video.tsx
+var React16 = __toESM(require_react(), 1);
+
+// src/types/FrameSyncStyle.tsx
+var React15 = __toESM(require_react(), 1);
+var import_jsx_runtime76 = __toESM(require_jsx_runtime(), 1);
+function FrameSyncStyle({
+  style: style2,
+  children
+}) {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const hasAnimation = "animation" in style2;
+  const mergedStyle = React15.useMemo(() => {
+    if (!hasAnimation) return style2;
+    const currentTime = frame / fps;
+    return {
+      ...style2,
+      animationPlayState: "paused",
+      animationDelay: `-${currentTime}s`
+    };
+  }, [style2, hasAnimation, frame, fps]);
+  return /* @__PURE__ */ (0, import_jsx_runtime76.jsx)(
+    "div",
+    {
+      style: {
+        position: "absolute",
+        inset: 0,
+        overflow: "hidden",
+        ...mergedStyle
+      },
+      children
+    }
+  );
+}
+
+// src/types/Video.tsx
+var import_jsx_runtime77 = __toESM(require_jsx_runtime(), 1);
+function resolveVideoSrc(src) {
+  if (/^(https?:|data:|blob:|file:|\/)/.test(src)) return src;
+  return staticFile(src);
+}
+function VideoLeaf({ stream: stream2 }) {
+  const { fps } = useVideoConfig();
+  const audio2 = React16.useContext(AudioContext2);
+  if (!stream2.src) return null;
+  const resolvedSrc = resolveVideoSrc(stream2.src);
+  return /* @__PURE__ */ (0, import_jsx_runtime77.jsx)(import_jsx_runtime77.Fragment, { children: stream2.actions.map((a2) => {
+    const start = a2.start ?? 0;
+    const end = a2.end ?? start + 1;
+    const startFrom = a2.startFrom ?? 0;
+    const endAt = a2.endAt ?? stream2.durationInSeconds ?? end - start;
+    const volume = a2.volume ?? stream2.volume ?? 1;
+    const playbackRate = a2.loop ? 1 : Math.min(1, toPlaybackRate((endAt - startFrom) / (end - start)));
+    const actionStyle = cssJS(a2.style);
+    const hasAnimation = "animation" in actionStyle;
+    return /* @__PURE__ */ (0, import_jsx_runtime77.jsx)(
+      Sequence,
+      {
+        durationInFrames: Math.max(1, Math.floor(fps * (end - start))),
+        from: Math.floor(fps * start),
+        layout: "none",
+        showInTimeline: false,
+        children: hasAnimation ? /* @__PURE__ */ (0, import_jsx_runtime77.jsx)(FrameSyncStyle, { style: actionStyle, children: /* @__PURE__ */ (0, import_jsx_runtime77.jsx)(
+          OffthreadVideo,
+          {
+            src: resolvedSrc,
+            startFrom: Math.floor(startFrom * fps),
+            endAt: Math.floor(startFrom * fps) + Math.floor((endAt - startFrom) * fps / playbackRate),
+            muted: volume === 0 || !!audio2?.foreground,
+            volume,
+            playbackRate,
+            showInTimeline: false,
+            style: { width: "100%", height: "100%" }
+          }
+        ) }) : /* @__PURE__ */ (0, import_jsx_runtime77.jsx)(
+          OffthreadVideo,
+          {
+            src: resolvedSrc,
+            startFrom: Math.floor(startFrom * fps),
+            endAt: Math.floor(startFrom * fps) + Math.floor((endAt - startFrom) * fps / playbackRate),
+            muted: volume === 0 || !!audio2?.foreground,
+            volume,
+            playbackRate,
+            showInTimeline: false,
+            style: { width: "100%", height: "100%", ...actionStyle }
+          }
+        )
+      },
+      a2.id
+    );
+  }) });
+}
+
+// src/types/Audio.tsx
+var React18 = __toESM(require_react(), 1);
+var import_jsx_runtime78 = __toESM(require_jsx_runtime(), 1);
+function resolveAudioSrc(src) {
+  if (/^(https?:|data:|blob:|file:|\/)/.test(src)) return src;
+  return staticFile(src);
+}
+function AudioLeaf({ stream: stream2 }) {
+  const { fps } = useVideoConfig();
+  const environment = useRemotionEnvironment();
+  const ctx = React18.useContext(AudioContext2);
+  if (!stream2.src) return null;
+  if (environment.isStudio) return null;
+  const resolvedSrc = resolveAudioSrc(stream2.src);
+  return /* @__PURE__ */ (0, import_jsx_runtime78.jsx)(import_jsx_runtime78.Fragment, { children: stream2.actions.map((a2) => {
+    const start = a2.start ?? 0;
+    const end = a2.end ?? start + 1;
+    const startFrom = a2.startFrom ?? 0;
+    const endAt = a2.endAt ?? stream2.durationInSeconds ?? end - start;
+    const volume = a2.volume ?? stream2.volume ?? 1;
+    const playbackRate = a2.loop ? 1 : toPlaybackRate((endAt - startFrom) / (end - start));
+    return /* @__PURE__ */ (0, import_jsx_runtime78.jsx)(
+      Sequence,
+      {
+        name: stream2.src ?? "audio",
+        durationInFrames: Math.max(1, Math.floor(fps * (end - start))),
+        from: Math.floor(fps * start),
+        layout: "none",
+        showInTimeline: false,
+        children: /* @__PURE__ */ (0, import_jsx_runtime78.jsx)(
+          Audio,
+          {
+            src: resolvedSrc,
+            startFrom: Math.floor(startFrom * fps),
+            endAt: Math.floor(startFrom * fps) + Math.floor((endAt - startFrom) * fps / playbackRate),
+            muted: volume === 0 || !!ctx?.foreground,
+            volume,
+            loop: (a2.loop ?? 1) > 1,
+            playbackRate,
+            showInTimeline: false
+          }
+        )
+      },
+      a2.id
+    );
+  }) });
+}
+
+// src/types/Image.tsx
+var import_jsx_runtime79 = __toESM(require_jsx_runtime(), 1);
+function resolveImageSrc(src) {
+  if (/^(https?:|data:|blob:|file:|\/)/.test(src)) return src;
+  return staticFile(src);
+}
+function ImageLeaf({ stream: stream2 }) {
+  const { fps } = useVideoConfig();
+  if (!stream2.src) return null;
+  const resolvedSrc = resolveImageSrc(stream2.src);
+  return /* @__PURE__ */ (0, import_jsx_runtime79.jsx)(import_jsx_runtime79.Fragment, { children: stream2.actions.map((a2) => {
+    const start = a2.start ?? 0;
+    const end = a2.end ?? start + 1;
+    return /* @__PURE__ */ (0, import_jsx_runtime79.jsx)(
+      Sequence,
+      {
+        durationInFrames: Math.max(1, Math.floor(fps * (end - start))),
+        from: Math.floor(fps * start),
+        layout: "none",
+        children: /* @__PURE__ */ (0, import_jsx_runtime79.jsx)(FrameSyncStyle, { style: cssJS(a2.style), children: /* @__PURE__ */ (0, import_jsx_runtime79.jsx)(
+          Img,
+          {
+            src: resolvedSrc,
+            style: {
+              width: "100%",
+              height: "100%",
+              objectFit: stream2.fit
+            },
+            onDragStart: (e) => {
+              e.stopPropagation();
+              return false;
+            }
+          }
+        ) })
+      },
+      a2.id
+    );
+  }) });
+}
+
+// src/types/DynamicLoader.tsx
+var React19 = __toESM(require_react(), 1);
+if (typeof window !== "undefined") {
+  window.__React = React19;
+  window.__Remotion = esm_exports;
+  globalThis.React = React19;
+}
+var reactShimInjected = false;
+function ensureReactShim() {
+  if (reactShimInjected) return;
+  if (typeof window === "undefined") return;
+  if (document.querySelector("#rmtr-react-shim")) {
+    reactShimInjected = true;
+    return;
+  }
+  try {
+    const blobReact = new Blob(
+      [
+        `
+        const R = globalThis.React;
+        export const {
+          useState,
+          useEffect,
+          useRef,
+          useMemo,
+          useCallback,
+          useContext,
+          createElement,
+          Fragment,
+          Suspense,
+          forwardRef,
+          Children,
+          isValidElement,
+          cloneElement,
+          createContext,
+          PureComponent,
+          Component,
+          lazy,
+        } = R;
+        export default R;
+      `
+      ],
+      { type: "application/javascript" }
+    );
+    const urlReact = URL.createObjectURL(blobReact);
+    const script = document.createElement("script");
+    script.type = "importmap";
+    script.id = "rmtr-react-shim";
+    script.textContent = JSON.stringify({
+      imports: {
+        react: urlReact
+      }
+    });
+    document.head.appendChild(script);
+    reactShimInjected = true;
+  } catch {
+    reactShimInjected = true;
+  }
+}
+function externalizeReact(url2) {
+  try {
+    const u = new URL(url2);
+    if (u.hostname.endsWith("esm.sh")) {
+      const params = new URLSearchParams(u.search);
+      if (!params.has("external")) {
+        params.set("external", "react");
+      } else {
+        const val = params.get("external");
+        if (!val.split(",").includes("react")) {
+          params.set("external", `react,${val}`);
+        }
+      }
+      params.set("standalone", "");
+      u.search = params.toString();
+      return u.toString();
+    }
+  } catch {
+  }
+  return url2;
+}
+var dynamicImport = typeof window !== "undefined" ? (url2) => import(
+  /* webpackIgnore: true */
+  url2
+) : null;
+var jsxCache = /* @__PURE__ */ new Map();
+var babelPromise = null;
+async function loadBabel() {
+  if (typeof window === "undefined" || !dynamicImport) return null;
+  if (!babelPromise) {
+    const babelUrl = externalizeReact("https://esm.sh/@babel/standalone@7.26.10");
+    ensureReactShim();
+    babelPromise = dynamicImport(babelUrl).then((m) => m?.default ?? m).catch(() => null);
+  }
+  return babelPromise;
+}
+function useJsxWithImports(jsx68, imports, onError) {
+  const cacheKey = React19.useMemo(() => {
+    if (!jsx68) return null;
+    const importKeys = imports ? Object.keys(imports).sort().join(",") : "";
+    return `${importKeys}
+${jsx68}`;
+  }, [jsx68, imports]);
+  const cached2 = cacheKey ? jsxCache.get(cacheKey) ?? null : null;
+  const needsLoad = !!cacheKey && !cached2;
+  const handleRef = React19.useRef(null);
+  if (needsLoad && !handleRef.current) {
+    handleRef.current = delayRender(`Compiling JSX with imports`);
+  }
+  const [Comp, setComp] = React19.useState(() => cached2);
+  React19.useEffect(() => {
+    if (!cacheKey || cached2) return;
+    let active = true;
+    compileJsxWithImports(jsx68, imports ?? {}).then((C) => {
+      if (active) setComp(() => C);
+    }).catch((err) => {
+      onError?.(err, { source: jsx68 });
+    });
+    return () => {
+      active = false;
+    };
+  }, [cacheKey, onError]);
+  React19.useEffect(() => {
+    if (Comp && handleRef.current) {
+      continueRender(handleRef.current);
+      handleRef.current = null;
+    }
+  }, [Comp]);
+  return Comp;
+}
+async function compileJsxWithImports(usageJsx, imports) {
+  ensureReactShim();
+  const names = Object.keys(imports);
+  const loaded = /* @__PURE__ */ new Map();
+  await Promise.all(
+    names.map(async (name) => {
+      const url2 = imports[name];
+      if (url2.startsWith("__jsx__:")) return;
+      try {
+        const mod = await dynamicImport(externalizeReact(url2));
+        const Comp = mod.default ?? Object.values(mod).find((v) => typeof v === "function") ?? mod;
+        if (typeof Comp === "function") loaded.set(name, Comp);
+      } catch {
+      }
+    })
+  );
+  const Babel = await loadBabel();
+  if (!Babel || !dynamicImport) {
+    throw new Error("@babel/standalone failed to load; cannot compile JSX");
+  }
+  const importId = `__ri_${Math.random().toString(36).slice(2, 8)}`;
+  window[importId] = Object.fromEntries(loaded);
+  try {
+    const importDecls = names.filter((n) => loaded.has(n)).map((n) => `const ${n} = window["${importId}"]["${n}"];`).join("\n");
+    const source = `
+const React = window.__React;
+const { useCurrentFrame, interpolate, spring, useVideoConfig, Easing } = window.__Remotion;
+
+// Mutable refs updated on every render \u2014 tween() can read them
+var __frame = 0, __fpsVal = 30, __actionDurationFrames = 120;
+var __cache = {};
+var __easingRegistry = {
+  linear: undefined,
+  easeIn: Easing.in(Easing.ease),
+  easeOut: Easing.out(Easing.ease),
+  easeInOut: Easing.inOut(Easing.ease),
+  ease: Easing.ease,
+};
+
+// tween(from, to, easing) \u2014 returns interpolated value for current frame
+function tween(from, to, easing) {
+  var key = from + ',' + to + ',' + (easing || 'linear');
+  if (__cache[key] !== undefined) return __cache[key];
+  var easingFn = __easingRegistry[easing] || undefined;
+  var val = interpolate(__frame, [0, __actionDurationFrames], [from, to], {
+    extrapolateLeft: 'clamp',
+    extrapolateRight: 'clamp',
+    easing: easingFn,
+  });
+  __cache[key] = val;
+  return val;
+}
+// Clear cache when frame or action duration changes
+function __clearCache(f, dur) { if (f !== __frame || dur !== __actionDurationFrames) { __frame = f; __actionDurationFrames = dur; __cache = {}; } }
+
+${importDecls}
+
+function Wrapper(props) {
+  var frame = useCurrentFrame();
+  var fps = useVideoConfig().fps;
+  var action = props.action || {};
+  var startFrame = Math.floor((action.start || 0) * fps);
+  var endFrame = Math.floor((action.end || 1) * fps);
+  var actionDurationFrames = Math.max(1, endFrame - startFrame);
+  __clearCache(frame, actionDurationFrames);
+  __fpsVal = fps;
+  return (${usageJsx.trim()});
+}
+
+export default Wrapper;
+`;
+    const out = Babel.transform(source, {
+      filename: "component.jsx",
+      presets: [["react", { runtime: "classic" }], "typescript"]
+    });
+    const code = out.code ?? source;
+    const blob = new Blob([code], { type: "text/javascript" });
+    const blobUrl = URL.createObjectURL(blob);
+    try {
+      let Comp;
+      try {
+        const mod = await dynamicImport(blobUrl);
+        Comp = mod.default ?? mod;
+      } catch {
+        throw new Error("Compiled JSX did not export a function");
+      }
+      if (typeof Comp !== "function") {
+        throw new Error("Compiled JSX did not export a function");
+      }
+      jsxCache.set(`${names.sort().join(",")}
+${usageJsx}`, Comp);
+      return Comp;
+    } finally {
+      URL.revokeObjectURL(blobUrl);
+    }
+  } finally {
+    delete window[importId];
+  }
+}
+
+// src/types/Component.tsx
+var import_jsx_runtime80 = __toESM(require_jsx_runtime(), 1);
+function ComponentLeaf({ stream: stream2 }) {
+  const { fps } = useVideoConfig();
+  const Comp = useJsxWithImports(stream2.jsx, stream2.imports ?? void 0);
+  if (!Comp) return null;
+  return /* @__PURE__ */ (0, import_jsx_runtime80.jsx)(import_jsx_runtime80.Fragment, { children: stream2.actions.map((a2) => {
+    const start = a2.start ?? 0;
+    const end = a2.end ?? start + 1;
+    return /* @__PURE__ */ (0, import_jsx_runtime80.jsx)(
+      Sequence,
+      {
+        durationInFrames: Math.max(1, Math.floor(fps * (end - start))),
+        from: Math.floor(fps * start),
+        layout: "none",
+        children: /* @__PURE__ */ (0, import_jsx_runtime80.jsx)(Comp, { action: a2 })
+      },
+      a2.id
+    );
+  }) });
+}
+
+// src/types/Rhythm.tsx
+var import_jsx_runtime81 = __toESM(require_jsx_runtime(), 1);
+function resolveAudioSrc2(src) {
+  if (/^(https?:|data:|blob:|file:|\/)/.test(src)) return src;
+  return staticFile(src);
+}
+function RhythmLeaf({ stream: stream2 }) {
+  const { fps } = useVideoConfig();
+  const environment = useRemotionEnvironment();
+  if (!stream2.src || environment.isStudio) return null;
+  const resolvedSrc = resolveAudioSrc2(stream2.src);
+  return /* @__PURE__ */ (0, import_jsx_runtime81.jsx)(import_jsx_runtime81.Fragment, { children: stream2.actions.map((a2) => {
+    const start = a2.start ?? 0;
+    const end = a2.end ?? start + 1;
+    const volume = a2.volume ?? stream2.volume ?? 1;
+    return /* @__PURE__ */ (0, import_jsx_runtime81.jsx)(
+      Sequence,
+      {
+        name: stream2.src ?? "rhythm",
+        durationInFrames: Math.max(1, Math.floor(fps * (end - start))),
+        from: Math.floor(fps * start),
+        layout: "none",
+        showInTimeline: false,
+        children: /* @__PURE__ */ (0, import_jsx_runtime81.jsx)(
+          Audio,
+          {
+            src: resolvedSrc,
+            muted: volume === 0,
+            volume,
+            loop: true,
+            showInTimeline: false
+          }
+        )
+      },
+      a2.id
+    );
+  }) });
+}
+
+// src/types/Map.tsx
+var import_react126 = __toESM(require_react(), 1);
+
+// node_modules/@vis.gl/react-google-maps/dist/index.modern.mjs
+var React25 = __toESM(require_react(), 1);
+var import_react125 = __toESM(require_react(), 1);
+var import_react_dom3 = __toESM(require_react_dom(), 1);
+var import_fast_deep_equal = __toESM(require_fast_deep_equal(), 1);
+var VERSION2 = "1.8.3";
+function __rest(s, e) {
+  var t = {};
+  for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
+    t[p] = s[p];
+  if (s != null && typeof Object.getOwnPropertySymbols === "function")
+    for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
+      if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
+        t[p[i]] = s[p[i]];
+    }
+  return t;
+}
+function __awaiter(thisArg, _arguments, P, generator) {
+  function adopt(value) {
+    return value instanceof P ? value : new P(function(resolve) {
+      resolve(value);
+    });
+  }
+  return new (P || (P = Promise))(function(resolve, reject) {
+    function fulfilled(value) {
+      try {
+        step(generator.next(value));
+      } catch (e) {
+        reject(e);
+      }
+    }
+    function rejected(value) {
+      try {
+        step(generator["throw"](value));
+      } catch (e) {
+        reject(e);
+      }
+    }
+    function step(result) {
+      result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
+    }
+    step((generator = generator.apply(thisArg, _arguments || [])).next());
+  });
+}
+function setScriptSrc(script, src) {
+  script.src = src;
+}
+var bootstrap = (bootstrapParams) => {
+  var bootstrapPromise;
+  var script;
+  var bootstrapParamsKey;
+  var PRODUCT_NAME = "The Google Maps JavaScript API";
+  var GOOGLE = "google";
+  var IMPORT_API_NAME = "importLibrary";
+  var PENDING_BOOTSTRAP_KEY = "__ib__";
+  var doc = document;
+  var global_ = window;
+  var google_ = global_[GOOGLE] || (global_[GOOGLE] = {});
+  var namespace = google_.maps || (google_.maps = {});
+  var libraries = /* @__PURE__ */ new Set();
+  var searchParams = new URLSearchParams();
+  var triggerBootstrap = () => bootstrapPromise || (bootstrapPromise = new Promise(async (resolve, reject) => {
+    await (script = doc.createElement("script"));
+    searchParams.set("libraries", [...libraries] + "");
+    for (bootstrapParamsKey in bootstrapParams) {
+      searchParams.set(bootstrapParamsKey.replace(/[A-Z]/g, (g) => "_" + g[0].toLowerCase()), bootstrapParams[bootstrapParamsKey]);
+    }
+    searchParams.set("callback", GOOGLE + ".maps." + PENDING_BOOTSTRAP_KEY);
+    setScriptSrc(script, "https://maps.googleapis.com/maps/api/js?" + searchParams);
+    namespace[PENDING_BOOTSTRAP_KEY] = resolve;
+    script.onerror = () => bootstrapPromise = reject(Error(PRODUCT_NAME + " could not load."));
+    script.nonce = doc.querySelector("script[nonce]")?.nonce || "";
+    doc.head.append(script);
+  }));
+  namespace[IMPORT_API_NAME] ? console.warn(PRODUCT_NAME + " only loads once. Ignoring:", bootstrapParams) : namespace[IMPORT_API_NAME] = (libraryName, ...args) => libraries.add(libraryName) && triggerBootstrap().then(() => namespace[IMPORT_API_NAME](libraryName, ...args));
+};
+var MSG_REPEATED_SET_OPTIONS = (options) => `The setOptions() function should only be called once. The options passed to the additional call (${JSON.stringify(options)}) will be ignored.`;
+var MSG_IMPORT_LIBRARY_EXISTS = (options) => `The google.maps.importLibrary() function is already defined, and @googlemaps/js-api-loader will use the existing function instead of overwriting it. The options passed to setOptions (${JSON.stringify(options)}) will be ignored.`;
+var MSG_SET_OPTIONS_NOT_CALLED = "No options were set before calling importLibrary. Make sure to configure the loader using setOptions().";
+var MSG_SCRIPT_ELEMENT_EXISTS = "There already is a script loading the Google Maps JavaScript API, and no google.maps.importLibrary function is defined. @googlemaps/js-api-loader will proceed to bootstrap the API with the specified options, but the existing script might cause problems using the API. Make sure to remove the script loading the API.";
+var __DEV__$1 = false;
+var logDevWarning = __DEV__$1 ? (message) => {
+  console.warn(`[@googlemaps/js-api-loader] ${message}`);
+} : () => {
+};
+var logDevNotice = __DEV__$1 ? (message) => {
+  console.info(`[@googlemaps/js-api-loader] ${message}`);
+} : () => {
+};
+var __DEV__ = false;
+var setOptionsWasCalled_ = false;
+function setOptions(options) {
+  if (setOptionsWasCalled_) {
+    logDevWarning(MSG_REPEATED_SET_OPTIONS(options));
+    return;
+  }
+  installImportLibrary_(options);
+  setOptionsWasCalled_ = true;
+}
+async function importLibrary(libraryName) {
+  if (!setOptionsWasCalled_) {
+    logDevWarning(MSG_SET_OPTIONS_NOT_CALLED);
+  }
+  if (!window?.google?.maps?.importLibrary) {
+    throw new Error("google.maps.importLibrary is not installed.");
+  }
+  return await google.maps.importLibrary(libraryName);
+}
+function installImportLibrary_(options) {
+  const importLibraryExists = Boolean(window.google?.maps?.importLibrary);
+  if (importLibraryExists) {
+    logDevNotice(MSG_IMPORT_LIBRARY_EXISTS(options));
+  } else if (__DEV__) {
+    const scriptEl = document.querySelector('script[src*="maps.googleapis.com/maps/api/js"]');
+    if (scriptEl) {
+      logDevWarning(MSG_SCRIPT_ELEMENT_EXISTS);
+    }
+  }
+  if (!importLibraryExists) {
+    bootstrap(options);
+  }
+}
+var APILoadingStatus = {
+  NOT_LOADED: "NOT_LOADED",
+  LOADING: "LOADING",
+  LOADED: "LOADED",
+  FAILED: "FAILED",
+  AUTH_FAILURE: "AUTH_FAILURE"
+};
+var DEFAULT_SOLUTION_CHANNEL = "GMP_visgl_rgmlibrary_v1_default";
+var DEFAULT_INTERNAL_USAGE_ATTRIBUTION_IDS = [
+  `gmp_visgl_reactgooglemaps_v${VERSION2}`
+];
+var APIProviderContext = import_react125.default.createContext(null);
+var loadingStatus = APILoadingStatus.NOT_LOADED;
+var serializedApiParams;
+var listeners2 = /* @__PURE__ */ new Set();
+function updateLoadingStatus(status) {
+  if (status === loadingStatus) {
+    return;
+  }
+  loadingStatus = status;
+  listeners2.forEach((listener) => listener(loadingStatus));
+}
+function useMapInstances() {
+  const [mapInstances, setMapInstances] = (0, import_react125.useState)({});
+  const addMapInstance = (mapInstance, id = "default") => {
+    setMapInstances((instances) => Object.assign(Object.assign({}, instances), { [id]: mapInstance }));
+  };
+  const removeMapInstance = (id = "default") => {
+    setMapInstances((_a3) => {
+      var _b = id;
+      _a3[_b];
+      var remaining = __rest(_a3, [typeof _b === "symbol" ? _b : _b + ""]);
+      return remaining;
+    });
+  };
+  const clearMapInstances = () => {
+    setMapInstances({});
+  };
+  return { mapInstances, addMapInstance, removeMapInstance, clearMapInstances };
+}
+function useMap3DInstances() {
+  const [map3dInstances, setMap3DInstances] = (0, import_react125.useState)({});
+  const addMap3DInstance = (map3dInstance, id = "default") => {
+    setMap3DInstances((instances) => Object.assign(Object.assign({}, instances), { [id]: map3dInstance }));
+  };
+  const removeMap3DInstance = (id = "default") => {
+    setMap3DInstances((_a3) => {
+      var _b = id;
+      _a3[_b];
+      var remaining = __rest(_a3, [typeof _b === "symbol" ? _b : _b + ""]);
+      return remaining;
+    });
+  };
+  const clearMap3DInstances = () => {
+    setMap3DInstances({});
+  };
+  return {
+    map3dInstances,
+    addMap3DInstance,
+    removeMap3DInstance,
+    clearMap3DInstances
+  };
+}
+function useGoogleMapsApiLoader(props) {
+  const { onLoad, onError, apiKey, version: version3, libraries = [], region, language, authReferrerPolicy, channel, solutionChannel, fetchAppCheckToken } = props;
+  const [status, setStatus] = (0, import_react125.useState)(loadingStatus);
+  const [loadedLibraries, addLoadedLibrary] = (0, import_react125.useReducer)((loadedLibraries2, action2) => {
+    return loadedLibraries2[action2.name] ? loadedLibraries2 : Object.assign(Object.assign({}, loadedLibraries2), { [action2.name]: action2.value });
+  }, {});
+  const currentSerializedParams = (0, import_react125.useMemo)(() => {
+    const params = {
+      apiKey,
+      version: version3,
+      libraries: libraries.join(","),
+      region,
+      language,
+      authReferrerPolicy,
+      channel,
+      solutionChannel
+    };
+    return JSON.stringify(params);
+  }, [
+    apiKey,
+    version3,
+    libraries,
+    region,
+    language,
+    authReferrerPolicy,
+    channel,
+    solutionChannel
+  ]);
+  const importLibraryCallback = (0, import_react125.useCallback)((name) => __awaiter(this, void 0, void 0, function* () {
+    if (loadedLibraries[name]) {
+      return loadedLibraries[name];
+    }
+    const res = yield importLibrary(name);
+    addLoadedLibrary({ name, value: res });
+    return res;
+  }), [loadedLibraries]);
+  (0, import_react125.useEffect)(() => {
+    listeners2.add(setStatus);
+    setStatus(loadingStatus);
+    return () => {
+      listeners2.delete(setStatus);
+    };
+  }, []);
+  (0, import_react125.useEffect)(
+    () => {
+      (() => __awaiter(this, void 0, void 0, function* () {
+        var _a3, _b;
+        try {
+          if (serializedApiParams && serializedApiParams !== currentSerializedParams) {
+            console.warn(`The Google Maps JavaScript API has already been loaded with different parameters. The new parameters will be ignored. If you need to use different parameters, please refresh the page.`);
+          }
+          const librariesToLoad = ["core", "maps", ...libraries];
+          if ((_b = (_a3 = window.google) === null || _a3 === void 0 ? void 0 : _a3.maps) === null || _b === void 0 ? void 0 : _b.importLibrary) {
+            if (!serializedApiParams) {
+              updateLoadingStatus(APILoadingStatus.LOADED);
+            }
+            yield Promise.all(librariesToLoad.map((name) => importLibraryCallback(name)));
+            if (onLoad)
+              onLoad();
+            return;
+          }
+          if (loadingStatus === APILoadingStatus.LOADING || loadingStatus === APILoadingStatus.LOADED) {
+            if (loadingStatus === APILoadingStatus.LOADED && onLoad)
+              onLoad();
+            return;
+          }
+          serializedApiParams = currentSerializedParams;
+          updateLoadingStatus(APILoadingStatus.LOADING);
+          const options = Object.fromEntries(Object.entries({
+            key: apiKey,
+            v: version3,
+            libraries,
+            region,
+            language,
+            authReferrerPolicy
+          }).filter(([, value]) => value !== void 0));
+          if (channel !== void 0 && channel >= 0 && channel <= 999) {
+            options.channel = String(channel);
+          }
+          if (solutionChannel === void 0) {
+            options.solutionChannel = DEFAULT_SOLUTION_CHANNEL;
+          } else if (solutionChannel !== "") {
+            options.solutionChannel = solutionChannel;
+          }
+          setOptions(options);
+          yield Promise.all(librariesToLoad.map((name) => importLibraryCallback(name)));
+          updateLoadingStatus(APILoadingStatus.LOADED);
+          if (onLoad) {
+            onLoad();
+          }
+        } catch (error49) {
+          updateLoadingStatus(APILoadingStatus.FAILED);
+          if (onError) {
+            onError(error49);
+          } else {
+            console.error("The Google Maps JavaScript API failed to load.", error49);
+          }
+        }
+      }))();
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [currentSerializedParams, onLoad, onError, importLibraryCallback, libraries]
+  );
+  (0, import_react125.useEffect)(() => {
+    if (status !== APILoadingStatus.LOADED)
+      return;
+    const settings = google.maps.Settings.getInstance();
+    if (fetchAppCheckToken) {
+      settings.fetchAppCheckToken = fetchAppCheckToken;
+    } else if (settings.fetchAppCheckToken) {
+      settings.fetchAppCheckToken = null;
+    }
+  }, [status, fetchAppCheckToken]);
+  return {
+    status,
+    loadedLibraries,
+    importLibrary: importLibraryCallback
+  };
+}
+function useInternalUsageAttributionIds(props) {
+  return (0, import_react125.useMemo)(() => props.disableUsageAttribution ? null : DEFAULT_INTERNAL_USAGE_ATTRIBUTION_IDS, [props.disableUsageAttribution]);
+}
+var APIProvider = (props) => {
+  const { children } = props, loaderProps = __rest(props, ["children"]);
+  const { mapInstances, addMapInstance, removeMapInstance, clearMapInstances } = useMapInstances();
+  const { map3dInstances, addMap3DInstance, removeMap3DInstance, clearMap3DInstances } = useMap3DInstances();
+  const { status, loadedLibraries, importLibrary: importLibrary2 } = useGoogleMapsApiLoader(loaderProps);
+  const internalUsageAttributionIds = useInternalUsageAttributionIds(loaderProps);
+  const contextValue = (0, import_react125.useMemo)(() => ({
+    mapInstances,
+    addMapInstance,
+    removeMapInstance,
+    clearMapInstances,
+    map3dInstances,
+    addMap3DInstance,
+    removeMap3DInstance,
+    clearMap3DInstances,
+    status,
+    loadedLibraries,
+    importLibrary: importLibrary2,
+    internalUsageAttributionIds
+  }), [
+    mapInstances,
+    addMapInstance,
+    removeMapInstance,
+    clearMapInstances,
+    map3dInstances,
+    addMap3DInstance,
+    removeMap3DInstance,
+    clearMap3DInstances,
+    status,
+    loadedLibraries,
+    importLibrary2,
+    internalUsageAttributionIds
+  ]);
+  return import_react125.default.createElement(APIProviderContext.Provider, { value: contextValue }, children);
+};
+function useMapEvents(map2, props) {
+  for (const propName of eventPropNames) {
+    const handler = props[propName];
+    const eventType = propNameToEventType[propName];
+    (0, import_react125.useEffect)(() => {
+      if (!map2)
+        return;
+      if (!handler)
+        return;
+      const listener = google.maps.event.addListener(map2, eventType, (ev) => {
+        handler(createMapEvent(eventType, map2, ev));
+      });
+      return () => listener.remove();
+    }, [map2, eventType, handler]);
+  }
+}
+function createMapEvent(type, map2, srcEvent) {
+  var _a3;
+  const ev = {
+    type,
+    map: map2,
+    detail: {},
+    stoppable: false,
+    stop: () => {
+    }
+  };
+  if (cameraEventTypes.includes(type)) {
+    const camEvent = ev;
+    const center = map2.getCenter();
+    const zoom = map2.getZoom();
+    const heading = map2.getHeading() || 0;
+    const tilt = map2.getTilt() || 0;
+    const bounds = map2.getBounds();
+    if (!center || !bounds || !Number.isFinite(zoom)) {
+      console.warn("[createEvent] at least one of the values from the map returned undefined. This is not expected to happen. Please report an issue at https://github.com/visgl/react-google-maps/issues/new");
+    }
+    camEvent.detail = {
+      center: (center === null || center === void 0 ? void 0 : center.toJSON()) || { lat: 0, lng: 0 },
+      zoom: zoom || 0,
+      heading,
+      tilt,
+      bounds: (bounds === null || bounds === void 0 ? void 0 : bounds.toJSON()) || {
+        north: 90,
+        east: 180,
+        south: -90,
+        west: -180
+      }
+    };
+    return camEvent;
+  } else if (mouseEventTypes.includes(type)) {
+    if (!srcEvent)
+      throw new Error("[createEvent] mouse events must provide a srcEvent");
+    const mouseEvent = ev;
+    mouseEvent.domEvent = srcEvent.domEvent;
+    mouseEvent.stoppable = true;
+    mouseEvent.stop = () => srcEvent.stop();
+    mouseEvent.detail = {
+      latLng: ((_a3 = srcEvent.latLng) === null || _a3 === void 0 ? void 0 : _a3.toJSON()) || null,
+      placeId: srcEvent.placeId
+    };
+    return mouseEvent;
+  }
+  return ev;
+}
+var propNameToEventType = {
+  onBoundsChanged: "bounds_changed",
+  onCenterChanged: "center_changed",
+  onClick: "click",
+  onContextmenu: "contextmenu",
+  onDblclick: "dblclick",
+  onDrag: "drag",
+  onDragend: "dragend",
+  onDragstart: "dragstart",
+  onHeadingChanged: "heading_changed",
+  onIdle: "idle",
+  onIsFractionalZoomEnabledChanged: "isfractionalzoomenabled_changed",
+  onMapCapabilitiesChanged: "mapcapabilities_changed",
+  onMapTypeIdChanged: "maptypeid_changed",
+  onMousemove: "mousemove",
+  onMouseout: "mouseout",
+  onMouseover: "mouseover",
+  onProjectionChanged: "projection_changed",
+  onRenderingTypeChanged: "renderingtype_changed",
+  onTilesLoaded: "tilesloaded",
+  onTiltChanged: "tilt_changed",
+  onZoomChanged: "zoom_changed",
+  // note: onCameraChanged is an alias for the bounds_changed event,
+  // since that is going to be fired in every situation where the camera is
+  // updated.
+  onCameraChanged: "bounds_changed"
+};
+var cameraEventTypes = [
+  "bounds_changed",
+  "center_changed",
+  "heading_changed",
+  "tilt_changed",
+  "zoom_changed"
+];
+var mouseEventTypes = [
+  "click",
+  "contextmenu",
+  "dblclick",
+  "mousemove",
+  "mouseout",
+  "mouseover"
+];
+var eventPropNames = Object.keys(propNameToEventType);
+function useMemoized(value, isEqual) {
+  const ref = (0, import_react125.useRef)(value);
+  if (!isEqual(value, ref.current)) {
+    ref.current = value;
+  }
+  return ref.current;
+}
+function useCustomCompareEffect(effect2, dependencies, isEqual) {
+  (0, import_react125.useEffect)(effect2, [useMemoized(dependencies, isEqual)]);
+}
+function useDeepCompareEffect(effect2, dependencies) {
+  useCustomCompareEffect(effect2, dependencies, import_fast_deep_equal.default);
+}
+var mapOptionKeys = /* @__PURE__ */ new Set([
+  "backgroundColor",
+  "clickableIcons",
+  "controlSize",
+  "disableDefaultUI",
+  "disableDoubleClickZoom",
+  "draggable",
+  "draggableCursor",
+  "draggingCursor",
+  "fullscreenControl",
+  "fullscreenControlOptions",
+  "gestureHandling",
+  "headingInteractionEnabled",
+  "isFractionalZoomEnabled",
+  "keyboardShortcuts",
+  "mapTypeControl",
+  "mapTypeControlOptions",
+  "mapTypeId",
+  "maxZoom",
+  "minZoom",
+  "noClear",
+  "panControl",
+  "panControlOptions",
+  "restriction",
+  "rotateControl",
+  "rotateControlOptions",
+  "scaleControl",
+  "scaleControlOptions",
+  "scrollwheel",
+  "streetView",
+  "streetViewControl",
+  "streetViewControlOptions",
+  "styles",
+  "tiltInteractionEnabled",
+  "zoomControl",
+  "zoomControlOptions"
+]);
+function useMapOptions(map2, mapProps) {
+  const mapOptions = {};
+  const keys = Object.keys(mapProps);
+  for (const key of keys) {
+    if (!mapOptionKeys.has(key))
+      continue;
+    mapOptions[key] = mapProps[key];
+  }
+  useDeepCompareEffect(() => {
+    if (!map2)
+      return;
+    map2.setOptions(mapOptions);
+  }, [mapOptions]);
+}
+function useApiLoadingStatus() {
+  var _a3;
+  return ((_a3 = (0, import_react125.useContext)(APIProviderContext)) === null || _a3 === void 0 ? void 0 : _a3.status) || APILoadingStatus.NOT_LOADED;
+}
+function useDeckGLCameraUpdate(map2, props) {
+  const { viewport, viewState } = props;
+  const isDeckGlControlled = !!viewport;
+  (0, import_react125.useLayoutEffect)(() => {
+    if (!map2 || !viewState)
+      return;
+    const { latitude, longitude, bearing: heading, pitch: tilt, zoom } = viewState;
+    map2.moveCamera({
+      center: { lat: latitude, lng: longitude },
+      heading,
+      tilt,
+      zoom: zoom + 1
+    });
+  }, [map2, viewState]);
+  return isDeckGlControlled;
+}
+function isLatLngLiteral(obj) {
+  if (!obj || typeof obj !== "object")
+    return false;
+  if (!("lat" in obj && "lng" in obj))
+    return false;
+  return Number.isFinite(obj.lat) && Number.isFinite(obj.lng);
+}
+function latLngEquals(a2, b2) {
+  if (!a2 || !b2)
+    return false;
+  const A = toLatLngLiteral(a2);
+  const B = toLatLngLiteral(b2);
+  if (A.lat !== B.lat || A.lng !== B.lng)
+    return false;
+  return true;
+}
+function toLatLngLiteral(obj) {
+  if (isLatLngLiteral(obj))
+    return obj;
+  return obj.toJSON();
+}
+function toLatLngBoundsLiteral(obj) {
+  if ("north" in obj && "south" in obj && "east" in obj && "west" in obj) {
+    return obj;
+  }
+  const ne = obj.getNorthEast().toJSON();
+  const sw = obj.getSouthWest().toJSON();
+  return {
+    north: ne.lat,
+    east: ne.lng,
+    south: sw.lat,
+    west: sw.lng
+  };
+}
+function boundsEquals(a2, b2) {
+  if (!a2 || !b2)
+    return false;
+  const A = toLatLngBoundsLiteral(a2);
+  const B = toLatLngBoundsLiteral(b2);
+  return A.north === B.north && A.south === B.south && A.east === B.east && A.west === B.west;
+}
+function pathEquals(a2, b2) {
+  if (!a2 || !b2)
+    return a2 === b2;
+  const arrayB = "getArray" in b2 ? b2.getArray() : b2;
+  if (a2.length !== arrayB.length)
+    return false;
+  for (let i = 0; i < a2.length; i++) {
+    if (!latLngEquals(a2[i], arrayB[i]))
+      return false;
+  }
+  return true;
+}
+function pathsEquals(a2, b2) {
+  if (!a2 || !b2)
+    return a2 === b2;
+  const arrayB = "getArray" in b2 ? b2.getArray().map((inner2) => inner2.getArray()) : b2;
+  if (a2.length !== arrayB.length)
+    return false;
+  for (let i = 0; i < a2.length; i++) {
+    if (!pathEquals(a2[i], arrayB[i]))
+      return false;
+  }
+  return true;
+}
+function useMapCameraParams(map2, cameraStateRef, mapProps) {
+  const center = mapProps.center ? toLatLngLiteral(mapProps.center) : null;
+  let lat = null;
+  let lng = null;
+  if (center && Number.isFinite(center.lat) && Number.isFinite(center.lng)) {
+    lat = center.lat;
+    lng = center.lng;
+  }
+  const zoom = Number.isFinite(mapProps.zoom) ? mapProps.zoom : null;
+  const heading = Number.isFinite(mapProps.heading) ? mapProps.heading : null;
+  const tilt = Number.isFinite(mapProps.tilt) ? mapProps.tilt : null;
+  (0, import_react125.useLayoutEffect)(() => {
+    if (!map2)
+      return;
+    const nextCamera = {};
+    let needsUpdate = false;
+    if (lat !== null && lng !== null && (cameraStateRef.current.center.lat !== lat || cameraStateRef.current.center.lng !== lng)) {
+      nextCamera.center = { lat, lng };
+      needsUpdate = true;
+    }
+    if (zoom !== null && cameraStateRef.current.zoom !== zoom) {
+      nextCamera.zoom = zoom;
+      needsUpdate = true;
+    }
+    if (heading !== null && cameraStateRef.current.heading !== heading) {
+      nextCamera.heading = heading;
+      needsUpdate = true;
+    }
+    if (tilt !== null && cameraStateRef.current.tilt !== tilt) {
+      nextCamera.tilt = tilt;
+      needsUpdate = true;
+    }
+    if (needsUpdate) {
+      map2.moveCamera(nextCamera);
+    }
+  });
+}
+var AuthFailureMessage = () => {
+  const style2 = {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    bottom: 0,
+    right: 0,
+    zIndex: 999,
+    display: "flex",
+    flexFlow: "column nowrap",
+    textAlign: "center",
+    justifyContent: "center",
+    fontSize: ".8rem",
+    color: "rgba(0,0,0,0.6)",
+    background: "#dddddd",
+    padding: "1rem 1.5rem"
+  };
+  return import_react125.default.createElement(
+    "div",
+    { style: style2 },
+    import_react125.default.createElement("h2", null, "Error: AuthFailure"),
+    import_react125.default.createElement(
+      "p",
+      null,
+      "A problem with your API key prevents the map from rendering correctly. Please make sure the value of the ",
+      import_react125.default.createElement("code", null, "APIProvider.apiKey"),
+      " prop is correct. Check the error-message in the console for further details."
+    )
+  );
+};
+function useCallbackRef() {
+  const [el, setEl] = (0, import_react125.useState)(null);
+  const ref = (0, import_react125.useCallback)((value) => setEl(value), [setEl]);
+  return [el, ref];
+}
+function useApiIsLoaded() {
+  const status = useApiLoadingStatus();
+  return status === APILoadingStatus.LOADED;
+}
+function useForceUpdate() {
+  const [, forceUpdate] = (0, import_react125.useReducer)((x) => x + 1, 0);
+  return forceUpdate;
+}
+function handleBoundsChange(map2, ref) {
+  const center = map2.getCenter();
+  const zoom = map2.getZoom();
+  const heading = map2.getHeading() || 0;
+  const tilt = map2.getTilt() || 0;
+  const bounds = map2.getBounds();
+  if (!center || !bounds || !Number.isFinite(zoom)) {
+    console.warn("[useTrackedCameraState] at least one of the values from the map returned undefined. This is not expected to happen. Please report an issue at https://github.com/visgl/react-google-maps/issues/new");
+  }
+  Object.assign(ref.current, {
+    center: (center === null || center === void 0 ? void 0 : center.toJSON()) || { lat: 0, lng: 0 },
+    zoom: zoom || 0,
+    heading,
+    tilt
+  });
+}
+function useTrackedCameraStateRef(map2) {
+  const forceUpdate = useForceUpdate();
+  const ref = (0, import_react125.useRef)({
+    center: { lat: 0, lng: 0 },
+    heading: 0,
+    tilt: 0,
+    zoom: 0
+  });
+  (0, import_react125.useEffect)(() => {
+    if (!map2)
+      return;
+    const listener = google.maps.event.addListener(map2, "bounds_changed", () => {
+      handleBoundsChange(map2, ref);
+      forceUpdate();
+    });
+    return () => listener.remove();
+  }, [map2, forceUpdate]);
+  return ref;
+}
+var CachedMapStack = class {
+  static has(key) {
+    return this.entries[key] && this.entries[key].length > 0;
+  }
+  static pop(key) {
+    if (!this.entries[key])
+      return null;
+    return this.entries[key].pop() || null;
+  }
+  static push(key, value) {
+    if (!this.entries[key])
+      this.entries[key] = [];
+    this.entries[key].push(value);
   }
 };
-var corporate = {
-  name: "corporate",
-  colors: {
-    background: "#0f172a",
-    surface: "#1e293b",
-    primary: "#3b82f6",
-    secondary: "#f59e0b",
-    text: "#f8fafc",
-    textMuted: "#94a3b8",
-    border: "#1e293b",
-    gradient: ["#3b82f6", "#8b5cf6"],
-    chart: ["#3b82f6", "#f59e0b", "#10b981", "#ef4444", "#8b5cf6", "#ec4899"]
-  },
-  fonts: {
-    heading: "'Plus Jakarta Sans', 'Inter', sans-serif",
-    body: "'Inter', sans-serif",
-    mono: "'SF Mono', 'Fira Code', monospace"
-  },
-  timing: {
-    spring: { damping: 14, stiffness: 160, mass: 0.9 },
-    stagger: 5,
-    transitionDuration: 0.6
-  },
-  effects: {
-    particles: false,
-    gradientBg: true,
-    motionBlur: false,
-    grain: 0
+CachedMapStack.entries = {};
+function useMapInstance(props, context) {
+  const apiIsLoaded = useApiIsLoaded();
+  const [map2, setMap] = (0, import_react125.useState)(null);
+  const [container3, containerRef] = useCallbackRef();
+  const cameraStateRef = useTrackedCameraStateRef(map2);
+  const { id, defaultBounds, defaultCenter, defaultZoom, defaultHeading, defaultTilt, reuseMaps, renderingType, colorScheme } = props, mapOptions = __rest(props, ["id", "defaultBounds", "defaultCenter", "defaultZoom", "defaultHeading", "defaultTilt", "reuseMaps", "renderingType", "colorScheme"]);
+  const hasZoom = props.zoom !== void 0 || props.defaultZoom !== void 0;
+  const hasCenter = props.center !== void 0 || props.defaultCenter !== void 0;
+  if (!defaultBounds && (!hasZoom || !hasCenter)) {
+    console.warn("<Map> component is missing configuration. You have to provide zoom and center (via the `zoom`/`defaultZoom` and `center`/`defaultCenter` props) or specify the region to show using `defaultBounds`. See https://visgl.github.io/react-google-maps/docs/api-reference/components/map#required");
+  }
+  if (!mapOptions.center && defaultCenter)
+    mapOptions.center = defaultCenter;
+  if (!mapOptions.zoom && Number.isFinite(defaultZoom))
+    mapOptions.zoom = defaultZoom;
+  if (!mapOptions.heading && Number.isFinite(defaultHeading))
+    mapOptions.heading = defaultHeading;
+  if (!mapOptions.tilt && Number.isFinite(defaultTilt))
+    mapOptions.tilt = defaultTilt;
+  const customIds = mapOptions.internalUsageAttributionIds;
+  if (customIds == null) {
+    mapOptions.internalUsageAttributionIds = context.internalUsageAttributionIds;
+  } else {
+    mapOptions.internalUsageAttributionIds = [
+      ...context.internalUsageAttributionIds || [],
+      ...customIds
+    ];
+  }
+  for (const key of Object.keys(mapOptions))
+    if (mapOptions[key] === void 0)
+      delete mapOptions[key];
+  const savedMapStateRef = (0, import_react125.useRef)(void 0);
+  (0, import_react125.useEffect)(
+    () => {
+      if (!container3 || !apiIsLoaded)
+        return;
+      const { addMapInstance, removeMapInstance } = context;
+      const { mapId } = props;
+      const cacheKey = `${mapId || "default"}:${renderingType || "default"}:${colorScheme || "LIGHT"}`;
+      let mapDiv;
+      let map3;
+      if (reuseMaps && CachedMapStack.has(cacheKey)) {
+        map3 = CachedMapStack.pop(cacheKey);
+        mapDiv = map3.getDiv();
+        container3.appendChild(mapDiv);
+        map3.setOptions(mapOptions);
+        setTimeout(() => map3.moveCamera({}), 0);
+      } else {
+        mapDiv = document.createElement("div");
+        mapDiv.style.height = "100%";
+        container3.appendChild(mapDiv);
+        map3 = new google.maps.Map(mapDiv, Object.assign(Object.assign(Object.assign({}, mapOptions), renderingType ? { renderingType } : {}), colorScheme ? { colorScheme } : {}));
+      }
+      setMap(map3);
+      addMapInstance(map3, id);
+      if (defaultBounds) {
+        const { padding } = defaultBounds, defBounds = __rest(defaultBounds, ["padding"]);
+        map3.fitBounds(defBounds, padding);
+      } else if (!hasZoom || !hasCenter) {
+        map3.fitBounds({ east: 180, west: -180, south: -90, north: 90 });
+      }
+      if (savedMapStateRef.current) {
+        const { mapId: savedMapId, cameraState: savedCameraState } = savedMapStateRef.current;
+        if (savedMapId !== mapId) {
+          map3.moveCamera(savedCameraState);
+        }
+      }
+      return () => {
+        savedMapStateRef.current = {
+          mapId,
+          // eslint-disable-next-line react-hooks/exhaustive-deps
+          cameraState: cameraStateRef.current
+        };
+        mapDiv.remove();
+        if (reuseMaps) {
+          CachedMapStack.push(cacheKey, map3);
+        } else {
+          google.maps.event.clearInstanceListeners(map3);
+        }
+        setMap(null);
+        removeMapInstance(id);
+      };
+    },
+    // some dependencies are ignored in the list below:
+    //  - defaultBounds and the default* camera props will only be used once, and
+    //    changes should be ignored
+    //  - mapOptions has special hooks that take care of updating the options
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
+      container3,
+      apiIsLoaded,
+      id,
+      // these props can't be changed after initialization and require a new
+      // instance to be created
+      props.mapId,
+      props.renderingType,
+      props.colorScheme
+    ]
+  );
+  return [map2, containerRef, cameraStateRef];
+}
+var GoogleMapsContext = import_react125.default.createContext(null);
+var Map2 = (props) => {
+  const { children, id, className: className2, style: style2 } = props;
+  const context = (0, import_react125.useContext)(APIProviderContext);
+  const loadingStatus2 = useApiLoadingStatus();
+  if (!context) {
+    throw new Error("<Map> can only be used inside an <ApiProvider> component.");
+  }
+  const [map2, mapRef, cameraStateRef] = useMapInstance(props, context);
+  useMapCameraParams(map2, cameraStateRef, props);
+  useMapEvents(map2, props);
+  useMapOptions(map2, props);
+  const isDeckGlControlled = useDeckGLCameraUpdate(map2, props);
+  const isControlledExternally = !!props.controlled;
+  (0, import_react125.useEffect)(() => {
+    if (!map2)
+      return;
+    if (isDeckGlControlled) {
+      map2.setOptions({ disableDefaultUI: true });
+    }
+    if (isDeckGlControlled || isControlledExternally) {
+      map2.setOptions({
+        gestureHandling: "none",
+        keyboardShortcuts: false
+      });
+    }
+    return () => {
+      map2.setOptions({
+        gestureHandling: props.gestureHandling,
+        keyboardShortcuts: props.keyboardShortcuts
+      });
+    };
+  }, [
+    map2,
+    isDeckGlControlled,
+    isControlledExternally,
+    props.gestureHandling,
+    props.keyboardShortcuts
+  ]);
+  const center = props.center ? toLatLngLiteral(props.center) : null;
+  let lat = null;
+  let lng = null;
+  if (center && Number.isFinite(center.lat) && Number.isFinite(center.lng)) {
+    lat = center.lat;
+    lng = center.lng;
+  }
+  const cameraOptions = (0, import_react125.useMemo)(() => {
+    var _a3, _b, _c;
+    return {
+      center: { lat: lat !== null && lat !== void 0 ? lat : 0, lng: lng !== null && lng !== void 0 ? lng : 0 },
+      zoom: (_a3 = props.zoom) !== null && _a3 !== void 0 ? _a3 : 0,
+      heading: (_b = props.heading) !== null && _b !== void 0 ? _b : 0,
+      tilt: (_c = props.tilt) !== null && _c !== void 0 ? _c : 0
+    };
+  }, [lat, lng, props.zoom, props.heading, props.tilt]);
+  (0, import_react125.useLayoutEffect)(() => {
+    if (!map2 || !isControlledExternally)
+      return;
+    map2.moveCamera(cameraOptions);
+    const listener = map2.addListener("bounds_changed", () => {
+      map2.moveCamera(cameraOptions);
+    });
+    return () => listener.remove();
+  }, [map2, isControlledExternally, cameraOptions]);
+  const combinedStyle = (0, import_react125.useMemo)(() => Object.assign({
+    width: "100%",
+    height: "100%",
+    position: "relative",
+    // when using deckgl, the map should be sent to the back
+    zIndex: isDeckGlControlled ? -1 : 0
+  }, style2), [style2, isDeckGlControlled]);
+  const contextValue = (0, import_react125.useMemo)(() => ({ map: map2 }), [map2]);
+  if (loadingStatus2 === APILoadingStatus.AUTH_FAILURE) {
+    return import_react125.default.createElement(
+      "div",
+      { style: Object.assign({ position: "relative" }, className2 ? {} : combinedStyle), className: className2 },
+      import_react125.default.createElement(AuthFailureMessage, null)
+    );
+  }
+  return import_react125.default.createElement("div", Object.assign({ ref: mapRef, "data-testid": "map", style: className2 ? void 0 : combinedStyle, className: className2 }, id ? { id } : {}), map2 ? import_react125.default.createElement(GoogleMapsContext.Provider, { value: contextValue }, children) : null);
+};
+Map2.deckGLViewProps = true;
+var shownMessages = /* @__PURE__ */ new Set();
+function logErrorOnce(...args) {
+  const key = JSON.stringify(args);
+  if (!shownMessages.has(key)) {
+    shownMessages.add(key);
+    console.error(...args);
+  }
+}
+var useMap = (id = null) => {
+  const ctx = (0, import_react125.useContext)(APIProviderContext);
+  const { map: map2 } = (0, import_react125.useContext)(GoogleMapsContext) || {};
+  if (ctx === null) {
+    logErrorOnce("useMap(): failed to retrieve APIProviderContext. Make sure that the <APIProvider> component exists and that the component you are calling `useMap()` from is a sibling of the <APIProvider>.");
+    return null;
+  }
+  const { mapInstances } = ctx;
+  if (id !== null)
+    return mapInstances[id] || null;
+  if (map2)
+    return map2;
+  return mapInstances["default"] || null;
+};
+function useMapsLibrary(name) {
+  const apiIsLoaded = useApiIsLoaded();
+  const ctx = (0, import_react125.useContext)(APIProviderContext);
+  (0, import_react125.useEffect)(() => {
+    if (!apiIsLoaded || !ctx)
+      return;
+    void ctx.importLibrary(name);
+  }, [apiIsLoaded, ctx, name]);
+  return (ctx === null || ctx === void 0 ? void 0 : ctx.loadedLibraries[name]) || null;
+}
+var _a;
+var { useLayoutEffect: useLayoutEffect15, useRef: useRef31 } = React25;
+var useBeforeEffect = (_a = React25.useInsertionEffect) !== null && _a !== void 0 ? _a : useLayoutEffect15;
+function forbiddenInRender() {
+  throw new Error("useEffectEvent: invalid call during rendering.");
+}
+function useEffectEventPolyfill(fn) {
+  const ref = useRef31(forbiddenInRender);
+  useBeforeEffect(() => {
+    ref.current = fn;
+  }, [fn]);
+  return ((...args) => ref.current(...args));
+}
+var useEffectEvent = useEffectEventPolyfill;
+var noop$1 = () => {
+};
+function useMapsEventListener(target, name, callback) {
+  const eventFn = useEffectEvent(callback !== null && callback !== void 0 ? callback : noop$1);
+  const isCallbackDefined = Boolean(callback);
+  (0, import_react125.useEffect)(() => {
+    if (!target || !name || !isCallbackDefined)
+      return;
+    const listener = google.maps.event.addListener(target, name, eventFn);
+    return () => listener.remove();
+  }, [target, name, isCallbackDefined]);
+}
+function usePropBinding(object2, prop, value) {
+  (0, import_react125.useEffect)(() => {
+    if (!object2)
+      return;
+    object2[prop] = value;
+  }, [object2, prop, value]);
+}
+var noop = () => {
+};
+function useDomEventListener(target, name, callback) {
+  const eventFn = useEffectEvent(callback !== null && callback !== void 0 ? callback : noop);
+  const isCallbackDefined = Boolean(callback);
+  (0, import_react125.useEffect)(() => {
+    if (!target || !name || !isCallbackDefined)
+      return;
+    const listenerCallback = eventFn;
+    target.addEventListener(name, listenerCallback);
+    return () => target.removeEventListener(name, listenerCallback);
+  }, [target, name, isCallbackDefined]);
+}
+var GlobalStyleManager = class {
+  constructor() {
+    this.renderedStyles = /* @__PURE__ */ new Set();
+    this.styleElement = null;
+  }
+  getStyleElement() {
+    if (!this.styleElement) {
+      this.styleElement = document.createElement("style");
+      this.styleElement.setAttribute("data-rgm-anchor-styles", "");
+      document.head.appendChild(this.styleElement);
+    }
+    return this.styleElement;
+  }
+  addAdvancedMarkerPointerEventsOverwrite() {
+    if (this.renderedStyles.has("marker-pointer-events")) {
+      return;
+    }
+    const styleElement = this.getStyleElement();
+    styleElement.textContent += `
+      gmp-advanced-marker[data-origin='rgm'] {
+        pointer-events: none !important;
+      }
+    `;
+    this.renderedStyles.add("marker-pointer-events");
+  }
+  cleanup() {
+    if (this.styleElement) {
+      this.styleElement.remove();
+      this.styleElement = null;
+      this.renderedStyles.clear();
+    }
   }
 };
-var cleanProfessional = {
-  name: "clean-professional",
-  colors: {
-    background: "#FFFFFF",
-    surface: "#F9FAFB",
-    primary: "#2563EB",
-    secondary: "#F59E0B",
-    text: "#1F2937",
-    textMuted: "#6B7280",
-    border: "#E5E7EB",
-    gradient: ["#2563EB", "#F59E0B"],
-    chart: ["#2563EB", "#F59E0B", "#10B981", "#8B5CF6", "#EC4899", "#06B6D4"]
-  },
-  fonts: {
-    heading: "'Inter', sans-serif",
-    body: "'Inter', sans-serif",
-    mono: "'JetBrains Mono', monospace"
-  },
-  timing: {
-    spring: { damping: 20, stiffness: 120, mass: 1 },
-    stagger: 3,
-    transitionDuration: 0.4
-  },
-  effects: {
-    particles: false,
-    gradientBg: false,
-    motionBlur: false,
-    grain: 0
+var globalStyleManager = new GlobalStyleManager();
+function isVersionGreaterEqual(major, minor) {
+  var _a3;
+  if (!((_a3 = google === null || google === void 0 ? void 0 : google.maps) === null || _a3 === void 0 ? void 0 : _a3.version))
+    return void 0;
+  const version3 = google.maps.version.split(".");
+  const currentMajor = parseInt(version3[0], 10);
+  const currentMinor = parseInt(version3[1], 10);
+  return currentMajor > major || currentMajor === major && currentMinor >= minor;
+}
+var AdvancedMarkerContext = import_react125.default.createContext(null);
+var AdvancedMarkerAnchorPoint = {
+  TOP_LEFT: ["0%", "0%"],
+  TOP_CENTER: ["50%", "0%"],
+  TOP: ["50%", "0%"],
+  TOP_RIGHT: ["100%", "0%"],
+  LEFT_CENTER: ["0%", "50%"],
+  LEFT_TOP: ["0%", "0%"],
+  LEFT: ["0%", "50%"],
+  LEFT_BOTTOM: ["0%", "100%"],
+  RIGHT_TOP: ["100%", "0%"],
+  RIGHT: ["100%", "50%"],
+  RIGHT_CENTER: ["100%", "50%"],
+  RIGHT_BOTTOM: ["100%", "100%"],
+  BOTTOM_LEFT: ["0%", "100%"],
+  BOTTOM_CENTER: ["50%", "100%"],
+  BOTTOM: ["50%", "100%"],
+  BOTTOM_RIGHT: ["100%", "100%"],
+  CENTER: ["50%", "50%"]
+};
+var AdvancedMarker = (0, import_react125.forwardRef)((props, ref) => {
+  const { children, style: style2, className: className2, anchorPoint } = props;
+  const [marker, contentContainer] = useAdvancedMarker(props);
+  const advancedMarkerContextValue = (0, import_react125.useMemo)(() => marker ? { marker } : null, [marker]);
+  (0, import_react125.useImperativeHandle)(ref, () => marker, [marker]);
+  if (!contentContainer)
+    return null;
+  return import_react125.default.createElement(AdvancedMarkerContext.Provider, { value: advancedMarkerContextValue }, (0, import_react_dom3.createPortal)(import_react125.default.createElement(MarkerContent, { anchorPoint, styles: style2, className: className2 }, children), contentContainer));
+});
+AdvancedMarker.displayName = "AdvancedMarker";
+function isElementNode(node) {
+  return node.nodeType === Node.ELEMENT_NODE;
+}
+var MarkerContent = ({ children, styles, className: className2 }) => {
+  return import_react125.default.createElement("div", { className: className2, style: styles }, children);
+};
+function useAdvancedMarker(props) {
+  const [marker, setMarker] = (0, import_react125.useState)(null);
+  const [contentContainer, setContentContainer] = (0, import_react125.useState)(null);
+  const map2 = useMap();
+  const markerLibrary = useMapsLibrary("marker");
+  const { children, onClick, className: className2, onMouseEnter, onMouseLeave, onDrag, onDragStart, onDragEnd, collisionBehavior, clickable, draggable, position, title, zIndex, anchorPoint, anchorLeft, anchorTop } = props;
+  const numChildren = import_react125.Children.count(children);
+  (0, import_react125.useEffect)(() => {
+    if (!map2 || !markerLibrary)
+      return;
+    const newMarker = new markerLibrary.AdvancedMarkerElement();
+    newMarker.map = map2;
+    setMarker(newMarker);
+    let contentElement = null;
+    if (numChildren > 0) {
+      contentElement = document.createElement("div");
+      newMarker.content = contentElement;
+      setContentContainer(contentElement);
+    }
+    return () => {
+      newMarker.map = null;
+      contentElement === null || contentElement === void 0 ? void 0 : contentElement.remove();
+      setMarker(null);
+      setContentContainer(null);
+    };
+  }, [map2, markerLibrary, numChildren]);
+  (0, import_react125.useEffect)(() => {
+    if (!(marker === null || marker === void 0 ? void 0 : marker.content) || !isElementNode(marker.content) || numChildren > 0)
+      return;
+    marker.content.className = className2 !== null && className2 !== void 0 ? className2 : "";
+  }, [marker, className2, numChildren]);
+  useAdvancedMarkerAnchoring(marker, anchorPoint, anchorLeft, anchorTop, numChildren > 0);
+  usePropBinding(marker, "position", position);
+  usePropBinding(marker, "title", title !== null && title !== void 0 ? title : "");
+  usePropBinding(marker, "zIndex", zIndex);
+  usePropBinding(marker, "collisionBehavior", collisionBehavior);
+  (0, import_react125.useEffect)(() => {
+    if (!marker)
+      return;
+    if (draggable !== void 0)
+      marker.gmpDraggable = draggable;
+    else if (onDrag || onDragStart || onDragEnd)
+      marker.gmpDraggable = true;
+    else
+      marker.gmpDraggable = false;
+  }, [marker, draggable, onDrag, onDragEnd, onDragStart]);
+  (0, import_react125.useEffect)(() => {
+    if (!marker)
+      return;
+    const gmpClickable = clickable !== void 0 ? clickable : Boolean(onClick) || Boolean(onMouseEnter) || Boolean(onMouseLeave);
+    marker.gmpClickable = gmpClickable;
+    if (gmpClickable && (marker === null || marker === void 0 ? void 0 : marker.content) && isElementNode(marker.content)) {
+      marker.content.style.pointerEvents = "all";
+      if (onClick) {
+        marker.content.style.cursor = "pointer";
+      }
+    }
+  }, [marker, clickable, onClick, onMouseEnter, onMouseLeave]);
+  useMapsEventListener(marker, "click", onClick);
+  useMapsEventListener(marker, "drag", onDrag);
+  useMapsEventListener(marker, "dragstart", onDragStart);
+  useMapsEventListener(marker, "dragend", onDragEnd);
+  useDomEventListener(marker === null || marker === void 0 ? void 0 : marker.element, "mouseenter", onMouseEnter);
+  useDomEventListener(marker === null || marker === void 0 ? void 0 : marker.element, "mouseleave", onMouseLeave);
+  return [marker, contentContainer];
+}
+function useAdvancedMarkerAnchoring(marker, anchorPoint, anchorLeft, anchorTop, hasChildren) {
+  (0, import_react125.useEffect)(() => {
+    if (!marker || !hasChildren)
+      return;
+    const anchorOptionsSupported = isVersionGreaterEqual(3, 62);
+    const contentElement = marker.content;
+    if (!contentElement || !isElementNode(contentElement))
+      return;
+    if (anchorLeft !== void 0 || anchorTop !== void 0) {
+      if (!anchorOptionsSupported) {
+        console.warn(`AdvancedMarker: The anchorLeft and anchorTop props are only supported in Google Maps API version 3.62 and above. The current version is ${google.maps.version}.`);
+      }
+      marker.anchorLeft = anchorLeft;
+      marker.anchorTop = anchorTop;
+      if (anchorPoint !== void 0) {
+        console.warn("AdvancedMarker: the anchorPoint prop is ignored when anchorLeft and/or anchorTop are set.");
+      }
+      return;
+    }
+    if (anchorPoint !== void 0) {
+      const [x, y] = anchorPoint !== null && anchorPoint !== void 0 ? anchorPoint : AdvancedMarkerAnchorPoint["BOTTOM"];
+      const translateX = `calc(-1 * ${x})`;
+      const translateY = `calc(-1 * ${y})`;
+      if (anchorOptionsSupported) {
+        marker.anchorLeft = translateX;
+        marker.anchorTop = translateY;
+        contentElement.style.transform = "";
+      } else {
+        contentElement.style.transform = `translate(50%, 100%) translate(${translateX}, ${translateY})`;
+        marker.dataset.origin = "rgm";
+        globalStyleManager.addAdvancedMarkerPointerEventsOverwrite();
+      }
+    }
+  }, [marker, anchorPoint, anchorLeft, anchorTop, hasChildren]);
+}
+function useCircle(props) {
+  var _a3, _b, _c;
+  const { onClick, onDrag, onDragStart, onDragEnd, onMouseOver, onMouseOut, onRadiusChanged, onCenterChanged, center, defaultCenter, radius, defaultRadius } = props, destructuredOptions = __rest(props, ["onClick", "onDrag", "onDragStart", "onDragEnd", "onMouseOver", "onMouseOut", "onRadiusChanged", "onCenterChanged", "center", "defaultCenter", "radius", "defaultRadius"]);
+  const [circle, setCircle] = (0, import_react125.useState)(null);
+  const map2 = useMap();
+  const circleOptions = useMemoized(Object.assign(Object.assign({}, destructuredOptions), { clickable: (_a3 = destructuredOptions.clickable) !== null && _a3 !== void 0 ? _a3 : Boolean(onClick), draggable: (_b = destructuredOptions.draggable) !== null && _b !== void 0 ? _b : Boolean(onDrag || onDragStart || onDragEnd || onCenterChanged), editable: (_c = destructuredOptions.editable) !== null && _c !== void 0 ? _c : Boolean(onRadiusChanged) }), import_fast_deep_equal.default);
+  (0, import_react125.useEffect)(() => {
+    if (!map2) {
+      if (map2 === void 0)
+        console.error("<Circle> has to be inside a Map component.");
+      return;
+    }
+    const newCircle = new google.maps.Circle(Object.assign(Object.assign({}, circleOptions), { center: center !== null && center !== void 0 ? center : defaultCenter, radius: radius !== null && radius !== void 0 ? radius : defaultRadius }));
+    newCircle.setMap(map2);
+    setCircle(newCircle);
+    return () => {
+      newCircle.setMap(null);
+      setCircle(null);
+    };
+  }, [map2]);
+  useMapsEventListener(circle, "click", onClick);
+  useMapsEventListener(circle, "drag", onDrag);
+  useMapsEventListener(circle, "dragstart", onDragStart);
+  useMapsEventListener(circle, "dragend", onDragEnd);
+  useMapsEventListener(circle, "mouseover", onMouseOver);
+  useMapsEventListener(circle, "mouseout", onMouseOut);
+  useMapsEventListener(circle, "radius_changed", onRadiusChanged ? () => {
+    const newRadius = circle === null || circle === void 0 ? void 0 : circle.getRadius();
+    if (newRadius !== void 0)
+      onRadiusChanged(newRadius);
+  } : null);
+  useMapsEventListener(circle, "center_changed", onCenterChanged ? () => {
+    onCenterChanged(circle === null || circle === void 0 ? void 0 : circle.getCenter());
+  } : null);
+  (0, import_react125.useEffect)(() => {
+    if (!circle)
+      return;
+    circle.setOptions(circleOptions);
+  }, [circle, circleOptions]);
+  (0, import_react125.useEffect)(() => {
+    if (!circle || !center)
+      return;
+    if (!latLngEquals(center, circle.getCenter())) {
+      circle.setCenter(center);
+    }
+  }, [circle, center]);
+  (0, import_react125.useEffect)(() => {
+    if (!circle || radius === void 0)
+      return;
+    if (radius !== circle.getRadius()) {
+      circle.setRadius(radius);
+    }
+  }, [circle, radius]);
+  return circle;
+}
+var Circle = (0, import_react125.forwardRef)((props, ref) => {
+  const circle = useCircle(props);
+  (0, import_react125.useImperativeHandle)(ref, () => circle, [circle]);
+  return import_react125.default.createElement(import_react125.default.Fragment, null);
+});
+Circle.displayName = "Circle";
+function setValueForStyles(element, styles, prevStyles) {
+  if (styles != null && typeof styles !== "object") {
+    throw new Error("The `style` prop expects a mapping from style properties to values, not a string. For example, style={{marginRight: spacing + 'em'}} when using JSX.");
+  }
+  const elementStyle = element.style;
+  if (prevStyles == null) {
+    if (styles == null)
+      return;
+    for (const styleName in styles) {
+      if (!styles.hasOwnProperty(styleName))
+        continue;
+      setValueForStyle(elementStyle, styleName, styles[styleName]);
+    }
+    return;
+  }
+  for (const styleName in prevStyles) {
+    if (prevStyles.hasOwnProperty(styleName) && (styles == null || !styles.hasOwnProperty(styleName))) {
+      const isCustomProperty = styleName.indexOf("--") === 0;
+      if (isCustomProperty) {
+        elementStyle.setProperty(styleName, "");
+      } else if (styleName === "float") {
+        elementStyle.cssFloat = "";
+      } else {
+        elementStyle[styleName] = "";
+      }
+    }
+  }
+  if (styles == null)
+    return;
+  for (const styleName in styles) {
+    const value = styles[styleName];
+    if (styles.hasOwnProperty(styleName) && prevStyles[styleName] !== value) {
+      setValueForStyle(elementStyle, styleName, value);
+    }
+  }
+}
+function setValueForStyle(elementStyle, styleName, value) {
+  const isCustomProperty = styleName.indexOf("--") === 0;
+  if (value == null || typeof value === "boolean" || value === "") {
+    if (isCustomProperty) {
+      elementStyle.setProperty(styleName, "");
+    } else if (styleName === "float") {
+      elementStyle.cssFloat = "";
+    } else {
+      elementStyle[styleName] = "";
+    }
+  } else if (isCustomProperty) {
+    elementStyle.setProperty(styleName, value);
+  } else if (typeof value === "number" && value !== 0 && !isUnitlessNumber(styleName)) {
+    elementStyle[styleName] = value + "px";
+  } else {
+    if (styleName === "float") {
+      elementStyle.cssFloat = value;
+    } else {
+      elementStyle[styleName] = ("" + value).trim();
+    }
+  }
+}
+var unitlessNumbers = /* @__PURE__ */ new Set([
+  "animationIterationCount",
+  "aspectRatio",
+  "borderImageOutset",
+  "borderImageSlice",
+  "borderImageWidth",
+  "boxFlex",
+  "boxFlexGroup",
+  "boxOrdinalGroup",
+  "columnCount",
+  "columns",
+  "flex",
+  "flexGrow",
+  "flexPositive",
+  "flexShrink",
+  "flexNegative",
+  "flexOrder",
+  "gridArea",
+  "gridRow",
+  "gridRowEnd",
+  "gridRowSpan",
+  "gridRowStart",
+  "gridColumn",
+  "gridColumnEnd",
+  "gridColumnSpan",
+  "gridColumnStart",
+  "fontWeight",
+  "lineClamp",
+  "lineHeight",
+  "opacity",
+  "order",
+  "orphans",
+  "scale",
+  "tabSize",
+  "widows",
+  "zIndex",
+  "zoom",
+  "fillOpacity",
+  // SVG-related properties
+  "floodOpacity",
+  "stopOpacity",
+  "strokeDasharray",
+  "strokeDashoffset",
+  "strokeMiterlimit",
+  "strokeOpacity",
+  "strokeWidth"
+]);
+function isUnitlessNumber(name) {
+  return unitlessNumbers.has(name);
+}
+function getPathsArray(polygon) {
+  const mvcPaths = polygon.getPaths();
+  const result = [];
+  for (let i = 0; i < mvcPaths.getLength(); i++) {
+    result.push(mvcPaths.getAt(i).getArray());
+  }
+  return result;
+}
+function usePolygon(props) {
+  var _a3, _b, _c;
+  const { onClick, onDrag, onDragStart, onDragEnd, onMouseOver, onMouseOut, onPathsChanged, polygon: externalPolygon, encodedPaths, paths, defaultPaths } = props, destructuredOptions = __rest(props, ["onClick", "onDrag", "onDragStart", "onDragEnd", "onMouseOver", "onMouseOut", "onPathsChanged", "polygon", "encodedPaths", "paths", "defaultPaths"]);
+  const [polygon, setPolygon] = (0, import_react125.useState)(null);
+  const map2 = useMap();
+  const geometryLibrary = useMapsLibrary("geometry");
+  const isUpdatingRef = (0, import_react125.useRef)(false);
+  const polygonOptions = useMemoized(Object.assign(Object.assign({}, destructuredOptions), { clickable: (_a3 = destructuredOptions.clickable) !== null && _a3 !== void 0 ? _a3 : Boolean(onClick), draggable: (_b = destructuredOptions.draggable) !== null && _b !== void 0 ? _b : Boolean(onDrag || onDragStart || onDragEnd || onPathsChanged), editable: (_c = destructuredOptions.editable) !== null && _c !== void 0 ? _c : Boolean(onPathsChanged) }), import_fast_deep_equal.default);
+  (0, import_react125.useEffect)(() => {
+    if (!map2) {
+      if (map2 === void 0)
+        console.error("<Polygon> has to be inside a Map component.");
+      return;
+    }
+    let instance;
+    if (externalPolygon) {
+      instance = externalPolygon;
+      const initialPaths = paths !== null && paths !== void 0 ? paths : defaultPaths;
+      if (initialPaths && Array.isArray(initialPaths)) {
+        instance.setPaths(initialPaths);
+      }
+      instance.setOptions(polygonOptions);
+    } else {
+      const initialPaths = paths !== null && paths !== void 0 ? paths : defaultPaths;
+      const polygonOptionsWithPaths = Object.assign({}, polygonOptions);
+      if (initialPaths && Array.isArray(initialPaths)) {
+        polygonOptionsWithPaths.paths = initialPaths;
+      }
+      instance = new google.maps.Polygon(polygonOptionsWithPaths);
+    }
+    instance.setMap(map2);
+    setPolygon(instance);
+    return () => {
+      instance.setMap(null);
+      setPolygon(null);
+    };
+  }, [map2, externalPolygon]);
+  useMapsEventListener(polygon, "click", onClick);
+  useMapsEventListener(polygon, "drag", onDrag);
+  useMapsEventListener(polygon, "dragstart", onDragStart);
+  useMapsEventListener(polygon, "mouseover", onMouseOver);
+  useMapsEventListener(polygon, "mouseout", onMouseOut);
+  useMapsEventListener(polygon, "dragend", (e) => {
+    onDragEnd === null || onDragEnd === void 0 ? void 0 : onDragEnd(e);
+    if (onPathsChanged && polygon && !isUpdatingRef.current) {
+      onPathsChanged(getPathsArray(polygon));
+    }
+  });
+  (0, import_react125.useEffect)(() => {
+    if (!polygon || !onPathsChanged)
+      return;
+    const listeners3 = [];
+    const mvcPaths = polygon.getPaths();
+    if (typeof mvcPaths.getLength !== "function" || typeof mvcPaths.getAt !== "function") {
+      return;
+    }
+    const handlePathsChange = () => {
+      if (!isUpdatingRef.current) {
+        onPathsChanged(getPathsArray(polygon));
+      }
+    };
+    const subscribeToInnerPath = (innerPath) => {
+      listeners3.push(google.maps.event.addListener(innerPath, "insert_at", handlePathsChange));
+      listeners3.push(google.maps.event.addListener(innerPath, "remove_at", handlePathsChange));
+      listeners3.push(google.maps.event.addListener(innerPath, "set_at", handlePathsChange));
+    };
+    for (let i = 0; i < mvcPaths.getLength(); i++) {
+      subscribeToInnerPath(mvcPaths.getAt(i));
+    }
+    listeners3.push(google.maps.event.addListener(mvcPaths, "insert_at", (index) => {
+      subscribeToInnerPath(mvcPaths.getAt(index));
+      handlePathsChange();
+    }));
+    listeners3.push(google.maps.event.addListener(mvcPaths, "set_at", (index) => {
+      subscribeToInnerPath(mvcPaths.getAt(index));
+      handlePathsChange();
+    }));
+    listeners3.push(google.maps.event.addListener(mvcPaths, "remove_at", handlePathsChange));
+    return () => {
+      listeners3.forEach((listener) => listener.remove());
+    };
+  }, [
+    polygon,
+    onPathsChanged,
+    paths,
+    encodedPaths,
+    polygonOptions.editable,
+    polygonOptions.draggable
+  ]);
+  (0, import_react125.useEffect)(() => {
+    if (!polygon)
+      return;
+    polygon.setOptions(polygonOptions);
+  }, [polygon, polygonOptions]);
+  (0, import_react125.useEffect)(() => {
+    if (!polygon || !paths)
+      return;
+    if (!Array.isArray(paths))
+      return;
+    const firstPath = paths[0];
+    const normalizedPaths = Array.isArray(firstPath) ? paths : [paths];
+    const currentPaths = polygon.getPaths();
+    if (!pathsEquals(normalizedPaths, currentPaths)) {
+      isUpdatingRef.current = true;
+      polygon.setPaths(paths);
+      isUpdatingRef.current = false;
+    }
+  }, [polygon, paths]);
+  (0, import_react125.useEffect)(() => {
+    if (!polygon || !encodedPaths || !geometryLibrary)
+      return;
+    isUpdatingRef.current = true;
+    const decodedPaths = encodedPaths.map((encodedPath) => geometryLibrary.encoding.decodePath(encodedPath));
+    polygon.setPaths(decodedPaths);
+    isUpdatingRef.current = false;
+  }, [polygon, encodedPaths, geometryLibrary]);
+  return polygon;
+}
+var Polygon = (0, import_react125.forwardRef)((props, ref) => {
+  const polygon = usePolygon(props);
+  (0, import_react125.useImperativeHandle)(ref, () => polygon, [polygon]);
+  return import_react125.default.createElement(import_react125.default.Fragment, null);
+});
+Polygon.displayName = "Polygon";
+function usePolyline(props) {
+  var _a3, _b, _c;
+  const { onClick, onDrag, onDragStart, onDragEnd, onMouseOver, onMouseOut, onPathChanged, polyline: externalPolyline, encodedPath, path, defaultPath } = props, destructuredOptions = __rest(props, ["onClick", "onDrag", "onDragStart", "onDragEnd", "onMouseOver", "onMouseOut", "onPathChanged", "polyline", "encodedPath", "path", "defaultPath"]);
+  const [polyline, setPolyline] = (0, import_react125.useState)(null);
+  const map2 = useMap();
+  const geometryLibrary = useMapsLibrary("geometry");
+  const isUpdatingRef = (0, import_react125.useRef)(false);
+  const polylineOptions = useMemoized(Object.assign(Object.assign({}, destructuredOptions), { clickable: (_a3 = destructuredOptions.clickable) !== null && _a3 !== void 0 ? _a3 : Boolean(onClick), draggable: (_b = destructuredOptions.draggable) !== null && _b !== void 0 ? _b : Boolean(onDrag || onDragStart || onDragEnd || onPathChanged), editable: (_c = destructuredOptions.editable) !== null && _c !== void 0 ? _c : Boolean(onPathChanged) }), import_fast_deep_equal.default);
+  (0, import_react125.useEffect)(() => {
+    if (!map2) {
+      if (map2 === void 0)
+        console.error("<Polyline> has to be inside a Map component.");
+      return;
+    }
+    let instance;
+    if (externalPolyline) {
+      instance = externalPolyline;
+      const initialPath = path !== null && path !== void 0 ? path : defaultPath;
+      if (initialPath && Array.isArray(initialPath)) {
+        instance.setPath(initialPath);
+      }
+      instance.setOptions(polylineOptions);
+    } else {
+      const initialPath = path !== null && path !== void 0 ? path : defaultPath;
+      const polylineOptionsWithPath = Object.assign({}, polylineOptions);
+      if (initialPath && Array.isArray(initialPath)) {
+        polylineOptionsWithPath.path = initialPath;
+      }
+      instance = new google.maps.Polyline(polylineOptionsWithPath);
+    }
+    instance.setMap(map2);
+    setPolyline(instance);
+    return () => {
+      instance.setMap(null);
+      setPolyline(null);
+    };
+  }, [map2, externalPolyline]);
+  useMapsEventListener(polyline, "click", onClick);
+  useMapsEventListener(polyline, "drag", onDrag);
+  useMapsEventListener(polyline, "dragstart", onDragStart);
+  useMapsEventListener(polyline, "mouseover", onMouseOver);
+  useMapsEventListener(polyline, "mouseout", onMouseOut);
+  useMapsEventListener(polyline, "dragend", (e) => {
+    onDragEnd === null || onDragEnd === void 0 ? void 0 : onDragEnd(e);
+    if (onPathChanged && polyline && !isUpdatingRef.current) {
+      onPathChanged(polyline.getPath().getArray());
+    }
+  });
+  (0, import_react125.useEffect)(() => {
+    if (!polyline || !onPathChanged)
+      return;
+    const mvcPath = polyline.getPath();
+    if (!mvcPath)
+      return;
+    const handlePathChange = () => {
+      if (!isUpdatingRef.current) {
+        onPathChanged(mvcPath.getArray());
+      }
+    };
+    const listeners3 = [
+      google.maps.event.addListener(mvcPath, "insert_at", handlePathChange),
+      google.maps.event.addListener(mvcPath, "remove_at", handlePathChange),
+      google.maps.event.addListener(mvcPath, "set_at", handlePathChange)
+    ];
+    return () => {
+      listeners3.forEach((listener) => listener.remove());
+    };
+  }, [
+    polyline,
+    onPathChanged,
+    path,
+    encodedPath,
+    polylineOptions.editable,
+    polylineOptions.draggable
+  ]);
+  (0, import_react125.useEffect)(() => {
+    if (!polyline)
+      return;
+    polyline.setOptions(polylineOptions);
+  }, [polyline, polylineOptions]);
+  (0, import_react125.useEffect)(() => {
+    if (!polyline || !path)
+      return;
+    const currentPath = polyline.getPath();
+    if (!pathEquals(path, currentPath)) {
+      isUpdatingRef.current = true;
+      polyline.setPath(path);
+      isUpdatingRef.current = false;
+    }
+  }, [polyline, path]);
+  (0, import_react125.useEffect)(() => {
+    if (!polyline || !encodedPath || !geometryLibrary)
+      return;
+    isUpdatingRef.current = true;
+    const decodedPath = geometryLibrary.encoding.decodePath(encodedPath);
+    polyline.setPath(decodedPath);
+    isUpdatingRef.current = false;
+  }, [polyline, encodedPath, geometryLibrary]);
+  return polyline;
+}
+var Polyline = (0, import_react125.forwardRef)((props, ref) => {
+  const polyline = usePolyline(props);
+  (0, import_react125.useImperativeHandle)(ref, () => polyline, [polyline]);
+  return import_react125.default.createElement(import_react125.default.Fragment, null);
+});
+Polyline.displayName = "Polyline";
+var DEFAULT_CAMERA_STATE = {
+  center: { lat: 0, lng: 0, altitude: 0 },
+  range: 0,
+  heading: 0,
+  tilt: 0,
+  roll: 0
+};
+var CAMERA_PROPS = ["center", "range", "heading", "tilt", "roll"];
+function updateCameraState(map3d, ref, prop) {
+  const value = map3d[prop];
+  if (value == null)
+    return;
+  if (prop === "center") {
+    const center = value;
+    ref.current.center = center.toJSON ? center.toJSON() : center;
+  } else {
+    ref.current[prop] = value;
+  }
+}
+function useTrackedCameraStateRef3D(map3d) {
+  const forceUpdate = useForceUpdate();
+  const ref = (0, import_react125.useRef)(Object.assign({}, DEFAULT_CAMERA_STATE));
+  (0, import_react125.useEffect)(() => {
+    if (!map3d)
+      return;
+    const listeners3 = [];
+    for (const prop of CAMERA_PROPS) {
+      const eventName = `gmp-${prop}change`;
+      const handler = () => {
+        updateCameraState(map3d, ref, prop);
+        forceUpdate();
+      };
+      map3d.addEventListener(eventName, handler);
+      listeners3.push(() => map3d.removeEventListener(eventName, handler));
+    }
+    return () => {
+      for (const removeListener of listeners3) {
+        removeListener();
+      }
+    };
+  }, [map3d, forceUpdate]);
+  return ref;
+}
+function useMap3DInstance(props) {
+  const maps3dLib = useMapsLibrary("maps3d");
+  const [customElementReady, setCustomElementReady] = (0, import_react125.useState)(false);
+  const [, containerRef] = useCallbackRef();
+  const [map3d, map3dRef] = useCallbackRef();
+  const cameraStateRef = useTrackedCameraStateRef3D(map3d);
+  (0, import_react125.useEffect)(() => {
+    customElements.whenDefined("gmp-map-3d").then(() => {
+      setCustomElementReady(true);
+    });
+  }, []);
+  (0, import_react125.useEffect)(
+    () => {
+      if (!map3d)
+        return;
+      const {
+        center,
+        heading,
+        tilt,
+        range,
+        roll,
+        defaultCenter,
+        defaultHeading,
+        defaultTilt,
+        defaultRange,
+        defaultRoll,
+        // Non-element props to exclude
+        id,
+        style: style2,
+        className: className2,
+        children,
+        onCenterChanged,
+        onHeadingChanged,
+        onTiltChanged,
+        onRangeChanged,
+        onRollChanged,
+        onCameraChanged,
+        onClick,
+        onSteadyChange,
+        onAnimationEnd,
+        onError,
+        mode,
+        gestureHandling
+      } = props, elementOptions = __rest(props, ["center", "heading", "tilt", "range", "roll", "defaultCenter", "defaultHeading", "defaultTilt", "defaultRange", "defaultRoll", "id", "style", "className", "children", "onCenterChanged", "onHeadingChanged", "onTiltChanged", "onRangeChanged", "onRollChanged", "onCameraChanged", "onClick", "onSteadyChange", "onAnimationEnd", "onError", "mode", "gestureHandling"]);
+      const initialCenter = center !== null && center !== void 0 ? center : defaultCenter;
+      const initialHeading = heading !== null && heading !== void 0 ? heading : defaultHeading;
+      const initialTilt = tilt !== null && tilt !== void 0 ? tilt : defaultTilt;
+      const initialRange = range !== null && range !== void 0 ? range : defaultRange;
+      const initialRoll = roll !== null && roll !== void 0 ? roll : defaultRoll;
+      const initialOptions = Object.assign({}, elementOptions);
+      if (initialCenter)
+        initialOptions.center = initialCenter;
+      if (initialHeading !== void 0)
+        initialOptions.heading = initialHeading;
+      if (initialTilt !== void 0)
+        initialOptions.tilt = initialTilt;
+      if (initialRange !== void 0)
+        initialOptions.range = initialRange;
+      if (initialRoll !== void 0)
+        initialOptions.roll = initialRoll;
+      Object.assign(map3d, initialOptions);
+    },
+    // this effect should only run when the map3d element first becomes
+    // available, so we skip re-running it when other props change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [map3d]
+  );
+  const isReady = !!maps3dLib && customElementReady;
+  return [map3d, containerRef, map3dRef, cameraStateRef, isReady];
+}
+function toLatLngAltitudeLiteral(value) {
+  if (!value)
+    return null;
+  if ("toJSON" in value && typeof value.toJSON === "function") {
+    return value.toJSON();
+  }
+  return value;
+}
+function useMap3DCameraParams(map3d, cameraStateRef, props) {
+  var _a3, _b, _c, _d, _e, _f, _g;
+  const centerLiteral = toLatLngAltitudeLiteral(props.center);
+  const lat = (_a3 = centerLiteral === null || centerLiteral === void 0 ? void 0 : centerLiteral.lat) !== null && _a3 !== void 0 ? _a3 : null;
+  const lng = (_b = centerLiteral === null || centerLiteral === void 0 ? void 0 : centerLiteral.lng) !== null && _b !== void 0 ? _b : null;
+  const altitude = (_c = centerLiteral === null || centerLiteral === void 0 ? void 0 : centerLiteral.altitude) !== null && _c !== void 0 ? _c : null;
+  const range = (_d = props.range) !== null && _d !== void 0 ? _d : null;
+  const heading = (_e = props.heading) !== null && _e !== void 0 ? _e : null;
+  const tilt = (_f = props.tilt) !== null && _f !== void 0 ? _f : null;
+  const roll = (_g = props.roll) !== null && _g !== void 0 ? _g : null;
+  (0, import_react125.useLayoutEffect)(() => {
+    var _a4;
+    if (!map3d)
+      return;
+    const currentState = cameraStateRef.current;
+    if (lat !== null && lng !== null && (currentState.center.lat !== lat || currentState.center.lng !== lng || altitude !== null && currentState.center.altitude !== altitude)) {
+      map3d.center = {
+        lat,
+        lng,
+        altitude: (_a4 = altitude !== null && altitude !== void 0 ? altitude : currentState.center.altitude) !== null && _a4 !== void 0 ? _a4 : 0
+      };
+    }
+    if (range !== null && currentState.range !== range) {
+      map3d.range = range;
+    }
+    if (heading !== null && currentState.heading !== heading) {
+      map3d.heading = heading;
+    }
+    if (tilt !== null && currentState.tilt !== tilt) {
+      map3d.tilt = tilt;
+    }
+    if (roll !== null && currentState.roll !== roll) {
+      map3d.roll = roll;
+    }
+  });
+}
+var CAMERA_EVENTS = [
+  "gmp-centerchange",
+  "gmp-headingchange",
+  "gmp-tiltchange",
+  "gmp-rangechange",
+  "gmp-rollchange"
+];
+function createCameraEvent(map3d, type) {
+  const center = map3d.center;
+  let centerLiteral;
+  if (center && "toJSON" in center && typeof center.toJSON === "function") {
+    centerLiteral = center.toJSON();
+  } else if (center) {
+    centerLiteral = center;
+  } else {
+    centerLiteral = { lat: 0, lng: 0, altitude: 0 };
+  }
+  return {
+    type,
+    map3d,
+    detail: {
+      center: centerLiteral,
+      range: map3d.range || 0,
+      heading: map3d.heading || 0,
+      tilt: map3d.tilt || 0,
+      roll: map3d.roll || 0
+    }
+  };
+}
+function createClickEvent(map3d, srcEvent) {
+  const placeClickEvent = srcEvent;
+  return {
+    type: "gmp-click",
+    map3d,
+    detail: {
+      position: srcEvent.position || null,
+      placeId: placeClickEvent.placeId
+    }
+  };
+}
+function createSteadyChangeEvent(map3d, srcEvent) {
+  return {
+    type: "gmp-steadychange",
+    map3d,
+    detail: {
+      isSteady: srcEvent.isSteady
+    }
+  };
+}
+function useMap3DEvents(map3d, props) {
+  const { onCenterChanged, onHeadingChanged, onTiltChanged, onRangeChanged, onRollChanged, onCameraChanged, onClick, onSteadyChange, onAnimationEnd, onError } = props;
+  useMap3DEvent(map3d, "gmp-centerchange", onCenterChanged, createCameraEvent);
+  useMap3DEvent(map3d, "gmp-headingchange", onHeadingChanged, createCameraEvent);
+  useMap3DEvent(map3d, "gmp-tiltchange", onTiltChanged, createCameraEvent);
+  useMap3DEvent(map3d, "gmp-rangechange", onRangeChanged, createCameraEvent);
+  useMap3DEvent(map3d, "gmp-rollchange", onRollChanged, createCameraEvent);
+  (0, import_react125.useEffect)(() => {
+    if (!map3d || !onCameraChanged)
+      return;
+    const handler = () => {
+      onCameraChanged(createCameraEvent(map3d, "camerachange"));
+    };
+    for (const eventName of CAMERA_EVENTS) {
+      map3d.addEventListener(eventName, handler);
+    }
+    return () => {
+      for (const eventName of CAMERA_EVENTS) {
+        map3d.removeEventListener(eventName, handler);
+      }
+    };
+  }, [map3d, onCameraChanged]);
+  (0, import_react125.useEffect)(() => {
+    if (!map3d || !onClick)
+      return;
+    const handler = (ev) => {
+      onClick(createClickEvent(map3d, ev));
+    };
+    map3d.addEventListener("gmp-click", handler);
+    return () => map3d.removeEventListener("gmp-click", handler);
+  }, [map3d, onClick]);
+  (0, import_react125.useEffect)(() => {
+    if (!map3d || !onSteadyChange)
+      return;
+    const handler = (ev) => {
+      onSteadyChange(createSteadyChangeEvent(map3d, ev));
+    };
+    map3d.addEventListener("gmp-steadychange", handler);
+    return () => map3d.removeEventListener("gmp-steadychange", handler);
+  }, [map3d, onSteadyChange]);
+  useMap3DEvent(map3d, "gmp-animationend", onAnimationEnd, (map3d2, type) => ({
+    type,
+    map3d: map3d2
+  }));
+  useMap3DEvent(map3d, "gmp-error", onError, (map3d2, type) => ({
+    type,
+    map3d: map3d2
+  }));
+}
+function useMap3DEvent(map3d, eventName, handler, createEvent) {
+  (0, import_react125.useEffect)(() => {
+    if (!map3d || !handler)
+      return;
+    const listener = () => {
+      handler(createEvent(map3d, eventName));
+    };
+    map3d.addEventListener(eventName, listener);
+    return () => map3d.removeEventListener(eventName, listener);
+  }, [map3d, eventName, handler, createEvent]);
+}
+var MAP_3D_OPTION_KEYS = /* @__PURE__ */ new Set([
+  "bounds",
+  "defaultUIHidden",
+  "gestureHandling",
+  "internalUsageAttributionIds",
+  "maxAltitude",
+  "maxHeading",
+  "maxTilt",
+  "minAltitude",
+  "minHeading",
+  "minTilt",
+  "mode"
+]);
+function useMap3DOptions(map3d, props) {
+  const options = (0, import_react125.useMemo)(() => {
+    const result = {};
+    const keys = Object.keys(props);
+    for (const key of keys) {
+      if (!MAP_3D_OPTION_KEYS.has(key))
+        continue;
+      const value = props[key];
+      if (value === void 0)
+        continue;
+      result[key] = value;
+    }
+    return result;
+  }, [props]);
+  useDeepCompareEffect(() => {
+    if (!map3d)
+      return;
+    Object.assign(map3d, options);
+  }, [map3d, options]);
+}
+var GoogleMaps3DContext = import_react125.default.createContext(null);
+var DEFAULT_CONTAINER_STYLE = {
+  width: "100%",
+  height: "100%",
+  position: "relative"
+};
+var Map3D = (0, import_react125.forwardRef)((props, ref) => {
+  const { children, id, className: className2, style: style2 } = props;
+  const context = (0, import_react125.useContext)(APIProviderContext);
+  if (!context) {
+    throw new Error("<Map3D> can only be used inside an <APIProvider> component.");
+  }
+  const { addMap3DInstance, removeMap3DInstance } = context;
+  const [map3d, containerRef, map3dRef, cameraStateRef, isReady] = useMap3DInstance(props);
+  useMap3DCameraParams(map3d, cameraStateRef, props);
+  useMap3DEvents(map3d, props);
+  useMap3DOptions(map3d, props);
+  (0, import_react125.useEffect)(() => {
+    if (!map3d)
+      return;
+    const instanceId = id !== null && id !== void 0 ? id : "default";
+    addMap3DInstance(map3d, instanceId);
+    return () => {
+      removeMap3DInstance(instanceId);
+    };
+  }, [map3d, id]);
+  (0, import_react125.useImperativeHandle)(ref, () => ({
+    map3d,
+    flyCameraAround: (options) => {
+      map3d === null || map3d === void 0 ? void 0 : map3d.flyCameraAround(options);
+    },
+    flyCameraTo: (options) => {
+      map3d === null || map3d === void 0 ? void 0 : map3d.flyCameraTo(options);
+    },
+    stopCameraAnimation: () => {
+      map3d === null || map3d === void 0 ? void 0 : map3d.stopCameraAnimation();
+    }
+  }), [map3d]);
+  const combinedStyle = (0, import_react125.useMemo)(() => Object.assign(Object.assign({}, DEFAULT_CONTAINER_STYLE), style2), [style2]);
+  const contextValue = (0, import_react125.useMemo)(() => ({ map3d }), [map3d]);
+  if (!isReady) {
+    return import_react125.default.createElement("div", Object.assign({ ref: containerRef, "data-testid": "map-3d", style: className2 ? void 0 : combinedStyle, className: className2 }, id ? { id } : {}));
+  }
+  return import_react125.default.createElement(
+    "div",
+    Object.assign({ ref: containerRef, "data-testid": "map-3d", style: className2 ? void 0 : combinedStyle, className: className2 }, id ? { id } : {}),
+    import_react125.default.createElement("gmp-map-3d", { ref: map3dRef, style: { width: "100%", height: "100%" } }, map3d && import_react125.default.createElement(GoogleMaps3DContext.Provider, { value: contextValue }, children))
+  );
+});
+Map3D.displayName = "Map3D";
+var Marker3DContext = (0, import_react125.createContext)(null);
+var Marker3D = (0, import_react125.forwardRef)(function Marker3D2(props, ref) {
+  const { children, onClick, position, altitudeMode, collisionBehavior, drawsWhenOccluded, extruded, label: label3, sizePreserved, zIndex, title } = props;
+  const isInteractive = Boolean(onClick);
+  const [marker, setMarker] = (0, import_react125.useState)(null);
+  const [contentHandledExternally, setContentHandledExternally] = (0, import_react125.useState)(false);
+  const contentContainer = (0, import_react125.useMemo)(() => {
+    const container3 = document.createElement("div");
+    container3.style.display = "none";
+    document.body.appendChild(container3);
+    return container3;
+  }, []);
+  (0, import_react125.useEffect)(() => {
+    return () => contentContainer.remove();
+  }, [contentContainer]);
+  const markerRef = (0, import_react125.useCallback)((node) => {
+    setMarker(node);
+    if (typeof ref === "function") {
+      ref(node);
+    } else if (ref) {
+      ref.current = node;
+    }
+  }, [ref]);
+  useDomEventListener(marker, "gmp-click", onClick);
+  (0, import_react125.useLayoutEffect)(() => {
+    if (contentHandledExternally)
+      return;
+    if (!marker || !contentContainer)
+      return;
+    while (marker.firstChild) {
+      marker.removeChild(marker.firstChild);
+    }
+    const childNodes = Array.from(contentContainer.childNodes);
+    for (const node of childNodes) {
+      if (node.nodeType !== Node.ELEMENT_NODE)
+        continue;
+      const element = node;
+      const tagName = element.tagName.toLowerCase();
+      if (tagName === "img" || tagName === "svg") {
+        const template = document.createElement("template");
+        template.content.appendChild(element.cloneNode(true));
+        marker.appendChild(template);
+      } else {
+        marker.appendChild(element.cloneNode(true));
+      }
+    }
+  }, [marker, contentContainer, children, contentHandledExternally]);
+  const contextValue = (0, import_react125.useMemo)(() => ({ marker, setContentHandledExternally }), [marker]);
+  usePropBinding(marker, "position", position);
+  usePropBinding(marker, "altitudeMode", altitudeMode);
+  usePropBinding(marker, "collisionBehavior", collisionBehavior);
+  usePropBinding(marker, "drawsWhenOccluded", drawsWhenOccluded);
+  usePropBinding(marker, "extruded", extruded);
+  usePropBinding(marker, "label", label3);
+  usePropBinding(marker, "sizePreserved", sizePreserved);
+  usePropBinding(marker, "zIndex", zIndex);
+  usePropBinding(marker, "title", title !== null && title !== void 0 ? title : "");
+  return import_react125.default.createElement(
+    Marker3DContext.Provider,
+    { value: contextValue },
+    isInteractive ? import_react125.default.createElement("gmp-marker-3d-interactive", { ref: markerRef }) : import_react125.default.createElement("gmp-marker-3d", { ref: markerRef }),
+    (0, import_react_dom3.createPortal)(children, contentContainer)
+  );
+});
+Marker3D.displayName = "Marker3D";
+var Popover = (0, import_react125.forwardRef)(function Popover2(props, ref) {
+  var _a3;
+  const { children, headerContent, style: style2, className: className2, open = true, position, anchor, anchorId, altitudeMode, lightDismissDisabled, autoPanDisabled, onClose } = props;
+  const [popover, setPopover] = (0, import_react125.useState)(null);
+  const prevStyleRef = (0, import_react125.useRef)(null);
+  (0, import_react125.useImperativeHandle)(ref, () => popover, [popover]);
+  usePopoverCloseObserver(popover, open, onClose);
+  usePropBinding(popover, "open", open !== null && open !== void 0 ? open : false);
+  usePropBinding(popover, "altitudeMode", altitudeMode);
+  usePropBinding(popover, "lightDismissDisabled", lightDismissDisabled);
+  usePropBinding(popover, "autoPanDisabled", autoPanDisabled);
+  const positionAnchor = (_a3 = anchor !== null && anchor !== void 0 ? anchor : anchorId) !== null && _a3 !== void 0 ? _a3 : position;
+  usePropBinding(popover, "positionAnchor", positionAnchor);
+  (0, import_react125.useLayoutEffect)(() => {
+    if (!popover)
+      return;
+    setValueForStyles(popover, style2 || null, prevStyleRef.current);
+    prevStyleRef.current = style2 || null;
+  }, [popover, style2]);
+  return import_react125.default.createElement(
+    "gmp-popover",
+    { ref: setPopover, className: className2 },
+    headerContent && import_react125.default.createElement("div", { slot: "header" }, headerContent),
+    children
+  );
+});
+Popover.displayName = "Popover";
+function usePopoverCloseObserver(popover, open, onClose) {
+  const previousOpenState = (0, import_react125.useRef)(void 0);
+  const openPropRef = (0, import_react125.useRef)(open);
+  (0, import_react125.useEffect)(() => {
+    openPropRef.current = open;
+  }, [open]);
+  (0, import_react125.useEffect)(() => {
+    if (!popover || !onClose)
+      return;
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (mutation.type === "attributes" && mutation.attributeName === "open") {
+          const isOpen = popover.hasAttribute("open");
+          if (previousOpenState.current === true && !isOpen && openPropRef.current !== false) {
+            onClose();
+          }
+          previousOpenState.current = isOpen;
+        }
+      }
+    });
+    observer.observe(popover, {
+      attributes: true,
+      attributeFilter: ["open"]
+    });
+    previousOpenState.current = popover.hasAttribute("open");
+    return () => {
+      observer.disconnect();
+    };
+  }, [popover, onClose]);
+}
+function useMarker(props) {
+  const [marker, setMarker] = (0, import_react125.useState)(null);
+  const map2 = useMap();
+  const { onClick, onDrag, onDragStart, onDragEnd, onMouseOver, onMouseOut } = props, markerOptions = __rest(props, ["onClick", "onDrag", "onDragStart", "onDragEnd", "onMouseOver", "onMouseOut"]);
+  const { position, draggable } = markerOptions;
+  (0, import_react125.useEffect)(() => {
+    if (!map2) {
+      if (map2 === void 0)
+        console.error("<Marker> has to be inside a Map component.");
+      return;
+    }
+    const newMarker = new google.maps.Marker(markerOptions);
+    newMarker.setMap(map2);
+    setMarker(newMarker);
+    return () => {
+      newMarker.setMap(null);
+      setMarker(null);
+    };
+  }, [map2]);
+  (0, import_react125.useEffect)(() => {
+    if (!marker)
+      return;
+    const m = marker;
+    const gme = google.maps.event;
+    if (onClick)
+      gme.addListener(m, "click", onClick);
+    if (onDrag)
+      gme.addListener(m, "drag", onDrag);
+    if (onDragStart)
+      gme.addListener(m, "dragstart", onDragStart);
+    if (onDragEnd)
+      gme.addListener(m, "dragend", onDragEnd);
+    if (onMouseOver)
+      gme.addListener(m, "mouseover", onMouseOver);
+    if (onMouseOut)
+      gme.addListener(m, "mouseout", onMouseOut);
+    marker.setDraggable(Boolean(draggable));
+    return () => {
+      gme.clearInstanceListeners(m);
+    };
+  }, [
+    marker,
+    draggable,
+    onClick,
+    onDrag,
+    onDragStart,
+    onDragEnd,
+    onMouseOver,
+    onMouseOut
+  ]);
+  (0, import_react125.useEffect)(() => {
+    if (!marker)
+      return;
+    if (markerOptions)
+      marker.setOptions(markerOptions);
+  }, [marker, markerOptions]);
+  (0, import_react125.useEffect)(() => {
+    if (draggable || !position || !marker)
+      return;
+    marker.setPosition(position);
+  }, [draggable, position, marker]);
+  return marker;
+}
+var Marker = (0, import_react125.forwardRef)((props, ref) => {
+  const marker = useMarker(props);
+  (0, import_react125.useImperativeHandle)(ref, () => marker, [marker]);
+  return import_react125.default.createElement(import_react125.default.Fragment, null);
+});
+Marker.displayName = "Marker";
+var PinLegacy = (props) => {
+  const advancedMarkerContext = (0, import_react125.useContext)(AdvancedMarkerContext);
+  const marker3dContext = (0, import_react125.useContext)(Marker3DContext);
+  const advancedMarker = advancedMarkerContext === null || advancedMarkerContext === void 0 ? void 0 : advancedMarkerContext.marker;
+  const marker3d = marker3dContext === null || marker3dContext === void 0 ? void 0 : marker3dContext.marker;
+  const setContentHandledExternally = marker3dContext === null || marker3dContext === void 0 ? void 0 : marker3dContext.setContentHandledExternally;
+  const glyphContainer = (0, import_react125.useMemo)(() => document.createElement("div"), []);
+  const markerLibrary = useMapsLibrary("marker");
+  (0, import_react125.useEffect)(() => {
+    if (marker3d && setContentHandledExternally) {
+      setContentHandledExternally(true);
+      return () => setContentHandledExternally(false);
+    }
+  }, [marker3d, setContentHandledExternally]);
+  (0, import_react125.useEffect)(() => {
+    if (!marker3d || !markerLibrary)
+      return;
+    const pinViewOptions = Object.assign({}, props);
+    const pinElement = new markerLibrary.PinElement(pinViewOptions);
+    if (props.children) {
+      pinElement.glyph = glyphContainer;
+    }
+    while (marker3d.firstChild) {
+      marker3d.removeChild(marker3d.firstChild);
+    }
+    marker3d.append(pinElement);
+    return () => {
+    };
+  }, [marker3d, markerLibrary, glyphContainer, props]);
+  (0, import_react125.useEffect)(() => {
+    var _a3;
+    if (marker3d)
+      return;
+    if (!advancedMarker) {
+      if (advancedMarker === void 0 && marker3d === void 0) {
+        console.error("The <Pin> component can only be used inside <AdvancedMarker> or <Marker3D>.");
+      }
+      return;
+    }
+    if (props.glyph && props.children) {
+      logErrorOnce("The <Pin> component only uses children to render the glyph if both the glyph property and children are present.");
+    }
+    if (import_react125.Children.count(props.children) > 1) {
+      logErrorOnce("Passing multiple children to the <Pin> component might lead to unexpected results.");
+    }
+    const pinViewOptions = Object.assign({}, props);
+    const pinElement = new google.maps.marker.PinElement(pinViewOptions);
+    if (props.children) {
+      pinElement.glyph = glyphContainer;
+    }
+    const markerContent = (_a3 = advancedMarker.content) === null || _a3 === void 0 ? void 0 : _a3.firstChild;
+    while (markerContent === null || markerContent === void 0 ? void 0 : markerContent.firstChild) {
+      markerContent.removeChild(markerContent.firstChild);
+    }
+    if (markerContent) {
+      markerContent.appendChild(pinElement.element);
+    }
+  }, [advancedMarker, glyphContainer, marker3d, props]);
+  return (0, import_react_dom3.createPortal)(props.children, glyphContainer);
+};
+var PinModern = (props) => {
+  const { children } = props;
+  const advancedMarkerContext = (0, import_react125.useContext)(AdvancedMarkerContext);
+  const marker3dContext = (0, import_react125.useContext)(Marker3DContext);
+  const advancedMarker = advancedMarkerContext === null || advancedMarkerContext === void 0 ? void 0 : advancedMarkerContext.marker;
+  const marker3d = marker3dContext === null || marker3dContext === void 0 ? void 0 : marker3dContext.marker;
+  const setContentHandledExternally = marker3dContext === null || marker3dContext === void 0 ? void 0 : marker3dContext.setContentHandledExternally;
+  const glyphContainer = (0, import_react125.useMemo)(() => document.createElement("div"), []);
+  const markerLibrary = useMapsLibrary("marker");
+  (0, import_react125.useEffect)(() => {
+    if (marker3d && setContentHandledExternally) {
+      setContentHandledExternally(true);
+      return () => setContentHandledExternally(false);
+    }
+  }, [marker3d, setContentHandledExternally]);
+  (0, import_react125.useEffect)(() => {
+    if (!marker3d || !markerLibrary)
+      return;
+    const pinOptions = Object.assign({}, props);
+    const pinElement = new markerLibrary.PinElement(pinOptions);
+    if (children) {
+      pinElement.appendChild(glyphContainer);
+    }
+    while (marker3d.firstChild) {
+      marker3d.removeChild(marker3d.firstChild);
+    }
+    marker3d.appendChild(pinElement);
+    return () => {
+    };
+  }, [marker3d, markerLibrary, glyphContainer, children, props]);
+  (0, import_react125.useEffect)(() => {
+    var _a3;
+    if (marker3d)
+      return;
+    if (!advancedMarker || !markerLibrary) {
+      if (advancedMarker === void 0 && marker3d === void 0) {
+        console.error("The <Pin> component can only be used inside <AdvancedMarker> or <Marker3D>.");
+      }
+      return;
+    }
+    if ((props.glyphSrc || props.glyphText) && children) {
+      logErrorOnce("The <Pin> component only uses children to render the glyph if both glyphSrc/glyphText and children are present.");
+    }
+    if (import_react125.Children.count(children) > 1) {
+      logErrorOnce("Passing multiple children to the <Pin> component might lead to unexpected results.");
+    }
+    const pinOptions = Object.assign({}, props);
+    const pinElement = new markerLibrary.PinElement(pinOptions);
+    if (children) {
+      pinElement.appendChild(glyphContainer);
+    }
+    const markerContent = (_a3 = advancedMarker.content) === null || _a3 === void 0 ? void 0 : _a3.firstChild;
+    while (markerContent === null || markerContent === void 0 ? void 0 : markerContent.firstChild) {
+      markerContent.removeChild(markerContent.firstChild);
+    }
+    if (markerContent) {
+      markerContent.appendChild(pinElement);
+    }
+  }, [
+    advancedMarker,
+    markerLibrary,
+    glyphContainer,
+    marker3d,
+    children,
+    props
+  ]);
+  return (0, import_react_dom3.createPortal)(children, glyphContainer);
+};
+var Pin = (props) => {
+  var _a3;
+  const markerLibrary = useMapsLibrary("marker");
+  const isModern = (0, import_react125.useMemo)(() => {
+    if (!markerLibrary)
+      return false;
+    return typeof customElements !== "undefined" && customElements.get("gmp-pin") !== void 0;
+  }, [markerLibrary]);
+  if (!markerLibrary)
+    return null;
+  if (isModern) {
+    const { glyph, glyphSrc, glyphText } = props, restProps = __rest(props, ["glyph", "glyphSrc", "glyphText"]);
+    const isUrl = glyph instanceof URL || typeof glyph === "string" && glyph.startsWith("http");
+    const finalGlyphText = glyphText !== null && glyphText !== void 0 ? glyphText : typeof glyph === "string" && !isUrl ? glyph : void 0;
+    const finalGlyphSrc = glyphSrc !== null && glyphSrc !== void 0 ? glyphSrc : isUrl ? String(glyph) : void 0;
+    return import_react125.default.createElement(PinModern, Object.assign({}, restProps, { glyphText: finalGlyphText, glyphSrc: finalGlyphSrc }));
+  } else {
+    const { glyph, glyphSrc, glyphText } = props, restProps = __rest(props, ["glyph", "glyphSrc", "glyphText"]);
+    const finalGlyph = (_a3 = glyph !== null && glyph !== void 0 ? glyph : glyphSrc) !== null && _a3 !== void 0 ? _a3 : glyphText;
+    return import_react125.default.createElement(PinLegacy, Object.assign({}, restProps, { glyph: finalGlyph }));
   }
 };
-var flatMotionGraphics = {
-  name: "flat-motion-graphics",
-  colors: {
-    background: "#0F172A",
-    surface: "#1E293B",
-    primary: "#7C3AED",
-    secondary: "#EC4899",
-    text: "#F8FAFC",
-    textMuted: "#94A3B8",
-    border: "#334155",
-    gradient: ["#7C3AED", "#EC4899"],
-    chart: ["#7C3AED", "#EC4899", "#06B6D4", "#F59E0B", "#10B981", "#EF4444"]
-  },
-  fonts: {
-    heading: "'Space Grotesk', 'Inter', sans-serif",
-    body: "'Inter', sans-serif",
-    mono: "'Fira Code', monospace"
-  },
-  timing: {
-    spring: { damping: 12, stiffness: 80, mass: 1 },
-    stagger: 3,
-    transitionDuration: 0.3
-  },
-  effects: {
-    particles: true,
-    gradientBg: true,
-    motionBlur: false,
-    grain: 0.02
+function useRectangle(props) {
+  var _a3, _b, _c;
+  const { onClick, onDrag, onDragStart, onDragEnd, onMouseOver, onMouseOut, onBoundsChanged, bounds, defaultBounds } = props, destructuredOptions = __rest(props, ["onClick", "onDrag", "onDragStart", "onDragEnd", "onMouseOver", "onMouseOut", "onBoundsChanged", "bounds", "defaultBounds"]);
+  const [rectangle, setRectangle] = (0, import_react125.useState)(null);
+  const map2 = useMap();
+  const rectangleOptions = useMemoized(Object.assign(Object.assign({}, destructuredOptions), { clickable: (_a3 = destructuredOptions.clickable) !== null && _a3 !== void 0 ? _a3 : Boolean(onClick), draggable: (_b = destructuredOptions.draggable) !== null && _b !== void 0 ? _b : Boolean(onDrag || onDragStart || onDragEnd || onBoundsChanged), editable: (_c = destructuredOptions.editable) !== null && _c !== void 0 ? _c : Boolean(onBoundsChanged) }), import_fast_deep_equal.default);
+  (0, import_react125.useEffect)(() => {
+    if (!map2) {
+      if (map2 === void 0)
+        console.error("<Rectangle> has to be inside a Map component.");
+      return;
+    }
+    const newRectangle = new google.maps.Rectangle(Object.assign(Object.assign({}, rectangleOptions), { bounds: bounds !== null && bounds !== void 0 ? bounds : defaultBounds }));
+    newRectangle.setMap(map2);
+    setRectangle(newRectangle);
+    return () => {
+      newRectangle.setMap(null);
+      setRectangle(null);
+    };
+  }, [map2]);
+  useMapsEventListener(rectangle, "click", onClick);
+  useMapsEventListener(rectangle, "drag", onDrag);
+  useMapsEventListener(rectangle, "dragstart", onDragStart);
+  useMapsEventListener(rectangle, "dragend", onDragEnd);
+  useMapsEventListener(rectangle, "mouseover", onMouseOver);
+  useMapsEventListener(rectangle, "mouseout", onMouseOut);
+  useMapsEventListener(rectangle, "bounds_changed", onBoundsChanged ? () => {
+    onBoundsChanged(rectangle === null || rectangle === void 0 ? void 0 : rectangle.getBounds());
+  } : null);
+  (0, import_react125.useEffect)(() => {
+    if (!rectangle)
+      return;
+    rectangle.setOptions(rectangleOptions);
+  }, [rectangle, rectangleOptions]);
+  (0, import_react125.useEffect)(() => {
+    if (!rectangle || !bounds)
+      return;
+    if (!boundsEquals(bounds, rectangle.getBounds())) {
+      rectangle.setBounds(bounds);
+    }
+  }, [rectangle, bounds]);
+  return rectangle;
+}
+var Rectangle = (0, import_react125.forwardRef)((props, ref) => {
+  const rectangle = useRectangle(props);
+  (0, import_react125.useImperativeHandle)(ref, () => rectangle, [
+    rectangle
+  ]);
+  return import_react125.default.createElement(import_react125.default.Fragment, null);
+});
+Rectangle.displayName = "Rectangle";
+
+// src/types/Map.tsx
+var import_jsx_runtime82 = __toESM(require_jsx_runtime(), 1);
+var GM_API_KEY = "AIzaSyC6x4jghg5ZggV5VTThu9JE4DwX9NlbN9U";
+function MapLeaf({ stream: stream2 }) {
+  const { fps } = useVideoConfig();
+  const waypoints = stream2.waypoints ?? [];
+  if (waypoints.length === 0) return null;
+  return /* @__PURE__ */ (0, import_jsx_runtime82.jsx)(import_jsx_runtime82.Fragment, { children: stream2.actions?.map((a2, i) => {
+    const start = a2.start ?? 0;
+    const end = a2.end ?? start + 1;
+    const durFrames = Math.max(1, Math.floor(fps * (end - start)));
+    const center = stream2.center ?? { lat: waypoints[0].lat, lng: waypoints[0].lng };
+    const zoom = stream2.zoom ?? 10;
+    const mapType = stream2.mapType ?? "roadmap";
+    const travelMode = stream2.travelMode ?? "DRIVING";
+    const markerEmoji = stream2.routeMarker ?? "\u{1F697}";
+    return /* @__PURE__ */ (0, import_jsx_runtime82.jsx)(
+      Sequence,
+      {
+        durationInFrames: durFrames,
+        from: Math.floor(fps * start),
+        layout: "none",
+        children: /* @__PURE__ */ (0, import_jsx_runtime82.jsx)(APIProvider, { apiKey: GM_API_KEY, children: /* @__PURE__ */ (0, import_jsx_runtime82.jsx)(
+          Map2,
+          {
+            mapId: String(stream2.id ?? i),
+            defaultCenter: center,
+            defaultZoom: zoom,
+            defaultOptions: {
+              mapTypeId: mapType,
+              disableDefaultUI: true,
+              zoomControl: false
+            },
+            style: { width: "100%", height: "100%", position: "absolute" },
+            children: /* @__PURE__ */ (0, import_jsx_runtime82.jsx)(
+              RouteWithMarker,
+              {
+                waypoints,
+                travelMode,
+                markerEmoji,
+                actionDuration: end - start
+              }
+            )
+          }
+        ) })
+      },
+      a2.id ?? i
+    );
+  }) });
+}
+function RouteWithMarker({
+  waypoints,
+  travelMode,
+  markerEmoji,
+  actionDuration
+}) {
+  const map2 = useMap();
+  const routesLibrary = useMapsLibrary("routes");
+  const [leg, setLeg] = import_react126.default.useState(null);
+  const [routeIndex, setRouteIndex] = import_react126.default.useState(0);
+  const handle = import_react126.default.useRef(null);
+  import_react126.default.useEffect(() => {
+    if (!routesLibrary || !map2 || waypoints.length < 2) return;
+    const renderHandle = delayRender("Loading map directions...");
+    handle.current = renderHandle;
+    const renderer = new routesLibrary.DirectionsRenderer({ map: map2, suppressMarkers: true });
+    const service = new routesLibrary.DirectionsService();
+    service.route({
+      origin: waypoints[0],
+      destination: waypoints[waypoints.length - 1],
+      waypoints: waypoints.slice(1, -1).map((wp) => ({ location: wp, stopover: true })),
+      travelMode: google.maps.TravelMode[travelMode],
+      provideRouteAlternatives: false
+    }).then((response) => {
+      renderer.setDirections(response);
+      setRouteIndex(0);
+      setLeg(response.routes[0]?.legs[0] ?? null);
+      if (handle.current !== null) continueRender(handle.current);
+    }).catch(() => {
+      if (handle.current !== null) continueRender(handle.current);
+    });
+    return () => {
+      renderer.setMap(null);
+    };
+  }, [routesLibrary, map2, waypoints, travelMode]);
+  import_react126.default.useEffect(() => {
+    setRouteIndex((prev) => prev);
+  }, [routeIndex]);
+  const position = useAnimatedPosition({ leg, actionDuration, waypoints });
+  return /* @__PURE__ */ (0, import_jsx_runtime82.jsxs)(import_jsx_runtime82.Fragment, { children: [
+    waypoints.map((wp, i) => /* @__PURE__ */ (0, import_jsx_runtime82.jsx)(AdvancedMarker, { position: wp, children: wp.label ? /* @__PURE__ */ (0, import_jsx_runtime82.jsx)(
+      "div",
+      {
+        style: {
+          background: "rgba(255,255,255,0.9)",
+          borderRadius: "4px",
+          padding: "2px 6px",
+          fontSize: "12px",
+          fontWeight: 700,
+          color: "#333",
+          whiteSpace: "nowrap",
+          position: "relative",
+          top: "-24px"
+        },
+        children: wp.label
+      }
+    ) : null }, i)),
+    position ? /* @__PURE__ */ (0, import_jsx_runtime82.jsx)(AdvancedMarker, { position, children: /* @__PURE__ */ (0, import_jsx_runtime82.jsx)(Pin, { glyphText: markerEmoji, scale: 4 }) }) : null
+  ] });
+}
+function useAnimatedPosition({
+  leg,
+  actionDuration,
+  waypoints
+}) {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  return import_react126.default.useMemo(() => {
+    if (!leg || !leg.duration?.value) {
+      if (waypoints.length < 2) return null;
+      const t = Math.min(frame / (actionDuration * fps), 1);
+      const total = waypoints.length - 1;
+      const segI = Math.min(Math.floor(t * total), total - 1);
+      const segT = t * total - segI;
+      const a2 = waypoints[segI];
+      const b2 = waypoints[segI + 1];
+      if (!a2 || !b2) return null;
+      return {
+        lat: a2.lat + (b2.lat - a2.lat) * segT,
+        lng: a2.lng + (b2.lng - a2.lng) * segT
+      };
+    }
+    const currentInSecond = frame / fps * (leg.duration.value / actionDuration);
+    const { step, elapsedInSeconds } = getCurrentStep(leg, currentInSecond);
+    if (!step || !step.path) {
+      const t = Math.min(frame / (actionDuration * fps), 1);
+      const total = waypoints.length - 1;
+      const segI = Math.min(Math.floor(t * total), total - 1);
+      const segT = t * total - segI;
+      const a2 = waypoints[segI];
+      const b2 = waypoints[segI + 1];
+      if (!a2 || !b2) return null;
+      return {
+        lat: a2.lat + (b2.lat - a2.lat) * segT,
+        lng: a2.lng + (b2.lng - a2.lng) * segT
+      };
+    }
+    const stepElapsed = currentInSecond - elapsedInSeconds;
+    const stepProgress = stepElapsed / (step.duration?.value ?? 1);
+    const pathIdx = Math.min(
+      Math.max(0, Math.floor(stepProgress * step.path.length)),
+      step.path.length - 1
+    );
+    const pt = step.path[pathIdx];
+    if (!pt) return null;
+    return { lat: pt.lat(), lng: pt.lng() };
+  }, [leg, frame, fps, actionDuration, waypoints]);
+}
+function getCurrentStep(leg, currentInSecond) {
+  let elapsedInSeconds = 0;
+  for (const step of leg.steps ?? []) {
+    const stepDur = step.duration?.value ?? 0;
+    if (elapsedInSeconds <= currentInSecond && currentInSecond < elapsedInSeconds + stepDur) {
+      return { step, elapsedInSeconds };
+    }
+    elapsedInSeconds += stepDur;
   }
+  return { step: null, elapsedInSeconds: 0 };
+}
+
+// src/types/Include.tsx
+var React27 = __toESM(require_react(), 1);
+var import_jsx_runtime83 = __toESM(require_jsx_runtime(), 1);
+var ASPECT_DIMS = {
+  "16x9": { width: 1920, height: 1080 },
+  "9x16": { width: 1080, height: 1920 },
+  "1x1": { width: 1080, height: 1080 }
 };
-var minimalistDiagram = {
-  name: "minimalist-diagram",
-  colors: {
-    background: "#FAFAFA",
-    surface: "#FFFFFF",
-    primary: "#E94560",
-    secondary: "#1A1A2E",
-    text: "#1A1A2E",
-    textMuted: "#6B7280",
-    border: "#E5E7EB",
-    gradient: ["#E94560", "#1A1A2E"],
-    chart: ["#E94560", "#1A1A2E", "#0F3460", "#9CA3AF"]
-  },
-  fonts: {
-    heading: "'IBM Plex Sans', sans-serif",
-    body: "'IBM Plex Sans', sans-serif",
-    mono: "'IBM Plex Mono', monospace"
-  },
-  timing: {
-    spring: { damping: 25, stiffness: 150, mass: 1 },
-    stagger: 4,
-    transitionDuration: 0.5
-  },
-  effects: {
-    particles: false,
-    gradientBg: false,
-    motionBlur: false,
-    grain: 0
+function isSceneBased(data) {
+  if (!data || typeof data !== "object") return false;
+  const d = data;
+  return typeof d.meta === "object" && d.meta !== null && Array.isArray(d.scenes);
+}
+function resolveIncludeSrc(src) {
+  if (src.startsWith("http://") || src.startsWith("https://") || src.startsWith("data:") || src.startsWith("/")) {
+    return src;
   }
-};
-var animeGhibli = {
-  name: "anime-ghibli",
-  colors: {
-    background: "#0A0A1A",
-    surface: "#1A2332",
-    primary: "#FFB347",
-    secondary: "#2D5016",
-    text: "#F0E6D3",
-    textMuted: "#A8957E",
-    border: "#2A3A4A",
-    gradient: ["#FFB347", "#2D5016"],
-    chart: ["#FFB347", "#2D5016", "#FF6B9D", "#A8E6CF", "#6B4C8A", "#E8927C"]
-  },
-  fonts: {
-    heading: "'Noto Serif JP', 'Georgia', serif",
-    body: "'Noto Sans', 'Inter', sans-serif",
-    mono: "'Fira Code', monospace"
-  },
-  timing: {
-    spring: { damping: 15, stiffness: 100, mass: 1 },
-    stagger: 5,
-    transitionDuration: 0.6
-  },
-  effects: {
-    particles: true,
-    gradientBg: true,
-    motionBlur: false,
-    grain: 0.03
+  return staticFile(src);
+}
+function IncludeLeaf({ stream: stream2 }) {
+  const { fps: parentFps, width: parentWidth, height: parentHeight } = useVideoConfig();
+  const { Container } = React27.useContext(ComposeContext);
+  const parentAudio = React27.useContext(AudioContext2);
+  if (!stream2.actions?.length) return null;
+  const [externalData, setExternalData] = React27.useState(null);
+  const [loadError, setLoadError] = React27.useState(null);
+  const [handle] = React27.useState(
+    () => stream2.src ? delayRender(`Loading include: ${stream2.src}`) : null
+  );
+  React27.useEffect(() => {
+    if (!stream2.src || !handle) return;
+    let active = true;
+    const url2 = resolveIncludeSrc(stream2.src);
+    fetch(url2).then((res) => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}: ${stream2.src}`);
+      return res.json();
+    }).then((data) => {
+      if (!active) return;
+      const streamTree = data.root ?? data;
+      getDurationInSeconds(streamTree, true);
+      setExternalData(data);
+      continueRender(handle);
+    }).catch((err) => {
+      if (!active) return;
+      const msg = err instanceof Error ? err.message : String(err);
+      setLoadError(msg);
+      console.warn(`Include "${stream2.src}" failed to load: ${msg}`);
+      continueRender(handle);
+    });
+    return () => {
+      active = false;
+    };
+  }, [stream2.src, handle]);
+  React27.useMemo(() => {
+    if (!stream2.src) {
+      getDurationInSeconds(stream2, true);
+    }
+  }, [stream2, stream2.src]);
+  const audioCtx = React27.useMemo(
+    () => ({ id: stream2.id, foreground: true, parent: parentAudio }),
+    [stream2.id, parentAudio]
+  );
+  const renderExternalContent = React27.useCallback(() => {
+    if (!externalData) return null;
+    if (loadError) {
+      return /* @__PURE__ */ (0, import_jsx_runtime83.jsxs)("div", { style: { color: "#ff4444", fontSize: 24, padding: 40 }, children: [
+        "\u26A0 Include load error: ",
+        loadError
+      ] });
+    }
+    if (isSceneBased(externalData)) {
+      const vj = externalData;
+      const vjFps = vj.meta.fps ?? parentFps;
+      const aspectKey = vj.meta.aspects?.[0] ?? "16x9";
+      const dims = ASPECT_DIMS[aspectKey] ?? { width: parentWidth, height: parentHeight };
+      return /* @__PURE__ */ (0, import_jsx_runtime83.jsxs)(AbsoluteFill, { style: { backgroundColor: "#0a0a0a", width: dims.width, height: dims.height }, children: [
+        vj.bgm && /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(Audio, { src: vj.bgm.src, volume: vj.bgm.baseVolume }),
+        vj.scenes.map((scene2) => {
+          const startFrame = Math.round((scene2.start ?? 0) * vjFps);
+          const durFrames = Math.round((scene2.duration ?? 1) * vjFps);
+          return /* @__PURE__ */ (0, import_jsx_runtime83.jsxs)(
+            Sequence,
+            {
+              from: startFrame,
+              durationInFrames: durFrames,
+              name: `${scene2.id}:${scene2.component}`,
+              children: [
+                /* @__PURE__ */ (0, import_jsx_runtime83.jsxs)(
+                  AbsoluteFill,
+                  {
+                    style: {
+                      backgroundColor: "#0c0c0e",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      padding: 60
+                    },
+                    children: [
+                      /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(
+                        "div",
+                        {
+                          style: {
+                            color: "#fafafa",
+                            fontSize: 48,
+                            fontWeight: 800,
+                            fontFamily: "Inter, system-ui, sans-serif",
+                            textAlign: "center",
+                            marginBottom: 16
+                          },
+                          children: scene2.props?.headline ?? scene2.id
+                        }
+                      ),
+                      scene2.props?.subhead && /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(
+                        "div",
+                        {
+                          style: {
+                            color: "#a1a1aa",
+                            fontSize: 28,
+                            fontFamily: "Inter, system-ui, sans-serif",
+                            textAlign: "center"
+                          },
+                          children: scene2.props.subhead
+                        }
+                      )
+                    ]
+                  }
+                ),
+                scene2.voiceover?.audio && /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(Audio, { src: scene2.voiceover.audio, volume: 1 })
+              ]
+            },
+            scene2.id
+          );
+        })
+      ] });
+    }
+    const streamTree = externalData.root ?? externalData;
+    const merged = {
+      ...streamTree,
+      width: streamTree.width ?? parentWidth,
+      height: streamTree.height ?? parentHeight,
+      fps: streamTree.fps ?? parentFps
+    };
+    return /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(
+      "div",
+      {
+        style: {
+          width: merged.width,
+          height: merged.height,
+          overflow: "hidden",
+          position: "relative"
+        },
+        children: /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(FolderLeaf, { stream: merged })
+      }
+    );
+  }, [externalData, loadError, parentFps, parentWidth, parentHeight]);
+  const renderAction = (a2) => {
+    const start = a2.start ?? 0;
+    const end = a2.end ?? (stream2.durationInSeconds ?? start + 1);
+    const dur = Math.max(0.1, end - start);
+    const durFrames = Math.max(1, Math.floor(parentFps * dur));
+    if (!stream2.src && stream2.children?.length) {
+      return /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(
+        Sequence,
+        {
+          durationInFrames: durFrames,
+          from: Math.floor(parentFps * start),
+          layout: "none",
+          showInTimeline: false,
+          children: /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(
+            Container,
+            {
+              id: stream2.id,
+              type: "include",
+              style: {
+                ...cssJS(stream2.style),
+                width: parentWidth,
+                height: parentHeight,
+                overflow: "hidden",
+                position: "relative"
+              },
+              className: `include ${toClassName(stream2.id ?? "")}`,
+              children: /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(FolderLeaf, { stream: stream2 })
+            }
+          )
+        },
+        a2.id
+      );
+    }
+    return /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(
+      Sequence,
+      {
+        durationInFrames: durFrames,
+        from: Math.floor(parentFps * start),
+        layout: "none",
+        showInTimeline: false,
+        children: externalData || loadError ? /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(
+          "div",
+          {
+            style: {
+              width: parentWidth,
+              height: parentHeight,
+              overflow: "hidden",
+              position: "relative"
+            },
+            children: renderExternalContent()
+          }
+        ) : /* @__PURE__ */ (0, import_jsx_runtime83.jsxs)(
+          "div",
+          {
+            style: {
+              width: parentWidth,
+              height: parentHeight,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#666",
+              fontSize: 20,
+              fontFamily: "monospace"
+            },
+            children: [
+              "Loading\u2026 ",
+              stream2.src
+            ]
+          }
+        )
+      },
+      a2.id
+    );
+  };
+  return /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(AudioContext2.Provider, { value: audioCtx, children: stream2.actions.map(renderAction) });
+}
+
+// src/types/Scene.tsx
+var React30 = __toESM(require_react(), 1);
+var import_jsx_runtime84 = __toESM(require_jsx_runtime(), 1);
+function SceneLeaf({ stream: stream2 }) {
+  const { Container } = React30.useContext(ComposeContext);
+  const parentAudio = React30.useContext(AudioContext2);
+  const audioCtx = React30.useMemo(
+    () => ({ id: stream2.id, parent: parentAudio }),
+    [stream2.id, parentAudio]
+  );
+  return /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(AudioContext2.Provider, { value: audioCtx, children: /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(
+    Container,
+    {
+      id: stream2.id,
+      type: "scene",
+      style: cssJS(stream2.style),
+      className: `scene ${toClassName(stream2.name ?? "")}`,
+      children: /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(FolderLeaf, { stream: stream2 })
+    }
+  ) });
+}
+
+// src/types/Effect.tsx
+var React35 = __toESM(require_react(), 1);
+
+// src/types/keyframes.ts
+function parseKeyframeData(data) {
+  const styles = {};
+  const steps = [];
+  for (const [key, style2] of Object.entries(data)) {
+    const perc = parseFloat(key);
+    styles[String(perc)] = style2;
+    if (!steps.includes(perc)) steps.push(perc);
   }
+  steps.sort((a2, b2) => b2 - a2);
+  return { steps, styles };
+}
+function getEasing(timing) {
+  if (!timing) return void 0;
+  const parts = timing.split(/[(),]/);
+  const fx = (parts[0] ?? "").trim();
+  switch (fx) {
+    case "linear":
+      return Easing.linear;
+    case "cubic-bezier":
+      return Easing.bezier(
+        parseFloat(parts[1] ?? "0"),
+        parseFloat(parts[2] ?? "0"),
+        parseFloat(parts[3] ?? "0"),
+        parseFloat(parts[4] ?? "0")
+      );
+    case "ease":
+      return Easing.ease;
+    case "ease-in":
+      return Easing.in(Easing.ease);
+    case "ease-out":
+      return Easing.out(Easing.ease);
+    case "ease-in-out":
+      return Easing.inOut(Easing.ease);
+    default:
+      return void 0;
+  }
+}
+function interpolateValue(from, to, fn) {
+  const numRe = /(-?[\d.]+)/g;
+  const toNums = to.match(numRe);
+  const fromNums = from.match(numRe);
+  if (!fromNums && !toNums) return to;
+  if (!fromNums || !toNums || fromNums.length !== toNums.length) return to;
+  let i = 0;
+  return from.replace(numRe, () => {
+    const result = fn([parseFloat(fromNums[i] ?? "0"), parseFloat(toNums[i] ?? "0")]);
+    i++;
+    return String(Math.round(result * 1e3) / 1e3);
+  });
+}
+function interpolateKeyframes(config2, frame, opts) {
+  const { fps, durationInSeconds, timingFunction } = opts;
+  const durationInFrames = durationInSeconds * fps;
+  if (durationInFrames <= 0) return null;
+  const perc = frame * 100 / durationInFrames;
+  const { steps, styles } = config2;
+  const i = steps.findIndex((s) => s <= perc);
+  if (i === -1) return null;
+  const fromPerc = steps[i];
+  const toPerc = steps[i - 1] ?? fromPerc;
+  const fromStyle = styles[String(fromPerc)];
+  const toStyle = styles[String(toPerc)] ?? fromStyle;
+  if (!fromStyle || !toStyle) return null;
+  const frameRange = [
+    Math.floor(fromPerc * durationInFrames / 100),
+    Math.floor(toPerc * durationInFrames / 100)
+  ];
+  const easing = getEasing(timingFunction || config2.timingFunction);
+  const result = {};
+  for (const key of Object.keys(toStyle)) {
+    if (key === "animationTimingFunction") continue;
+    const fromVal = fromStyle[key] ?? toStyle[key];
+    const toVal = toStyle[key] ?? fromVal;
+    if (!fromVal || !toVal) continue;
+    result[key] = interpolateValue(fromVal, toVal, (valueRange) => {
+      if (valueRange[0] === valueRange[1] || frameRange[0] === frameRange[1]) {
+        return valueRange[0];
+      }
+      return interpolate(frame, frameRange, valueRange, {
+        easing,
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp"
+      });
+    });
+  }
+  return Object.keys(result).length > 0 ? result : null;
+}
+function resolveAnimation(name, custom2) {
+  if (custom2) return parseKeyframeData(custom2);
+  return builtinAnimations[name] ?? null;
+}
+var builtinAnimations = {
+  // ── Fades ──────────────────────────────────────────────────────────────
+  fadeIn: parseKeyframeData({
+    "0": { opacity: "0" },
+    "100": { opacity: "1" }
+  }),
+  fadeOut: parseKeyframeData({
+    "0": { opacity: "1" },
+    "100": { opacity: "0" }
+  }),
+  fadeInDown: parseKeyframeData({
+    "0": { opacity: "0", transform: "translate3d(0, -100%, 0)" },
+    "100": { opacity: "1", transform: "translate3d(0, 0, 0)" }
+  }),
+  fadeInUp: parseKeyframeData({
+    "0": { opacity: "0", transform: "translate3d(0, 100%, 0)" },
+    "100": { opacity: "1", transform: "translate3d(0, 0, 0)" }
+  }),
+  fadeInLeft: parseKeyframeData({
+    "0": { opacity: "0", transform: "translate3d(-100%, 0, 0)" },
+    "100": { opacity: "1", transform: "translate3d(0, 0, 0)" }
+  }),
+  fadeInRight: parseKeyframeData({
+    "0": { opacity: "0", transform: "translate3d(100%, 0, 0)" },
+    "100": { opacity: "1", transform: "translate3d(0, 0, 0)" }
+  }),
+  fadeOutDown: parseKeyframeData({
+    "0": { opacity: "1", transform: "translate3d(0, 0, 0)" },
+    "100": { opacity: "0", transform: "translate3d(0, 100%, 0)" }
+  }),
+  fadeOutUp: parseKeyframeData({
+    "0": { opacity: "1", transform: "translate3d(0, 0, 0)" },
+    "100": { opacity: "0", transform: "translate3d(0, -100%, 0)" }
+  }),
+  fadeOutLeft: parseKeyframeData({
+    "0": { opacity: "1", transform: "translate3d(0, 0, 0)" },
+    "100": { opacity: "0", transform: "translate3d(-100%, 0, 0)" }
+  }),
+  fadeOutRight: parseKeyframeData({
+    "0": { opacity: "1", transform: "translate3d(0, 0, 0)" },
+    "100": { opacity: "0", transform: "translate3d(100%, 0, 0)" }
+  }),
+  // ── Slides ─────────────────────────────────────────────────────────────
+  slideInDown: parseKeyframeData({
+    "0": { transform: "translate3d(0, -100%, 0)" },
+    "100": { transform: "translate3d(0, 0, 0)" }
+  }),
+  slideInUp: parseKeyframeData({
+    "0": { transform: "translate3d(0, 100%, 0)" },
+    "100": { transform: "translate3d(0, 0, 0)" }
+  }),
+  slideInLeft: parseKeyframeData({
+    "0": { transform: "translate3d(-100%, 0, 0)" },
+    "100": { transform: "translate3d(0, 0, 0)" }
+  }),
+  slideInRight: parseKeyframeData({
+    "0": { transform: "translate3d(100%, 0, 0)" },
+    "100": { transform: "translate3d(0, 0, 0)" }
+  }),
+  // ── Zooms ──────────────────────────────────────────────────────────────
+  zoomIn: parseKeyframeData({
+    "0": { opacity: "0", transform: "scale3d(0.3, 0.3, 0.3)" },
+    "50": { opacity: "1", transform: "scale3d(0.65, 0.65, 0.65)" },
+    "100": { opacity: "1", transform: "scale3d(1, 1, 1)" }
+  }),
+  zoomOut: parseKeyframeData({
+    "0": { opacity: "1", transform: "scale3d(1, 1, 1)" },
+    "50": { opacity: "0", transform: "scale3d(0.3, 0.3, 0.3)" },
+    "100": { opacity: "0", transform: "scale3d(0.3, 0.3, 0.3)" }
+  }),
+  // ── Attention seekers ──────────────────────────────────────────────────
+  pulse: parseKeyframeData({
+    "0": { transform: "scale3d(1, 1, 1)" },
+    "50": { transform: "scale3d(1.05, 1.05, 1.05)" },
+    "100": { transform: "scale3d(1, 1, 1)" }
+  }),
+  flash: parseKeyframeData({
+    "0": { opacity: "1" },
+    "25": { opacity: "0" },
+    "50": { opacity: "1" },
+    "75": { opacity: "0" },
+    "100": { opacity: "1" }
+  }),
+  bounce: parseKeyframeData({
+    "0": { transform: "translate3d(0, 0, 0)" },
+    "20": { transform: "translate3d(0, 0, 0)" },
+    "40": { transform: "translate3d(0, -30px, 0) scaleY(1.1)" },
+    "43": { transform: "translate3d(0, -30px, 0) scaleY(1.1)" },
+    "53": { transform: "translate3d(0, 0, 0)" },
+    "70": { transform: "translate3d(0, -15px, 0) scaleY(1.05)" },
+    "80": { transform: "translate3d(0, 0, 0) scaleY(0.95)" },
+    "90": { transform: "translate3d(0, -4px, 0) scaleY(1.02)" },
+    "100": { transform: "translate3d(0, 0, 0)" }
+  }),
+  heartBeat: parseKeyframeData({
+    "0": { transform: "scale(1)" },
+    "14": { transform: "scale(1.3)" },
+    "28": { transform: "scale(1)" },
+    "42": { transform: "scale(1.3)" },
+    "70": { transform: "scale(1)" },
+    "100": { transform: "scale(1)" }
+  }),
+  rubberBand: parseKeyframeData({
+    "0": { transform: "scale3d(1, 1, 1)" },
+    "30": { transform: "scale3d(1.25, 0.75, 1)" },
+    "40": { transform: "scale3d(0.75, 1.25, 1)" },
+    "50": { transform: "scale3d(1.15, 0.85, 1)" },
+    "65": { transform: "scale3d(0.95, 1.05, 1)" },
+    "75": { transform: "scale3d(1.05, 0.95, 1)" },
+    "100": { transform: "scale3d(1, 1, 1)" }
+  }),
+  shakeX: parseKeyframeData({
+    "0": { transform: "translate3d(0, 0, 0)" },
+    "10": { transform: "translate3d(-10px, 0, 0)" },
+    "20": { transform: "translate3d(10px, 0, 0)" },
+    "30": { transform: "translate3d(-10px, 0, 0)" },
+    "40": { transform: "translate3d(10px, 0, 0)" },
+    "50": { transform: "translate3d(-10px, 0, 0)" },
+    "60": { transform: "translate3d(10px, 0, 0)" },
+    "70": { transform: "translate3d(-10px, 0, 0)" },
+    "80": { transform: "translate3d(10px, 0, 0)" },
+    "90": { transform: "translate3d(-10px, 0, 0)" },
+    "100": { transform: "translate3d(0, 0, 0)" }
+  }),
+  // ── Bouncing entrances ─────────────────────────────────────────────────
+  bounceIn: parseKeyframeData({
+    "0": { opacity: "0", transform: "scale3d(0.3, 0.3, 0.3)" },
+    "20": { opacity: "0.3", transform: "scale3d(1.1, 1.1, 1.1)" },
+    "40": { opacity: "0.6", transform: "scale3d(0.9, 0.9, 0.9)" },
+    "60": { opacity: "1", transform: "scale3d(1.03, 1.03, 1.03)" },
+    "80": { opacity: "1", transform: "scale3d(0.97, 0.97, 0.97)" },
+    "100": { opacity: "1", transform: "scale3d(1, 1, 1)" }
+  }),
+  // ── Rotations ──────────────────────────────────────────────────────────
+  rotateIn: parseKeyframeData({
+    "0": { opacity: "0", transform: "rotate(-200deg)" },
+    "100": { opacity: "1", transform: "rotate(0deg)" }
+  }),
+  rotateOut: parseKeyframeData({
+    "0": { opacity: "1", transform: "rotate(0deg)" },
+    "100": { opacity: "0", transform: "rotate(200deg)" }
+  }),
+  rotateInDownLeft: parseKeyframeData({
+    "0": { opacity: "0", transform: "rotate3d(0, 0, 1, -45deg)" },
+    "100": { opacity: "1", transform: "rotate3d(0, 0, 1, 0deg)" }
+  }),
+  rotateInDownRight: parseKeyframeData({
+    "0": { opacity: "0", transform: "rotate3d(0, 0, 1, 45deg)" },
+    "100": { opacity: "1", transform: "rotate3d(0, 0, 1, 0deg)" }
+  }),
+  rotateInUpLeft: parseKeyframeData({
+    "0": { opacity: "0", transform: "rotate3d(0, 0, 1, 45deg)" },
+    "100": { opacity: "1", transform: "rotate3d(0, 0, 1, 0deg)" }
+  }),
+  rotateInUpRight: parseKeyframeData({
+    "0": { opacity: "0", transform: "rotate3d(0, 0, 1, -45deg)" },
+    "100": { opacity: "1", transform: "rotate3d(0, 0, 1, 0deg)" }
+  }),
+  // ── Flips ──────────────────────────────────────────────────────────────
+  flipInX: parseKeyframeData({
+    "0": { opacity: "0", transform: "perspective(400px) rotate3d(1, 0, 0, 90deg)" },
+    "40": { opacity: "1", transform: "perspective(400px) rotate3d(1, 0, 0, -20deg)" },
+    "60": { transform: "perspective(400px) rotate3d(1, 0, 0, 10deg)" },
+    "80": { transform: "perspective(400px) rotate3d(1, 0, 0, -5deg)" },
+    "100": { opacity: "1", transform: "perspective(400px)" }
+  }),
+  flipInY: parseKeyframeData({
+    "0": { opacity: "0", transform: "perspective(400px) rotate3d(0, 1, 0, 90deg)" },
+    "40": { opacity: "1", transform: "perspective(400px) rotate3d(0, 1, 0, -20deg)" },
+    "60": { transform: "perspective(400px) rotate3d(0, 1, 0, 10deg)" },
+    "80": { transform: "perspective(400px) rotate3d(0, 1, 0, -5deg)" },
+    "100": { opacity: "1", transform: "perspective(400px)" }
+  }),
+  // ── Slides out ─────────────────────────────────────────────────────────
+  slideOutDown: parseKeyframeData({
+    "0": { transform: "translate3d(0, 0, 0)" },
+    "100": { transform: "translate3d(0, 100%, 0)" }
+  }),
+  slideOutLeft: parseKeyframeData({
+    "0": { transform: "translate3d(0, 0, 0)" },
+    "100": { transform: "translate3d(-100%, 0, 0)" }
+  }),
+  slideOutRight: parseKeyframeData({
+    "0": { transform: "translate3d(0, 0, 0)" },
+    "100": { transform: "translate3d(100%, 0, 0)" }
+  }),
+  slideOutUp: parseKeyframeData({
+    "0": { transform: "translate3d(0, 0, 0)" },
+    "100": { transform: "translate3d(0, -100%, 0)" }
+  }),
+  // ── Zoom variants ──────────────────────────────────────────────────────
+  zoomInDown: parseKeyframeData({
+    "0": { opacity: "0", transform: "scale3d(0.1, 0.1, 0.1) translate3d(0, -1000px, 0)" },
+    "60": { opacity: "1", transform: "scale3d(0.475, 0.475, 0.475) translate3d(0, 60px, 0)" },
+    "100": { opacity: "1", transform: "scale3d(1, 1, 1) translate3d(0, 0, 0)" }
+  }),
+  zoomInLeft: parseKeyframeData({
+    "0": { opacity: "0", transform: "scale3d(0.1, 0.1, 0.1) translate3d(-1000px, 0, 0)" },
+    "60": { opacity: "1", transform: "scale3d(0.475, 0.475, 0.475) translate3d(10px, 0, 0)" },
+    "100": { opacity: "1", transform: "scale3d(1, 1, 1) translate3d(0, 0, 0)" }
+  }),
+  zoomInRight: parseKeyframeData({
+    "0": { opacity: "0", transform: "scale3d(0.1, 0.1, 0.1) translate3d(1000px, 0, 0)" },
+    "60": { opacity: "1", transform: "scale3d(0.475, 0.475, 0.475) translate3d(-10px, 0, 0)" },
+    "100": { opacity: "1", transform: "scale3d(1, 1, 1) translate3d(0, 0, 0)" }
+  }),
+  zoomInUp: parseKeyframeData({
+    "0": { opacity: "0", transform: "scale3d(0.1, 0.1, 0.1) translate3d(0, 1000px, 0)" },
+    "60": { opacity: "1", transform: "scale3d(0.475, 0.475, 0.475) translate3d(0, -60px, 0)" },
+    "100": { opacity: "1", transform: "scale3d(1, 1, 1) translate3d(0, 0, 0)" }
+  }),
+  // ── Attention seekers (extended) ───────────────────────────────────────
+  shakeY: parseKeyframeData({
+    "0": { transform: "translate3d(0, 0, 0)" },
+    "10": { transform: "translate3d(0, -10px, 0)" },
+    "20": { transform: "translate3d(0, 10px, 0)" },
+    "30": { transform: "translate3d(0, -10px, 0)" },
+    "40": { transform: "translate3d(0, 10px, 0)" },
+    "50": { transform: "translate3d(0, -10px, 0)" },
+    "60": { transform: "translate3d(0, 10px, 0)" },
+    "70": { transform: "translate3d(0, -10px, 0)" },
+    "80": { transform: "translate3d(0, 10px, 0)" },
+    "90": { transform: "translate3d(0, -10px, 0)" },
+    "100": { transform: "translate3d(0, 0, 0)" }
+  }),
+  swing: parseKeyframeData({
+    "20": { transform: "rotate3d(0, 0, 1, 15deg)" },
+    "40": { transform: "rotate3d(0, 0, 1, -10deg)" },
+    "60": { transform: "rotate3d(0, 0, 1, 5deg)" },
+    "80": { transform: "rotate3d(0, 0, 1, -5deg)" },
+    "100": { transform: "rotate3d(0, 0, 1, 0deg)" }
+  }),
+  tada: parseKeyframeData({
+    "0": { transform: "scale3d(1, 1, 1)" },
+    "10": { transform: "scale3d(0.9, 0.9, 0.9) rotate3d(0, 0, 1, -3deg)" },
+    "20": { transform: "scale3d(0.9, 0.9, 0.9) rotate3d(0, 0, 1, -3deg)" },
+    "30": { transform: "scale3d(1.1, 1.1, 1.1) rotate3d(0, 0, 1, 3deg)" },
+    "50": { transform: "scale3d(1.1, 1.1, 1.1) rotate3d(0, 0, 1, 3deg)" },
+    "70": { transform: "scale3d(1.1, 1.1, 1.1) rotate3d(0, 0, 1, 3deg)" },
+    "90": { transform: "scale3d(1.1, 1.1, 1.1) rotate3d(0, 0, 1, 3deg)" },
+    "100": { transform: "scale3d(1, 1, 1)" }
+  }),
+  wobble: parseKeyframeData({
+    "0": { transform: "translate3d(0, 0, 0)" },
+    "15": { transform: "translate3d(-25%, 0, 0) rotate3d(0, 0, 1, -5deg)" },
+    "30": { transform: "translate3d(20%, 0, 0) rotate3d(0, 0, 1, 3deg)" },
+    "45": { transform: "translate3d(-15%, 0, 0) rotate3d(0, 0, 1, -3deg)" },
+    "60": { transform: "translate3d(10%, 0, 0) rotate3d(0, 0, 1, 2deg)" },
+    "75": { transform: "translate3d(-5%, 0, 0) rotate3d(0, 0, 1, -1deg)" },
+    "100": { transform: "translate3d(0, 0, 0)" }
+  }),
+  jello: parseKeyframeData({
+    "0": { transform: "translate3d(0, 0, 0)" },
+    "11.1": { transform: "translate3d(0, 0, 0)" },
+    "22.2": { transform: "skewX(-12.5deg) skewY(-12.5deg)" },
+    "33.3": { transform: "skewX(6.25deg) skewY(6.25deg)" },
+    "44.4": { transform: "skewX(-3.125deg) skewY(-3.125deg)" },
+    "55.5": { transform: "skewX(1.5625deg) skewY(1.5625deg)" },
+    "66.6": { transform: "skewX(-0.78125deg) skewY(-0.78125deg)" },
+    "77.7": { transform: "skewX(0.390625deg) skewY(0.390625deg)" },
+    "88.8": { transform: "skewX(-0.1953125deg) skewY(-0.1953125deg)" },
+    "100": { transform: "translate3d(0, 0, 0)" }
+  }),
+  // ── Specials ───────────────────────────────────────────────────────────
+  rollIn: parseKeyframeData({
+    "0": { opacity: "0", transform: "translate3d(-100%, 0, 0) rotate3d(0, 0, 1, -120deg)" },
+    "100": { opacity: "1", transform: "translate3d(0, 0, 0)" }
+  }),
+  rollOut: parseKeyframeData({
+    "0": { opacity: "1", transform: "translate3d(0, 0, 0)" },
+    "100": { opacity: "0", transform: "translate3d(100%, 0, 0) rotate3d(0, 0, 1, 120deg)" }
+  }),
+  jackInTheBox: parseKeyframeData({
+    "0": { opacity: "0", transform: "scale(0.1) rotate(30deg)" },
+    "50": { transform: "rotate(-10deg)" },
+    "70": { transform: "rotate(3deg)" },
+    "100": { opacity: "1", transform: "scale(1)" }
+  }),
+  // ── Light speed ────────────────────────────────────────────────────────
+  lightSpeedIn: parseKeyframeData({
+    "0": { opacity: "0", transform: "translate3d(100%, 0, 0) skewX(-30deg)" },
+    "60": { opacity: "1", transform: "skewX(20deg)" },
+    "80": { transform: "skewX(-5deg)" },
+    "100": { opacity: "1", transform: "translate3d(0, 0, 0)" }
+  }),
+  lightSpeedOut: parseKeyframeData({
+    "0": { opacity: "1", transform: "translate3d(0, 0, 0) skewX(0)" },
+    "100": { opacity: "0", transform: "translate3d(100%, 0, 0) skewX(30deg)" }
+  })
 };
-var themePresets = {
-  cinematic,
-  minimal,
-  neon,
-  corporate,
-  "clean-professional": cleanProfessional,
-  "flat-motion-graphics": flatMotionGraphics,
-  "minimalist-diagram": minimalistDiagram,
-  "anime-ghibli": animeGhibli
+
+// src/types/Effect.tsx
+var import_jsx_runtime85 = __toESM(require_jsx_runtime(), 1);
+function EffectWrapper({
+  stream: stream2,
+  children
+}) {
+  const frame = useCurrentFrame();
+  const { fps, width, height } = useVideoConfig();
+  const actions = stream2.actions ?? [];
+  const styles = React35.useMemo(() => {
+    const result = [];
+    for (const action2 of actions) {
+      const start = Math.ceil(action2.start * fps);
+      const end = Math.ceil(action2.end * fps);
+      const durationInFrames = end - start;
+      if (durationInFrames <= 0) continue;
+      const animation = stream2.animation;
+      const timingFn = stream2.animationTimingFunction;
+      const iterCount = stream2.animationIterationCount ?? 1;
+      const style2 = cssJS(action2.style) ?? {};
+      let currentFrame = frame;
+      if (iterCount > 0 && durationInFrames > 0) {
+        const iteration = Math.floor((frame - start) / durationInFrames);
+        if (iteration < iterCount) {
+          currentFrame = start + (frame - start) % durationInFrames;
+        }
+      }
+      if (currentFrame >= start && currentFrame < end) {
+        const actionFrame = currentFrame - start;
+        if (animation) {
+          const config2 = resolveAnimation(animation, stream2.customKeyframes);
+          if (config2) {
+            const animStyle = interpolateKeyframes(config2, actionFrame, {
+              fps,
+              durationInSeconds: durationInFrames / fps,
+              timingFunction: timingFn
+            });
+            if (animStyle) Object.assign(style2, animStyle);
+          }
+        }
+        if (Object.keys(style2).length > 0) {
+          result.push(style2);
+        }
+      }
+    }
+    return result;
+  }, [frame, fps, actions, stream2.animation, stream2.animationTimingFunction, stream2.animationIterationCount, stream2.customKeyframes]);
+  if (styles.length === 0) return /* @__PURE__ */ (0, import_jsx_runtime85.jsx)(import_jsx_runtime85.Fragment, { children });
+  return /* @__PURE__ */ (0, import_jsx_runtime85.jsx)(
+    "div",
+    {
+      style: Object.assign({ width, height, position: "absolute", inset: 0 }, ...styles),
+      className: "effect",
+      children
+    }
+  );
+}
+
+// src/types/Folder.tsx
+var import_jsx_runtime86 = __toESM(require_jsx_runtime(), 1);
+var Leaves = {
+  video: VideoLeaf,
+  audio: AudioLeaf,
+  image: ImageLeaf,
+  component: ComponentLeaf,
+  rhythm: RhythmLeaf,
+  map: MapLeaf,
+  include: IncludeLeaf,
+  scene: SceneLeaf
 };
+var TransitionPresets = {
+  fade,
+  slide: slide2,
+  wipe,
+  flip,
+  clockWipe
+};
+var NotSeries = ({ children }) => /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(import_jsx_runtime86.Fragment, { children });
+NotSeries.Sequence = ({ children }) => /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(import_jsx_runtime86.Fragment, { children });
+function FolderLeaf({ stream: stream2 }) {
+  const { fps, width, height } = useVideoConfig();
+  const { Container } = React39.useContext(ComposeContext);
+  const parentAudio = React39.useContext(AudioContext2);
+  const isSeries = !!stream2.isSeries;
+  const transition = stream2.transition;
+  const transitionTime = stream2.transitionTime ?? 0.5;
+  const isRoot = stream2.id === "root";
+  const TypedSeries = React39.useMemo(() => {
+    if (!isSeries) return NotSeries;
+    return transition ? TransitionSeries : Series;
+  }, [isSeries, transition]);
+  const transEl = React39.useMemo(() => {
+    if (!isSeries || !transition) return null;
+    const presentation = TransitionPresets[transition]?.(
+      transition === "clockWipe" ? { width, height } : void 0
+    );
+    return /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(
+      TransitionSeries.Transition,
+      {
+        presentation,
+        timing: linearTiming({ durationInFrames: Math.floor(fps * transitionTime) })
+      }
+    );
+  }, [isSeries, transition, transitionTime, fps, width, height]);
+  const visibleChildren = stream2.children.filter((c2) => c2.visible !== false);
+  const sequences = visibleChildren.map((child) => {
+    const dur = child.durationInSeconds ?? 0;
+    const durFrames = Math.max(1, Math.floor(dur * fps));
+    const SequenceWrap = TypedSeries.Sequence ?? Sequence;
+    const isLeaf = child.type !== "folder" && child.type !== "root" && child.type !== "effect";
+    const childContent = isLeaf ? React39.createElement(Leaves[child.type] ?? (() => null), { stream: child }) : child.type === "effect" ? /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(EffectWrapper, { stream: child, children: /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(FolderLeaf, { stream: child }) }) : React39.createElement(FolderLeaf, { stream: child });
+    const wrapped = /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(
+      Container,
+      {
+        id: child.id,
+        type: child.type,
+        style: cssJS(child.style),
+        className: `${child.type} ${toClassName(child.id ?? "")}`,
+        children: childContent
+      }
+    );
+    const seq = /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(SequenceWrap, { durationInFrames: durFrames, layout: "none", children: wrapped }, child.id);
+    if (child.isBackground && stream2.durationInSeconds) {
+      const times = Math.max(1, Math.ceil(stream2.durationInSeconds * fps / durFrames));
+      return /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(Loop, { durationInFrames: durFrames, times, showInTimeline: false, children: wrapped }, child.id);
+    }
+    return seq;
+  }).filter(Boolean);
+  if (isSeries && transEl) {
+    for (let i = 1; i < sequences.length; i += 2) {
+      sequences.splice(i, 0, React39.cloneElement(transEl, { key: `t${i}` }));
+    }
+  }
+  const audioCtx = React39.useMemo(
+    () => stream2.type !== "folder" ? { id: stream2.id, parent: parentAudio } : parentAudio,
+    [stream2.id, stream2.type, parentAudio]
+  );
+  if (visibleChildren.length === 0 || stream2.visible === false) return null;
+  const containerStyle3 = cssJS(stream2.style);
+  const orientation = isRoot ? width > height ? "landscape" : "portrait" : "";
+  return /* @__PURE__ */ (0, import_jsx_runtime86.jsxs)(AudioContext2.Provider, { value: audioCtx, children: [
+    stream2.stylesheet ? /* @__PURE__ */ (0, import_jsx_runtime86.jsx)("style", { children: stream2.stylesheet }) : null,
+    /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(
+      Container,
+      {
+        id: stream2.id,
+        type: stream2.type,
+        style: containerStyle3,
+        className: `${orientation} ${stream2.type}`.trim(),
+        children: isSeries ? /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(TypedSeries, { children: sequences }) : sequences
+      }
+    )
+  ] });
+}
+
+// src/types/Subtitle.tsx
+var React41 = __toESM(require_react(), 1);
+var import_jsx_runtime87 = __toESM(require_jsx_runtime(), 1);
+function resolveSubtitleSrc(src) {
+  if (src.startsWith("http://") || src.startsWith("https://") || src.startsWith("data:") || src.startsWith("/")) {
+    return src;
+  }
+  return staticFile(src);
+}
+var DEFAULT_BOX_STYLE = {
+  position: "absolute",
+  inset: 0,
+  display: "flex",
+  alignItems: "flex-end",
+  justifyContent: "center",
+  padding: "0 5% 8% 5%",
+  pointerEvents: "none",
+  zIndex: 100
+};
+var DEFAULT_TEXT_STYLE = {
+  color: "white",
+  fontSize: 56,
+  fontWeight: 700,
+  textAlign: "center",
+  textShadow: "0 2px 12px rgba(0,0,0,0.85)",
+  lineHeight: 1.2,
+  fontFamily: '"PingFang SC","Noto Sans CJK SC","Hiragino Sans","Helvetica Neue",sans-serif'
+};
+function SubtitleOverlay({ subtitle }) {
+  const { fps } = useVideoConfig();
+  const currentTime = useCurrentFrame() / fps;
+  const [cues, setCues] = React41.useState(null);
+  React41.useEffect(() => {
+    const { src } = subtitle;
+    if (src.includes("-->")) {
+      setCues(parseVTT(src));
+      return;
+    }
+    if (!/\.vtt(?:$|[?#])/.test(src)) {
+      setCues([{ startFrom: 0, endAt: Infinity, text: src }]);
+      return;
+    }
+    const handle = delayRender(`Loading subtitles: ${src}`);
+    let active = true;
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      continueRender(handle);
+    };
+    fetch(resolveSubtitleSrc(src)).then((r) => {
+      if (!r.ok) throw new Error(`Failed to load subtitles (${r.status}): ${src}`);
+      return r.text();
+    }).then((text) => {
+      if (!active) return;
+      setCues(parseVTT(text));
+      finish();
+    }).catch((err) => {
+      if (!active) return;
+      settled = true;
+      cancelRender(err);
+    });
+    return () => {
+      active = false;
+      finish();
+    };
+  }, [subtitle.src]);
+  const cue = React41.useMemo(
+    () => cues?.find((c2) => c2.startFrom <= currentTime && c2.endAt > currentTime),
+    [cues, currentTime]
+  );
+  if (!cue) return null;
+  const boxCss = subtitle.style ? cssJS(subtitle.style) : {};
+  return /* @__PURE__ */ (0, import_jsx_runtime87.jsx)("div", { className: "caption-overlay subtitle-overlay", style: { ...DEFAULT_BOX_STYLE, ...boxCss }, children: /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(
+    "span",
+    {
+      className: "caption",
+      style: { ...DEFAULT_TEXT_STYLE, fontSize: subtitle.fontSize ?? DEFAULT_TEXT_STYLE.fontSize },
+      dangerouslySetInnerHTML: { __html: cue.text }
+    }
+  ) });
+}
 
 // node_modules/zod/v4/classic/external.js
 var external_exports = {};
@@ -28713,7 +34656,7 @@ __export(core_exports2, {
   toJSONSchema: () => toJSONSchema,
   treeifyError: () => treeifyError,
   util: () => util_exports,
-  version: () => version
+  version: () => version2
 });
 
 // node_modules/zod/v4/core/core.js
@@ -30436,7 +36379,7 @@ var Doc = class {
 };
 
 // node_modules/zod/v4/core/versions.js
-var version = {
+var version2 = {
   major: 4,
   minor: 3,
   patch: 6
@@ -30448,7 +36391,7 @@ var $ZodType = /* @__PURE__ */ $constructor("$ZodType", (inst, def) => {
   inst ?? (inst = {});
   inst._zod.def = def;
   inst._zod.bag = inst._zod.bag || {};
-  inst._zod.version = version;
+  inst._zod.version = version2;
   const checks = [...inst._zod.def.checks ?? []];
   if (inst._zod.traits.has("$ZodCheck")) {
     checks.unshift(inst);
@@ -37991,7 +43934,7 @@ function yo_default() {
 }
 
 // node_modules/zod/v4/core/registries.js
-var _a;
+var _a2;
 var $output = /* @__PURE__ */ Symbol("ZodOutput");
 var $input = /* @__PURE__ */ Symbol("ZodInput");
 var $ZodRegistry = class {
@@ -38037,7 +43980,7 @@ var $ZodRegistry = class {
 function registry() {
   return new $ZodRegistry();
 }
-(_a = globalThis).__zod_globalRegistry ?? (_a.__zod_globalRegistry = registry());
+(_a2 = globalThis).__zod_globalRegistry ?? (_a2.__zod_globalRegistry = registry());
 var globalRegistry = globalThis.__zod_globalRegistry;
 
 // node_modules/zod/v4/core/api.js
@@ -41965,6284 +47908,6 @@ function date4(params) {
 // node_modules/zod/v4/classic/external.js
 config(en_default());
 
-// src/themes/schema.ts
-var DEFAULT_SPRING_CONFIG = {
-  damping: 12,
-  stiffness: 180,
-  mass: 0.8
-};
-var springConfig = external_exports.object({
-  damping: external_exports.number().default(DEFAULT_SPRING_CONFIG.damping),
-  stiffness: external_exports.number().default(DEFAULT_SPRING_CONFIG.stiffness),
-  mass: external_exports.number().default(DEFAULT_SPRING_CONFIG.mass)
-});
-var themeSchema = external_exports.object({
-  name: external_exports.string(),
-  colors: external_exports.object({
-    background: external_exports.string().default("#050505"),
-    surface: external_exports.string().default("#161618"),
-    primary: external_exports.string().default("#f97316"),
-    secondary: external_exports.string().default("#ec4899"),
-    text: external_exports.string().default("#fafafa"),
-    textMuted: external_exports.string().default("#a1a1aa"),
-    border: external_exports.string().default("#27272a"),
-    gradient: external_exports.tuple([external_exports.string(), external_exports.string()]).default(["#f97316", "#ec4899"]),
-    chart: external_exports.array(external_exports.string()).default(["#f97316", "#ec4899", "#3b82f6", "#10b981", "#f59e0b", "#8b5cf6"])
-  }),
-  fonts: external_exports.object({
-    heading: external_exports.string().default("'SF Pro Display', 'Inter', sans-serif"),
-    body: external_exports.string().default("'SF Pro Text', 'Inter', sans-serif"),
-    mono: external_exports.string().default("'SF Mono', 'JetBrains Mono', monospace")
-  }),
-  timing: external_exports.object({
-    spring: springConfig.default(DEFAULT_SPRING_CONFIG),
-    stagger: external_exports.number().default(4),
-    transitionDuration: external_exports.number().default(0.5)
-  }),
-  effects: external_exports.object({
-    particles: external_exports.boolean().default(false),
-    gradientBg: external_exports.boolean().default(true),
-    motionBlur: external_exports.boolean().default(false),
-    grain: external_exports.number().min(0).max(1).default(0)
-  })
-});
-
-// src/themes/index.tsx
-var import_jsx_runtime57 = __toESM(require_jsx_runtime(), 1);
-var ThemeContext = React9.createContext(themePresets.cinematic);
-function ThemeProvider({
-  theme,
-  children
-}) {
-  return /* @__PURE__ */ (0, import_jsx_runtime57.jsx)(ThemeContext.Provider, { value: theme, children });
-}
-function resolveTheme(input) {
-  if (!input) return themePresets.cinematic;
-  if (typeof input === "string") {
-    if (themePresets[input]) return themePresets[input];
-    try {
-      const parsed = JSON.parse(input);
-      return themeSchema.parse(parsed);
-    } catch {
-      return themePresets.cinematic;
-    }
-  }
-  if ("base" in input && typeof input.base === "string" && themePresets[input.base]) {
-    const base2 = themePresets[input.base];
-    const { base: _base, ...overrides } = input;
-    const merged = { ...base2, ...overrides };
-    for (const section of ["colors", "fonts", "timing", "effects"]) {
-      if (overrides[section] && typeof overrides[section] === "object") {
-        merged[section] = { ...base2[section], ...overrides[section] };
-      }
-    }
-    return merged;
-  }
-  try {
-    return themeSchema.parse(input);
-  } catch {
-    return themePresets.cinematic;
-  }
-}
-
-// src/types/Folder.tsx
-var React41 = __toESM(require_react(), 1);
-
-// node_modules/@remotion/transitions/dist/esm/index.mjs
-var import_react113 = __toESM(require_react(), 1);
-var import_jsx_runtime58 = __toESM(require_jsx_runtime(), 1);
-var import_react114 = __toESM(require_react(), 1);
-var import_jsx_runtime59 = __toESM(require_jsx_runtime(), 1);
-var import_react115 = __toESM(require_react(), 1);
-var import_react116 = __toESM(require_react(), 1);
-var import_jsx_runtime60 = __toESM(require_jsx_runtime(), 1);
-var import_react117 = __toESM(require_react(), 1);
-var import_jsx_runtime61 = __toESM(require_jsx_runtime(), 1);
-var import_react118 = __toESM(require_react(), 1);
-var epsilon = 0.01;
-var SlidePresentation = ({
-  children,
-  presentationProgress,
-  presentationDirection,
-  passedProps: { direction = "from-left", enterStyle, exitStyle }
-}) => {
-  const directionStyle = (0, import_react113.useMemo)(() => {
-    const presentationProgressWithEpsilonCorrection = presentationProgress === 1 ? presentationProgress * 100 : presentationProgress * 100 - epsilon;
-    if (presentationDirection === "exiting") {
-      switch (direction) {
-        case "from-left":
-          return {
-            transform: `translateX(${presentationProgressWithEpsilonCorrection}%)`
-          };
-        case "from-right":
-          return {
-            transform: `translateX(${-presentationProgress * 100}%)`
-          };
-        case "from-top":
-          return {
-            transform: `translateY(${presentationProgressWithEpsilonCorrection}%)`
-          };
-        case "from-bottom":
-          return {
-            transform: `translateY(${-presentationProgress * 100}%)`
-          };
-        default:
-          throw new Error(`Invalid direction: ${direction}`);
-      }
-    }
-    switch (direction) {
-      case "from-left":
-        return {
-          transform: `translateX(${-100 + presentationProgress * 100}%)`
-        };
-      case "from-right":
-        return {
-          transform: `translateX(${100 - presentationProgressWithEpsilonCorrection}%)`
-        };
-      case "from-top":
-        return {
-          transform: `translateY(${-100 + presentationProgress * 100}%)`
-        };
-      case "from-bottom":
-        return {
-          transform: `translateY(${100 - presentationProgressWithEpsilonCorrection}%)`
-        };
-      default:
-        throw new Error(`Invalid direction: ${direction}`);
-    }
-  }, [presentationDirection, presentationProgress, direction]);
-  const style2 = (0, import_react113.useMemo)(() => {
-    return {
-      width: "100%",
-      height: "100%",
-      justifyContent: "center",
-      alignItems: "center",
-      ...directionStyle,
-      ...presentationDirection === "entering" ? enterStyle : exitStyle
-    };
-  }, [directionStyle, enterStyle, exitStyle, presentationDirection]);
-  return /* @__PURE__ */ (0, import_jsx_runtime58.jsx)(AbsoluteFill, {
-    style: style2,
-    children
-  });
-};
-var slide = (props) => {
-  return {
-    component: SlidePresentation,
-    props: props ?? {}
-  };
-};
-var HtmlInCanvasPresentation = ({
-  children,
-  onElementImage,
-  onUnmount,
-  presentationProgress,
-  presentationDirection,
-  shader,
-  effects,
-  passedProps,
-  bothEnteringAndExiting
-}) => {
-  if (!HtmlInCanvas.isSupported()) {
-    throw new Error(HTML_IN_CANVAS_UNSUPPORTED_MESSAGE);
-  }
-  const canvasRef = (0, import_react114.useRef)(null);
-  const canvasSubtreeStyle = (0, import_react114.useMemo)(() => {
-    return {
-      width: "100%",
-      height: "100%",
-      position: "absolute",
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0
-    };
-  }, []);
-  const [offscreenCanvas] = (0, import_react114.useState)(() => new OffscreenCanvas(1, 1));
-  const passedPropsRef = (0, import_react114.useRef)(passedProps);
-  passedPropsRef.current = passedProps;
-  const memoizedEffects = Internals.useMemoizedEffects({
-    effects: effects ?? [],
-    overrideId: null
-  });
-  const effectsRef = (0, import_react114.useRef)(memoizedEffects);
-  effectsRef.current = memoizedEffects;
-  const [instance] = (0, import_react114.useState)(() => shader(offscreenCanvas));
-  (0, import_react114.useLayoutEffect)(() => {
-    return () => {
-      instance.cleanup();
-    };
-  }, [offscreenCanvas, instance]);
-  const chainState = Internals.useEffectChainState();
-  const { delayRender: delayRender2, continueRender: continueRender2 } = useDelayRender();
-  const draw = (0, import_react114.useCallback)(async (prevImage, nextImage, progress) => {
-    if (!canvasRef.current) {
-      throw new Error("Canvas not found");
-    }
-    const handle = delayRender2("onPaint");
-    if (!prevImage && !nextImage) {
-      continueRender2(handle);
-      instance.clear();
-      return;
-    }
-    const width = prevImage?.width ?? nextImage?.width ?? 0;
-    const height = prevImage?.height ?? nextImage?.height ?? 0;
-    if (width === 0 || height === 0) {
-      continueRender2(handle);
-      instance.clear();
-      return;
-    }
-    offscreenCanvas.width = width;
-    offscreenCanvas.height = height;
-    instance.draw({
-      prevImage,
-      nextImage,
-      width,
-      height,
-      time: progress,
-      passedProps: passedPropsRef.current
-    });
-    await Internals.runEffectChain({
-      state: chainState.get(width, height),
-      source: offscreenCanvas,
-      effects: effectsRef.current ?? [],
-      width,
-      height,
-      output: canvasRef.current
-    });
-    continueRender2(handle);
-  }, [chainState, instance, offscreenCanvas, continueRender2, delayRender2]);
-  const passThrough = bothEnteringAndExiting && presentationDirection === "exiting";
-  (0, import_react114.useLayoutEffect)(() => {
-    if (passThrough) {
-      return;
-    }
-    const canvas = canvasRef.current;
-    if (!canvas) {
-      throw new Error("Canvas not found");
-    }
-    canvas.layoutSubtree = true;
-    const onPaint = () => {
-      const firstChild = canvas.firstChild;
-      if (!firstChild) {
-        return;
-      }
-      const elementImage = canvas.captureElementImage(firstChild);
-      onElementImage(elementImage, draw);
-    };
-    canvas.addEventListener("paint", onPaint);
-    return () => {
-      canvas.removeEventListener("paint", onPaint);
-    };
-  }, [onElementImage, presentationDirection, draw, passThrough]);
-  (0, import_react114.useLayoutEffect)(() => {
-    if (passThrough) {
-      return;
-    }
-    const canvas = canvasRef.current;
-    if (!canvas) {
-      throw new Error("Canvas not found");
-    }
-    canvas.requestPaint?.();
-  }, [presentationProgress, passThrough, memoizedEffects]);
-  (0, import_react114.useLayoutEffect)(() => {
-    if (passThrough) {
-      return;
-    }
-    return () => {
-      onUnmount();
-    };
-  }, [onUnmount, passThrough]);
-  (0, import_react114.useLayoutEffect)(() => {
-    if (passThrough) {
-      return;
-    }
-    const canvas = canvasRef.current;
-    if (!canvas) {
-      return;
-    }
-    const observer = new ResizeObserver(([entry]) => {
-      canvas.width = entry.devicePixelContentBoxSize[0].inlineSize;
-      canvas.height = entry.devicePixelContentBoxSize[0].blockSize;
-    });
-    observer.observe(canvas, { box: "device-pixel-content-box" });
-  }, [passThrough]);
-  if (passThrough) {
-    return children;
-  }
-  return /* @__PURE__ */ (0, import_jsx_runtime59.jsx)(AbsoluteFill, {
-    children: /* @__PURE__ */ (0, import_jsx_runtime59.jsx)("canvas", {
-      ref: canvasRef,
-      style: canvasSubtreeStyle,
-      children
-    })
-  });
-};
-var makeHtmlInCanvasPresentation = (shader) => {
-  const CompWithShader = (props) => {
-    const { passedProps, ...otherProps } = props;
-    const { effects, ...restPassedProps } = props.passedProps;
-    return /* @__PURE__ */ (0, import_jsx_runtime59.jsx)(HtmlInCanvasPresentation, {
-      shader,
-      passedProps: restPassedProps,
-      effects,
-      ...otherProps
-    });
-  };
-  return (props) => {
-    return {
-      component: CompWithShader,
-      props
-    };
-  };
-};
-var DEFAULT_STRENGTH = 0.4;
-var VERTEX_SHADER = `#version 300 es
-in vec2 a_pos;
-out vec2 v_uv;
-void main() {
-	v_uv = vec2(a_pos.x * 0.5 + 0.5, 0.5 - a_pos.y * 0.5);
-	gl_Position = vec4(a_pos, 0.0, 1.0);
-}`;
-var FRAGMENT_SHADER = `#version 300 es
-precision highp float;
-
-uniform sampler2D u_prev;
-uniform sampler2D u_next;
-uniform float u_time;
-uniform float u_strength;
-
-in vec2 v_uv;
-out vec4 outColor;
-
-const float PI = 3.141592653589793;
-
-float linearEase(float begin, float change, float duration, float time) {
-	return change * time / duration + begin;
-}
-
-float exponentialEaseInOut(float begin, float change, float duration, float time) {
-	if (time == 0.0) {
-		return begin;
-	}
-
-	if (time == duration) {
-		return begin + change;
-	}
-
-	float t = time / (duration / 2.0);
-	if (t < 1.0) {
-		return change / 2.0 * pow(2.0, 10.0 * (t - 1.0)) + begin;
-	}
-
-	return change / 2.0 * (-pow(2.0, -10.0 * (t - 1.0)) + 2.0) + begin;
-}
-
-float sinusoidalEaseInOut(float begin, float change, float duration, float time) {
-	return -change / 2.0 * (cos(PI * time / duration) - 1.0) + begin;
-}
-
-float random(vec2 co) {
-	return fract(sin(dot(co.xy, vec2(12.9898, 78.233))) * 43758.5453);
-}
-
-vec4 crossFade(vec2 uv, float dissolve) {
-	return mix(texture(u_prev, uv), texture(u_next, uv), dissolve);
-}
-
-vec4 transition(vec2 uv, float progress) {
-	vec2 center = vec2(linearEase(0.25, 0.5, 1.0, progress), 0.5);
-	float dissolve = exponentialEaseInOut(0.0, 1.0, 1.0, progress);
-	float strength = sinusoidalEaseInOut(0.0, u_strength, 0.5, progress);
-
-	vec4 color = vec4(0.0);
-	float total = 0.0;
-	vec2 toCenter = center - uv;
-	float offset = random(uv);
-
-	for (int i = 0; i <= 40; i++) {
-		float percent = (float(i) + offset) / 40.0;
-		float weight = 4.0 * (percent - percent * percent);
-		color += crossFade(uv + toCenter * percent * strength, dissolve) * weight;
-		total += weight;
-	}
-
-	return color / total;
-}
-
-void main() {
-	float progress = 1.0 - u_time;
-	outColor = transition(v_uv, progress);
-}`;
-var compileShader = (gl, source, type) => {
-  const shader = gl.createShader(type);
-  if (!shader) {
-    throw new Error("Failed to create shader");
-  }
-  gl.shaderSource(shader, source);
-  gl.compileShader(shader);
-  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-    const log = gl.getShaderInfoLog(shader);
-    gl.deleteShader(shader);
-    throw new Error(`Failed to compile shader: ${log}`);
-  }
-  return shader;
-};
-var createProgram = (gl) => {
-  const program = gl.createProgram();
-  if (!program) {
-    throw new Error("Failed to create WebGL program");
-  }
-  const vs = compileShader(gl, VERTEX_SHADER, gl.VERTEX_SHADER);
-  const fs = compileShader(gl, FRAGMENT_SHADER, gl.FRAGMENT_SHADER);
-  gl.attachShader(program, vs);
-  gl.attachShader(program, fs);
-  gl.linkProgram(program);
-  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-    const log = gl.getProgramInfoLog(program);
-    gl.deleteProgram(program);
-    throw new Error(`Failed to link program: ${log}`);
-  }
-  return program;
-};
-var createTexture = (gl) => {
-  const tex = gl.createTexture();
-  if (!tex) {
-    throw new Error("Failed to create texture");
-  }
-  gl.bindTexture(gl.TEXTURE_2D, tex);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 0]));
-  return tex;
-};
-var crossZoomShader = (canvas) => {
-  const gl = canvas.getContext("webgl2", { premultipliedAlpha: true });
-  if (!gl) {
-    throw new Error("Failed to create WebGL2 context");
-  }
-  const program = createProgram(gl);
-  const prevTex = createTexture(gl);
-  const nextTex = createTexture(gl);
-  const vao = gl.createVertexArray();
-  gl.bindVertexArray(vao);
-  const buffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
-  const aPos = gl.getAttribLocation(program, "a_pos");
-  gl.enableVertexAttribArray(aPos);
-  gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
-  const uTime = gl.getUniformLocation(program, "u_time");
-  const uPrev = gl.getUniformLocation(program, "u_prev");
-  const uNext = gl.getUniformLocation(program, "u_next");
-  const uStrength = gl.getUniformLocation(program, "u_strength");
-  const cleanup = () => {
-    gl.deleteProgram(program);
-    gl.deleteTexture(prevTex);
-    gl.deleteTexture(nextTex);
-  };
-  const clear = () => {
-    gl.clearColor(0, 0, 0, 0);
-    gl.clear(gl.COLOR_BUFFER_BIT);
-  };
-  const draw = ({
-    prevImage,
-    nextImage,
-    width,
-    height,
-    time: time3,
-    passedProps
-  }) => {
-    const { strength = DEFAULT_STRENGTH } = passedProps;
-    if (!prevImage && !nextImage) {
-      return;
-    }
-    if (prevImage && (prevImage.width === 0 || prevImage.height === 0)) {
-      return;
-    }
-    if (nextImage && (nextImage.width === 0 || nextImage.height === 0)) {
-      return;
-    }
-    const effectiveTime = !prevImage ? 0 : !nextImage ? 1 : time3;
-    gl.viewport(0, 0, width, height);
-    gl.clearColor(0, 0, 0, 0);
-    gl.clear(gl.COLOR_BUFFER_BIT);
-    gl.useProgram(program);
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, prevTex);
-    if (prevImage) {
-      gl.texElementImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, prevImage);
-    }
-    gl.uniform1i(uPrev, 0);
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, nextTex);
-    if (nextImage) {
-      gl.texElementImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, nextImage);
-    }
-    gl.uniform1i(uNext, 1);
-    gl.uniform1f(uTime, effectiveTime);
-    gl.uniform1f(uStrength, strength);
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-  };
-  return {
-    clear,
-    cleanup,
-    draw
-  };
-};
-var crossZoom = makeHtmlInCanvasPresentation(crossZoomShader);
-var DEFAULT_ROTATION = 6;
-var DEFAULT_SCALE = 1.2;
-var VERTEX_SHADER2 = `#version 300 es
-in vec2 a_pos;
-out vec2 v_uv;
-void main() {
-	v_uv = vec2(a_pos.x * 0.5 + 0.5, 0.5 - a_pos.y * 0.5);
-	gl_Position = vec4(a_pos, 0.0, 1.0);
-}`;
-var FRAGMENT_SHADER2 = `#version 300 es
-precision highp float;
-
-uniform sampler2D u_prev;
-uniform sampler2D u_next;
-uniform float u_time;
-uniform float u_rotation;
-uniform float u_scale;
-uniform float u_ratio;
-
-in vec2 v_uv;
-out vec4 outColor;
-
-const float DEG2RAD = 0.03926990816987241548078304229099;
-
-vec4 transition(vec2 uv, float progress) {
-	float phase = progress < 0.5 ? progress * 2.0 : (progress - 0.5) * 2.0;
-	float angleOffset = progress < 0.5 ? mix(0.0, u_rotation * DEG2RAD, phase) : mix(-u_rotation * DEG2RAD, 0.0, phase);
-	float newScale = progress < 0.5 ? mix(1.0, u_scale, phase) : mix(u_scale, 1.0, phase);
-
-	vec2 center = vec2(0.0, 0.0);
-	vec2 p = (uv.xy - vec2(0.5, 0.5)) / newScale * vec2(u_ratio, 1.0);
-	float angle = atan(p.y, p.x) + angleOffset;
-	float dist = distance(center, p);
-
-	p.x = cos(angle) * dist / u_ratio + 0.5;
-	p.y = sin(angle) * dist + 0.5;
-
-	vec4 c = progress < 0.5 ? texture(u_prev, p) : texture(u_next, p);
-	return c + (progress < 0.5 ? mix(0.0, 1.0, phase) : mix(1.0, 0.0, phase));
-}
-
-void main() {
-	float progress = 1.0 - u_time;
-	outColor = transition(v_uv, progress);
-}`;
-var compileShader2 = (gl, source, type) => {
-  const shader = gl.createShader(type);
-  if (!shader) {
-    throw new Error("Failed to create shader");
-  }
-  gl.shaderSource(shader, source);
-  gl.compileShader(shader);
-  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-    const log = gl.getShaderInfoLog(shader);
-    gl.deleteShader(shader);
-    throw new Error(`Failed to compile shader: ${log}`);
-  }
-  return shader;
-};
-var createProgram2 = (gl) => {
-  const program = gl.createProgram();
-  if (!program) {
-    throw new Error("Failed to create WebGL program");
-  }
-  const vs = compileShader2(gl, VERTEX_SHADER2, gl.VERTEX_SHADER);
-  const fs = compileShader2(gl, FRAGMENT_SHADER2, gl.FRAGMENT_SHADER);
-  gl.attachShader(program, vs);
-  gl.attachShader(program, fs);
-  gl.linkProgram(program);
-  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-    const log = gl.getProgramInfoLog(program);
-    gl.deleteProgram(program);
-    throw new Error(`Failed to link program: ${log}`);
-  }
-  return program;
-};
-var createTexture2 = (gl) => {
-  const tex = gl.createTexture();
-  if (!tex) {
-    throw new Error("Failed to create texture");
-  }
-  gl.bindTexture(gl.TEXTURE_2D, tex);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 0]));
-  return tex;
-};
-var dreamyZoomShader = (canvas) => {
-  const gl = canvas.getContext("webgl2", { premultipliedAlpha: true });
-  if (!gl) {
-    throw new Error("Failed to create WebGL2 context");
-  }
-  const program = createProgram2(gl);
-  const prevTex = createTexture2(gl);
-  const nextTex = createTexture2(gl);
-  const vao = gl.createVertexArray();
-  gl.bindVertexArray(vao);
-  const buffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
-  const aPos = gl.getAttribLocation(program, "a_pos");
-  gl.enableVertexAttribArray(aPos);
-  gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
-  const uTime = gl.getUniformLocation(program, "u_time");
-  const uPrev = gl.getUniformLocation(program, "u_prev");
-  const uNext = gl.getUniformLocation(program, "u_next");
-  const uRotation = gl.getUniformLocation(program, "u_rotation");
-  const uScale = gl.getUniformLocation(program, "u_scale");
-  const uRatio = gl.getUniformLocation(program, "u_ratio");
-  const cleanup = () => {
-    gl.deleteProgram(program);
-    gl.deleteTexture(prevTex);
-    gl.deleteTexture(nextTex);
-  };
-  const clear = () => {
-    gl.clearColor(0, 0, 0, 0);
-    gl.clear(gl.COLOR_BUFFER_BIT);
-  };
-  const draw = ({
-    prevImage,
-    nextImage,
-    width,
-    height,
-    time: time3,
-    passedProps
-  }) => {
-    const { rotation = DEFAULT_ROTATION, scale = DEFAULT_SCALE } = passedProps;
-    if (!prevImage && !nextImage) {
-      return;
-    }
-    if (prevImage && (prevImage.width === 0 || prevImage.height === 0)) {
-      return;
-    }
-    if (nextImage && (nextImage.width === 0 || nextImage.height === 0)) {
-      return;
-    }
-    const effectiveTime = !prevImage ? 0 : !nextImage ? 1 : time3;
-    gl.viewport(0, 0, width, height);
-    gl.clearColor(0, 0, 0, 0);
-    gl.clear(gl.COLOR_BUFFER_BIT);
-    gl.useProgram(program);
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, prevTex);
-    if (prevImage) {
-      gl.texElementImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, prevImage);
-    }
-    gl.uniform1i(uPrev, 0);
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, nextTex);
-    if (nextImage) {
-      gl.texElementImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, nextImage);
-    }
-    gl.uniform1i(uNext, 1);
-    gl.uniform1f(uTime, effectiveTime);
-    gl.uniform1f(uRotation, rotation);
-    gl.uniform1f(uScale, scale);
-    gl.uniform1f(uRatio, width / height);
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-  };
-  return {
-    clear,
-    cleanup,
-    draw
-  };
-};
-var dreamyZoom = makeHtmlInCanvasPresentation(dreamyZoomShader);
-var DEFAULT_SEED = 2.31;
-var VERTEX_SHADER3 = `#version 300 es
-in vec2 a_pos;
-out vec2 v_uv;
-void main() {
-	v_uv = vec2(a_pos.x * 0.5 + 0.5, 0.5 - a_pos.y * 0.5);
-	gl_Position = vec4(a_pos, 0.0, 1.0);
-}`;
-var FRAGMENT_SHADER3 = `#version 300 es
-precision highp float;
-
-uniform sampler2D u_prev;
-uniform sampler2D u_next;
-uniform float u_time;
-uniform float u_seed;
-
-in vec2 v_uv;
-out vec4 outColor;
-
-#define PI 3.14159265358979323
-#define CLAMPS(x) clamp(x, 0.0, 1.0)
-#define REPEATS 50.0
-
-float sigmoid(float x, float a) {
-	float b = pow(x * 2.0, a) / 2.0;
-	if (x > 0.5) {
-		b = 1.0 - pow(2.0 - (x * 2.0), a) / 2.0;
-	}
-	return b;
-}
-
-float rand(float co) {
-	return fract(sin((co * 24.9898) + u_seed) * 43758.5453);
-}
-
-float rand(vec2 co) {
-	return fract(sin(dot(co.xy, vec2(12.9898, 78.233))) * 43758.5453);
-}
-
-float apow(float a, float b) {
-	return pow(abs(a), b) * sign(b);
-}
-
-vec3 pow3(vec3 a, vec3 b) {
-	return vec3(apow(a.r, b.r), apow(a.g, b.g), apow(a.b, b.b));
-}
-
-float smoothMix(float a, float b, float c) {
-	return mix(a, b, sigmoid(c, 2.0));
-}
-
-float random(vec2 co, float shft) {
-	co += 10.0;
-	return smoothMix(
-		fract(
-			sin(
-				dot(
-					co.xy,
-					vec2(12.9898 + (floor(shft) * 0.5), 78.233 + u_seed)
-				)
-			) * 43758.5453
-		),
-		fract(
-			sin(
-				dot(
-					co.xy,
-					vec2(12.9898 + (floor(shft + 1.0) * 0.5), 78.233 + u_seed)
-				)
-			) * 43758.5453
-		),
-		fract(shft)
-	);
-}
-
-float smoothRandom(vec2 co, float shft) {
-	return smoothMix(
-		smoothMix(
-			random(floor(co), shft),
-			random(floor(co + vec2(1.0, 0.0)), shft),
-			fract(co.x)
-		),
-		smoothMix(
-			random(floor(co + vec2(0.0, 1.0)), shft),
-			random(floor(co + vec2(1.0, 1.0)), shft),
-			fract(co.x)
-		),
-		fract(co.y)
-	);
-}
-
-vec4 sampleTexture(vec2 p, float progress) {
-	return mix(texture(u_prev, p), texture(u_next, p), sigmoid(progress, 10.0));
-}
-
-vec4 transition(vec2 p, float progress) {
-	vec3 f = vec3(0.0);
-	for (float i = 0.0; i < 13.0; i++) {
-		f += sin(((p.x * rand(i) * 6.0) + (progress * 8.0)) + rand(i + 1.43)) *
-			sin(
-				((p.y * rand(i + 4.4) * 6.0) + (progress * 6.0)) +
-					rand(i + 2.4)
-			);
-		f += 1.0 - CLAMPS(
-			length(
-				p -
-					vec2(
-						smoothRandom(vec2(progress * 1.3), i + 1.0),
-						smoothRandom(vec2(progress * 0.5), i + 6.25)
-					)
-			) * mix(20.0, 70.0, rand(i))
-		);
-	}
-
-	f += 4.0;
-	f /= 11.0;
-	f = pow3(
-		f * vec3(1.0, 0.7, 0.6),
-		vec3(1.0, 2.0 - sin(progress * PI), 1.3)
-	);
-	f *= sin(progress * PI);
-
-	p -= 0.5;
-	p *= 1.0 + (smoothRandom(vec2(progress * 5.0), 6.3) * sin(progress * PI) * 0.05);
-	p += 0.5;
-
-	vec4 blurredImage = vec4(0.0);
-	float blurAmount = sin(progress * PI) * 0.03;
-	for (float i = 0.0; i < REPEATS; i++) {
-		vec2 q = vec2(
-			cos(degrees((i / REPEATS) * 360.0)),
-			sin(degrees((i / REPEATS) * 360.0))
-		) * (rand(vec2(i, p.x + p.y)) + blurAmount);
-		vec2 uv2 = p + (q * blurAmount);
-		blurredImage += sampleTexture(uv2, progress);
-	}
-
-	blurredImage /= REPEATS;
-	return blurredImage + vec4(f, 0.0);
-}
-
-void main() {
-	float progress = 1.0 - u_time;
-	outColor = transition(v_uv, progress);
-}`;
-var compileShader3 = (gl, source, type) => {
-  const shader = gl.createShader(type);
-  if (!shader) {
-    throw new Error("Failed to create shader");
-  }
-  gl.shaderSource(shader, source);
-  gl.compileShader(shader);
-  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-    const log = gl.getShaderInfoLog(shader);
-    gl.deleteShader(shader);
-    throw new Error(`Failed to compile shader: ${log}`);
-  }
-  return shader;
-};
-var createProgram3 = (gl) => {
-  const program = gl.createProgram();
-  if (!program) {
-    throw new Error("Failed to create WebGL program");
-  }
-  const vs = compileShader3(gl, VERTEX_SHADER3, gl.VERTEX_SHADER);
-  const fs = compileShader3(gl, FRAGMENT_SHADER3, gl.FRAGMENT_SHADER);
-  gl.attachShader(program, vs);
-  gl.attachShader(program, fs);
-  gl.linkProgram(program);
-  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-    const log = gl.getProgramInfoLog(program);
-    gl.deleteProgram(program);
-    throw new Error(`Failed to link program: ${log}`);
-  }
-  return program;
-};
-var createTexture3 = (gl) => {
-  const tex = gl.createTexture();
-  if (!tex) {
-    throw new Error("Failed to create texture");
-  }
-  gl.bindTexture(gl.TEXTURE_2D, tex);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 0]));
-  return tex;
-};
-var filmBurnShader = (canvas) => {
-  const gl = canvas.getContext("webgl2", { premultipliedAlpha: true });
-  if (!gl) {
-    throw new Error("Failed to create WebGL2 context");
-  }
-  const program = createProgram3(gl);
-  const prevTex = createTexture3(gl);
-  const nextTex = createTexture3(gl);
-  const vao = gl.createVertexArray();
-  gl.bindVertexArray(vao);
-  const buffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
-  const aPos = gl.getAttribLocation(program, "a_pos");
-  gl.enableVertexAttribArray(aPos);
-  gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
-  const uTime = gl.getUniformLocation(program, "u_time");
-  const uPrev = gl.getUniformLocation(program, "u_prev");
-  const uNext = gl.getUniformLocation(program, "u_next");
-  const uSeed = gl.getUniformLocation(program, "u_seed");
-  const cleanup = () => {
-    gl.deleteProgram(program);
-    gl.deleteTexture(prevTex);
-    gl.deleteTexture(nextTex);
-  };
-  const clear = () => {
-    gl.clearColor(0, 0, 0, 0);
-    gl.clear(gl.COLOR_BUFFER_BIT);
-  };
-  const draw = ({
-    prevImage,
-    nextImage,
-    width,
-    height,
-    time: time3,
-    passedProps
-  }) => {
-    const { seed = DEFAULT_SEED } = passedProps;
-    if (!prevImage && !nextImage) {
-      return;
-    }
-    if (prevImage && (prevImage.width === 0 || prevImage.height === 0)) {
-      return;
-    }
-    if (nextImage && (nextImage.width === 0 || nextImage.height === 0)) {
-      return;
-    }
-    const effectiveTime = !prevImage ? 0 : !nextImage ? 1 : time3;
-    gl.viewport(0, 0, width, height);
-    gl.clearColor(0, 0, 0, 0);
-    gl.clear(gl.COLOR_BUFFER_BIT);
-    gl.useProgram(program);
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, prevTex);
-    if (prevImage) {
-      gl.texElementImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, prevImage);
-    }
-    gl.uniform1i(uPrev, 0);
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, nextTex);
-    if (nextImage) {
-      gl.texElementImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, nextImage);
-    }
-    gl.uniform1i(uNext, 1);
-    gl.uniform1f(uTime, effectiveTime);
-    gl.uniform1f(uSeed, seed);
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-  };
-  return {
-    clear,
-    cleanup,
-    draw
-  };
-};
-var filmBurn = makeHtmlInCanvasPresentation(filmBurnShader);
-var VERTEX_SHADER4 = `#version 300 es
-in vec2 a_pos;
-out vec2 v_uv;
-void main() {
-	v_uv = vec2(a_pos.x * 0.5 + 0.5, 0.5 - a_pos.y * 0.5);
-	gl_Position = vec4(a_pos, 0.0, 1.0);
-}`;
-var FRAGMENT_SHADER4 = `#version 300 es
-precision highp float;
-
-uniform sampler2D u_prev;
-uniform sampler2D u_next;
-uniform float u_time;
-uniform float u_intensity;
-
-in vec2 v_uv;
-out vec4 outColor;
-
-const int PASSES = 6;
-
-vec4 transition(vec2 uv, float progress) {
-	vec4 c1 = vec4(0.0);
-	vec4 c2 = vec4(0.0);
-
-	float disp = u_intensity * (0.5 - distance(0.5, progress));
-	for (int xi = 0; xi < PASSES; xi++) {
-		float x = float(xi) / float(PASSES) - 0.5;
-		for (int yi = 0; yi < PASSES; yi++) {
-			float y = float(yi) / float(PASSES) - 0.5;
-			vec2 v = vec2(x, y);
-			c1 += texture(u_prev, uv + disp * v);
-			c2 += texture(u_next, uv + disp * v);
-		}
-	}
-
-	c1 /= float(PASSES * PASSES);
-	c2 /= float(PASSES * PASSES);
-	return mix(c1, c2, progress);
-}
-
-void main() {
-	float progress = 1.0 - u_time;
-	outColor = transition(v_uv, progress);
-}`;
-var compileShader4 = (gl, source, type) => {
-  const shader = gl.createShader(type);
-  if (!shader) {
-    throw new Error("Failed to create shader");
-  }
-  gl.shaderSource(shader, source);
-  gl.compileShader(shader);
-  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-    const log = gl.getShaderInfoLog(shader);
-    gl.deleteShader(shader);
-    throw new Error(`Failed to compile shader: ${log}`);
-  }
-  return shader;
-};
-var createProgram4 = (gl) => {
-  const program = gl.createProgram();
-  if (!program) {
-    throw new Error("Failed to create WebGL program");
-  }
-  const vs = compileShader4(gl, VERTEX_SHADER4, gl.VERTEX_SHADER);
-  const fs = compileShader4(gl, FRAGMENT_SHADER4, gl.FRAGMENT_SHADER);
-  gl.attachShader(program, vs);
-  gl.attachShader(program, fs);
-  gl.linkProgram(program);
-  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-    const log = gl.getProgramInfoLog(program);
-    gl.deleteProgram(program);
-    throw new Error(`Failed to link program: ${log}`);
-  }
-  return program;
-};
-var createTexture4 = (gl) => {
-  const tex = gl.createTexture();
-  if (!tex) {
-    throw new Error("Failed to create texture");
-  }
-  gl.bindTexture(gl.TEXTURE_2D, tex);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 0]));
-  return tex;
-};
-var linearBlurShader = (canvas) => {
-  const gl = canvas.getContext("webgl2", { premultipliedAlpha: true });
-  if (!gl) {
-    throw new Error("Failed to create WebGL2 context");
-  }
-  const program = createProgram4(gl);
-  const prevTex = createTexture4(gl);
-  const nextTex = createTexture4(gl);
-  const vao = gl.createVertexArray();
-  gl.bindVertexArray(vao);
-  const buffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
-  const aPos = gl.getAttribLocation(program, "a_pos");
-  gl.enableVertexAttribArray(aPos);
-  gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
-  const uTime = gl.getUniformLocation(program, "u_time");
-  const uPrev = gl.getUniformLocation(program, "u_prev");
-  const uNext = gl.getUniformLocation(program, "u_next");
-  const uIntensity = gl.getUniformLocation(program, "u_intensity");
-  const cleanup = () => {
-    gl.deleteProgram(program);
-    gl.deleteTexture(prevTex);
-    gl.deleteTexture(nextTex);
-  };
-  const clear = () => {
-    gl.clearColor(0, 0, 0, 0);
-    gl.clear(gl.COLOR_BUFFER_BIT);
-  };
-  const draw = ({
-    prevImage,
-    nextImage,
-    width,
-    height,
-    time: time3,
-    passedProps
-  }) => {
-    const { intensity = 0.1 } = passedProps;
-    if (!prevImage && !nextImage) {
-      return;
-    }
-    if (prevImage && (prevImage.width === 0 || prevImage.height === 0)) {
-      return;
-    }
-    if (nextImage && (nextImage.width === 0 || nextImage.height === 0)) {
-      return;
-    }
-    const effectiveTime = !prevImage ? 0 : !nextImage ? 1 : time3;
-    gl.viewport(0, 0, width, height);
-    gl.clearColor(0, 0, 0, 0);
-    gl.clear(gl.COLOR_BUFFER_BIT);
-    gl.useProgram(program);
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, prevTex);
-    if (prevImage) {
-      gl.texElementImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, prevImage);
-    }
-    gl.uniform1i(uPrev, 0);
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, nextTex);
-    if (nextImage) {
-      gl.texElementImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, nextImage);
-    }
-    gl.uniform1i(uNext, 1);
-    gl.uniform1f(uTime, effectiveTime);
-    gl.uniform1f(uIntensity, intensity);
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-  };
-  return {
-    clear,
-    cleanup,
-    draw
-  };
-};
-var linearBlur = makeHtmlInCanvasPresentation(linearBlurShader);
-var linearTiming = (options) => {
-  return {
-    getDurationInFrames: () => {
-      return options.durationInFrames;
-    },
-    getProgress: ({ frame }) => {
-      return interpolate(frame, [0, options.durationInFrames], [0, 1], {
-        easing: options.easing,
-        extrapolateLeft: "clamp",
-        extrapolateRight: "clamp"
-      });
-    }
-  };
-};
-var EnteringContext = import_react116.default.createContext(null);
-var ExitingContext = import_react116.default.createContext(null);
-var WrapInEnteringProgressContext = ({ presentationProgress, children }) => {
-  const value = (0, import_react116.useMemo)(() => {
-    return {
-      enteringProgress: presentationProgress
-    };
-  }, [presentationProgress]);
-  return /* @__PURE__ */ (0, import_jsx_runtime60.jsx)(EnteringContext.Provider, {
-    value,
-    children
-  });
-};
-var WrapInExitingProgressContext = ({ presentationProgress, children }) => {
-  const value = (0, import_react116.useMemo)(() => {
-    return {
-      exitingProgress: presentationProgress
-    };
-  }, [presentationProgress]);
-  return /* @__PURE__ */ (0, import_jsx_runtime60.jsx)(ExitingContext.Provider, {
-    value,
-    children
-  });
-};
-var flattenChildren2 = (children) => {
-  const childrenArray = import_react117.default.Children.toArray(children);
-  return childrenArray.reduce((flatChildren, child) => {
-    if (child.type === import_react117.default.Fragment) {
-      return flatChildren.concat(flattenChildren2(child.props.children));
-    }
-    flatChildren.push(child);
-    return flatChildren;
-  }, []);
-};
-var validateDurationInFrames4 = NoReactInternals.validateDurationInFrames;
-var TransitionSeriesTransition = function(_props) {
-  return null;
-};
-var SeriesOverlay = () => {
-  return null;
-};
-var SeriesSequence2 = ({ children }) => {
-  return /* @__PURE__ */ (0, import_jsx_runtime61.jsx)(import_jsx_runtime61.Fragment, {
-    children
-  });
-};
-var TransitionSeriesChildren = ({
-  children
-}) => {
-  const { fps } = useVideoConfig();
-  const frame = useCurrentFrame();
-  const prevImageRef = (0, import_react115.useRef)({});
-  const nextImageRef = (0, import_react115.useRef)({});
-  const flattedChildren = (0, import_react115.useMemo)(() => {
-    return flattenChildren2(children);
-  }, [children]);
-  const drawIfSynced = (0, import_react115.useCallback)((index) => {
-    const prevImage = prevImageRef?.current?.[index];
-    const nextImage = nextImageRef?.current?.[index];
-    if (!nextImage?.elementImage && prevImage?.elementImage) {
-      nextImage?.draw?.(null, null, 0);
-      prevImage?.draw?.(prevImage?.elementImage ?? null, null, 0);
-      return;
-    }
-    if (!prevImage?.elementImage && nextImage?.elementImage) {
-      prevImage?.draw?.(null, null, 0);
-      nextImage?.draw?.(null, nextImage?.elementImage ?? null, 0);
-      return;
-    }
-    if (prevImage && nextImage && prevImage.progress === nextImage.progress || !prevImage?.elementImage || !nextImage?.elementImage) {
-      prevImage?.draw?.(prevImage?.elementImage ?? null, nextImage?.elementImage ?? null, prevImage?.progress ?? nextImage?.progress ?? 0);
-      nextImage?.draw?.(null, null, 0);
-    }
-  }, []);
-  const onNextElementImage = (0, import_react115.useCallback)((elementImage, progress, draw, index) => {
-    prevImageRef.current[index] = { elementImage, progress, draw };
-    drawIfSynced(index);
-  }, [drawIfSynced]);
-  const onPrevElementImage = (0, import_react115.useCallback)((elementImage, progress, draw, index) => {
-    nextImageRef.current[index] = { elementImage, progress, draw };
-    drawIfSynced(index);
-  }, [drawIfSynced]);
-  const childrenValue = (0, import_react115.useMemo)(() => {
-    let transitionOffsets = 0;
-    let startFrame = 0;
-    const overlayRenders = [];
-    const sequenceDurations = [];
-    let pendingOverlayValidation = false;
-    const mainChildren = import_react115.Children.map(flattedChildren, (child, i) => {
-      const current = child;
-      if (typeof current === "string") {
-        if (current.trim() === "") {
-          return null;
-        }
-        throw new TypeError(`The <TransitionSeries /> component only accepts a list of <TransitionSeries.Sequence /> components as its children, but you passed a string "${current}"`);
-      }
-      const hasPrev = flattedChildren[i - 1];
-      const nextPrev = flattedChildren[i + 1];
-      const prevIsTransition = typeof hasPrev === "string" || typeof hasPrev === "undefined" ? false : hasPrev.type === TransitionSeriesTransition;
-      const prevIsOverlay = typeof hasPrev === "string" || typeof hasPrev === "undefined" ? false : hasPrev.type === SeriesOverlay;
-      if (current.type === SeriesOverlay) {
-        if (prevIsOverlay) {
-          throw new TypeError(`A <TransitionSeries.Overlay /> component must not be followed by another <TransitionSeries.Overlay /> component (nth children = ${i - 1} and ${i})`);
-        }
-        if (prevIsTransition) {
-          throw new TypeError(`A <TransitionSeries.Transition /> component must not be followed by a <TransitionSeries.Overlay /> component (nth children = ${i - 1} and ${i})`);
-        }
-        const nextIsTransition = typeof nextPrev === "string" || typeof nextPrev === "undefined" ? false : nextPrev.type === TransitionSeriesTransition;
-        if (nextIsTransition) {
-          throw new TypeError(`A <TransitionSeries.Overlay /> component must not be followed by a <TransitionSeries.Transition /> component (nth children = ${i} and ${i + 1})`);
-        }
-        const overlayProps = current.props;
-        validateDurationInFrames4(overlayProps.durationInFrames, {
-          component: `of a <TransitionSeries.Overlay /> component`,
-          allowFloats: false
-        });
-        const overlayOffset = overlayProps.offset ?? 0;
-        if (Number.isNaN(overlayOffset)) {
-          throw new TypeError(`The "offset" property of a <TransitionSeries.Overlay /> must not be NaN, but got NaN.`);
-        }
-        if (!Number.isFinite(overlayOffset)) {
-          throw new TypeError(`The "offset" property of a <TransitionSeries.Overlay /> must be finite, but got ${overlayOffset}.`);
-        }
-        if (overlayOffset % 1 !== 0) {
-          throw new TypeError(`The "offset" property of a <TransitionSeries.Overlay /> must be an integer, but got ${overlayOffset}.`);
-        }
-        const cutPoint = startFrame + transitionOffsets;
-        const halfDuration = overlayProps.durationInFrames / 2;
-        const overlayFrom = cutPoint - halfDuration + overlayOffset;
-        if (overlayFrom < 0) {
-          throw new TypeError(`A <TransitionSeries.Overlay /> extends before frame 0. The overlay starts at frame ${overlayFrom}. Reduce the duration or adjust the offset.`);
-        }
-        const prevSeqIdx = sequenceDurations.length - 1;
-        if (prevSeqIdx >= 0) {
-          const overlayStartInPrev = halfDuration - overlayOffset;
-          if (overlayStartInPrev > sequenceDurations[prevSeqIdx]) {
-            throw new TypeError(`A <TransitionSeries.Overlay /> extends beyond the previous sequence. The overlay needs ${overlayStartInPrev} frames before the cut, but the previous sequence is only ${sequenceDurations[prevSeqIdx]} frames long.`);
-          }
-        }
-        pendingOverlayValidation = true;
-        overlayRenders.push({
-          cutPoint,
-          overlayFrom,
-          durationInFrames: overlayProps.durationInFrames,
-          overlayOffset,
-          halfDuration,
-          children: overlayProps.children,
-          index: i,
-          stack: overlayProps.stack
-        });
-        return null;
-      }
-      if (current.type === TransitionSeriesTransition) {
-        if (prevIsTransition) {
-          throw new TypeError(`A <TransitionSeries.Transition /> component must not be followed by another <TransitionSeries.Transition /> component (nth children = ${i - 1} and ${i})`);
-        }
-        if (prevIsOverlay) {
-          throw new TypeError(`A <TransitionSeries.Overlay /> component must not be followed by a <TransitionSeries.Transition /> component (nth children = ${i - 1} and ${i})`);
-        }
-        return null;
-      }
-      if (current.type !== SeriesSequence2) {
-        throw new TypeError(`The <TransitionSeries /> component only accepts a list of <TransitionSeries.Sequence />, <TransitionSeries.Transition />, and <TransitionSeries.Overlay /> components as its children, but got ${current} instead`);
-      }
-      const prev = typeof hasPrev === "string" || typeof hasPrev === "undefined" ? null : hasPrev.type === TransitionSeriesTransition ? hasPrev : null;
-      const next = typeof nextPrev === "string" || typeof nextPrev === "undefined" ? null : nextPrev.type === TransitionSeriesTransition ? nextPrev : null;
-      const castedChildAgain = current;
-      const debugInfo = `index = ${i}, duration = ${castedChildAgain.props.durationInFrames}`;
-      const durationInFramesProp = castedChildAgain.props.durationInFrames;
-      const {
-        durationInFrames,
-        children: _children,
-        ...passedProps
-      } = castedChildAgain.props;
-      validateDurationInFrames4(durationInFramesProp, {
-        component: `of a <TransitionSeries.Sequence /> component`,
-        allowFloats: true
-      });
-      const offset = castedChildAgain.props.offset ?? 0;
-      if (Number.isNaN(offset)) {
-        throw new TypeError(`The "offset" property of a <TransitionSeries.Sequence /> must not be NaN, but got NaN (${debugInfo}).`);
-      }
-      if (!Number.isFinite(offset)) {
-        throw new TypeError(`The "offset" property of a <TransitionSeries.Sequence /> must be finite, but got ${offset} (${debugInfo}).`);
-      }
-      if (offset % 1 !== 0) {
-        throw new TypeError(`The "offset" property of a <TransitionSeries.Sequence /> must be finite, but got ${offset} (${debugInfo}).`);
-      }
-      const currentStartFrame = startFrame + offset;
-      let duration3 = 0;
-      if (prev) {
-        duration3 = prev.props.timing.getDurationInFrames({
-          fps
-        });
-        transitionOffsets -= duration3;
-      }
-      let actualStartFrame = currentStartFrame + transitionOffsets;
-      startFrame += durationInFramesProp + offset;
-      if (actualStartFrame < 0) {
-        startFrame -= actualStartFrame;
-        actualStartFrame = 0;
-      }
-      sequenceDurations.push(durationInFramesProp);
-      if (pendingOverlayValidation) {
-        pendingOverlayValidation = false;
-        const lastOverlay = overlayRenders[overlayRenders.length - 1];
-        const framesAfterCut = lastOverlay.halfDuration + lastOverlay.overlayOffset;
-        if (framesAfterCut > durationInFramesProp) {
-          throw new TypeError(`A <TransitionSeries.Overlay /> extends beyond the next sequence. The overlay needs ${framesAfterCut} frames after the cut, but the next sequence is only ${durationInFramesProp} frames long.`);
-        }
-      }
-      const nextProgress = next ? next.props.timing.getProgress({
-        frame: frame - actualStartFrame - durationInFrames + next.props.timing.getDurationInFrames({ fps }),
-        fps
-      }) : null;
-      const prevProgress = prev ? prev.props.timing.getProgress({
-        frame: frame - actualStartFrame,
-        fps
-      }) : null;
-      if (next && durationInFramesProp < next.props.timing.getDurationInFrames({ fps })) {
-        throw new Error(`The duration of a <TransitionSeries.Sequence /> must not be shorter than the duration of the next <TransitionSeries.Transition />. The transition is ${next.props.timing.getDurationInFrames({ fps })} frames long, but the sequence is only ${durationInFramesProp} frames long (${debugInfo})`);
-      }
-      if (prev && durationInFramesProp < prev.props.timing.getDurationInFrames({ fps })) {
-        throw new Error(`The duration of a <TransitionSeries.Sequence /> must not be shorter than the duration of the previous <TransitionSeries.Transition />. The transition is ${prev.props.timing.getDurationInFrames({ fps })} frames long, but the sequence is only ${durationInFramesProp} frames long (${debugInfo})`);
-      }
-      if (next && prev && nextProgress !== null && prevProgress !== null) {
-        const nextPresentation = next.props.presentation ?? slide();
-        const prevPresentation = prev.props.presentation ?? slide();
-        const UppercaseNextPresentation = nextPresentation.component;
-        const UppercasePrevPresentation = prevPresentation.component;
-        return /* @__PURE__ */ (0, import_jsx_runtime61.jsx)(Sequence, {
-          from: actualStartFrame,
-          durationInFrames: durationInFramesProp,
-          ...passedProps,
-          name: passedProps.name || "<TS.Sequence>",
-          _remotionInternalDocumentationLink: passedProps.name ? void 0 : "https://www.remotion.dev/docs/transitions/transitionseries",
-          children: /* @__PURE__ */ (0, import_jsx_runtime61.jsx)(UppercaseNextPresentation, {
-            passedProps: nextPresentation.props ?? {},
-            presentationDirection: "exiting",
-            presentationProgress: nextProgress,
-            presentationDurationInFrames: next.props.timing.getDurationInFrames({ fps }),
-            onElementImage: () => {
-              throw new Error("Should not call when exiting");
-            },
-            onUnmount: () => {
-              throw new Error("Should not call when exiting");
-            },
-            bothEnteringAndExiting: true,
-            children: /* @__PURE__ */ (0, import_jsx_runtime61.jsx)(WrapInExitingProgressContext, {
-              presentationProgress: nextProgress,
-              children: /* @__PURE__ */ (0, import_jsx_runtime61.jsx)(UppercasePrevPresentation, {
-                passedProps: prevPresentation.props ?? {},
-                presentationDirection: "entering",
-                presentationProgress: prevProgress,
-                presentationDurationInFrames: prev.props.timing.getDurationInFrames({ fps }),
-                onElementImage: (elementImage, draw) => {
-                  onPrevElementImage(elementImage, nextProgress, draw, i + 1);
-                  onNextElementImage(elementImage, prevProgress, draw, i - 1);
-                },
-                onUnmount: () => {
-                  onPrevElementImage(null, null, null, i + 1);
-                  onNextElementImage(null, null, null, i - 1);
-                },
-                bothEnteringAndExiting: true,
-                children: /* @__PURE__ */ (0, import_jsx_runtime61.jsx)(WrapInEnteringProgressContext, {
-                  presentationProgress: prevProgress,
-                  children: child
-                })
-              })
-            })
-          })
-        }, i);
-      }
-      if (prevProgress !== null && prev) {
-        const prevPresentation = prev.props.presentation ?? slide();
-        const UppercasePrevPresentation = prevPresentation.component;
-        return /* @__PURE__ */ (0, import_jsx_runtime61.jsx)(Sequence, {
-          from: actualStartFrame,
-          durationInFrames: durationInFramesProp,
-          ...passedProps,
-          name: passedProps.name || "<TS.Sequence>",
-          _remotionInternalDocumentationLink: passedProps.name ? void 0 : "https://www.remotion.dev/docs/transitions/transitionseries",
-          children: /* @__PURE__ */ (0, import_jsx_runtime61.jsx)(UppercasePrevPresentation, {
-            passedProps: prevPresentation.props ?? {},
-            presentationDirection: "entering",
-            presentationProgress: prevProgress,
-            presentationDurationInFrames: prev.props.timing.getDurationInFrames({ fps }),
-            onElementImage: (elementImage, draw) => onNextElementImage(elementImage, prevProgress, draw, i - 1),
-            onUnmount: () => {
-              onNextElementImage(null, null, null, i - 1);
-            },
-            bothEnteringAndExiting: false,
-            children: /* @__PURE__ */ (0, import_jsx_runtime61.jsx)(WrapInEnteringProgressContext, {
-              presentationProgress: prevProgress,
-              children: child
-            })
-          })
-        }, i);
-      }
-      if (nextProgress !== null && next) {
-        const nextPresentation = next.props.presentation ?? slide();
-        const UppercaseNextPresentation = nextPresentation.component;
-        return /* @__PURE__ */ (0, import_jsx_runtime61.jsx)(Sequence, {
-          from: actualStartFrame,
-          durationInFrames: durationInFramesProp,
-          ...passedProps,
-          name: passedProps.name || "<TS.Sequence>",
-          _remotionInternalDocumentationLink: passedProps.name ? void 0 : "https://www.remotion.dev/docs/transitions/transitionseries",
-          children: /* @__PURE__ */ (0, import_jsx_runtime61.jsx)(UppercaseNextPresentation, {
-            passedProps: nextPresentation.props ?? {},
-            presentationDirection: "exiting",
-            presentationProgress: nextProgress,
-            presentationDurationInFrames: next.props.timing.getDurationInFrames({ fps }),
-            onElementImage: (elementImage, draw) => onPrevElementImage(elementImage, nextProgress, draw, i + 1),
-            onUnmount: () => {
-              onPrevElementImage(null, null, null, i + 1);
-            },
-            bothEnteringAndExiting: false,
-            children: /* @__PURE__ */ (0, import_jsx_runtime61.jsx)(WrapInExitingProgressContext, {
-              presentationProgress: nextProgress,
-              children: child
-            })
-          })
-        }, i);
-      }
-      return /* @__PURE__ */ (0, import_jsx_runtime61.jsx)(Sequence, {
-        from: actualStartFrame,
-        durationInFrames: durationInFramesProp,
-        ...passedProps,
-        name: passedProps.name || "<TS.Sequence>",
-        _remotionInternalDocumentationLink: passedProps.name ? void 0 : "https://www.remotion.dev/docs/transitions/transitionseries",
-        children: child
-      }, i);
-    });
-    const overlayElements = overlayRenders.map((overlayInfo) => {
-      const info2 = overlayInfo;
-      return /* @__PURE__ */ (0, import_jsx_runtime61.jsx)(Sequence, {
-        from: Math.round(info2.overlayFrom),
-        durationInFrames: info2.durationInFrames,
-        name: "<TS.Overlay>",
-        _remotionInternalDocumentationLink: "https://www.remotion.dev/docs/transitions/transitionseries",
-        layout: "absolute-fill",
-        ...info2.stack ? { stack: info2.stack } : {},
-        children: info2.children
-      }, `overlay-${info2.index}`);
-    });
-    return [...mainChildren || [], ...overlayElements];
-  }, [flattedChildren, fps, frame, onPrevElementImage, onNextElementImage]);
-  return /* @__PURE__ */ (0, import_jsx_runtime61.jsx)(import_jsx_runtime61.Fragment, {
-    children: childrenValue
-  });
-};
-var TransitionSeries = ({ children, name, layout: passedLayout, ...otherProps }) => {
-  const displayName = name ?? "<TransitionSeries>";
-  const layout = passedLayout ?? "absolute-fill";
-  if (NoReactInternals.ENABLE_V5_BREAKING_CHANGES && layout !== "absolute-fill") {
-    throw new TypeError(`The "layout" prop of <TransitionSeries /> is not supported anymore in v5. TransitionSeries' must be absolutely positioned.`);
-  }
-  return /* @__PURE__ */ (0, import_jsx_runtime61.jsx)(Sequence, {
-    name: displayName,
-    layout,
-    _remotionInternalDocumentationLink: name === void 0 ? "https://www.remotion.dev/docs/transitions/transitionseries" : void 0,
-    ...otherProps,
-    children: /* @__PURE__ */ (0, import_jsx_runtime61.jsx)(TransitionSeriesChildren, {
-      children
-    })
-  });
-};
-TransitionSeries.Sequence = SeriesSequence2;
-TransitionSeries.Transition = TransitionSeriesTransition;
-TransitionSeries.Overlay = SeriesOverlay;
-Internals.addSequenceStackTraces(TransitionSeries);
-Internals.addSequenceStackTraces(SeriesSequence2);
-Internals.addSequenceStackTraces(SeriesOverlay);
-
-// node_modules/@remotion/transitions/dist/esm/fade.mjs
-var import_react119 = __toESM(require_react(), 1);
-var import_jsx_runtime62 = __toESM(require_jsx_runtime(), 1);
-var FadePresentation = ({ children, presentationDirection, presentationProgress, passedProps }) => {
-  const isEntering = presentationDirection === "entering";
-  const style2 = (0, import_react119.useMemo)(() => {
-    return {
-      opacity: isEntering ? presentationProgress : passedProps.shouldFadeOutExitingScene ? 1 - presentationProgress : 1,
-      ...presentationDirection === "entering" ? passedProps.enterStyle : passedProps.exitStyle
-    };
-  }, [
-    isEntering,
-    passedProps.enterStyle,
-    passedProps.exitStyle,
-    passedProps.shouldFadeOutExitingScene,
-    presentationDirection,
-    presentationProgress
-  ]);
-  return /* @__PURE__ */ (0, import_jsx_runtime62.jsx)(AbsoluteFill, {
-    style: style2,
-    children
-  });
-};
-var fade = (props) => {
-  return {
-    component: FadePresentation,
-    props: props ?? {}
-  };
-};
-
-// node_modules/@remotion/transitions/dist/esm/slide.mjs
-var import_react120 = __toESM(require_react(), 1);
-var import_jsx_runtime63 = __toESM(require_jsx_runtime(), 1);
-var epsilon2 = 0.01;
-var SlidePresentation2 = ({
-  children,
-  presentationProgress,
-  presentationDirection,
-  passedProps: { direction = "from-left", enterStyle, exitStyle }
-}) => {
-  const directionStyle = (0, import_react120.useMemo)(() => {
-    const presentationProgressWithEpsilonCorrection = presentationProgress === 1 ? presentationProgress * 100 : presentationProgress * 100 - epsilon2;
-    if (presentationDirection === "exiting") {
-      switch (direction) {
-        case "from-left":
-          return {
-            transform: `translateX(${presentationProgressWithEpsilonCorrection}%)`
-          };
-        case "from-right":
-          return {
-            transform: `translateX(${-presentationProgress * 100}%)`
-          };
-        case "from-top":
-          return {
-            transform: `translateY(${presentationProgressWithEpsilonCorrection}%)`
-          };
-        case "from-bottom":
-          return {
-            transform: `translateY(${-presentationProgress * 100}%)`
-          };
-        default:
-          throw new Error(`Invalid direction: ${direction}`);
-      }
-    }
-    switch (direction) {
-      case "from-left":
-        return {
-          transform: `translateX(${-100 + presentationProgress * 100}%)`
-        };
-      case "from-right":
-        return {
-          transform: `translateX(${100 - presentationProgressWithEpsilonCorrection}%)`
-        };
-      case "from-top":
-        return {
-          transform: `translateY(${-100 + presentationProgress * 100}%)`
-        };
-      case "from-bottom":
-        return {
-          transform: `translateY(${100 - presentationProgressWithEpsilonCorrection}%)`
-        };
-      default:
-        throw new Error(`Invalid direction: ${direction}`);
-    }
-  }, [presentationDirection, presentationProgress, direction]);
-  const style2 = (0, import_react120.useMemo)(() => {
-    return {
-      width: "100%",
-      height: "100%",
-      justifyContent: "center",
-      alignItems: "center",
-      ...directionStyle,
-      ...presentationDirection === "entering" ? enterStyle : exitStyle
-    };
-  }, [directionStyle, enterStyle, exitStyle, presentationDirection]);
-  return /* @__PURE__ */ (0, import_jsx_runtime63.jsx)(AbsoluteFill, {
-    style: style2,
-    children
-  });
-};
-var slide2 = (props) => {
-  return {
-    component: SlidePresentation2,
-    props: props ?? {}
-  };
-};
-
-// node_modules/@remotion/transitions/dist/esm/wipe.mjs
-var import_react121 = __toESM(require_react(), 1);
-var import_jsx_runtime64 = __toESM(require_jsx_runtime(), 1);
-var makePolygonIn = (progress, direction) => {
-  const p = progress * 100;
-  switch (direction) {
-    case "from-left":
-      return `polygon(0% 0%, ${p}% 0%, ${p}% 100%, 0% 100%)`;
-    case "from-top-left":
-      return `polygon(0% 0%, ${p * 2}% 0%, 0% ${p * 2}%)`;
-    case "from-top":
-      return `polygon(0% 0%, 100% 0%, 100% ${p}%, 0% ${p}%)`;
-    case "from-top-right":
-      return `polygon(100% 0%, ${100 - p * 2}% 0%, 100% ${p * 2}%)`;
-    case "from-right":
-      return `polygon(100% 0%, 100% 100%, ${100 - p}% 100%, ${100 - p}% 0%)`;
-    case "from-bottom-right":
-      return `polygon(100% 100%, ${100 - p * 2}% 100%, 100% ${100 - p * 2}%)`;
-    case "from-bottom":
-      return `polygon(0% 100%, 100% 100%, 100% ${100 - p}%, 0% ${100 - p}%)`;
-    case "from-bottom-left":
-      return `polygon(0% 100%, 0% ${100 - p * 2}%, ${p * 2}% 100%)`;
-    default:
-      throw new Error(`Unknown direction ${JSON.stringify(direction)}`);
-  }
-};
-var makePolygonOut = (progress, direction) => {
-  const p = progress * 100;
-  switch (direction) {
-    case "from-left":
-      return `polygon(100% 100%, ${100 - p}% 100%, ${100 - p}% 0%, 100% 0%)`;
-    case "from-top-left":
-      return `polygon(100% 100%, ${100 - p * 2}% 100%, 100% ${100 - p * 2}%)`;
-    case "from-top":
-      return `polygon(100% 100%, 0% 100%, 0% ${100 - p}%, 100% ${100 - p}%)`;
-    case "from-top-right":
-      return `polygon(0% 100%, ${p * 2}% 100%, 0% ${100 - p * 2}%)`;
-    case "from-right":
-      return `polygon(0% 0%, ${p}% 0%, ${p}% 100%, 0% 100%)`;
-    case "from-bottom-right":
-      return `polygon(0% 0%, ${p * 2}% 0%, 0% ${p * 2}%)`;
-    case "from-bottom":
-      return `polygon(100% 0%, 0% 0%, 0% ${p}%, 100% ${p}%)`;
-    case "from-bottom-left":
-      return `polygon(100% 0%, ${100 - p * 2}% 0%, 100% ${p * 2}%)`;
-    default:
-      throw new Error(`Unknown direction ${JSON.stringify(direction)}`);
-  }
-};
-var WipePresentation = ({
-  children,
-  presentationProgress,
-  presentationDirection,
-  passedProps: {
-    direction = "from-left",
-    innerEnterStyle,
-    innerExitStyle,
-    outerEnterStyle,
-    outerExitStyle
-  }
-}) => {
-  const progressInDirection = presentationDirection === "entering" ? presentationProgress : 1 - presentationProgress;
-  const clipPath = presentationDirection === "entering" ? makePolygonIn(progressInDirection, direction) : makePolygonOut(progressInDirection, direction);
-  const style2 = (0, import_react121.useMemo)(() => {
-    return {
-      width: "100%",
-      height: "100%",
-      justifyContent: "center",
-      alignItems: "center",
-      clipPath,
-      ...presentationDirection === "entering" ? innerEnterStyle : innerExitStyle
-    };
-  }, [clipPath, innerEnterStyle, innerExitStyle, presentationDirection]);
-  const outerStyle = (0, import_react121.useMemo)(() => {
-    return presentationDirection === "entering" ? outerEnterStyle : outerExitStyle;
-  }, [outerEnterStyle, outerExitStyle, presentationDirection]);
-  return /* @__PURE__ */ (0, import_jsx_runtime64.jsx)(AbsoluteFill, {
-    style: outerStyle,
-    children: /* @__PURE__ */ (0, import_jsx_runtime64.jsx)(AbsoluteFill, {
-      style: style2,
-      children
-    })
-  });
-};
-var wipe = (props) => {
-  return {
-    component: WipePresentation,
-    props: props ?? {}
-  };
-};
-
-// node_modules/@remotion/transitions/dist/esm/flip.mjs
-var import_react122 = __toESM(require_react(), 1);
-var import_jsx_runtime65 = __toESM(require_jsx_runtime(), 1);
-var Flip = ({
-  children,
-  presentationDirection,
-  presentationProgress,
-  passedProps: {
-    direction = "from-left",
-    perspective = 1e3,
-    innerEnterStyle,
-    innerExitStyle,
-    outerEnterStyle,
-    outerExitStyle
-  }
-}) => {
-  const style2 = (0, import_react122.useMemo)(() => {
-    const startRotationEntering = direction === "from-right" || direction === "from-top" ? 180 : -180;
-    const endRotationEntering = direction === "from-right" || direction === "from-top" ? -180 : 180;
-    const rotation = presentationDirection === "entering" ? interpolate(presentationProgress, [0, 1], [startRotationEntering, 0]) : interpolate(presentationProgress, [0, 1], [0, endRotationEntering]);
-    const rotateProperty = direction === "from-top" || direction === "from-bottom" ? "rotateX" : "rotateY";
-    return {
-      width: "100%",
-      height: "100%",
-      transform: `${rotateProperty}(${rotation}deg)`,
-      backfaceVisibility: "hidden",
-      WebkitBackfaceVisibility: "hidden",
-      ...presentationDirection === "entering" ? innerEnterStyle : innerExitStyle
-    };
-  }, [
-    direction,
-    innerEnterStyle,
-    innerExitStyle,
-    presentationDirection,
-    presentationProgress
-  ]);
-  const outer = (0, import_react122.useMemo)(() => {
-    return {
-      perspective,
-      transformStyle: "preserve-3d",
-      ...presentationDirection === "entering" ? outerEnterStyle : outerExitStyle
-    };
-  }, [outerEnterStyle, outerExitStyle, perspective, presentationDirection]);
-  return /* @__PURE__ */ (0, import_jsx_runtime65.jsx)(AbsoluteFill, {
-    style: outer,
-    children: /* @__PURE__ */ (0, import_jsx_runtime65.jsx)(AbsoluteFill, {
-      style: style2,
-      children
-    })
-  });
-};
-var flip = (props) => {
-  return { component: Flip, props: props ?? {} };
-};
-
-// node_modules/@remotion/paths/dist/esm/index.mjs
-var length = {
-  a: 7,
-  A: 7,
-  C: 6,
-  c: 6,
-  H: 1,
-  h: 1,
-  L: 2,
-  l: 2,
-  M: 2,
-  m: 2,
-  Q: 4,
-  q: 4,
-  S: 4,
-  s: 4,
-  T: 2,
-  t: 2,
-  V: 1,
-  v: 1,
-  Z: 0,
-  z: 0
-};
-var chunkExact = (array2, instruction) => {
-  const chunks = [];
-  const expectedSize = length[instruction];
-  if (array2.length % expectedSize !== 0) {
-    throw new Error(`Expected number of arguments of SVG instruction "${instruction} ${array2.join(" ")}" to be a multiple of ${expectedSize}`);
-  }
-  for (let i = 0; i < array2.length; i += expectedSize) {
-    chunks.push(array2.slice(i, i + expectedSize));
-  }
-  return chunks;
-};
-var makeInstructions = (arr, instruction, cb) => {
-  return chunkExact(arr, instruction).map((args) => {
-    return cb(args);
-  });
-};
-var segmentRegExp = /([astvzqmhlc])([^astvzqmhlc]*)/gi;
-var numberRegExp = /-?[0-9]*\.?[0-9]+(?:e[-+]?\d+)?/gi;
-var parseValues = (args, instructionType) => {
-  const numbers = args.match(numberRegExp);
-  if (!numbers) {
-    if (instructionType === "Z" || instructionType === "z") {
-      return [];
-    }
-    throw new Error(`Malformed path data: ${instructionType} was expected to have numbers afterwards`);
-  }
-  const expectedArguments = length[instructionType];
-  if (numbers.length % expectedArguments !== 0) {
-    throw new Error(`Malformed path data: ${instructionType} was expected to have a multiple of ${expectedArguments} numbers, but got "${instructionType} ${numbers.join(" ")} instead"`);
-  }
-  return numbers.map(Number);
-};
-var parsePath = (path) => {
-  if (!path) {
-    throw new Error("No path provided");
-  }
-  const segments = path.match(segmentRegExp);
-  if (!segments) {
-    throw new Error(`No path elements found in string ${path}`);
-  }
-  return segments.map((segmentString) => {
-    const command = segmentString.charAt(0);
-    const args = parseValues(segmentString.substring(1), command);
-    if (command === "M" && args.length > 2) {
-      const segmentsArray = [];
-      segmentsArray.push({
-        type: command,
-        x: args[0],
-        y: args[1]
-      });
-      segmentsArray.push(...makeInstructions(args.slice(2), "L", (numbers) => ({
-        type: "L",
-        x: numbers[0],
-        y: numbers[1]
-      })));
-      return segmentsArray;
-    }
-    if (command === "m" && args.length > 2) {
-      const segmentsArray = [];
-      segmentsArray.push({
-        type: command,
-        dx: args[0],
-        dy: args[1]
-      });
-      segmentsArray.push(...makeInstructions(args.slice(2), "l", (numbers) => ({
-        type: "l",
-        dx: numbers[0],
-        dy: numbers[1]
-      })));
-      return segmentsArray;
-    }
-    if (command === "Z" || command === "z") {
-      return [
-        {
-          type: "Z"
-        }
-      ];
-    }
-    if (command === "A") {
-      return makeInstructions(args, command, (numbers) => ({
-        type: command,
-        rx: numbers[0],
-        ry: numbers[1],
-        xAxisRotation: numbers[2],
-        largeArcFlag: numbers[3] === 1,
-        sweepFlag: numbers[4] === 1,
-        x: numbers[5],
-        y: numbers[6]
-      }));
-    }
-    if (command === "a") {
-      return makeInstructions(args, command, (numbers) => ({
-        type: command,
-        rx: numbers[0],
-        ry: numbers[1],
-        xAxisRotation: numbers[2],
-        largeArcFlag: numbers[3] === 1,
-        sweepFlag: numbers[4] === 1,
-        dx: numbers[5],
-        dy: numbers[6]
-      }));
-    }
-    if (command === "C") {
-      return makeInstructions(args, command, (numbers) => ({
-        type: command,
-        cp1x: numbers[0],
-        cp1y: numbers[1],
-        cp2x: numbers[2],
-        cp2y: numbers[3],
-        x: numbers[4],
-        y: numbers[5]
-      }));
-    }
-    if (command === "c") {
-      return makeInstructions(args, command, (numbers) => ({
-        type: command,
-        cp1dx: numbers[0],
-        cp1dy: numbers[1],
-        cp2dx: numbers[2],
-        cp2dy: numbers[3],
-        dx: numbers[4],
-        dy: numbers[5]
-      }));
-    }
-    if (command === "S") {
-      return makeInstructions(args, command, (numbers) => ({
-        type: command,
-        cpx: numbers[0],
-        cpy: numbers[1],
-        x: numbers[2],
-        y: numbers[3]
-      }));
-    }
-    if (command === "s") {
-      return makeInstructions(args, command, (numbers) => ({
-        type: command,
-        cpdx: numbers[0],
-        cpdy: numbers[1],
-        dx: numbers[2],
-        dy: numbers[3]
-      }));
-    }
-    if (command === "H") {
-      return makeInstructions(args, command, (numbers) => ({
-        type: command,
-        x: numbers[0]
-      }));
-    }
-    if (command === "h") {
-      return makeInstructions(args, command, (numbers) => ({
-        type: command,
-        dx: numbers[0]
-      }));
-    }
-    if (command === "V") {
-      return makeInstructions(args, command, (numbers) => ({
-        type: command,
-        y: numbers[0]
-      }));
-    }
-    if (command === "v") {
-      return makeInstructions(args, command, (numbers) => ({
-        type: command,
-        dy: numbers[0]
-      }));
-    }
-    if (command === "L") {
-      return makeInstructions(args, command, (numbers) => ({
-        type: command,
-        x: numbers[0],
-        y: numbers[1]
-      }));
-    }
-    if (command === "M") {
-      return makeInstructions(args, command, (numbers) => ({
-        type: command,
-        x: numbers[0],
-        y: numbers[1]
-      }));
-    }
-    if (command === "m") {
-      return makeInstructions(args, command, (numbers) => ({
-        type: command,
-        dx: numbers[0],
-        dy: numbers[1]
-      }));
-    }
-    if (command === "l") {
-      return makeInstructions(args, command, (numbers) => ({
-        type: command,
-        dx: numbers[0],
-        dy: numbers[1]
-      }));
-    }
-    if (command === "Q") {
-      return makeInstructions(args, command, (numbers) => ({
-        type: command,
-        cpx: numbers[0],
-        cpy: numbers[1],
-        x: numbers[2],
-        y: numbers[3]
-      }));
-    }
-    if (command === "q") {
-      return makeInstructions(args, command, (numbers) => ({
-        type: command,
-        cpdx: numbers[0],
-        cpdy: numbers[1],
-        dx: numbers[2],
-        dy: numbers[3]
-      }));
-    }
-    if (command === "T") {
-      return makeInstructions(args, command, (numbers) => ({
-        type: command,
-        x: numbers[0],
-        y: numbers[1]
-      }));
-    }
-    if (command === "t") {
-      return makeInstructions(args, command, (numbers) => ({
-        type: command,
-        dx: numbers[0],
-        dy: numbers[1]
-      }));
-    }
-    throw new Error(`Invalid path element ${segmentString}`);
-  }, []).flat(1);
-};
-var TAU = Math.PI * 2;
-var serializeInstruction = (instruction) => {
-  if (instruction.type === "A") {
-    return `A ${instruction.rx} ${instruction.ry} ${instruction.xAxisRotation} ${Number(instruction.largeArcFlag)} ${Number(instruction.sweepFlag)} ${instruction.x} ${instruction.y}`;
-  }
-  if (instruction.type === "a") {
-    return `a ${instruction.rx} ${instruction.ry} ${instruction.xAxisRotation} ${Number(instruction.largeArcFlag)} ${Number(instruction.sweepFlag)} ${instruction.dx} ${instruction.dy}`;
-  }
-  if (instruction.type === "C") {
-    return `C ${instruction.cp1x} ${instruction.cp1y} ${instruction.cp2x} ${instruction.cp2y} ${instruction.x} ${instruction.y}`;
-  }
-  if (instruction.type === "c") {
-    return `c ${instruction.cp1dx} ${instruction.cp1dy} ${instruction.cp2dx} ${instruction.cp2dy} ${instruction.dx} ${instruction.dy}`;
-  }
-  if (instruction.type === "S") {
-    return `S ${instruction.cpx} ${instruction.cpy} ${instruction.x} ${instruction.y}`;
-  }
-  if (instruction.type === "s") {
-    return `s ${instruction.cpdx} ${instruction.cpdy} ${instruction.dx} ${instruction.dy}`;
-  }
-  if (instruction.type === "Q") {
-    return `Q ${instruction.cpx} ${instruction.cpy} ${instruction.x} ${instruction.y}`;
-  }
-  if (instruction.type === "q") {
-    return `q ${instruction.cpdx} ${instruction.cpdy} ${instruction.dx} ${instruction.dy}`;
-  }
-  if (instruction.type === "Z") {
-    return "Z";
-  }
-  if (instruction.type === "H") {
-    return `H ${instruction.x}`;
-  }
-  if (instruction.type === "h") {
-    return `h ${instruction.dx}`;
-  }
-  if (instruction.type === "V") {
-    return `V ${instruction.y}`;
-  }
-  if (instruction.type === "v") {
-    return `v ${instruction.dy}`;
-  }
-  if (instruction.type === "L") {
-    return `L ${instruction.x} ${instruction.y}`;
-  }
-  if (instruction.type === "l") {
-    return `l ${instruction.dx} ${instruction.dy}`;
-  }
-  if (instruction.type === "M") {
-    return `M ${instruction.x} ${instruction.y}`;
-  }
-  if (instruction.type === "m") {
-    return `m ${instruction.dx} ${instruction.dy}`;
-  }
-  if (instruction.type === "T") {
-    return `T ${instruction.x} ${instruction.y}`;
-  }
-  if (instruction.type === "t") {
-    return `t ${instruction.dx} ${instruction.dy}`;
-  }
-  throw new Error(`Unknown instruction type: ${instruction.type}`);
-};
-var serializeInstructions = (path) => {
-  return path.map((p) => {
-    return serializeInstruction(p);
-  }).join(" ");
-};
-var translateSegments = (segments, x, y) => {
-  return segments.map((segment) => {
-    if (segment.type === "a" || segment.type === "c" || segment.type === "v" || segment.type === "s" || segment.type === "h" || segment.type === "l" || segment.type === "m" || segment.type === "q" || segment.type === "t") {
-      return segment;
-    }
-    if (segment.type === "V") {
-      return {
-        type: "V",
-        y: segment.y + y
-      };
-    }
-    if (segment.type === "H") {
-      return {
-        type: "H",
-        x: segment.x + x
-      };
-    }
-    if (segment.type === "A") {
-      return {
-        type: "A",
-        rx: segment.rx,
-        ry: segment.ry,
-        largeArcFlag: segment.largeArcFlag,
-        sweepFlag: segment.sweepFlag,
-        xAxisRotation: segment.xAxisRotation,
-        x: segment.x + x,
-        y: segment.y + y
-      };
-    }
-    if (segment.type === "Z") {
-      return segment;
-    }
-    if (segment.type === "C") {
-      return {
-        type: "C",
-        cp1x: segment.cp1x + x,
-        cp1y: segment.cp1y + y,
-        cp2x: segment.cp2x + x,
-        cp2y: segment.cp2y + y,
-        x: segment.x + x,
-        y: segment.y + y
-      };
-    }
-    if (segment.type === "Q") {
-      return {
-        type: "Q",
-        cpx: segment.cpx + x,
-        cpy: segment.cpy + y,
-        x: segment.x + x,
-        y: segment.y + y
-      };
-    }
-    if (segment.type === "S") {
-      return {
-        type: "S",
-        cpx: segment.cpx + x,
-        cpy: segment.cpy + y,
-        x: segment.x + x,
-        y: segment.y + y
-      };
-    }
-    if (segment.type === "T") {
-      return {
-        type: "T",
-        x: segment.x + x,
-        y: segment.y + y
-      };
-    }
-    if (segment.type === "L") {
-      return {
-        type: "L",
-        x: segment.x + x,
-        y: segment.y + y
-      };
-    }
-    if (segment.type === "M") {
-      return {
-        type: "M",
-        x: segment.x + x,
-        y: segment.y + y
-      };
-    }
-    throw new Error(`Unknown segment type: ${segment.type}`);
-  });
-};
-var translatePath = (path, x, y) => {
-  return serializeInstructions(translateSegments(parsePath(path), x, y));
-};
-
-// node_modules/@remotion/shapes/dist/esm/index.mjs
-var import_react123 = __toESM(require_react(), 1);
-var import_react_dom2 = __toESM(require_react_dom(), 1);
-var import_jsx_runtime66 = __toESM(require_jsx_runtime(), 1);
-var import_jsx_runtime67 = __toESM(require_jsx_runtime(), 1);
-var import_jsx_runtime68 = __toESM(require_jsx_runtime(), 1);
-var import_jsx_runtime69 = __toESM(require_jsx_runtime(), 1);
-var import_jsx_runtime70 = __toESM(require_jsx_runtime(), 1);
-var import_jsx_runtime71 = __toESM(require_jsx_runtime(), 1);
-var import_jsx_runtime72 = __toESM(require_jsx_runtime(), 1);
-var import_jsx_runtime73 = __toESM(require_jsx_runtime(), 1);
-var import_jsx_runtime74 = __toESM(require_jsx_runtime(), 1);
-var import_jsx_runtime75 = __toESM(require_jsx_runtime(), 1);
-var getCoord = ({
-  counterClockwise,
-  actualProgress,
-  rotation,
-  radius,
-  coord
-}) => {
-  const factor = counterClockwise ? -1 : 1;
-  const val = Math[coord === "x" ? "cos" : "sin"](factor * actualProgress * Math.PI * 2 + Math.PI * 1.5 + rotation) * radius + radius;
-  const rounded = Math.round(val * 1e5) / 1e5;
-  return rounded;
-};
-var makePie = ({
-  progress,
-  radius,
-  closePath = true,
-  counterClockwise = false,
-  rotation = 0
-}) => {
-  const actualProgress = Math.min(Math.max(progress, 0), 1);
-  const endAngleX = getCoord({
-    actualProgress,
-    coord: "x",
-    counterClockwise,
-    radius,
-    rotation
-  });
-  const endAngleY = getCoord({
-    actualProgress,
-    coord: "y",
-    counterClockwise,
-    radius,
-    rotation
-  });
-  const start = {
-    x: getCoord({
-      actualProgress: 0,
-      coord: "x",
-      counterClockwise,
-      radius,
-      rotation
-    }),
-    y: getCoord({
-      actualProgress: 0,
-      coord: "y",
-      counterClockwise,
-      radius,
-      rotation
-    })
-  };
-  const end = { x: endAngleX, y: endAngleY };
-  const instructions = [
-    {
-      type: "M",
-      ...start
-    },
-    {
-      type: "A",
-      rx: radius,
-      ry: radius,
-      xAxisRotation: 0,
-      largeArcFlag: false,
-      sweepFlag: !counterClockwise,
-      x: actualProgress <= 0.5 ? endAngleX : getCoord({
-        actualProgress: 0.5,
-        coord: "x",
-        counterClockwise,
-        radius,
-        rotation
-      }),
-      y: actualProgress <= 0.5 ? endAngleY : getCoord({
-        actualProgress: 0.5,
-        coord: "y",
-        counterClockwise,
-        radius,
-        rotation
-      })
-    },
-    actualProgress > 0.5 ? {
-      type: "A",
-      rx: radius,
-      ry: radius,
-      xAxisRotation: 0,
-      largeArcFlag: false,
-      sweepFlag: !counterClockwise,
-      ...end
-    } : null,
-    actualProgress > 0 && actualProgress < 1 && closePath ? {
-      type: "L",
-      x: radius,
-      y: radius
-    } : null,
-    closePath ? {
-      type: "Z"
-    } : null
-  ].filter(Boolean);
-  const path = serializeInstructions(instructions);
-  return {
-    height: radius * 2,
-    width: radius * 2,
-    path,
-    instructions,
-    transformOrigin: `${radius} ${radius}`
-  };
-};
-
-// node_modules/@remotion/transitions/dist/esm/clock-wipe.mjs
-var import_react124 = __toESM(require_react(), 1);
-var import_jsx_runtime76 = __toESM(require_jsx_runtime(), 1);
-var ClockWipePresentation = ({ children, presentationDirection, presentationProgress, passedProps }) => {
-  const finishedRadius = Math.sqrt(passedProps.width ** 2 + passedProps.height ** 2) / 2;
-  const { path } = makePie({
-    radius: finishedRadius,
-    progress: presentationProgress
-  });
-  const translatedPath = translatePath(path, -(finishedRadius * 2 - passedProps.width) / 2, -(finishedRadius * 2 - passedProps.height) / 2);
-  const style2 = (0, import_react124.useMemo)(() => {
-    return {
-      width: "100%",
-      height: "100%",
-      clipPath: presentationDirection === "exiting" ? void 0 : `path("${translatedPath}")`,
-      ...presentationDirection === "entering" ? passedProps.innerEnterStyle : passedProps.innerExitStyle
-    };
-  }, [
-    translatedPath,
-    passedProps.innerEnterStyle,
-    passedProps.innerExitStyle,
-    presentationDirection
-  ]);
-  const outerStyle = (0, import_react124.useMemo)(() => {
-    return presentationDirection === "entering" ? passedProps.outerEnterStyle : passedProps.outerExitStyle;
-  }, [
-    passedProps.outerEnterStyle,
-    passedProps.outerExitStyle,
-    presentationDirection
-  ]);
-  return /* @__PURE__ */ (0, import_jsx_runtime76.jsx)(AbsoluteFill, {
-    style: outerStyle,
-    children: /* @__PURE__ */ (0, import_jsx_runtime76.jsx)(AbsoluteFill, {
-      style: style2,
-      children
-    })
-  });
-};
-var clockWipe = (props) => {
-  return { component: ClockWipePresentation, props: props ?? {} };
-};
-
-// src/utils/index.ts
-function uid() {
-  return Math.random().toString(36).slice(2, 10);
-}
-var KEBAB = /[^a-zA-Z0-9_-]+/g;
-function toClassName(s) {
-  return (s || "").replace(KEBAB, "-").replace(/^-+|-+$/g, "");
-}
-function toPlaybackRate(rate) {
-  if (!isFinite(rate) || rate <= 0) return 1;
-  return Math.min(16, Math.max(0.0625, rate));
-}
-function cssJS(css) {
-  if (!css) return {};
-  if (typeof css === "object") return css;
-  const out = {};
-  for (const decl of css.split(";")) {
-    const i = decl.indexOf(":");
-    if (i < 0) continue;
-    const k = decl.slice(0, i).trim();
-    const v = decl.slice(i + 1).trim();
-    if (!k) continue;
-    const camel = k.replace(/-([a-z])/g, (_, c2) => c2.toUpperCase());
-    out[camel] = v;
-  }
-  return out;
-}
-function getDurationInSeconds(stream2, update = true) {
-  if (!stream2) return 0;
-  if (stream2.type === "rhythm") {
-    return stream2.durationInSeconds ?? 0;
-  }
-  if (stream2.type === "include") {
-    if (stream2.src) {
-      const last = stream2.actions?.[stream2.actions.length - 1];
-      const d = last?.end ?? 0;
-      if (update) stream2.durationInSeconds = d;
-      return d;
-    }
-    const children = stream2.children ?? [];
-    if (children.length && update) {
-      for (const child of children) {
-        getDurationInSeconds(child, update);
-      }
-    }
-    const visible2 = children.filter((c2) => !c2.isBackground);
-    let total2 = 0;
-    for (const c2 of visible2) {
-      const d = c2.durationInSeconds ?? 0;
-      if (d > total2) total2 = d;
-    }
-    if (update) stream2.durationInSeconds = total2;
-    return total2;
-  }
-  if (!stream2.children?.length) {
-    const last = stream2.actions?.[stream2.actions.length - 1];
-    const d = last?.end ?? 0;
-    if (update) stream2.durationInSeconds = d;
-    return d;
-  }
-  let total = 0;
-  for (const child of stream2.children) {
-    getDurationInSeconds(child, update);
-  }
-  const visible = stream2.children.filter((c2) => !c2.isBackground);
-  if (stream2.isSeries) {
-    const overlap = stream2.transition ? stream2.transitionTime ?? 0.5 : 0;
-    for (let i = 0; i < visible.length; i++) {
-      const c2 = visible[i];
-      const d = c2.durationInSeconds ?? 0;
-      total += d;
-      if (i > 0 && overlap > 0) total -= overlap;
-    }
-  } else {
-    for (const c2 of visible) {
-      const d = c2.durationInSeconds ?? 0;
-      if (d > total) total = d;
-    }
-  }
-  if (update) stream2.durationInSeconds = total;
-  return total;
-}
-var VTT_REG = /^(?:(\d+):)?(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?$/;
-function vttSecond(t) {
-  const m = VTT_REG.exec(t.trim());
-  if (!m) return 0;
-  const [, h = "0", mm = "0", ss = "0", ms = "0"] = m;
-  return Number(h) * 3600 + Number(mm) * 60 + Number(ss) + Number(ms.padEnd(3, "0")) / 1e3;
-}
-function parseVTT(src) {
-  const cues = [];
-  const blocks = src.replace(/\r\n/g, "\n").split(/\n\n+/);
-  for (const b2 of blocks) {
-    const lines = b2.split("\n").filter(Boolean);
-    const tline = lines.find((l) => l.includes("-->"));
-    if (!tline) continue;
-    const [a2, z2] = tline.split("-->").map((s) => s.trim());
-    if (!a2 || !z2) continue;
-    const text = lines.slice(lines.indexOf(tline) + 1).join("\n").trim();
-    cues.push({ startFrom: vttSecond(a2), endAt: vttSecond(z2), text });
-  }
-  return cues;
-}
-
-// src/types/Video.tsx
-var React18 = __toESM(require_react(), 1);
-
-// src/types/FrameSyncStyle.tsx
-var React16 = __toESM(require_react(), 1);
-var import_jsx_runtime77 = __toESM(require_jsx_runtime(), 1);
-function FrameSyncStyle({
-  style: style2,
-  children
-}) {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const hasAnimation = "animation" in style2;
-  const mergedStyle = React16.useMemo(() => {
-    if (!hasAnimation) return style2;
-    const currentTime = frame / fps;
-    return {
-      ...style2,
-      animationPlayState: "paused",
-      animationDelay: `-${currentTime}s`
-    };
-  }, [style2, hasAnimation, frame, fps]);
-  return /* @__PURE__ */ (0, import_jsx_runtime77.jsx)(
-    "div",
-    {
-      style: {
-        position: "absolute",
-        inset: 0,
-        overflow: "hidden",
-        ...mergedStyle
-      },
-      children
-    }
-  );
-}
-
-// src/types/Video.tsx
-var import_jsx_runtime78 = __toESM(require_jsx_runtime(), 1);
-function resolveVideoSrc(src) {
-  if (/^(https?:|data:|blob:|file:|\/)/.test(src)) return src;
-  return staticFile(src);
-}
-function VideoLeaf({ stream: stream2 }) {
-  const { fps } = useVideoConfig();
-  const audio2 = React18.useContext(AudioContext2);
-  if (!stream2.src) return null;
-  const resolvedSrc = resolveVideoSrc(stream2.src);
-  return /* @__PURE__ */ (0, import_jsx_runtime78.jsx)(import_jsx_runtime78.Fragment, { children: stream2.actions.map((a2) => {
-    const start = a2.start ?? 0;
-    const end = a2.end ?? start + 1;
-    const startFrom = a2.startFrom ?? 0;
-    const endAt = a2.endAt ?? stream2.durationInSeconds ?? end - start;
-    const volume = a2.volume ?? stream2.volume ?? 1;
-    const playbackRate = a2.loop ? 1 : Math.min(1, toPlaybackRate((endAt - startFrom) / (end - start)));
-    const actionStyle = cssJS(a2.style);
-    const hasAnimation = "animation" in actionStyle;
-    return /* @__PURE__ */ (0, import_jsx_runtime78.jsx)(
-      Sequence,
-      {
-        durationInFrames: Math.max(1, Math.floor(fps * (end - start))),
-        from: Math.floor(fps * start),
-        layout: "none",
-        showInTimeline: false,
-        children: hasAnimation ? /* @__PURE__ */ (0, import_jsx_runtime78.jsx)(FrameSyncStyle, { style: actionStyle, children: /* @__PURE__ */ (0, import_jsx_runtime78.jsx)(
-          OffthreadVideo,
-          {
-            src: resolvedSrc,
-            startFrom: Math.floor(startFrom * fps),
-            endAt: Math.floor(startFrom * fps) + Math.floor((endAt - startFrom) * fps / playbackRate),
-            muted: volume === 0 || !!audio2?.foreground,
-            volume,
-            playbackRate,
-            showInTimeline: false,
-            style: { width: "100%", height: "100%" }
-          }
-        ) }) : /* @__PURE__ */ (0, import_jsx_runtime78.jsx)(
-          OffthreadVideo,
-          {
-            src: resolvedSrc,
-            startFrom: Math.floor(startFrom * fps),
-            endAt: Math.floor(startFrom * fps) + Math.floor((endAt - startFrom) * fps / playbackRate),
-            muted: volume === 0 || !!audio2?.foreground,
-            volume,
-            playbackRate,
-            showInTimeline: false,
-            style: { width: "100%", height: "100%", ...actionStyle }
-          }
-        )
-      },
-      a2.id
-    );
-  }) });
-}
-
-// src/types/Audio.tsx
-var React19 = __toESM(require_react(), 1);
-var import_jsx_runtime79 = __toESM(require_jsx_runtime(), 1);
-function resolveAudioSrc(src) {
-  if (/^(https?:|data:|blob:|file:|\/)/.test(src)) return src;
-  return staticFile(src);
-}
-function AudioLeaf({ stream: stream2 }) {
-  const { fps } = useVideoConfig();
-  const environment = useRemotionEnvironment();
-  const ctx = React19.useContext(AudioContext2);
-  if (!stream2.src) return null;
-  if (environment.isStudio) return null;
-  const resolvedSrc = resolveAudioSrc(stream2.src);
-  return /* @__PURE__ */ (0, import_jsx_runtime79.jsx)(import_jsx_runtime79.Fragment, { children: stream2.actions.map((a2) => {
-    const start = a2.start ?? 0;
-    const end = a2.end ?? start + 1;
-    const startFrom = a2.startFrom ?? 0;
-    const endAt = a2.endAt ?? stream2.durationInSeconds ?? end - start;
-    const volume = a2.volume ?? stream2.volume ?? 1;
-    const playbackRate = a2.loop ? 1 : toPlaybackRate((endAt - startFrom) / (end - start));
-    return /* @__PURE__ */ (0, import_jsx_runtime79.jsx)(
-      Sequence,
-      {
-        name: stream2.src ?? "audio",
-        durationInFrames: Math.max(1, Math.floor(fps * (end - start))),
-        from: Math.floor(fps * start),
-        layout: "none",
-        showInTimeline: false,
-        children: /* @__PURE__ */ (0, import_jsx_runtime79.jsx)(
-          Audio,
-          {
-            src: resolvedSrc,
-            startFrom: Math.floor(startFrom * fps),
-            endAt: Math.floor(startFrom * fps) + Math.floor((endAt - startFrom) * fps / playbackRate),
-            muted: volume === 0 || !!ctx?.foreground,
-            volume,
-            loop: (a2.loop ?? 1) > 1,
-            playbackRate,
-            showInTimeline: false
-          }
-        )
-      },
-      a2.id
-    );
-  }) });
-}
-
-// src/types/Image.tsx
-var import_jsx_runtime80 = __toESM(require_jsx_runtime(), 1);
-function resolveImageSrc(src) {
-  if (/^(https?:|data:|blob:|file:|\/)/.test(src)) return src;
-  return staticFile(src);
-}
-function ImageLeaf({ stream: stream2 }) {
-  const { fps } = useVideoConfig();
-  if (!stream2.src) return null;
-  const resolvedSrc = resolveImageSrc(stream2.src);
-  return /* @__PURE__ */ (0, import_jsx_runtime80.jsx)(import_jsx_runtime80.Fragment, { children: stream2.actions.map((a2) => {
-    const start = a2.start ?? 0;
-    const end = a2.end ?? start + 1;
-    return /* @__PURE__ */ (0, import_jsx_runtime80.jsx)(
-      Sequence,
-      {
-        durationInFrames: Math.max(1, Math.floor(fps * (end - start))),
-        from: Math.floor(fps * start),
-        layout: "none",
-        children: /* @__PURE__ */ (0, import_jsx_runtime80.jsx)(FrameSyncStyle, { style: cssJS(a2.style), children: /* @__PURE__ */ (0, import_jsx_runtime80.jsx)(
-          Img,
-          {
-            src: resolvedSrc,
-            style: {
-              width: "100%",
-              height: "100%",
-              objectFit: stream2.fit
-            },
-            onDragStart: (e) => {
-              e.stopPropagation();
-              return false;
-            }
-          }
-        ) })
-      },
-      a2.id
-    );
-  }) });
-}
-
-// src/types/DynamicLoader.tsx
-var React25 = __toESM(require_react(), 1);
-if (typeof window !== "undefined") {
-  window.__React = React25;
-  window.__Remotion = esm_exports;
-  globalThis.React = React25;
-}
-var reactShimInjected = false;
-function ensureReactShim() {
-  if (reactShimInjected) return;
-  if (typeof window === "undefined") return;
-  if (document.querySelector("#rmtr-react-shim")) {
-    reactShimInjected = true;
-    return;
-  }
-  try {
-    const blobReact = new Blob(
-      [
-        `
-        const R = globalThis.React;
-        export const {
-          useState,
-          useEffect,
-          useRef,
-          useMemo,
-          useCallback,
-          useContext,
-          createElement,
-          Fragment,
-          Suspense,
-          forwardRef,
-          Children,
-          isValidElement,
-          cloneElement,
-          createContext,
-          PureComponent,
-          Component,
-          lazy,
-        } = R;
-        export default R;
-      `
-      ],
-      { type: "application/javascript" }
-    );
-    const urlReact = URL.createObjectURL(blobReact);
-    const script = document.createElement("script");
-    script.type = "importmap";
-    script.id = "rmtr-react-shim";
-    script.textContent = JSON.stringify({
-      imports: {
-        react: urlReact
-      }
-    });
-    document.head.appendChild(script);
-    reactShimInjected = true;
-  } catch {
-    reactShimInjected = true;
-  }
-}
-function externalizeReact(url2) {
-  try {
-    const u = new URL(url2);
-    if (u.hostname.endsWith("esm.sh")) {
-      const params = new URLSearchParams(u.search);
-      if (!params.has("external")) {
-        params.set("external", "react");
-      } else {
-        const val = params.get("external");
-        if (!val.split(",").includes("react")) {
-          params.set("external", `react,${val}`);
-        }
-      }
-      params.set("standalone", "");
-      u.search = params.toString();
-      return u.toString();
-    }
-  } catch {
-  }
-  return url2;
-}
-var dynamicImport = typeof window !== "undefined" ? (url2) => import(
-  /* webpackIgnore: true */
-  url2
-) : null;
-var jsxCache = /* @__PURE__ */ new Map();
-var babelPromise = null;
-async function loadBabel() {
-  if (typeof window === "undefined" || !dynamicImport) return null;
-  if (!babelPromise) {
-    const babelUrl = externalizeReact("https://esm.sh/@babel/standalone@7.26.10");
-    ensureReactShim();
-    babelPromise = dynamicImport(babelUrl).then((m) => m?.default ?? m).catch(() => null);
-  }
-  return babelPromise;
-}
-function useJsxWithImports(jsx68, imports, onError) {
-  const cacheKey = React25.useMemo(() => {
-    if (!jsx68) return null;
-    const importKeys = imports ? Object.keys(imports).sort().join(",") : "";
-    return `${importKeys}
-${jsx68}`;
-  }, [jsx68, imports]);
-  const cached2 = cacheKey ? jsxCache.get(cacheKey) ?? null : null;
-  const needsLoad = !!cacheKey && !cached2;
-  const handleRef = React25.useRef(null);
-  if (needsLoad && !handleRef.current) {
-    handleRef.current = delayRender(`Compiling JSX with imports`);
-  }
-  const [Comp, setComp] = React25.useState(() => cached2);
-  React25.useEffect(() => {
-    if (!cacheKey || cached2) return;
-    let active = true;
-    compileJsxWithImports(jsx68, imports ?? {}).then((C) => {
-      if (active) setComp(() => C);
-    }).catch((err) => {
-      onError?.(err, { source: jsx68 });
-    });
-    return () => {
-      active = false;
-    };
-  }, [cacheKey, onError]);
-  React25.useEffect(() => {
-    if (Comp && handleRef.current) {
-      continueRender(handleRef.current);
-      handleRef.current = null;
-    }
-  }, [Comp]);
-  return Comp;
-}
-async function compileJsxWithImports(usageJsx, imports) {
-  ensureReactShim();
-  const names = Object.keys(imports);
-  const loaded = /* @__PURE__ */ new Map();
-  await Promise.all(
-    names.map(async (name) => {
-      const url2 = imports[name];
-      if (url2.startsWith("__jsx__:")) return;
-      try {
-        const mod = await dynamicImport(externalizeReact(url2));
-        const Comp = mod.default ?? Object.values(mod).find((v) => typeof v === "function") ?? mod;
-        if (typeof Comp === "function") loaded.set(name, Comp);
-      } catch {
-      }
-    })
-  );
-  const Babel = await loadBabel();
-  if (!Babel || !dynamicImport) {
-    throw new Error("@babel/standalone failed to load; cannot compile JSX");
-  }
-  const importId = `__ri_${Math.random().toString(36).slice(2, 8)}`;
-  window[importId] = Object.fromEntries(loaded);
-  try {
-    const importDecls = names.filter((n) => loaded.has(n)).map((n) => `const ${n} = window["${importId}"]["${n}"];`).join("\n");
-    const source = `
-const React = window.__React;
-const { useCurrentFrame, interpolate, spring, useVideoConfig, Easing } = window.__Remotion;
-
-// Mutable refs updated on every render \u2014 tween() can read them
-var __frame = 0, __fpsVal = 30, __actionDurationFrames = 120;
-var __cache = {};
-var __easingRegistry = {
-  linear: undefined,
-  easeIn: Easing.in(Easing.ease),
-  easeOut: Easing.out(Easing.ease),
-  easeInOut: Easing.inOut(Easing.ease),
-  ease: Easing.ease,
-};
-
-// tween(from, to, easing) \u2014 returns interpolated value for current frame
-function tween(from, to, easing) {
-  var key = from + ',' + to + ',' + (easing || 'linear');
-  if (__cache[key] !== undefined) return __cache[key];
-  var easingFn = __easingRegistry[easing] || undefined;
-  var val = interpolate(__frame, [0, __actionDurationFrames], [from, to], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-    easing: easingFn,
-  });
-  __cache[key] = val;
-  return val;
-}
-// Clear cache when frame or action duration changes
-function __clearCache(f, dur) { if (f !== __frame || dur !== __actionDurationFrames) { __frame = f; __actionDurationFrames = dur; __cache = {}; } }
-
-${importDecls}
-
-function Wrapper(props) {
-  var frame = useCurrentFrame();
-  var fps = useVideoConfig().fps;
-  var action = props.action || {};
-  var startFrame = Math.floor((action.start || 0) * fps);
-  var endFrame = Math.floor((action.end || 1) * fps);
-  var actionDurationFrames = Math.max(1, endFrame - startFrame);
-  __clearCache(frame, actionDurationFrames);
-  __fpsVal = fps;
-  return (${usageJsx.trim()});
-}
-
-export default Wrapper;
-`;
-    const out = Babel.transform(source, {
-      filename: "component.jsx",
-      presets: [["react", { runtime: "classic" }], "typescript"]
-    });
-    const code = out.code ?? source;
-    const blob = new Blob([code], { type: "text/javascript" });
-    const blobUrl = URL.createObjectURL(blob);
-    try {
-      let Comp;
-      try {
-        const mod = await dynamicImport(blobUrl);
-        Comp = mod.default ?? mod;
-      } catch {
-        throw new Error("Compiled JSX did not export a function");
-      }
-      if (typeof Comp !== "function") {
-        throw new Error("Compiled JSX did not export a function");
-      }
-      jsxCache.set(`${names.sort().join(",")}
-${usageJsx}`, Comp);
-      return Comp;
-    } finally {
-      URL.revokeObjectURL(blobUrl);
-    }
-  } finally {
-    delete window[importId];
-  }
-}
-
-// src/types/Component.tsx
-var import_jsx_runtime81 = __toESM(require_jsx_runtime(), 1);
-function ComponentLeaf({ stream: stream2 }) {
-  const { fps } = useVideoConfig();
-  const Comp = useJsxWithImports(stream2.jsx, stream2.imports ?? void 0);
-  if (!Comp) return null;
-  return /* @__PURE__ */ (0, import_jsx_runtime81.jsx)(import_jsx_runtime81.Fragment, { children: stream2.actions.map((a2) => {
-    const start = a2.start ?? 0;
-    const end = a2.end ?? start + 1;
-    return /* @__PURE__ */ (0, import_jsx_runtime81.jsx)(
-      Sequence,
-      {
-        durationInFrames: Math.max(1, Math.floor(fps * (end - start))),
-        from: Math.floor(fps * start),
-        layout: "none",
-        children: /* @__PURE__ */ (0, import_jsx_runtime81.jsx)(Comp, { action: a2 })
-      },
-      a2.id
-    );
-  }) });
-}
-
-// src/types/Rhythm.tsx
-var import_jsx_runtime82 = __toESM(require_jsx_runtime(), 1);
-function resolveAudioSrc2(src) {
-  if (/^(https?:|data:|blob:|file:|\/)/.test(src)) return src;
-  return staticFile(src);
-}
-function RhythmLeaf({ stream: stream2 }) {
-  const { fps } = useVideoConfig();
-  const environment = useRemotionEnvironment();
-  if (!stream2.src || environment.isStudio) return null;
-  const resolvedSrc = resolveAudioSrc2(stream2.src);
-  return /* @__PURE__ */ (0, import_jsx_runtime82.jsx)(import_jsx_runtime82.Fragment, { children: stream2.actions.map((a2) => {
-    const start = a2.start ?? 0;
-    const end = a2.end ?? start + 1;
-    const volume = a2.volume ?? stream2.volume ?? 1;
-    return /* @__PURE__ */ (0, import_jsx_runtime82.jsx)(
-      Sequence,
-      {
-        name: stream2.src ?? "rhythm",
-        durationInFrames: Math.max(1, Math.floor(fps * (end - start))),
-        from: Math.floor(fps * start),
-        layout: "none",
-        showInTimeline: false,
-        children: /* @__PURE__ */ (0, import_jsx_runtime82.jsx)(
-          Audio,
-          {
-            src: resolvedSrc,
-            muted: volume === 0,
-            volume,
-            loop: true,
-            showInTimeline: false
-          }
-        )
-      },
-      a2.id
-    );
-  }) });
-}
-
-// src/types/Map.tsx
-var import_react126 = __toESM(require_react(), 1);
-
-// node_modules/@vis.gl/react-google-maps/dist/index.modern.mjs
-var React26 = __toESM(require_react(), 1);
-var import_react125 = __toESM(require_react(), 1);
-var import_react_dom3 = __toESM(require_react_dom(), 1);
-var import_fast_deep_equal = __toESM(require_fast_deep_equal(), 1);
-var VERSION2 = "1.8.3";
-function __rest(s, e) {
-  var t = {};
-  for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
-    t[p] = s[p];
-  if (s != null && typeof Object.getOwnPropertySymbols === "function")
-    for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
-      if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
-        t[p[i]] = s[p[i]];
-    }
-  return t;
-}
-function __awaiter(thisArg, _arguments, P, generator) {
-  function adopt(value) {
-    return value instanceof P ? value : new P(function(resolve) {
-      resolve(value);
-    });
-  }
-  return new (P || (P = Promise))(function(resolve, reject) {
-    function fulfilled(value) {
-      try {
-        step(generator.next(value));
-      } catch (e) {
-        reject(e);
-      }
-    }
-    function rejected(value) {
-      try {
-        step(generator["throw"](value));
-      } catch (e) {
-        reject(e);
-      }
-    }
-    function step(result) {
-      result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
-    }
-    step((generator = generator.apply(thisArg, _arguments || [])).next());
-  });
-}
-function setScriptSrc(script, src) {
-  script.src = src;
-}
-var bootstrap = (bootstrapParams) => {
-  var bootstrapPromise;
-  var script;
-  var bootstrapParamsKey;
-  var PRODUCT_NAME = "The Google Maps JavaScript API";
-  var GOOGLE = "google";
-  var IMPORT_API_NAME = "importLibrary";
-  var PENDING_BOOTSTRAP_KEY = "__ib__";
-  var doc = document;
-  var global_ = window;
-  var google_ = global_[GOOGLE] || (global_[GOOGLE] = {});
-  var namespace = google_.maps || (google_.maps = {});
-  var libraries = /* @__PURE__ */ new Set();
-  var searchParams = new URLSearchParams();
-  var triggerBootstrap = () => bootstrapPromise || (bootstrapPromise = new Promise(async (resolve, reject) => {
-    await (script = doc.createElement("script"));
-    searchParams.set("libraries", [...libraries] + "");
-    for (bootstrapParamsKey in bootstrapParams) {
-      searchParams.set(bootstrapParamsKey.replace(/[A-Z]/g, (g) => "_" + g[0].toLowerCase()), bootstrapParams[bootstrapParamsKey]);
-    }
-    searchParams.set("callback", GOOGLE + ".maps." + PENDING_BOOTSTRAP_KEY);
-    setScriptSrc(script, "https://maps.googleapis.com/maps/api/js?" + searchParams);
-    namespace[PENDING_BOOTSTRAP_KEY] = resolve;
-    script.onerror = () => bootstrapPromise = reject(Error(PRODUCT_NAME + " could not load."));
-    script.nonce = doc.querySelector("script[nonce]")?.nonce || "";
-    doc.head.append(script);
-  }));
-  namespace[IMPORT_API_NAME] ? console.warn(PRODUCT_NAME + " only loads once. Ignoring:", bootstrapParams) : namespace[IMPORT_API_NAME] = (libraryName, ...args) => libraries.add(libraryName) && triggerBootstrap().then(() => namespace[IMPORT_API_NAME](libraryName, ...args));
-};
-var MSG_REPEATED_SET_OPTIONS = (options) => `The setOptions() function should only be called once. The options passed to the additional call (${JSON.stringify(options)}) will be ignored.`;
-var MSG_IMPORT_LIBRARY_EXISTS = (options) => `The google.maps.importLibrary() function is already defined, and @googlemaps/js-api-loader will use the existing function instead of overwriting it. The options passed to setOptions (${JSON.stringify(options)}) will be ignored.`;
-var MSG_SET_OPTIONS_NOT_CALLED = "No options were set before calling importLibrary. Make sure to configure the loader using setOptions().";
-var MSG_SCRIPT_ELEMENT_EXISTS = "There already is a script loading the Google Maps JavaScript API, and no google.maps.importLibrary function is defined. @googlemaps/js-api-loader will proceed to bootstrap the API with the specified options, but the existing script might cause problems using the API. Make sure to remove the script loading the API.";
-var __DEV__$1 = false;
-var logDevWarning = __DEV__$1 ? (message) => {
-  console.warn(`[@googlemaps/js-api-loader] ${message}`);
-} : () => {
-};
-var logDevNotice = __DEV__$1 ? (message) => {
-  console.info(`[@googlemaps/js-api-loader] ${message}`);
-} : () => {
-};
-var __DEV__ = false;
-var setOptionsWasCalled_ = false;
-function setOptions(options) {
-  if (setOptionsWasCalled_) {
-    logDevWarning(MSG_REPEATED_SET_OPTIONS(options));
-    return;
-  }
-  installImportLibrary_(options);
-  setOptionsWasCalled_ = true;
-}
-async function importLibrary(libraryName) {
-  if (!setOptionsWasCalled_) {
-    logDevWarning(MSG_SET_OPTIONS_NOT_CALLED);
-  }
-  if (!window?.google?.maps?.importLibrary) {
-    throw new Error("google.maps.importLibrary is not installed.");
-  }
-  return await google.maps.importLibrary(libraryName);
-}
-function installImportLibrary_(options) {
-  const importLibraryExists = Boolean(window.google?.maps?.importLibrary);
-  if (importLibraryExists) {
-    logDevNotice(MSG_IMPORT_LIBRARY_EXISTS(options));
-  } else if (__DEV__) {
-    const scriptEl = document.querySelector('script[src*="maps.googleapis.com/maps/api/js"]');
-    if (scriptEl) {
-      logDevWarning(MSG_SCRIPT_ELEMENT_EXISTS);
-    }
-  }
-  if (!importLibraryExists) {
-    bootstrap(options);
-  }
-}
-var APILoadingStatus = {
-  NOT_LOADED: "NOT_LOADED",
-  LOADING: "LOADING",
-  LOADED: "LOADED",
-  FAILED: "FAILED",
-  AUTH_FAILURE: "AUTH_FAILURE"
-};
-var DEFAULT_SOLUTION_CHANNEL = "GMP_visgl_rgmlibrary_v1_default";
-var DEFAULT_INTERNAL_USAGE_ATTRIBUTION_IDS = [
-  `gmp_visgl_reactgooglemaps_v${VERSION2}`
-];
-var APIProviderContext = import_react125.default.createContext(null);
-var loadingStatus = APILoadingStatus.NOT_LOADED;
-var serializedApiParams;
-var listeners2 = /* @__PURE__ */ new Set();
-function updateLoadingStatus(status) {
-  if (status === loadingStatus) {
-    return;
-  }
-  loadingStatus = status;
-  listeners2.forEach((listener) => listener(loadingStatus));
-}
-function useMapInstances() {
-  const [mapInstances, setMapInstances] = (0, import_react125.useState)({});
-  const addMapInstance = (mapInstance, id = "default") => {
-    setMapInstances((instances) => Object.assign(Object.assign({}, instances), { [id]: mapInstance }));
-  };
-  const removeMapInstance = (id = "default") => {
-    setMapInstances((_a3) => {
-      var _b = id;
-      _a3[_b];
-      var remaining = __rest(_a3, [typeof _b === "symbol" ? _b : _b + ""]);
-      return remaining;
-    });
-  };
-  const clearMapInstances = () => {
-    setMapInstances({});
-  };
-  return { mapInstances, addMapInstance, removeMapInstance, clearMapInstances };
-}
-function useMap3DInstances() {
-  const [map3dInstances, setMap3DInstances] = (0, import_react125.useState)({});
-  const addMap3DInstance = (map3dInstance, id = "default") => {
-    setMap3DInstances((instances) => Object.assign(Object.assign({}, instances), { [id]: map3dInstance }));
-  };
-  const removeMap3DInstance = (id = "default") => {
-    setMap3DInstances((_a3) => {
-      var _b = id;
-      _a3[_b];
-      var remaining = __rest(_a3, [typeof _b === "symbol" ? _b : _b + ""]);
-      return remaining;
-    });
-  };
-  const clearMap3DInstances = () => {
-    setMap3DInstances({});
-  };
-  return {
-    map3dInstances,
-    addMap3DInstance,
-    removeMap3DInstance,
-    clearMap3DInstances
-  };
-}
-function useGoogleMapsApiLoader(props) {
-  const { onLoad, onError, apiKey, version: version3, libraries = [], region, language, authReferrerPolicy, channel, solutionChannel, fetchAppCheckToken } = props;
-  const [status, setStatus] = (0, import_react125.useState)(loadingStatus);
-  const [loadedLibraries, addLoadedLibrary] = (0, import_react125.useReducer)((loadedLibraries2, action2) => {
-    return loadedLibraries2[action2.name] ? loadedLibraries2 : Object.assign(Object.assign({}, loadedLibraries2), { [action2.name]: action2.value });
-  }, {});
-  const currentSerializedParams = (0, import_react125.useMemo)(() => {
-    const params = {
-      apiKey,
-      version: version3,
-      libraries: libraries.join(","),
-      region,
-      language,
-      authReferrerPolicy,
-      channel,
-      solutionChannel
-    };
-    return JSON.stringify(params);
-  }, [
-    apiKey,
-    version3,
-    libraries,
-    region,
-    language,
-    authReferrerPolicy,
-    channel,
-    solutionChannel
-  ]);
-  const importLibraryCallback = (0, import_react125.useCallback)((name) => __awaiter(this, void 0, void 0, function* () {
-    if (loadedLibraries[name]) {
-      return loadedLibraries[name];
-    }
-    const res = yield importLibrary(name);
-    addLoadedLibrary({ name, value: res });
-    return res;
-  }), [loadedLibraries]);
-  (0, import_react125.useEffect)(() => {
-    listeners2.add(setStatus);
-    setStatus(loadingStatus);
-    return () => {
-      listeners2.delete(setStatus);
-    };
-  }, []);
-  (0, import_react125.useEffect)(
-    () => {
-      (() => __awaiter(this, void 0, void 0, function* () {
-        var _a3, _b;
-        try {
-          if (serializedApiParams && serializedApiParams !== currentSerializedParams) {
-            console.warn(`The Google Maps JavaScript API has already been loaded with different parameters. The new parameters will be ignored. If you need to use different parameters, please refresh the page.`);
-          }
-          const librariesToLoad = ["core", "maps", ...libraries];
-          if ((_b = (_a3 = window.google) === null || _a3 === void 0 ? void 0 : _a3.maps) === null || _b === void 0 ? void 0 : _b.importLibrary) {
-            if (!serializedApiParams) {
-              updateLoadingStatus(APILoadingStatus.LOADED);
-            }
-            yield Promise.all(librariesToLoad.map((name) => importLibraryCallback(name)));
-            if (onLoad)
-              onLoad();
-            return;
-          }
-          if (loadingStatus === APILoadingStatus.LOADING || loadingStatus === APILoadingStatus.LOADED) {
-            if (loadingStatus === APILoadingStatus.LOADED && onLoad)
-              onLoad();
-            return;
-          }
-          serializedApiParams = currentSerializedParams;
-          updateLoadingStatus(APILoadingStatus.LOADING);
-          const options = Object.fromEntries(Object.entries({
-            key: apiKey,
-            v: version3,
-            libraries,
-            region,
-            language,
-            authReferrerPolicy
-          }).filter(([, value]) => value !== void 0));
-          if (channel !== void 0 && channel >= 0 && channel <= 999) {
-            options.channel = String(channel);
-          }
-          if (solutionChannel === void 0) {
-            options.solutionChannel = DEFAULT_SOLUTION_CHANNEL;
-          } else if (solutionChannel !== "") {
-            options.solutionChannel = solutionChannel;
-          }
-          setOptions(options);
-          yield Promise.all(librariesToLoad.map((name) => importLibraryCallback(name)));
-          updateLoadingStatus(APILoadingStatus.LOADED);
-          if (onLoad) {
-            onLoad();
-          }
-        } catch (error49) {
-          updateLoadingStatus(APILoadingStatus.FAILED);
-          if (onError) {
-            onError(error49);
-          } else {
-            console.error("The Google Maps JavaScript API failed to load.", error49);
-          }
-        }
-      }))();
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [currentSerializedParams, onLoad, onError, importLibraryCallback, libraries]
-  );
-  (0, import_react125.useEffect)(() => {
-    if (status !== APILoadingStatus.LOADED)
-      return;
-    const settings = google.maps.Settings.getInstance();
-    if (fetchAppCheckToken) {
-      settings.fetchAppCheckToken = fetchAppCheckToken;
-    } else if (settings.fetchAppCheckToken) {
-      settings.fetchAppCheckToken = null;
-    }
-  }, [status, fetchAppCheckToken]);
-  return {
-    status,
-    loadedLibraries,
-    importLibrary: importLibraryCallback
-  };
-}
-function useInternalUsageAttributionIds(props) {
-  return (0, import_react125.useMemo)(() => props.disableUsageAttribution ? null : DEFAULT_INTERNAL_USAGE_ATTRIBUTION_IDS, [props.disableUsageAttribution]);
-}
-var APIProvider = (props) => {
-  const { children } = props, loaderProps = __rest(props, ["children"]);
-  const { mapInstances, addMapInstance, removeMapInstance, clearMapInstances } = useMapInstances();
-  const { map3dInstances, addMap3DInstance, removeMap3DInstance, clearMap3DInstances } = useMap3DInstances();
-  const { status, loadedLibraries, importLibrary: importLibrary2 } = useGoogleMapsApiLoader(loaderProps);
-  const internalUsageAttributionIds = useInternalUsageAttributionIds(loaderProps);
-  const contextValue = (0, import_react125.useMemo)(() => ({
-    mapInstances,
-    addMapInstance,
-    removeMapInstance,
-    clearMapInstances,
-    map3dInstances,
-    addMap3DInstance,
-    removeMap3DInstance,
-    clearMap3DInstances,
-    status,
-    loadedLibraries,
-    importLibrary: importLibrary2,
-    internalUsageAttributionIds
-  }), [
-    mapInstances,
-    addMapInstance,
-    removeMapInstance,
-    clearMapInstances,
-    map3dInstances,
-    addMap3DInstance,
-    removeMap3DInstance,
-    clearMap3DInstances,
-    status,
-    loadedLibraries,
-    importLibrary2,
-    internalUsageAttributionIds
-  ]);
-  return import_react125.default.createElement(APIProviderContext.Provider, { value: contextValue }, children);
-};
-function useMapEvents(map2, props) {
-  for (const propName of eventPropNames) {
-    const handler = props[propName];
-    const eventType = propNameToEventType[propName];
-    (0, import_react125.useEffect)(() => {
-      if (!map2)
-        return;
-      if (!handler)
-        return;
-      const listener = google.maps.event.addListener(map2, eventType, (ev) => {
-        handler(createMapEvent(eventType, map2, ev));
-      });
-      return () => listener.remove();
-    }, [map2, eventType, handler]);
-  }
-}
-function createMapEvent(type, map2, srcEvent) {
-  var _a3;
-  const ev = {
-    type,
-    map: map2,
-    detail: {},
-    stoppable: false,
-    stop: () => {
-    }
-  };
-  if (cameraEventTypes.includes(type)) {
-    const camEvent = ev;
-    const center = map2.getCenter();
-    const zoom = map2.getZoom();
-    const heading = map2.getHeading() || 0;
-    const tilt = map2.getTilt() || 0;
-    const bounds = map2.getBounds();
-    if (!center || !bounds || !Number.isFinite(zoom)) {
-      console.warn("[createEvent] at least one of the values from the map returned undefined. This is not expected to happen. Please report an issue at https://github.com/visgl/react-google-maps/issues/new");
-    }
-    camEvent.detail = {
-      center: (center === null || center === void 0 ? void 0 : center.toJSON()) || { lat: 0, lng: 0 },
-      zoom: zoom || 0,
-      heading,
-      tilt,
-      bounds: (bounds === null || bounds === void 0 ? void 0 : bounds.toJSON()) || {
-        north: 90,
-        east: 180,
-        south: -90,
-        west: -180
-      }
-    };
-    return camEvent;
-  } else if (mouseEventTypes.includes(type)) {
-    if (!srcEvent)
-      throw new Error("[createEvent] mouse events must provide a srcEvent");
-    const mouseEvent = ev;
-    mouseEvent.domEvent = srcEvent.domEvent;
-    mouseEvent.stoppable = true;
-    mouseEvent.stop = () => srcEvent.stop();
-    mouseEvent.detail = {
-      latLng: ((_a3 = srcEvent.latLng) === null || _a3 === void 0 ? void 0 : _a3.toJSON()) || null,
-      placeId: srcEvent.placeId
-    };
-    return mouseEvent;
-  }
-  return ev;
-}
-var propNameToEventType = {
-  onBoundsChanged: "bounds_changed",
-  onCenterChanged: "center_changed",
-  onClick: "click",
-  onContextmenu: "contextmenu",
-  onDblclick: "dblclick",
-  onDrag: "drag",
-  onDragend: "dragend",
-  onDragstart: "dragstart",
-  onHeadingChanged: "heading_changed",
-  onIdle: "idle",
-  onIsFractionalZoomEnabledChanged: "isfractionalzoomenabled_changed",
-  onMapCapabilitiesChanged: "mapcapabilities_changed",
-  onMapTypeIdChanged: "maptypeid_changed",
-  onMousemove: "mousemove",
-  onMouseout: "mouseout",
-  onMouseover: "mouseover",
-  onProjectionChanged: "projection_changed",
-  onRenderingTypeChanged: "renderingtype_changed",
-  onTilesLoaded: "tilesloaded",
-  onTiltChanged: "tilt_changed",
-  onZoomChanged: "zoom_changed",
-  // note: onCameraChanged is an alias for the bounds_changed event,
-  // since that is going to be fired in every situation where the camera is
-  // updated.
-  onCameraChanged: "bounds_changed"
-};
-var cameraEventTypes = [
-  "bounds_changed",
-  "center_changed",
-  "heading_changed",
-  "tilt_changed",
-  "zoom_changed"
-];
-var mouseEventTypes = [
-  "click",
-  "contextmenu",
-  "dblclick",
-  "mousemove",
-  "mouseout",
-  "mouseover"
-];
-var eventPropNames = Object.keys(propNameToEventType);
-function useMemoized(value, isEqual) {
-  const ref = (0, import_react125.useRef)(value);
-  if (!isEqual(value, ref.current)) {
-    ref.current = value;
-  }
-  return ref.current;
-}
-function useCustomCompareEffect(effect2, dependencies, isEqual) {
-  (0, import_react125.useEffect)(effect2, [useMemoized(dependencies, isEqual)]);
-}
-function useDeepCompareEffect(effect2, dependencies) {
-  useCustomCompareEffect(effect2, dependencies, import_fast_deep_equal.default);
-}
-var mapOptionKeys = /* @__PURE__ */ new Set([
-  "backgroundColor",
-  "clickableIcons",
-  "controlSize",
-  "disableDefaultUI",
-  "disableDoubleClickZoom",
-  "draggable",
-  "draggableCursor",
-  "draggingCursor",
-  "fullscreenControl",
-  "fullscreenControlOptions",
-  "gestureHandling",
-  "headingInteractionEnabled",
-  "isFractionalZoomEnabled",
-  "keyboardShortcuts",
-  "mapTypeControl",
-  "mapTypeControlOptions",
-  "mapTypeId",
-  "maxZoom",
-  "minZoom",
-  "noClear",
-  "panControl",
-  "panControlOptions",
-  "restriction",
-  "rotateControl",
-  "rotateControlOptions",
-  "scaleControl",
-  "scaleControlOptions",
-  "scrollwheel",
-  "streetView",
-  "streetViewControl",
-  "streetViewControlOptions",
-  "styles",
-  "tiltInteractionEnabled",
-  "zoomControl",
-  "zoomControlOptions"
-]);
-function useMapOptions(map2, mapProps) {
-  const mapOptions = {};
-  const keys = Object.keys(mapProps);
-  for (const key of keys) {
-    if (!mapOptionKeys.has(key))
-      continue;
-    mapOptions[key] = mapProps[key];
-  }
-  useDeepCompareEffect(() => {
-    if (!map2)
-      return;
-    map2.setOptions(mapOptions);
-  }, [mapOptions]);
-}
-function useApiLoadingStatus() {
-  var _a3;
-  return ((_a3 = (0, import_react125.useContext)(APIProviderContext)) === null || _a3 === void 0 ? void 0 : _a3.status) || APILoadingStatus.NOT_LOADED;
-}
-function useDeckGLCameraUpdate(map2, props) {
-  const { viewport, viewState } = props;
-  const isDeckGlControlled = !!viewport;
-  (0, import_react125.useLayoutEffect)(() => {
-    if (!map2 || !viewState)
-      return;
-    const { latitude, longitude, bearing: heading, pitch: tilt, zoom } = viewState;
-    map2.moveCamera({
-      center: { lat: latitude, lng: longitude },
-      heading,
-      tilt,
-      zoom: zoom + 1
-    });
-  }, [map2, viewState]);
-  return isDeckGlControlled;
-}
-function isLatLngLiteral(obj) {
-  if (!obj || typeof obj !== "object")
-    return false;
-  if (!("lat" in obj && "lng" in obj))
-    return false;
-  return Number.isFinite(obj.lat) && Number.isFinite(obj.lng);
-}
-function latLngEquals(a2, b2) {
-  if (!a2 || !b2)
-    return false;
-  const A = toLatLngLiteral(a2);
-  const B = toLatLngLiteral(b2);
-  if (A.lat !== B.lat || A.lng !== B.lng)
-    return false;
-  return true;
-}
-function toLatLngLiteral(obj) {
-  if (isLatLngLiteral(obj))
-    return obj;
-  return obj.toJSON();
-}
-function toLatLngBoundsLiteral(obj) {
-  if ("north" in obj && "south" in obj && "east" in obj && "west" in obj) {
-    return obj;
-  }
-  const ne = obj.getNorthEast().toJSON();
-  const sw = obj.getSouthWest().toJSON();
-  return {
-    north: ne.lat,
-    east: ne.lng,
-    south: sw.lat,
-    west: sw.lng
-  };
-}
-function boundsEquals(a2, b2) {
-  if (!a2 || !b2)
-    return false;
-  const A = toLatLngBoundsLiteral(a2);
-  const B = toLatLngBoundsLiteral(b2);
-  return A.north === B.north && A.south === B.south && A.east === B.east && A.west === B.west;
-}
-function pathEquals(a2, b2) {
-  if (!a2 || !b2)
-    return a2 === b2;
-  const arrayB = "getArray" in b2 ? b2.getArray() : b2;
-  if (a2.length !== arrayB.length)
-    return false;
-  for (let i = 0; i < a2.length; i++) {
-    if (!latLngEquals(a2[i], arrayB[i]))
-      return false;
-  }
-  return true;
-}
-function pathsEquals(a2, b2) {
-  if (!a2 || !b2)
-    return a2 === b2;
-  const arrayB = "getArray" in b2 ? b2.getArray().map((inner2) => inner2.getArray()) : b2;
-  if (a2.length !== arrayB.length)
-    return false;
-  for (let i = 0; i < a2.length; i++) {
-    if (!pathEquals(a2[i], arrayB[i]))
-      return false;
-  }
-  return true;
-}
-function useMapCameraParams(map2, cameraStateRef, mapProps) {
-  const center = mapProps.center ? toLatLngLiteral(mapProps.center) : null;
-  let lat = null;
-  let lng = null;
-  if (center && Number.isFinite(center.lat) && Number.isFinite(center.lng)) {
-    lat = center.lat;
-    lng = center.lng;
-  }
-  const zoom = Number.isFinite(mapProps.zoom) ? mapProps.zoom : null;
-  const heading = Number.isFinite(mapProps.heading) ? mapProps.heading : null;
-  const tilt = Number.isFinite(mapProps.tilt) ? mapProps.tilt : null;
-  (0, import_react125.useLayoutEffect)(() => {
-    if (!map2)
-      return;
-    const nextCamera = {};
-    let needsUpdate = false;
-    if (lat !== null && lng !== null && (cameraStateRef.current.center.lat !== lat || cameraStateRef.current.center.lng !== lng)) {
-      nextCamera.center = { lat, lng };
-      needsUpdate = true;
-    }
-    if (zoom !== null && cameraStateRef.current.zoom !== zoom) {
-      nextCamera.zoom = zoom;
-      needsUpdate = true;
-    }
-    if (heading !== null && cameraStateRef.current.heading !== heading) {
-      nextCamera.heading = heading;
-      needsUpdate = true;
-    }
-    if (tilt !== null && cameraStateRef.current.tilt !== tilt) {
-      nextCamera.tilt = tilt;
-      needsUpdate = true;
-    }
-    if (needsUpdate) {
-      map2.moveCamera(nextCamera);
-    }
-  });
-}
-var AuthFailureMessage = () => {
-  const style2 = {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    bottom: 0,
-    right: 0,
-    zIndex: 999,
-    display: "flex",
-    flexFlow: "column nowrap",
-    textAlign: "center",
-    justifyContent: "center",
-    fontSize: ".8rem",
-    color: "rgba(0,0,0,0.6)",
-    background: "#dddddd",
-    padding: "1rem 1.5rem"
-  };
-  return import_react125.default.createElement(
-    "div",
-    { style: style2 },
-    import_react125.default.createElement("h2", null, "Error: AuthFailure"),
-    import_react125.default.createElement(
-      "p",
-      null,
-      "A problem with your API key prevents the map from rendering correctly. Please make sure the value of the ",
-      import_react125.default.createElement("code", null, "APIProvider.apiKey"),
-      " prop is correct. Check the error-message in the console for further details."
-    )
-  );
-};
-function useCallbackRef() {
-  const [el, setEl] = (0, import_react125.useState)(null);
-  const ref = (0, import_react125.useCallback)((value) => setEl(value), [setEl]);
-  return [el, ref];
-}
-function useApiIsLoaded() {
-  const status = useApiLoadingStatus();
-  return status === APILoadingStatus.LOADED;
-}
-function useForceUpdate() {
-  const [, forceUpdate] = (0, import_react125.useReducer)((x) => x + 1, 0);
-  return forceUpdate;
-}
-function handleBoundsChange(map2, ref) {
-  const center = map2.getCenter();
-  const zoom = map2.getZoom();
-  const heading = map2.getHeading() || 0;
-  const tilt = map2.getTilt() || 0;
-  const bounds = map2.getBounds();
-  if (!center || !bounds || !Number.isFinite(zoom)) {
-    console.warn("[useTrackedCameraState] at least one of the values from the map returned undefined. This is not expected to happen. Please report an issue at https://github.com/visgl/react-google-maps/issues/new");
-  }
-  Object.assign(ref.current, {
-    center: (center === null || center === void 0 ? void 0 : center.toJSON()) || { lat: 0, lng: 0 },
-    zoom: zoom || 0,
-    heading,
-    tilt
-  });
-}
-function useTrackedCameraStateRef(map2) {
-  const forceUpdate = useForceUpdate();
-  const ref = (0, import_react125.useRef)({
-    center: { lat: 0, lng: 0 },
-    heading: 0,
-    tilt: 0,
-    zoom: 0
-  });
-  (0, import_react125.useEffect)(() => {
-    if (!map2)
-      return;
-    const listener = google.maps.event.addListener(map2, "bounds_changed", () => {
-      handleBoundsChange(map2, ref);
-      forceUpdate();
-    });
-    return () => listener.remove();
-  }, [map2, forceUpdate]);
-  return ref;
-}
-var CachedMapStack = class {
-  static has(key) {
-    return this.entries[key] && this.entries[key].length > 0;
-  }
-  static pop(key) {
-    if (!this.entries[key])
-      return null;
-    return this.entries[key].pop() || null;
-  }
-  static push(key, value) {
-    if (!this.entries[key])
-      this.entries[key] = [];
-    this.entries[key].push(value);
-  }
-};
-CachedMapStack.entries = {};
-function useMapInstance(props, context) {
-  const apiIsLoaded = useApiIsLoaded();
-  const [map2, setMap] = (0, import_react125.useState)(null);
-  const [container3, containerRef] = useCallbackRef();
-  const cameraStateRef = useTrackedCameraStateRef(map2);
-  const { id, defaultBounds, defaultCenter, defaultZoom, defaultHeading, defaultTilt, reuseMaps, renderingType, colorScheme } = props, mapOptions = __rest(props, ["id", "defaultBounds", "defaultCenter", "defaultZoom", "defaultHeading", "defaultTilt", "reuseMaps", "renderingType", "colorScheme"]);
-  const hasZoom = props.zoom !== void 0 || props.defaultZoom !== void 0;
-  const hasCenter = props.center !== void 0 || props.defaultCenter !== void 0;
-  if (!defaultBounds && (!hasZoom || !hasCenter)) {
-    console.warn("<Map> component is missing configuration. You have to provide zoom and center (via the `zoom`/`defaultZoom` and `center`/`defaultCenter` props) or specify the region to show using `defaultBounds`. See https://visgl.github.io/react-google-maps/docs/api-reference/components/map#required");
-  }
-  if (!mapOptions.center && defaultCenter)
-    mapOptions.center = defaultCenter;
-  if (!mapOptions.zoom && Number.isFinite(defaultZoom))
-    mapOptions.zoom = defaultZoom;
-  if (!mapOptions.heading && Number.isFinite(defaultHeading))
-    mapOptions.heading = defaultHeading;
-  if (!mapOptions.tilt && Number.isFinite(defaultTilt))
-    mapOptions.tilt = defaultTilt;
-  const customIds = mapOptions.internalUsageAttributionIds;
-  if (customIds == null) {
-    mapOptions.internalUsageAttributionIds = context.internalUsageAttributionIds;
-  } else {
-    mapOptions.internalUsageAttributionIds = [
-      ...context.internalUsageAttributionIds || [],
-      ...customIds
-    ];
-  }
-  for (const key of Object.keys(mapOptions))
-    if (mapOptions[key] === void 0)
-      delete mapOptions[key];
-  const savedMapStateRef = (0, import_react125.useRef)(void 0);
-  (0, import_react125.useEffect)(
-    () => {
-      if (!container3 || !apiIsLoaded)
-        return;
-      const { addMapInstance, removeMapInstance } = context;
-      const { mapId } = props;
-      const cacheKey = `${mapId || "default"}:${renderingType || "default"}:${colorScheme || "LIGHT"}`;
-      let mapDiv;
-      let map3;
-      if (reuseMaps && CachedMapStack.has(cacheKey)) {
-        map3 = CachedMapStack.pop(cacheKey);
-        mapDiv = map3.getDiv();
-        container3.appendChild(mapDiv);
-        map3.setOptions(mapOptions);
-        setTimeout(() => map3.moveCamera({}), 0);
-      } else {
-        mapDiv = document.createElement("div");
-        mapDiv.style.height = "100%";
-        container3.appendChild(mapDiv);
-        map3 = new google.maps.Map(mapDiv, Object.assign(Object.assign(Object.assign({}, mapOptions), renderingType ? { renderingType } : {}), colorScheme ? { colorScheme } : {}));
-      }
-      setMap(map3);
-      addMapInstance(map3, id);
-      if (defaultBounds) {
-        const { padding } = defaultBounds, defBounds = __rest(defaultBounds, ["padding"]);
-        map3.fitBounds(defBounds, padding);
-      } else if (!hasZoom || !hasCenter) {
-        map3.fitBounds({ east: 180, west: -180, south: -90, north: 90 });
-      }
-      if (savedMapStateRef.current) {
-        const { mapId: savedMapId, cameraState: savedCameraState } = savedMapStateRef.current;
-        if (savedMapId !== mapId) {
-          map3.moveCamera(savedCameraState);
-        }
-      }
-      return () => {
-        savedMapStateRef.current = {
-          mapId,
-          // eslint-disable-next-line react-hooks/exhaustive-deps
-          cameraState: cameraStateRef.current
-        };
-        mapDiv.remove();
-        if (reuseMaps) {
-          CachedMapStack.push(cacheKey, map3);
-        } else {
-          google.maps.event.clearInstanceListeners(map3);
-        }
-        setMap(null);
-        removeMapInstance(id);
-      };
-    },
-    // some dependencies are ignored in the list below:
-    //  - defaultBounds and the default* camera props will only be used once, and
-    //    changes should be ignored
-    //  - mapOptions has special hooks that take care of updating the options
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [
-      container3,
-      apiIsLoaded,
-      id,
-      // these props can't be changed after initialization and require a new
-      // instance to be created
-      props.mapId,
-      props.renderingType,
-      props.colorScheme
-    ]
-  );
-  return [map2, containerRef, cameraStateRef];
-}
-var GoogleMapsContext = import_react125.default.createContext(null);
-var Map2 = (props) => {
-  const { children, id, className: className2, style: style2 } = props;
-  const context = (0, import_react125.useContext)(APIProviderContext);
-  const loadingStatus2 = useApiLoadingStatus();
-  if (!context) {
-    throw new Error("<Map> can only be used inside an <ApiProvider> component.");
-  }
-  const [map2, mapRef, cameraStateRef] = useMapInstance(props, context);
-  useMapCameraParams(map2, cameraStateRef, props);
-  useMapEvents(map2, props);
-  useMapOptions(map2, props);
-  const isDeckGlControlled = useDeckGLCameraUpdate(map2, props);
-  const isControlledExternally = !!props.controlled;
-  (0, import_react125.useEffect)(() => {
-    if (!map2)
-      return;
-    if (isDeckGlControlled) {
-      map2.setOptions({ disableDefaultUI: true });
-    }
-    if (isDeckGlControlled || isControlledExternally) {
-      map2.setOptions({
-        gestureHandling: "none",
-        keyboardShortcuts: false
-      });
-    }
-    return () => {
-      map2.setOptions({
-        gestureHandling: props.gestureHandling,
-        keyboardShortcuts: props.keyboardShortcuts
-      });
-    };
-  }, [
-    map2,
-    isDeckGlControlled,
-    isControlledExternally,
-    props.gestureHandling,
-    props.keyboardShortcuts
-  ]);
-  const center = props.center ? toLatLngLiteral(props.center) : null;
-  let lat = null;
-  let lng = null;
-  if (center && Number.isFinite(center.lat) && Number.isFinite(center.lng)) {
-    lat = center.lat;
-    lng = center.lng;
-  }
-  const cameraOptions = (0, import_react125.useMemo)(() => {
-    var _a3, _b, _c;
-    return {
-      center: { lat: lat !== null && lat !== void 0 ? lat : 0, lng: lng !== null && lng !== void 0 ? lng : 0 },
-      zoom: (_a3 = props.zoom) !== null && _a3 !== void 0 ? _a3 : 0,
-      heading: (_b = props.heading) !== null && _b !== void 0 ? _b : 0,
-      tilt: (_c = props.tilt) !== null && _c !== void 0 ? _c : 0
-    };
-  }, [lat, lng, props.zoom, props.heading, props.tilt]);
-  (0, import_react125.useLayoutEffect)(() => {
-    if (!map2 || !isControlledExternally)
-      return;
-    map2.moveCamera(cameraOptions);
-    const listener = map2.addListener("bounds_changed", () => {
-      map2.moveCamera(cameraOptions);
-    });
-    return () => listener.remove();
-  }, [map2, isControlledExternally, cameraOptions]);
-  const combinedStyle = (0, import_react125.useMemo)(() => Object.assign({
-    width: "100%",
-    height: "100%",
-    position: "relative",
-    // when using deckgl, the map should be sent to the back
-    zIndex: isDeckGlControlled ? -1 : 0
-  }, style2), [style2, isDeckGlControlled]);
-  const contextValue = (0, import_react125.useMemo)(() => ({ map: map2 }), [map2]);
-  if (loadingStatus2 === APILoadingStatus.AUTH_FAILURE) {
-    return import_react125.default.createElement(
-      "div",
-      { style: Object.assign({ position: "relative" }, className2 ? {} : combinedStyle), className: className2 },
-      import_react125.default.createElement(AuthFailureMessage, null)
-    );
-  }
-  return import_react125.default.createElement("div", Object.assign({ ref: mapRef, "data-testid": "map", style: className2 ? void 0 : combinedStyle, className: className2 }, id ? { id } : {}), map2 ? import_react125.default.createElement(GoogleMapsContext.Provider, { value: contextValue }, children) : null);
-};
-Map2.deckGLViewProps = true;
-var shownMessages = /* @__PURE__ */ new Set();
-function logErrorOnce(...args) {
-  const key = JSON.stringify(args);
-  if (!shownMessages.has(key)) {
-    shownMessages.add(key);
-    console.error(...args);
-  }
-}
-var useMap = (id = null) => {
-  const ctx = (0, import_react125.useContext)(APIProviderContext);
-  const { map: map2 } = (0, import_react125.useContext)(GoogleMapsContext) || {};
-  if (ctx === null) {
-    logErrorOnce("useMap(): failed to retrieve APIProviderContext. Make sure that the <APIProvider> component exists and that the component you are calling `useMap()` from is a sibling of the <APIProvider>.");
-    return null;
-  }
-  const { mapInstances } = ctx;
-  if (id !== null)
-    return mapInstances[id] || null;
-  if (map2)
-    return map2;
-  return mapInstances["default"] || null;
-};
-function useMapsLibrary(name) {
-  const apiIsLoaded = useApiIsLoaded();
-  const ctx = (0, import_react125.useContext)(APIProviderContext);
-  (0, import_react125.useEffect)(() => {
-    if (!apiIsLoaded || !ctx)
-      return;
-    void ctx.importLibrary(name);
-  }, [apiIsLoaded, ctx, name]);
-  return (ctx === null || ctx === void 0 ? void 0 : ctx.loadedLibraries[name]) || null;
-}
-var _a2;
-var { useLayoutEffect: useLayoutEffect15, useRef: useRef31 } = React26;
-var useBeforeEffect = (_a2 = React26.useInsertionEffect) !== null && _a2 !== void 0 ? _a2 : useLayoutEffect15;
-function forbiddenInRender() {
-  throw new Error("useEffectEvent: invalid call during rendering.");
-}
-function useEffectEventPolyfill(fn) {
-  const ref = useRef31(forbiddenInRender);
-  useBeforeEffect(() => {
-    ref.current = fn;
-  }, [fn]);
-  return ((...args) => ref.current(...args));
-}
-var useEffectEvent = useEffectEventPolyfill;
-var noop$1 = () => {
-};
-function useMapsEventListener(target, name, callback) {
-  const eventFn = useEffectEvent(callback !== null && callback !== void 0 ? callback : noop$1);
-  const isCallbackDefined = Boolean(callback);
-  (0, import_react125.useEffect)(() => {
-    if (!target || !name || !isCallbackDefined)
-      return;
-    const listener = google.maps.event.addListener(target, name, eventFn);
-    return () => listener.remove();
-  }, [target, name, isCallbackDefined]);
-}
-function usePropBinding(object2, prop, value) {
-  (0, import_react125.useEffect)(() => {
-    if (!object2)
-      return;
-    object2[prop] = value;
-  }, [object2, prop, value]);
-}
-var noop = () => {
-};
-function useDomEventListener(target, name, callback) {
-  const eventFn = useEffectEvent(callback !== null && callback !== void 0 ? callback : noop);
-  const isCallbackDefined = Boolean(callback);
-  (0, import_react125.useEffect)(() => {
-    if (!target || !name || !isCallbackDefined)
-      return;
-    const listenerCallback = eventFn;
-    target.addEventListener(name, listenerCallback);
-    return () => target.removeEventListener(name, listenerCallback);
-  }, [target, name, isCallbackDefined]);
-}
-var GlobalStyleManager = class {
-  constructor() {
-    this.renderedStyles = /* @__PURE__ */ new Set();
-    this.styleElement = null;
-  }
-  getStyleElement() {
-    if (!this.styleElement) {
-      this.styleElement = document.createElement("style");
-      this.styleElement.setAttribute("data-rgm-anchor-styles", "");
-      document.head.appendChild(this.styleElement);
-    }
-    return this.styleElement;
-  }
-  addAdvancedMarkerPointerEventsOverwrite() {
-    if (this.renderedStyles.has("marker-pointer-events")) {
-      return;
-    }
-    const styleElement = this.getStyleElement();
-    styleElement.textContent += `
-      gmp-advanced-marker[data-origin='rgm'] {
-        pointer-events: none !important;
-      }
-    `;
-    this.renderedStyles.add("marker-pointer-events");
-  }
-  cleanup() {
-    if (this.styleElement) {
-      this.styleElement.remove();
-      this.styleElement = null;
-      this.renderedStyles.clear();
-    }
-  }
-};
-var globalStyleManager = new GlobalStyleManager();
-function isVersionGreaterEqual(major, minor) {
-  var _a3;
-  if (!((_a3 = google === null || google === void 0 ? void 0 : google.maps) === null || _a3 === void 0 ? void 0 : _a3.version))
-    return void 0;
-  const version3 = google.maps.version.split(".");
-  const currentMajor = parseInt(version3[0], 10);
-  const currentMinor = parseInt(version3[1], 10);
-  return currentMajor > major || currentMajor === major && currentMinor >= minor;
-}
-var AdvancedMarkerContext = import_react125.default.createContext(null);
-var AdvancedMarkerAnchorPoint = {
-  TOP_LEFT: ["0%", "0%"],
-  TOP_CENTER: ["50%", "0%"],
-  TOP: ["50%", "0%"],
-  TOP_RIGHT: ["100%", "0%"],
-  LEFT_CENTER: ["0%", "50%"],
-  LEFT_TOP: ["0%", "0%"],
-  LEFT: ["0%", "50%"],
-  LEFT_BOTTOM: ["0%", "100%"],
-  RIGHT_TOP: ["100%", "0%"],
-  RIGHT: ["100%", "50%"],
-  RIGHT_CENTER: ["100%", "50%"],
-  RIGHT_BOTTOM: ["100%", "100%"],
-  BOTTOM_LEFT: ["0%", "100%"],
-  BOTTOM_CENTER: ["50%", "100%"],
-  BOTTOM: ["50%", "100%"],
-  BOTTOM_RIGHT: ["100%", "100%"],
-  CENTER: ["50%", "50%"]
-};
-var AdvancedMarker = (0, import_react125.forwardRef)((props, ref) => {
-  const { children, style: style2, className: className2, anchorPoint } = props;
-  const [marker, contentContainer] = useAdvancedMarker(props);
-  const advancedMarkerContextValue = (0, import_react125.useMemo)(() => marker ? { marker } : null, [marker]);
-  (0, import_react125.useImperativeHandle)(ref, () => marker, [marker]);
-  if (!contentContainer)
-    return null;
-  return import_react125.default.createElement(AdvancedMarkerContext.Provider, { value: advancedMarkerContextValue }, (0, import_react_dom3.createPortal)(import_react125.default.createElement(MarkerContent, { anchorPoint, styles: style2, className: className2 }, children), contentContainer));
-});
-AdvancedMarker.displayName = "AdvancedMarker";
-function isElementNode(node) {
-  return node.nodeType === Node.ELEMENT_NODE;
-}
-var MarkerContent = ({ children, styles, className: className2 }) => {
-  return import_react125.default.createElement("div", { className: className2, style: styles }, children);
-};
-function useAdvancedMarker(props) {
-  const [marker, setMarker] = (0, import_react125.useState)(null);
-  const [contentContainer, setContentContainer] = (0, import_react125.useState)(null);
-  const map2 = useMap();
-  const markerLibrary = useMapsLibrary("marker");
-  const { children, onClick, className: className2, onMouseEnter, onMouseLeave, onDrag, onDragStart, onDragEnd, collisionBehavior, clickable, draggable, position, title, zIndex, anchorPoint, anchorLeft, anchorTop } = props;
-  const numChildren = import_react125.Children.count(children);
-  (0, import_react125.useEffect)(() => {
-    if (!map2 || !markerLibrary)
-      return;
-    const newMarker = new markerLibrary.AdvancedMarkerElement();
-    newMarker.map = map2;
-    setMarker(newMarker);
-    let contentElement = null;
-    if (numChildren > 0) {
-      contentElement = document.createElement("div");
-      newMarker.content = contentElement;
-      setContentContainer(contentElement);
-    }
-    return () => {
-      newMarker.map = null;
-      contentElement === null || contentElement === void 0 ? void 0 : contentElement.remove();
-      setMarker(null);
-      setContentContainer(null);
-    };
-  }, [map2, markerLibrary, numChildren]);
-  (0, import_react125.useEffect)(() => {
-    if (!(marker === null || marker === void 0 ? void 0 : marker.content) || !isElementNode(marker.content) || numChildren > 0)
-      return;
-    marker.content.className = className2 !== null && className2 !== void 0 ? className2 : "";
-  }, [marker, className2, numChildren]);
-  useAdvancedMarkerAnchoring(marker, anchorPoint, anchorLeft, anchorTop, numChildren > 0);
-  usePropBinding(marker, "position", position);
-  usePropBinding(marker, "title", title !== null && title !== void 0 ? title : "");
-  usePropBinding(marker, "zIndex", zIndex);
-  usePropBinding(marker, "collisionBehavior", collisionBehavior);
-  (0, import_react125.useEffect)(() => {
-    if (!marker)
-      return;
-    if (draggable !== void 0)
-      marker.gmpDraggable = draggable;
-    else if (onDrag || onDragStart || onDragEnd)
-      marker.gmpDraggable = true;
-    else
-      marker.gmpDraggable = false;
-  }, [marker, draggable, onDrag, onDragEnd, onDragStart]);
-  (0, import_react125.useEffect)(() => {
-    if (!marker)
-      return;
-    const gmpClickable = clickable !== void 0 ? clickable : Boolean(onClick) || Boolean(onMouseEnter) || Boolean(onMouseLeave);
-    marker.gmpClickable = gmpClickable;
-    if (gmpClickable && (marker === null || marker === void 0 ? void 0 : marker.content) && isElementNode(marker.content)) {
-      marker.content.style.pointerEvents = "all";
-      if (onClick) {
-        marker.content.style.cursor = "pointer";
-      }
-    }
-  }, [marker, clickable, onClick, onMouseEnter, onMouseLeave]);
-  useMapsEventListener(marker, "click", onClick);
-  useMapsEventListener(marker, "drag", onDrag);
-  useMapsEventListener(marker, "dragstart", onDragStart);
-  useMapsEventListener(marker, "dragend", onDragEnd);
-  useDomEventListener(marker === null || marker === void 0 ? void 0 : marker.element, "mouseenter", onMouseEnter);
-  useDomEventListener(marker === null || marker === void 0 ? void 0 : marker.element, "mouseleave", onMouseLeave);
-  return [marker, contentContainer];
-}
-function useAdvancedMarkerAnchoring(marker, anchorPoint, anchorLeft, anchorTop, hasChildren) {
-  (0, import_react125.useEffect)(() => {
-    if (!marker || !hasChildren)
-      return;
-    const anchorOptionsSupported = isVersionGreaterEqual(3, 62);
-    const contentElement = marker.content;
-    if (!contentElement || !isElementNode(contentElement))
-      return;
-    if (anchorLeft !== void 0 || anchorTop !== void 0) {
-      if (!anchorOptionsSupported) {
-        console.warn(`AdvancedMarker: The anchorLeft and anchorTop props are only supported in Google Maps API version 3.62 and above. The current version is ${google.maps.version}.`);
-      }
-      marker.anchorLeft = anchorLeft;
-      marker.anchorTop = anchorTop;
-      if (anchorPoint !== void 0) {
-        console.warn("AdvancedMarker: the anchorPoint prop is ignored when anchorLeft and/or anchorTop are set.");
-      }
-      return;
-    }
-    if (anchorPoint !== void 0) {
-      const [x, y] = anchorPoint !== null && anchorPoint !== void 0 ? anchorPoint : AdvancedMarkerAnchorPoint["BOTTOM"];
-      const translateX = `calc(-1 * ${x})`;
-      const translateY = `calc(-1 * ${y})`;
-      if (anchorOptionsSupported) {
-        marker.anchorLeft = translateX;
-        marker.anchorTop = translateY;
-        contentElement.style.transform = "";
-      } else {
-        contentElement.style.transform = `translate(50%, 100%) translate(${translateX}, ${translateY})`;
-        marker.dataset.origin = "rgm";
-        globalStyleManager.addAdvancedMarkerPointerEventsOverwrite();
-      }
-    }
-  }, [marker, anchorPoint, anchorLeft, anchorTop, hasChildren]);
-}
-function useCircle(props) {
-  var _a3, _b, _c;
-  const { onClick, onDrag, onDragStart, onDragEnd, onMouseOver, onMouseOut, onRadiusChanged, onCenterChanged, center, defaultCenter, radius, defaultRadius } = props, destructuredOptions = __rest(props, ["onClick", "onDrag", "onDragStart", "onDragEnd", "onMouseOver", "onMouseOut", "onRadiusChanged", "onCenterChanged", "center", "defaultCenter", "radius", "defaultRadius"]);
-  const [circle, setCircle] = (0, import_react125.useState)(null);
-  const map2 = useMap();
-  const circleOptions = useMemoized(Object.assign(Object.assign({}, destructuredOptions), { clickable: (_a3 = destructuredOptions.clickable) !== null && _a3 !== void 0 ? _a3 : Boolean(onClick), draggable: (_b = destructuredOptions.draggable) !== null && _b !== void 0 ? _b : Boolean(onDrag || onDragStart || onDragEnd || onCenterChanged), editable: (_c = destructuredOptions.editable) !== null && _c !== void 0 ? _c : Boolean(onRadiusChanged) }), import_fast_deep_equal.default);
-  (0, import_react125.useEffect)(() => {
-    if (!map2) {
-      if (map2 === void 0)
-        console.error("<Circle> has to be inside a Map component.");
-      return;
-    }
-    const newCircle = new google.maps.Circle(Object.assign(Object.assign({}, circleOptions), { center: center !== null && center !== void 0 ? center : defaultCenter, radius: radius !== null && radius !== void 0 ? radius : defaultRadius }));
-    newCircle.setMap(map2);
-    setCircle(newCircle);
-    return () => {
-      newCircle.setMap(null);
-      setCircle(null);
-    };
-  }, [map2]);
-  useMapsEventListener(circle, "click", onClick);
-  useMapsEventListener(circle, "drag", onDrag);
-  useMapsEventListener(circle, "dragstart", onDragStart);
-  useMapsEventListener(circle, "dragend", onDragEnd);
-  useMapsEventListener(circle, "mouseover", onMouseOver);
-  useMapsEventListener(circle, "mouseout", onMouseOut);
-  useMapsEventListener(circle, "radius_changed", onRadiusChanged ? () => {
-    const newRadius = circle === null || circle === void 0 ? void 0 : circle.getRadius();
-    if (newRadius !== void 0)
-      onRadiusChanged(newRadius);
-  } : null);
-  useMapsEventListener(circle, "center_changed", onCenterChanged ? () => {
-    onCenterChanged(circle === null || circle === void 0 ? void 0 : circle.getCenter());
-  } : null);
-  (0, import_react125.useEffect)(() => {
-    if (!circle)
-      return;
-    circle.setOptions(circleOptions);
-  }, [circle, circleOptions]);
-  (0, import_react125.useEffect)(() => {
-    if (!circle || !center)
-      return;
-    if (!latLngEquals(center, circle.getCenter())) {
-      circle.setCenter(center);
-    }
-  }, [circle, center]);
-  (0, import_react125.useEffect)(() => {
-    if (!circle || radius === void 0)
-      return;
-    if (radius !== circle.getRadius()) {
-      circle.setRadius(radius);
-    }
-  }, [circle, radius]);
-  return circle;
-}
-var Circle = (0, import_react125.forwardRef)((props, ref) => {
-  const circle = useCircle(props);
-  (0, import_react125.useImperativeHandle)(ref, () => circle, [circle]);
-  return import_react125.default.createElement(import_react125.default.Fragment, null);
-});
-Circle.displayName = "Circle";
-function setValueForStyles(element, styles, prevStyles) {
-  if (styles != null && typeof styles !== "object") {
-    throw new Error("The `style` prop expects a mapping from style properties to values, not a string. For example, style={{marginRight: spacing + 'em'}} when using JSX.");
-  }
-  const elementStyle = element.style;
-  if (prevStyles == null) {
-    if (styles == null)
-      return;
-    for (const styleName in styles) {
-      if (!styles.hasOwnProperty(styleName))
-        continue;
-      setValueForStyle(elementStyle, styleName, styles[styleName]);
-    }
-    return;
-  }
-  for (const styleName in prevStyles) {
-    if (prevStyles.hasOwnProperty(styleName) && (styles == null || !styles.hasOwnProperty(styleName))) {
-      const isCustomProperty = styleName.indexOf("--") === 0;
-      if (isCustomProperty) {
-        elementStyle.setProperty(styleName, "");
-      } else if (styleName === "float") {
-        elementStyle.cssFloat = "";
-      } else {
-        elementStyle[styleName] = "";
-      }
-    }
-  }
-  if (styles == null)
-    return;
-  for (const styleName in styles) {
-    const value = styles[styleName];
-    if (styles.hasOwnProperty(styleName) && prevStyles[styleName] !== value) {
-      setValueForStyle(elementStyle, styleName, value);
-    }
-  }
-}
-function setValueForStyle(elementStyle, styleName, value) {
-  const isCustomProperty = styleName.indexOf("--") === 0;
-  if (value == null || typeof value === "boolean" || value === "") {
-    if (isCustomProperty) {
-      elementStyle.setProperty(styleName, "");
-    } else if (styleName === "float") {
-      elementStyle.cssFloat = "";
-    } else {
-      elementStyle[styleName] = "";
-    }
-  } else if (isCustomProperty) {
-    elementStyle.setProperty(styleName, value);
-  } else if (typeof value === "number" && value !== 0 && !isUnitlessNumber(styleName)) {
-    elementStyle[styleName] = value + "px";
-  } else {
-    if (styleName === "float") {
-      elementStyle.cssFloat = value;
-    } else {
-      elementStyle[styleName] = ("" + value).trim();
-    }
-  }
-}
-var unitlessNumbers = /* @__PURE__ */ new Set([
-  "animationIterationCount",
-  "aspectRatio",
-  "borderImageOutset",
-  "borderImageSlice",
-  "borderImageWidth",
-  "boxFlex",
-  "boxFlexGroup",
-  "boxOrdinalGroup",
-  "columnCount",
-  "columns",
-  "flex",
-  "flexGrow",
-  "flexPositive",
-  "flexShrink",
-  "flexNegative",
-  "flexOrder",
-  "gridArea",
-  "gridRow",
-  "gridRowEnd",
-  "gridRowSpan",
-  "gridRowStart",
-  "gridColumn",
-  "gridColumnEnd",
-  "gridColumnSpan",
-  "gridColumnStart",
-  "fontWeight",
-  "lineClamp",
-  "lineHeight",
-  "opacity",
-  "order",
-  "orphans",
-  "scale",
-  "tabSize",
-  "widows",
-  "zIndex",
-  "zoom",
-  "fillOpacity",
-  // SVG-related properties
-  "floodOpacity",
-  "stopOpacity",
-  "strokeDasharray",
-  "strokeDashoffset",
-  "strokeMiterlimit",
-  "strokeOpacity",
-  "strokeWidth"
-]);
-function isUnitlessNumber(name) {
-  return unitlessNumbers.has(name);
-}
-function getPathsArray(polygon) {
-  const mvcPaths = polygon.getPaths();
-  const result = [];
-  for (let i = 0; i < mvcPaths.getLength(); i++) {
-    result.push(mvcPaths.getAt(i).getArray());
-  }
-  return result;
-}
-function usePolygon(props) {
-  var _a3, _b, _c;
-  const { onClick, onDrag, onDragStart, onDragEnd, onMouseOver, onMouseOut, onPathsChanged, polygon: externalPolygon, encodedPaths, paths, defaultPaths } = props, destructuredOptions = __rest(props, ["onClick", "onDrag", "onDragStart", "onDragEnd", "onMouseOver", "onMouseOut", "onPathsChanged", "polygon", "encodedPaths", "paths", "defaultPaths"]);
-  const [polygon, setPolygon] = (0, import_react125.useState)(null);
-  const map2 = useMap();
-  const geometryLibrary = useMapsLibrary("geometry");
-  const isUpdatingRef = (0, import_react125.useRef)(false);
-  const polygonOptions = useMemoized(Object.assign(Object.assign({}, destructuredOptions), { clickable: (_a3 = destructuredOptions.clickable) !== null && _a3 !== void 0 ? _a3 : Boolean(onClick), draggable: (_b = destructuredOptions.draggable) !== null && _b !== void 0 ? _b : Boolean(onDrag || onDragStart || onDragEnd || onPathsChanged), editable: (_c = destructuredOptions.editable) !== null && _c !== void 0 ? _c : Boolean(onPathsChanged) }), import_fast_deep_equal.default);
-  (0, import_react125.useEffect)(() => {
-    if (!map2) {
-      if (map2 === void 0)
-        console.error("<Polygon> has to be inside a Map component.");
-      return;
-    }
-    let instance;
-    if (externalPolygon) {
-      instance = externalPolygon;
-      const initialPaths = paths !== null && paths !== void 0 ? paths : defaultPaths;
-      if (initialPaths && Array.isArray(initialPaths)) {
-        instance.setPaths(initialPaths);
-      }
-      instance.setOptions(polygonOptions);
-    } else {
-      const initialPaths = paths !== null && paths !== void 0 ? paths : defaultPaths;
-      const polygonOptionsWithPaths = Object.assign({}, polygonOptions);
-      if (initialPaths && Array.isArray(initialPaths)) {
-        polygonOptionsWithPaths.paths = initialPaths;
-      }
-      instance = new google.maps.Polygon(polygonOptionsWithPaths);
-    }
-    instance.setMap(map2);
-    setPolygon(instance);
-    return () => {
-      instance.setMap(null);
-      setPolygon(null);
-    };
-  }, [map2, externalPolygon]);
-  useMapsEventListener(polygon, "click", onClick);
-  useMapsEventListener(polygon, "drag", onDrag);
-  useMapsEventListener(polygon, "dragstart", onDragStart);
-  useMapsEventListener(polygon, "mouseover", onMouseOver);
-  useMapsEventListener(polygon, "mouseout", onMouseOut);
-  useMapsEventListener(polygon, "dragend", (e) => {
-    onDragEnd === null || onDragEnd === void 0 ? void 0 : onDragEnd(e);
-    if (onPathsChanged && polygon && !isUpdatingRef.current) {
-      onPathsChanged(getPathsArray(polygon));
-    }
-  });
-  (0, import_react125.useEffect)(() => {
-    if (!polygon || !onPathsChanged)
-      return;
-    const listeners3 = [];
-    const mvcPaths = polygon.getPaths();
-    if (typeof mvcPaths.getLength !== "function" || typeof mvcPaths.getAt !== "function") {
-      return;
-    }
-    const handlePathsChange = () => {
-      if (!isUpdatingRef.current) {
-        onPathsChanged(getPathsArray(polygon));
-      }
-    };
-    const subscribeToInnerPath = (innerPath) => {
-      listeners3.push(google.maps.event.addListener(innerPath, "insert_at", handlePathsChange));
-      listeners3.push(google.maps.event.addListener(innerPath, "remove_at", handlePathsChange));
-      listeners3.push(google.maps.event.addListener(innerPath, "set_at", handlePathsChange));
-    };
-    for (let i = 0; i < mvcPaths.getLength(); i++) {
-      subscribeToInnerPath(mvcPaths.getAt(i));
-    }
-    listeners3.push(google.maps.event.addListener(mvcPaths, "insert_at", (index) => {
-      subscribeToInnerPath(mvcPaths.getAt(index));
-      handlePathsChange();
-    }));
-    listeners3.push(google.maps.event.addListener(mvcPaths, "set_at", (index) => {
-      subscribeToInnerPath(mvcPaths.getAt(index));
-      handlePathsChange();
-    }));
-    listeners3.push(google.maps.event.addListener(mvcPaths, "remove_at", handlePathsChange));
-    return () => {
-      listeners3.forEach((listener) => listener.remove());
-    };
-  }, [
-    polygon,
-    onPathsChanged,
-    paths,
-    encodedPaths,
-    polygonOptions.editable,
-    polygonOptions.draggable
-  ]);
-  (0, import_react125.useEffect)(() => {
-    if (!polygon)
-      return;
-    polygon.setOptions(polygonOptions);
-  }, [polygon, polygonOptions]);
-  (0, import_react125.useEffect)(() => {
-    if (!polygon || !paths)
-      return;
-    if (!Array.isArray(paths))
-      return;
-    const firstPath = paths[0];
-    const normalizedPaths = Array.isArray(firstPath) ? paths : [paths];
-    const currentPaths = polygon.getPaths();
-    if (!pathsEquals(normalizedPaths, currentPaths)) {
-      isUpdatingRef.current = true;
-      polygon.setPaths(paths);
-      isUpdatingRef.current = false;
-    }
-  }, [polygon, paths]);
-  (0, import_react125.useEffect)(() => {
-    if (!polygon || !encodedPaths || !geometryLibrary)
-      return;
-    isUpdatingRef.current = true;
-    const decodedPaths = encodedPaths.map((encodedPath) => geometryLibrary.encoding.decodePath(encodedPath));
-    polygon.setPaths(decodedPaths);
-    isUpdatingRef.current = false;
-  }, [polygon, encodedPaths, geometryLibrary]);
-  return polygon;
-}
-var Polygon = (0, import_react125.forwardRef)((props, ref) => {
-  const polygon = usePolygon(props);
-  (0, import_react125.useImperativeHandle)(ref, () => polygon, [polygon]);
-  return import_react125.default.createElement(import_react125.default.Fragment, null);
-});
-Polygon.displayName = "Polygon";
-function usePolyline(props) {
-  var _a3, _b, _c;
-  const { onClick, onDrag, onDragStart, onDragEnd, onMouseOver, onMouseOut, onPathChanged, polyline: externalPolyline, encodedPath, path, defaultPath } = props, destructuredOptions = __rest(props, ["onClick", "onDrag", "onDragStart", "onDragEnd", "onMouseOver", "onMouseOut", "onPathChanged", "polyline", "encodedPath", "path", "defaultPath"]);
-  const [polyline, setPolyline] = (0, import_react125.useState)(null);
-  const map2 = useMap();
-  const geometryLibrary = useMapsLibrary("geometry");
-  const isUpdatingRef = (0, import_react125.useRef)(false);
-  const polylineOptions = useMemoized(Object.assign(Object.assign({}, destructuredOptions), { clickable: (_a3 = destructuredOptions.clickable) !== null && _a3 !== void 0 ? _a3 : Boolean(onClick), draggable: (_b = destructuredOptions.draggable) !== null && _b !== void 0 ? _b : Boolean(onDrag || onDragStart || onDragEnd || onPathChanged), editable: (_c = destructuredOptions.editable) !== null && _c !== void 0 ? _c : Boolean(onPathChanged) }), import_fast_deep_equal.default);
-  (0, import_react125.useEffect)(() => {
-    if (!map2) {
-      if (map2 === void 0)
-        console.error("<Polyline> has to be inside a Map component.");
-      return;
-    }
-    let instance;
-    if (externalPolyline) {
-      instance = externalPolyline;
-      const initialPath = path !== null && path !== void 0 ? path : defaultPath;
-      if (initialPath && Array.isArray(initialPath)) {
-        instance.setPath(initialPath);
-      }
-      instance.setOptions(polylineOptions);
-    } else {
-      const initialPath = path !== null && path !== void 0 ? path : defaultPath;
-      const polylineOptionsWithPath = Object.assign({}, polylineOptions);
-      if (initialPath && Array.isArray(initialPath)) {
-        polylineOptionsWithPath.path = initialPath;
-      }
-      instance = new google.maps.Polyline(polylineOptionsWithPath);
-    }
-    instance.setMap(map2);
-    setPolyline(instance);
-    return () => {
-      instance.setMap(null);
-      setPolyline(null);
-    };
-  }, [map2, externalPolyline]);
-  useMapsEventListener(polyline, "click", onClick);
-  useMapsEventListener(polyline, "drag", onDrag);
-  useMapsEventListener(polyline, "dragstart", onDragStart);
-  useMapsEventListener(polyline, "mouseover", onMouseOver);
-  useMapsEventListener(polyline, "mouseout", onMouseOut);
-  useMapsEventListener(polyline, "dragend", (e) => {
-    onDragEnd === null || onDragEnd === void 0 ? void 0 : onDragEnd(e);
-    if (onPathChanged && polyline && !isUpdatingRef.current) {
-      onPathChanged(polyline.getPath().getArray());
-    }
-  });
-  (0, import_react125.useEffect)(() => {
-    if (!polyline || !onPathChanged)
-      return;
-    const mvcPath = polyline.getPath();
-    if (!mvcPath)
-      return;
-    const handlePathChange = () => {
-      if (!isUpdatingRef.current) {
-        onPathChanged(mvcPath.getArray());
-      }
-    };
-    const listeners3 = [
-      google.maps.event.addListener(mvcPath, "insert_at", handlePathChange),
-      google.maps.event.addListener(mvcPath, "remove_at", handlePathChange),
-      google.maps.event.addListener(mvcPath, "set_at", handlePathChange)
-    ];
-    return () => {
-      listeners3.forEach((listener) => listener.remove());
-    };
-  }, [
-    polyline,
-    onPathChanged,
-    path,
-    encodedPath,
-    polylineOptions.editable,
-    polylineOptions.draggable
-  ]);
-  (0, import_react125.useEffect)(() => {
-    if (!polyline)
-      return;
-    polyline.setOptions(polylineOptions);
-  }, [polyline, polylineOptions]);
-  (0, import_react125.useEffect)(() => {
-    if (!polyline || !path)
-      return;
-    const currentPath = polyline.getPath();
-    if (!pathEquals(path, currentPath)) {
-      isUpdatingRef.current = true;
-      polyline.setPath(path);
-      isUpdatingRef.current = false;
-    }
-  }, [polyline, path]);
-  (0, import_react125.useEffect)(() => {
-    if (!polyline || !encodedPath || !geometryLibrary)
-      return;
-    isUpdatingRef.current = true;
-    const decodedPath = geometryLibrary.encoding.decodePath(encodedPath);
-    polyline.setPath(decodedPath);
-    isUpdatingRef.current = false;
-  }, [polyline, encodedPath, geometryLibrary]);
-  return polyline;
-}
-var Polyline = (0, import_react125.forwardRef)((props, ref) => {
-  const polyline = usePolyline(props);
-  (0, import_react125.useImperativeHandle)(ref, () => polyline, [polyline]);
-  return import_react125.default.createElement(import_react125.default.Fragment, null);
-});
-Polyline.displayName = "Polyline";
-var DEFAULT_CAMERA_STATE = {
-  center: { lat: 0, lng: 0, altitude: 0 },
-  range: 0,
-  heading: 0,
-  tilt: 0,
-  roll: 0
-};
-var CAMERA_PROPS = ["center", "range", "heading", "tilt", "roll"];
-function updateCameraState(map3d, ref, prop) {
-  const value = map3d[prop];
-  if (value == null)
-    return;
-  if (prop === "center") {
-    const center = value;
-    ref.current.center = center.toJSON ? center.toJSON() : center;
-  } else {
-    ref.current[prop] = value;
-  }
-}
-function useTrackedCameraStateRef3D(map3d) {
-  const forceUpdate = useForceUpdate();
-  const ref = (0, import_react125.useRef)(Object.assign({}, DEFAULT_CAMERA_STATE));
-  (0, import_react125.useEffect)(() => {
-    if (!map3d)
-      return;
-    const listeners3 = [];
-    for (const prop of CAMERA_PROPS) {
-      const eventName = `gmp-${prop}change`;
-      const handler = () => {
-        updateCameraState(map3d, ref, prop);
-        forceUpdate();
-      };
-      map3d.addEventListener(eventName, handler);
-      listeners3.push(() => map3d.removeEventListener(eventName, handler));
-    }
-    return () => {
-      for (const removeListener of listeners3) {
-        removeListener();
-      }
-    };
-  }, [map3d, forceUpdate]);
-  return ref;
-}
-function useMap3DInstance(props) {
-  const maps3dLib = useMapsLibrary("maps3d");
-  const [customElementReady, setCustomElementReady] = (0, import_react125.useState)(false);
-  const [, containerRef] = useCallbackRef();
-  const [map3d, map3dRef] = useCallbackRef();
-  const cameraStateRef = useTrackedCameraStateRef3D(map3d);
-  (0, import_react125.useEffect)(() => {
-    customElements.whenDefined("gmp-map-3d").then(() => {
-      setCustomElementReady(true);
-    });
-  }, []);
-  (0, import_react125.useEffect)(
-    () => {
-      if (!map3d)
-        return;
-      const {
-        center,
-        heading,
-        tilt,
-        range,
-        roll,
-        defaultCenter,
-        defaultHeading,
-        defaultTilt,
-        defaultRange,
-        defaultRoll,
-        // Non-element props to exclude
-        id,
-        style: style2,
-        className: className2,
-        children,
-        onCenterChanged,
-        onHeadingChanged,
-        onTiltChanged,
-        onRangeChanged,
-        onRollChanged,
-        onCameraChanged,
-        onClick,
-        onSteadyChange,
-        onAnimationEnd,
-        onError,
-        mode,
-        gestureHandling
-      } = props, elementOptions = __rest(props, ["center", "heading", "tilt", "range", "roll", "defaultCenter", "defaultHeading", "defaultTilt", "defaultRange", "defaultRoll", "id", "style", "className", "children", "onCenterChanged", "onHeadingChanged", "onTiltChanged", "onRangeChanged", "onRollChanged", "onCameraChanged", "onClick", "onSteadyChange", "onAnimationEnd", "onError", "mode", "gestureHandling"]);
-      const initialCenter = center !== null && center !== void 0 ? center : defaultCenter;
-      const initialHeading = heading !== null && heading !== void 0 ? heading : defaultHeading;
-      const initialTilt = tilt !== null && tilt !== void 0 ? tilt : defaultTilt;
-      const initialRange = range !== null && range !== void 0 ? range : defaultRange;
-      const initialRoll = roll !== null && roll !== void 0 ? roll : defaultRoll;
-      const initialOptions = Object.assign({}, elementOptions);
-      if (initialCenter)
-        initialOptions.center = initialCenter;
-      if (initialHeading !== void 0)
-        initialOptions.heading = initialHeading;
-      if (initialTilt !== void 0)
-        initialOptions.tilt = initialTilt;
-      if (initialRange !== void 0)
-        initialOptions.range = initialRange;
-      if (initialRoll !== void 0)
-        initialOptions.roll = initialRoll;
-      Object.assign(map3d, initialOptions);
-    },
-    // this effect should only run when the map3d element first becomes
-    // available, so we skip re-running it when other props change.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [map3d]
-  );
-  const isReady = !!maps3dLib && customElementReady;
-  return [map3d, containerRef, map3dRef, cameraStateRef, isReady];
-}
-function toLatLngAltitudeLiteral(value) {
-  if (!value)
-    return null;
-  if ("toJSON" in value && typeof value.toJSON === "function") {
-    return value.toJSON();
-  }
-  return value;
-}
-function useMap3DCameraParams(map3d, cameraStateRef, props) {
-  var _a3, _b, _c, _d, _e, _f, _g;
-  const centerLiteral = toLatLngAltitudeLiteral(props.center);
-  const lat = (_a3 = centerLiteral === null || centerLiteral === void 0 ? void 0 : centerLiteral.lat) !== null && _a3 !== void 0 ? _a3 : null;
-  const lng = (_b = centerLiteral === null || centerLiteral === void 0 ? void 0 : centerLiteral.lng) !== null && _b !== void 0 ? _b : null;
-  const altitude = (_c = centerLiteral === null || centerLiteral === void 0 ? void 0 : centerLiteral.altitude) !== null && _c !== void 0 ? _c : null;
-  const range = (_d = props.range) !== null && _d !== void 0 ? _d : null;
-  const heading = (_e = props.heading) !== null && _e !== void 0 ? _e : null;
-  const tilt = (_f = props.tilt) !== null && _f !== void 0 ? _f : null;
-  const roll = (_g = props.roll) !== null && _g !== void 0 ? _g : null;
-  (0, import_react125.useLayoutEffect)(() => {
-    var _a4;
-    if (!map3d)
-      return;
-    const currentState = cameraStateRef.current;
-    if (lat !== null && lng !== null && (currentState.center.lat !== lat || currentState.center.lng !== lng || altitude !== null && currentState.center.altitude !== altitude)) {
-      map3d.center = {
-        lat,
-        lng,
-        altitude: (_a4 = altitude !== null && altitude !== void 0 ? altitude : currentState.center.altitude) !== null && _a4 !== void 0 ? _a4 : 0
-      };
-    }
-    if (range !== null && currentState.range !== range) {
-      map3d.range = range;
-    }
-    if (heading !== null && currentState.heading !== heading) {
-      map3d.heading = heading;
-    }
-    if (tilt !== null && currentState.tilt !== tilt) {
-      map3d.tilt = tilt;
-    }
-    if (roll !== null && currentState.roll !== roll) {
-      map3d.roll = roll;
-    }
-  });
-}
-var CAMERA_EVENTS = [
-  "gmp-centerchange",
-  "gmp-headingchange",
-  "gmp-tiltchange",
-  "gmp-rangechange",
-  "gmp-rollchange"
-];
-function createCameraEvent(map3d, type) {
-  const center = map3d.center;
-  let centerLiteral;
-  if (center && "toJSON" in center && typeof center.toJSON === "function") {
-    centerLiteral = center.toJSON();
-  } else if (center) {
-    centerLiteral = center;
-  } else {
-    centerLiteral = { lat: 0, lng: 0, altitude: 0 };
-  }
-  return {
-    type,
-    map3d,
-    detail: {
-      center: centerLiteral,
-      range: map3d.range || 0,
-      heading: map3d.heading || 0,
-      tilt: map3d.tilt || 0,
-      roll: map3d.roll || 0
-    }
-  };
-}
-function createClickEvent(map3d, srcEvent) {
-  const placeClickEvent = srcEvent;
-  return {
-    type: "gmp-click",
-    map3d,
-    detail: {
-      position: srcEvent.position || null,
-      placeId: placeClickEvent.placeId
-    }
-  };
-}
-function createSteadyChangeEvent(map3d, srcEvent) {
-  return {
-    type: "gmp-steadychange",
-    map3d,
-    detail: {
-      isSteady: srcEvent.isSteady
-    }
-  };
-}
-function useMap3DEvents(map3d, props) {
-  const { onCenterChanged, onHeadingChanged, onTiltChanged, onRangeChanged, onRollChanged, onCameraChanged, onClick, onSteadyChange, onAnimationEnd, onError } = props;
-  useMap3DEvent(map3d, "gmp-centerchange", onCenterChanged, createCameraEvent);
-  useMap3DEvent(map3d, "gmp-headingchange", onHeadingChanged, createCameraEvent);
-  useMap3DEvent(map3d, "gmp-tiltchange", onTiltChanged, createCameraEvent);
-  useMap3DEvent(map3d, "gmp-rangechange", onRangeChanged, createCameraEvent);
-  useMap3DEvent(map3d, "gmp-rollchange", onRollChanged, createCameraEvent);
-  (0, import_react125.useEffect)(() => {
-    if (!map3d || !onCameraChanged)
-      return;
-    const handler = () => {
-      onCameraChanged(createCameraEvent(map3d, "camerachange"));
-    };
-    for (const eventName of CAMERA_EVENTS) {
-      map3d.addEventListener(eventName, handler);
-    }
-    return () => {
-      for (const eventName of CAMERA_EVENTS) {
-        map3d.removeEventListener(eventName, handler);
-      }
-    };
-  }, [map3d, onCameraChanged]);
-  (0, import_react125.useEffect)(() => {
-    if (!map3d || !onClick)
-      return;
-    const handler = (ev) => {
-      onClick(createClickEvent(map3d, ev));
-    };
-    map3d.addEventListener("gmp-click", handler);
-    return () => map3d.removeEventListener("gmp-click", handler);
-  }, [map3d, onClick]);
-  (0, import_react125.useEffect)(() => {
-    if (!map3d || !onSteadyChange)
-      return;
-    const handler = (ev) => {
-      onSteadyChange(createSteadyChangeEvent(map3d, ev));
-    };
-    map3d.addEventListener("gmp-steadychange", handler);
-    return () => map3d.removeEventListener("gmp-steadychange", handler);
-  }, [map3d, onSteadyChange]);
-  useMap3DEvent(map3d, "gmp-animationend", onAnimationEnd, (map3d2, type) => ({
-    type,
-    map3d: map3d2
-  }));
-  useMap3DEvent(map3d, "gmp-error", onError, (map3d2, type) => ({
-    type,
-    map3d: map3d2
-  }));
-}
-function useMap3DEvent(map3d, eventName, handler, createEvent) {
-  (0, import_react125.useEffect)(() => {
-    if (!map3d || !handler)
-      return;
-    const listener = () => {
-      handler(createEvent(map3d, eventName));
-    };
-    map3d.addEventListener(eventName, listener);
-    return () => map3d.removeEventListener(eventName, listener);
-  }, [map3d, eventName, handler, createEvent]);
-}
-var MAP_3D_OPTION_KEYS = /* @__PURE__ */ new Set([
-  "bounds",
-  "defaultUIHidden",
-  "gestureHandling",
-  "internalUsageAttributionIds",
-  "maxAltitude",
-  "maxHeading",
-  "maxTilt",
-  "minAltitude",
-  "minHeading",
-  "minTilt",
-  "mode"
-]);
-function useMap3DOptions(map3d, props) {
-  const options = (0, import_react125.useMemo)(() => {
-    const result = {};
-    const keys = Object.keys(props);
-    for (const key of keys) {
-      if (!MAP_3D_OPTION_KEYS.has(key))
-        continue;
-      const value = props[key];
-      if (value === void 0)
-        continue;
-      result[key] = value;
-    }
-    return result;
-  }, [props]);
-  useDeepCompareEffect(() => {
-    if (!map3d)
-      return;
-    Object.assign(map3d, options);
-  }, [map3d, options]);
-}
-var GoogleMaps3DContext = import_react125.default.createContext(null);
-var DEFAULT_CONTAINER_STYLE = {
-  width: "100%",
-  height: "100%",
-  position: "relative"
-};
-var Map3D = (0, import_react125.forwardRef)((props, ref) => {
-  const { children, id, className: className2, style: style2 } = props;
-  const context = (0, import_react125.useContext)(APIProviderContext);
-  if (!context) {
-    throw new Error("<Map3D> can only be used inside an <APIProvider> component.");
-  }
-  const { addMap3DInstance, removeMap3DInstance } = context;
-  const [map3d, containerRef, map3dRef, cameraStateRef, isReady] = useMap3DInstance(props);
-  useMap3DCameraParams(map3d, cameraStateRef, props);
-  useMap3DEvents(map3d, props);
-  useMap3DOptions(map3d, props);
-  (0, import_react125.useEffect)(() => {
-    if (!map3d)
-      return;
-    const instanceId = id !== null && id !== void 0 ? id : "default";
-    addMap3DInstance(map3d, instanceId);
-    return () => {
-      removeMap3DInstance(instanceId);
-    };
-  }, [map3d, id]);
-  (0, import_react125.useImperativeHandle)(ref, () => ({
-    map3d,
-    flyCameraAround: (options) => {
-      map3d === null || map3d === void 0 ? void 0 : map3d.flyCameraAround(options);
-    },
-    flyCameraTo: (options) => {
-      map3d === null || map3d === void 0 ? void 0 : map3d.flyCameraTo(options);
-    },
-    stopCameraAnimation: () => {
-      map3d === null || map3d === void 0 ? void 0 : map3d.stopCameraAnimation();
-    }
-  }), [map3d]);
-  const combinedStyle = (0, import_react125.useMemo)(() => Object.assign(Object.assign({}, DEFAULT_CONTAINER_STYLE), style2), [style2]);
-  const contextValue = (0, import_react125.useMemo)(() => ({ map3d }), [map3d]);
-  if (!isReady) {
-    return import_react125.default.createElement("div", Object.assign({ ref: containerRef, "data-testid": "map-3d", style: className2 ? void 0 : combinedStyle, className: className2 }, id ? { id } : {}));
-  }
-  return import_react125.default.createElement(
-    "div",
-    Object.assign({ ref: containerRef, "data-testid": "map-3d", style: className2 ? void 0 : combinedStyle, className: className2 }, id ? { id } : {}),
-    import_react125.default.createElement("gmp-map-3d", { ref: map3dRef, style: { width: "100%", height: "100%" } }, map3d && import_react125.default.createElement(GoogleMaps3DContext.Provider, { value: contextValue }, children))
-  );
-});
-Map3D.displayName = "Map3D";
-var Marker3DContext = (0, import_react125.createContext)(null);
-var Marker3D = (0, import_react125.forwardRef)(function Marker3D2(props, ref) {
-  const { children, onClick, position, altitudeMode, collisionBehavior, drawsWhenOccluded, extruded, label: label3, sizePreserved, zIndex, title } = props;
-  const isInteractive = Boolean(onClick);
-  const [marker, setMarker] = (0, import_react125.useState)(null);
-  const [contentHandledExternally, setContentHandledExternally] = (0, import_react125.useState)(false);
-  const contentContainer = (0, import_react125.useMemo)(() => {
-    const container3 = document.createElement("div");
-    container3.style.display = "none";
-    document.body.appendChild(container3);
-    return container3;
-  }, []);
-  (0, import_react125.useEffect)(() => {
-    return () => contentContainer.remove();
-  }, [contentContainer]);
-  const markerRef = (0, import_react125.useCallback)((node) => {
-    setMarker(node);
-    if (typeof ref === "function") {
-      ref(node);
-    } else if (ref) {
-      ref.current = node;
-    }
-  }, [ref]);
-  useDomEventListener(marker, "gmp-click", onClick);
-  (0, import_react125.useLayoutEffect)(() => {
-    if (contentHandledExternally)
-      return;
-    if (!marker || !contentContainer)
-      return;
-    while (marker.firstChild) {
-      marker.removeChild(marker.firstChild);
-    }
-    const childNodes = Array.from(contentContainer.childNodes);
-    for (const node of childNodes) {
-      if (node.nodeType !== Node.ELEMENT_NODE)
-        continue;
-      const element = node;
-      const tagName = element.tagName.toLowerCase();
-      if (tagName === "img" || tagName === "svg") {
-        const template = document.createElement("template");
-        template.content.appendChild(element.cloneNode(true));
-        marker.appendChild(template);
-      } else {
-        marker.appendChild(element.cloneNode(true));
-      }
-    }
-  }, [marker, contentContainer, children, contentHandledExternally]);
-  const contextValue = (0, import_react125.useMemo)(() => ({ marker, setContentHandledExternally }), [marker]);
-  usePropBinding(marker, "position", position);
-  usePropBinding(marker, "altitudeMode", altitudeMode);
-  usePropBinding(marker, "collisionBehavior", collisionBehavior);
-  usePropBinding(marker, "drawsWhenOccluded", drawsWhenOccluded);
-  usePropBinding(marker, "extruded", extruded);
-  usePropBinding(marker, "label", label3);
-  usePropBinding(marker, "sizePreserved", sizePreserved);
-  usePropBinding(marker, "zIndex", zIndex);
-  usePropBinding(marker, "title", title !== null && title !== void 0 ? title : "");
-  return import_react125.default.createElement(
-    Marker3DContext.Provider,
-    { value: contextValue },
-    isInteractive ? import_react125.default.createElement("gmp-marker-3d-interactive", { ref: markerRef }) : import_react125.default.createElement("gmp-marker-3d", { ref: markerRef }),
-    (0, import_react_dom3.createPortal)(children, contentContainer)
-  );
-});
-Marker3D.displayName = "Marker3D";
-var Popover = (0, import_react125.forwardRef)(function Popover2(props, ref) {
-  var _a3;
-  const { children, headerContent, style: style2, className: className2, open = true, position, anchor, anchorId, altitudeMode, lightDismissDisabled, autoPanDisabled, onClose } = props;
-  const [popover, setPopover] = (0, import_react125.useState)(null);
-  const prevStyleRef = (0, import_react125.useRef)(null);
-  (0, import_react125.useImperativeHandle)(ref, () => popover, [popover]);
-  usePopoverCloseObserver(popover, open, onClose);
-  usePropBinding(popover, "open", open !== null && open !== void 0 ? open : false);
-  usePropBinding(popover, "altitudeMode", altitudeMode);
-  usePropBinding(popover, "lightDismissDisabled", lightDismissDisabled);
-  usePropBinding(popover, "autoPanDisabled", autoPanDisabled);
-  const positionAnchor = (_a3 = anchor !== null && anchor !== void 0 ? anchor : anchorId) !== null && _a3 !== void 0 ? _a3 : position;
-  usePropBinding(popover, "positionAnchor", positionAnchor);
-  (0, import_react125.useLayoutEffect)(() => {
-    if (!popover)
-      return;
-    setValueForStyles(popover, style2 || null, prevStyleRef.current);
-    prevStyleRef.current = style2 || null;
-  }, [popover, style2]);
-  return import_react125.default.createElement(
-    "gmp-popover",
-    { ref: setPopover, className: className2 },
-    headerContent && import_react125.default.createElement("div", { slot: "header" }, headerContent),
-    children
-  );
-});
-Popover.displayName = "Popover";
-function usePopoverCloseObserver(popover, open, onClose) {
-  const previousOpenState = (0, import_react125.useRef)(void 0);
-  const openPropRef = (0, import_react125.useRef)(open);
-  (0, import_react125.useEffect)(() => {
-    openPropRef.current = open;
-  }, [open]);
-  (0, import_react125.useEffect)(() => {
-    if (!popover || !onClose)
-      return;
-    const observer = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        if (mutation.type === "attributes" && mutation.attributeName === "open") {
-          const isOpen = popover.hasAttribute("open");
-          if (previousOpenState.current === true && !isOpen && openPropRef.current !== false) {
-            onClose();
-          }
-          previousOpenState.current = isOpen;
-        }
-      }
-    });
-    observer.observe(popover, {
-      attributes: true,
-      attributeFilter: ["open"]
-    });
-    previousOpenState.current = popover.hasAttribute("open");
-    return () => {
-      observer.disconnect();
-    };
-  }, [popover, onClose]);
-}
-function useMarker(props) {
-  const [marker, setMarker] = (0, import_react125.useState)(null);
-  const map2 = useMap();
-  const { onClick, onDrag, onDragStart, onDragEnd, onMouseOver, onMouseOut } = props, markerOptions = __rest(props, ["onClick", "onDrag", "onDragStart", "onDragEnd", "onMouseOver", "onMouseOut"]);
-  const { position, draggable } = markerOptions;
-  (0, import_react125.useEffect)(() => {
-    if (!map2) {
-      if (map2 === void 0)
-        console.error("<Marker> has to be inside a Map component.");
-      return;
-    }
-    const newMarker = new google.maps.Marker(markerOptions);
-    newMarker.setMap(map2);
-    setMarker(newMarker);
-    return () => {
-      newMarker.setMap(null);
-      setMarker(null);
-    };
-  }, [map2]);
-  (0, import_react125.useEffect)(() => {
-    if (!marker)
-      return;
-    const m = marker;
-    const gme = google.maps.event;
-    if (onClick)
-      gme.addListener(m, "click", onClick);
-    if (onDrag)
-      gme.addListener(m, "drag", onDrag);
-    if (onDragStart)
-      gme.addListener(m, "dragstart", onDragStart);
-    if (onDragEnd)
-      gme.addListener(m, "dragend", onDragEnd);
-    if (onMouseOver)
-      gme.addListener(m, "mouseover", onMouseOver);
-    if (onMouseOut)
-      gme.addListener(m, "mouseout", onMouseOut);
-    marker.setDraggable(Boolean(draggable));
-    return () => {
-      gme.clearInstanceListeners(m);
-    };
-  }, [
-    marker,
-    draggable,
-    onClick,
-    onDrag,
-    onDragStart,
-    onDragEnd,
-    onMouseOver,
-    onMouseOut
-  ]);
-  (0, import_react125.useEffect)(() => {
-    if (!marker)
-      return;
-    if (markerOptions)
-      marker.setOptions(markerOptions);
-  }, [marker, markerOptions]);
-  (0, import_react125.useEffect)(() => {
-    if (draggable || !position || !marker)
-      return;
-    marker.setPosition(position);
-  }, [draggable, position, marker]);
-  return marker;
-}
-var Marker = (0, import_react125.forwardRef)((props, ref) => {
-  const marker = useMarker(props);
-  (0, import_react125.useImperativeHandle)(ref, () => marker, [marker]);
-  return import_react125.default.createElement(import_react125.default.Fragment, null);
-});
-Marker.displayName = "Marker";
-var PinLegacy = (props) => {
-  const advancedMarkerContext = (0, import_react125.useContext)(AdvancedMarkerContext);
-  const marker3dContext = (0, import_react125.useContext)(Marker3DContext);
-  const advancedMarker = advancedMarkerContext === null || advancedMarkerContext === void 0 ? void 0 : advancedMarkerContext.marker;
-  const marker3d = marker3dContext === null || marker3dContext === void 0 ? void 0 : marker3dContext.marker;
-  const setContentHandledExternally = marker3dContext === null || marker3dContext === void 0 ? void 0 : marker3dContext.setContentHandledExternally;
-  const glyphContainer = (0, import_react125.useMemo)(() => document.createElement("div"), []);
-  const markerLibrary = useMapsLibrary("marker");
-  (0, import_react125.useEffect)(() => {
-    if (marker3d && setContentHandledExternally) {
-      setContentHandledExternally(true);
-      return () => setContentHandledExternally(false);
-    }
-  }, [marker3d, setContentHandledExternally]);
-  (0, import_react125.useEffect)(() => {
-    if (!marker3d || !markerLibrary)
-      return;
-    const pinViewOptions = Object.assign({}, props);
-    const pinElement = new markerLibrary.PinElement(pinViewOptions);
-    if (props.children) {
-      pinElement.glyph = glyphContainer;
-    }
-    while (marker3d.firstChild) {
-      marker3d.removeChild(marker3d.firstChild);
-    }
-    marker3d.append(pinElement);
-    return () => {
-    };
-  }, [marker3d, markerLibrary, glyphContainer, props]);
-  (0, import_react125.useEffect)(() => {
-    var _a3;
-    if (marker3d)
-      return;
-    if (!advancedMarker) {
-      if (advancedMarker === void 0 && marker3d === void 0) {
-        console.error("The <Pin> component can only be used inside <AdvancedMarker> or <Marker3D>.");
-      }
-      return;
-    }
-    if (props.glyph && props.children) {
-      logErrorOnce("The <Pin> component only uses children to render the glyph if both the glyph property and children are present.");
-    }
-    if (import_react125.Children.count(props.children) > 1) {
-      logErrorOnce("Passing multiple children to the <Pin> component might lead to unexpected results.");
-    }
-    const pinViewOptions = Object.assign({}, props);
-    const pinElement = new google.maps.marker.PinElement(pinViewOptions);
-    if (props.children) {
-      pinElement.glyph = glyphContainer;
-    }
-    const markerContent = (_a3 = advancedMarker.content) === null || _a3 === void 0 ? void 0 : _a3.firstChild;
-    while (markerContent === null || markerContent === void 0 ? void 0 : markerContent.firstChild) {
-      markerContent.removeChild(markerContent.firstChild);
-    }
-    if (markerContent) {
-      markerContent.appendChild(pinElement.element);
-    }
-  }, [advancedMarker, glyphContainer, marker3d, props]);
-  return (0, import_react_dom3.createPortal)(props.children, glyphContainer);
-};
-var PinModern = (props) => {
-  const { children } = props;
-  const advancedMarkerContext = (0, import_react125.useContext)(AdvancedMarkerContext);
-  const marker3dContext = (0, import_react125.useContext)(Marker3DContext);
-  const advancedMarker = advancedMarkerContext === null || advancedMarkerContext === void 0 ? void 0 : advancedMarkerContext.marker;
-  const marker3d = marker3dContext === null || marker3dContext === void 0 ? void 0 : marker3dContext.marker;
-  const setContentHandledExternally = marker3dContext === null || marker3dContext === void 0 ? void 0 : marker3dContext.setContentHandledExternally;
-  const glyphContainer = (0, import_react125.useMemo)(() => document.createElement("div"), []);
-  const markerLibrary = useMapsLibrary("marker");
-  (0, import_react125.useEffect)(() => {
-    if (marker3d && setContentHandledExternally) {
-      setContentHandledExternally(true);
-      return () => setContentHandledExternally(false);
-    }
-  }, [marker3d, setContentHandledExternally]);
-  (0, import_react125.useEffect)(() => {
-    if (!marker3d || !markerLibrary)
-      return;
-    const pinOptions = Object.assign({}, props);
-    const pinElement = new markerLibrary.PinElement(pinOptions);
-    if (children) {
-      pinElement.appendChild(glyphContainer);
-    }
-    while (marker3d.firstChild) {
-      marker3d.removeChild(marker3d.firstChild);
-    }
-    marker3d.appendChild(pinElement);
-    return () => {
-    };
-  }, [marker3d, markerLibrary, glyphContainer, children, props]);
-  (0, import_react125.useEffect)(() => {
-    var _a3;
-    if (marker3d)
-      return;
-    if (!advancedMarker || !markerLibrary) {
-      if (advancedMarker === void 0 && marker3d === void 0) {
-        console.error("The <Pin> component can only be used inside <AdvancedMarker> or <Marker3D>.");
-      }
-      return;
-    }
-    if ((props.glyphSrc || props.glyphText) && children) {
-      logErrorOnce("The <Pin> component only uses children to render the glyph if both glyphSrc/glyphText and children are present.");
-    }
-    if (import_react125.Children.count(children) > 1) {
-      logErrorOnce("Passing multiple children to the <Pin> component might lead to unexpected results.");
-    }
-    const pinOptions = Object.assign({}, props);
-    const pinElement = new markerLibrary.PinElement(pinOptions);
-    if (children) {
-      pinElement.appendChild(glyphContainer);
-    }
-    const markerContent = (_a3 = advancedMarker.content) === null || _a3 === void 0 ? void 0 : _a3.firstChild;
-    while (markerContent === null || markerContent === void 0 ? void 0 : markerContent.firstChild) {
-      markerContent.removeChild(markerContent.firstChild);
-    }
-    if (markerContent) {
-      markerContent.appendChild(pinElement);
-    }
-  }, [
-    advancedMarker,
-    markerLibrary,
-    glyphContainer,
-    marker3d,
-    children,
-    props
-  ]);
-  return (0, import_react_dom3.createPortal)(children, glyphContainer);
-};
-var Pin = (props) => {
-  var _a3;
-  const markerLibrary = useMapsLibrary("marker");
-  const isModern = (0, import_react125.useMemo)(() => {
-    if (!markerLibrary)
-      return false;
-    return typeof customElements !== "undefined" && customElements.get("gmp-pin") !== void 0;
-  }, [markerLibrary]);
-  if (!markerLibrary)
-    return null;
-  if (isModern) {
-    const { glyph, glyphSrc, glyphText } = props, restProps = __rest(props, ["glyph", "glyphSrc", "glyphText"]);
-    const isUrl = glyph instanceof URL || typeof glyph === "string" && glyph.startsWith("http");
-    const finalGlyphText = glyphText !== null && glyphText !== void 0 ? glyphText : typeof glyph === "string" && !isUrl ? glyph : void 0;
-    const finalGlyphSrc = glyphSrc !== null && glyphSrc !== void 0 ? glyphSrc : isUrl ? String(glyph) : void 0;
-    return import_react125.default.createElement(PinModern, Object.assign({}, restProps, { glyphText: finalGlyphText, glyphSrc: finalGlyphSrc }));
-  } else {
-    const { glyph, glyphSrc, glyphText } = props, restProps = __rest(props, ["glyph", "glyphSrc", "glyphText"]);
-    const finalGlyph = (_a3 = glyph !== null && glyph !== void 0 ? glyph : glyphSrc) !== null && _a3 !== void 0 ? _a3 : glyphText;
-    return import_react125.default.createElement(PinLegacy, Object.assign({}, restProps, { glyph: finalGlyph }));
-  }
-};
-function useRectangle(props) {
-  var _a3, _b, _c;
-  const { onClick, onDrag, onDragStart, onDragEnd, onMouseOver, onMouseOut, onBoundsChanged, bounds, defaultBounds } = props, destructuredOptions = __rest(props, ["onClick", "onDrag", "onDragStart", "onDragEnd", "onMouseOver", "onMouseOut", "onBoundsChanged", "bounds", "defaultBounds"]);
-  const [rectangle, setRectangle] = (0, import_react125.useState)(null);
-  const map2 = useMap();
-  const rectangleOptions = useMemoized(Object.assign(Object.assign({}, destructuredOptions), { clickable: (_a3 = destructuredOptions.clickable) !== null && _a3 !== void 0 ? _a3 : Boolean(onClick), draggable: (_b = destructuredOptions.draggable) !== null && _b !== void 0 ? _b : Boolean(onDrag || onDragStart || onDragEnd || onBoundsChanged), editable: (_c = destructuredOptions.editable) !== null && _c !== void 0 ? _c : Boolean(onBoundsChanged) }), import_fast_deep_equal.default);
-  (0, import_react125.useEffect)(() => {
-    if (!map2) {
-      if (map2 === void 0)
-        console.error("<Rectangle> has to be inside a Map component.");
-      return;
-    }
-    const newRectangle = new google.maps.Rectangle(Object.assign(Object.assign({}, rectangleOptions), { bounds: bounds !== null && bounds !== void 0 ? bounds : defaultBounds }));
-    newRectangle.setMap(map2);
-    setRectangle(newRectangle);
-    return () => {
-      newRectangle.setMap(null);
-      setRectangle(null);
-    };
-  }, [map2]);
-  useMapsEventListener(rectangle, "click", onClick);
-  useMapsEventListener(rectangle, "drag", onDrag);
-  useMapsEventListener(rectangle, "dragstart", onDragStart);
-  useMapsEventListener(rectangle, "dragend", onDragEnd);
-  useMapsEventListener(rectangle, "mouseover", onMouseOver);
-  useMapsEventListener(rectangle, "mouseout", onMouseOut);
-  useMapsEventListener(rectangle, "bounds_changed", onBoundsChanged ? () => {
-    onBoundsChanged(rectangle === null || rectangle === void 0 ? void 0 : rectangle.getBounds());
-  } : null);
-  (0, import_react125.useEffect)(() => {
-    if (!rectangle)
-      return;
-    rectangle.setOptions(rectangleOptions);
-  }, [rectangle, rectangleOptions]);
-  (0, import_react125.useEffect)(() => {
-    if (!rectangle || !bounds)
-      return;
-    if (!boundsEquals(bounds, rectangle.getBounds())) {
-      rectangle.setBounds(bounds);
-    }
-  }, [rectangle, bounds]);
-  return rectangle;
-}
-var Rectangle = (0, import_react125.forwardRef)((props, ref) => {
-  const rectangle = useRectangle(props);
-  (0, import_react125.useImperativeHandle)(ref, () => rectangle, [
-    rectangle
-  ]);
-  return import_react125.default.createElement(import_react125.default.Fragment, null);
-});
-Rectangle.displayName = "Rectangle";
-
-// src/types/Map.tsx
-var import_jsx_runtime83 = __toESM(require_jsx_runtime(), 1);
-var GM_API_KEY = "AIzaSyC6x4jghg5ZggV5VTThu9JE4DwX9NlbN9U";
-function MapLeaf({ stream: stream2 }) {
-  const { fps } = useVideoConfig();
-  const waypoints = stream2.waypoints ?? [];
-  if (waypoints.length === 0) return null;
-  return /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(import_jsx_runtime83.Fragment, { children: stream2.actions?.map((a2, i) => {
-    const start = a2.start ?? 0;
-    const end = a2.end ?? start + 1;
-    const durFrames = Math.max(1, Math.floor(fps * (end - start)));
-    const center = stream2.center ?? { lat: waypoints[0].lat, lng: waypoints[0].lng };
-    const zoom = stream2.zoom ?? 10;
-    const mapType = stream2.mapType ?? "roadmap";
-    const travelMode = stream2.travelMode ?? "DRIVING";
-    const markerEmoji = stream2.routeMarker ?? "\u{1F697}";
-    return /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(
-      Sequence,
-      {
-        durationInFrames: durFrames,
-        from: Math.floor(fps * start),
-        layout: "none",
-        children: /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(APIProvider, { apiKey: GM_API_KEY, children: /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(
-          Map2,
-          {
-            mapId: String(stream2.id ?? i),
-            defaultCenter: center,
-            defaultZoom: zoom,
-            defaultOptions: {
-              mapTypeId: mapType,
-              disableDefaultUI: true,
-              zoomControl: false
-            },
-            style: { width: "100%", height: "100%", position: "absolute" },
-            children: /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(
-              RouteWithMarker,
-              {
-                waypoints,
-                travelMode,
-                markerEmoji,
-                actionDuration: end - start
-              }
-            )
-          }
-        ) })
-      },
-      a2.id ?? i
-    );
-  }) });
-}
-function RouteWithMarker({
-  waypoints,
-  travelMode,
-  markerEmoji,
-  actionDuration
-}) {
-  const map2 = useMap();
-  const routesLibrary = useMapsLibrary("routes");
-  const [leg, setLeg] = import_react126.default.useState(null);
-  const [routeIndex, setRouteIndex] = import_react126.default.useState(0);
-  const handle = import_react126.default.useRef(null);
-  import_react126.default.useEffect(() => {
-    if (!routesLibrary || !map2 || waypoints.length < 2) return;
-    const renderHandle = delayRender("Loading map directions...");
-    handle.current = renderHandle;
-    const renderer = new routesLibrary.DirectionsRenderer({ map: map2, suppressMarkers: true });
-    const service = new routesLibrary.DirectionsService();
-    service.route({
-      origin: waypoints[0],
-      destination: waypoints[waypoints.length - 1],
-      waypoints: waypoints.slice(1, -1).map((wp) => ({ location: wp, stopover: true })),
-      travelMode: google.maps.TravelMode[travelMode],
-      provideRouteAlternatives: false
-    }).then((response) => {
-      renderer.setDirections(response);
-      setRouteIndex(0);
-      setLeg(response.routes[0]?.legs[0] ?? null);
-      if (handle.current !== null) continueRender(handle.current);
-    }).catch(() => {
-      if (handle.current !== null) continueRender(handle.current);
-    });
-    return () => {
-      renderer.setMap(null);
-    };
-  }, [routesLibrary, map2, waypoints, travelMode]);
-  import_react126.default.useEffect(() => {
-    setRouteIndex((prev) => prev);
-  }, [routeIndex]);
-  const position = useAnimatedPosition({ leg, actionDuration, waypoints });
-  return /* @__PURE__ */ (0, import_jsx_runtime83.jsxs)(import_jsx_runtime83.Fragment, { children: [
-    waypoints.map((wp, i) => /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(AdvancedMarker, { position: wp, children: wp.label ? /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(
-      "div",
-      {
-        style: {
-          background: "rgba(255,255,255,0.9)",
-          borderRadius: "4px",
-          padding: "2px 6px",
-          fontSize: "12px",
-          fontWeight: 700,
-          color: "#333",
-          whiteSpace: "nowrap",
-          position: "relative",
-          top: "-24px"
-        },
-        children: wp.label
-      }
-    ) : null }, i)),
-    position ? /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(AdvancedMarker, { position, children: /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(Pin, { glyphText: markerEmoji, scale: 4 }) }) : null
-  ] });
-}
-function useAnimatedPosition({
-  leg,
-  actionDuration,
-  waypoints
-}) {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  return import_react126.default.useMemo(() => {
-    if (!leg || !leg.duration?.value) {
-      if (waypoints.length < 2) return null;
-      const t = Math.min(frame / (actionDuration * fps), 1);
-      const total = waypoints.length - 1;
-      const segI = Math.min(Math.floor(t * total), total - 1);
-      const segT = t * total - segI;
-      const a2 = waypoints[segI];
-      const b2 = waypoints[segI + 1];
-      if (!a2 || !b2) return null;
-      return {
-        lat: a2.lat + (b2.lat - a2.lat) * segT,
-        lng: a2.lng + (b2.lng - a2.lng) * segT
-      };
-    }
-    const currentInSecond = frame / fps * (leg.duration.value / actionDuration);
-    const { step, elapsedInSeconds } = getCurrentStep(leg, currentInSecond);
-    if (!step || !step.path) {
-      const t = Math.min(frame / (actionDuration * fps), 1);
-      const total = waypoints.length - 1;
-      const segI = Math.min(Math.floor(t * total), total - 1);
-      const segT = t * total - segI;
-      const a2 = waypoints[segI];
-      const b2 = waypoints[segI + 1];
-      if (!a2 || !b2) return null;
-      return {
-        lat: a2.lat + (b2.lat - a2.lat) * segT,
-        lng: a2.lng + (b2.lng - a2.lng) * segT
-      };
-    }
-    const stepElapsed = currentInSecond - elapsedInSeconds;
-    const stepProgress = stepElapsed / (step.duration?.value ?? 1);
-    const pathIdx = Math.min(
-      Math.max(0, Math.floor(stepProgress * step.path.length)),
-      step.path.length - 1
-    );
-    const pt = step.path[pathIdx];
-    if (!pt) return null;
-    return { lat: pt.lat(), lng: pt.lng() };
-  }, [leg, frame, fps, actionDuration, waypoints]);
-}
-function getCurrentStep(leg, currentInSecond) {
-  let elapsedInSeconds = 0;
-  for (const step of leg.steps ?? []) {
-    const stepDur = step.duration?.value ?? 0;
-    if (elapsedInSeconds <= currentInSecond && currentInSecond < elapsedInSeconds + stepDur) {
-      return { step, elapsedInSeconds };
-    }
-    elapsedInSeconds += stepDur;
-  }
-  return { step: null, elapsedInSeconds: 0 };
-}
-
-// src/types/Include.tsx
-var React30 = __toESM(require_react(), 1);
-var import_jsx_runtime84 = __toESM(require_jsx_runtime(), 1);
-var ASPECT_DIMS = {
-  "16x9": { width: 1920, height: 1080 },
-  "9x16": { width: 1080, height: 1920 },
-  "1x1": { width: 1080, height: 1080 }
-};
-function isSceneBased(data) {
-  if (!data || typeof data !== "object") return false;
-  const d = data;
-  return typeof d.meta === "object" && d.meta !== null && Array.isArray(d.scenes);
-}
-function resolveIncludeSrc(src) {
-  if (src.startsWith("http://") || src.startsWith("https://") || src.startsWith("data:") || src.startsWith("/")) {
-    return src;
-  }
-  return staticFile(src);
-}
-function IncludeLeaf({ stream: stream2 }) {
-  const { fps: parentFps, width: parentWidth, height: parentHeight } = useVideoConfig();
-  const { Container } = React30.useContext(ComposeContext);
-  const parentAudio = React30.useContext(AudioContext2);
-  if (!stream2.actions?.length) return null;
-  const [externalData, setExternalData] = React30.useState(null);
-  const [loadError, setLoadError] = React30.useState(null);
-  const [handle] = React30.useState(
-    () => stream2.src ? delayRender(`Loading include: ${stream2.src}`) : null
-  );
-  React30.useEffect(() => {
-    if (!stream2.src || !handle) return;
-    let active = true;
-    const url2 = resolveIncludeSrc(stream2.src);
-    fetch(url2).then((res) => {
-      if (!res.ok) throw new Error(`HTTP ${res.status}: ${stream2.src}`);
-      return res.json();
-    }).then((data) => {
-      if (!active) return;
-      const streamTree = data.root ?? data;
-      getDurationInSeconds(streamTree, true);
-      setExternalData(data);
-      continueRender(handle);
-    }).catch((err) => {
-      if (!active) return;
-      const msg = err instanceof Error ? err.message : String(err);
-      setLoadError(msg);
-      console.warn(`Include "${stream2.src}" failed to load: ${msg}`);
-      continueRender(handle);
-    });
-    return () => {
-      active = false;
-    };
-  }, [stream2.src, handle]);
-  React30.useMemo(() => {
-    if (!stream2.src) {
-      getDurationInSeconds(stream2, true);
-    }
-  }, [stream2, stream2.src]);
-  const audioCtx = React30.useMemo(
-    () => ({ id: stream2.id, foreground: true, parent: parentAudio }),
-    [stream2.id, parentAudio]
-  );
-  const renderExternalContent = React30.useCallback(() => {
-    if (!externalData) return null;
-    if (loadError) {
-      return /* @__PURE__ */ (0, import_jsx_runtime84.jsxs)("div", { style: { color: "#ff4444", fontSize: 24, padding: 40 }, children: [
-        "\u26A0 Include load error: ",
-        loadError
-      ] });
-    }
-    if (isSceneBased(externalData)) {
-      const vj = externalData;
-      const vjFps = vj.meta.fps ?? parentFps;
-      const aspectKey = vj.meta.aspects?.[0] ?? "16x9";
-      const dims = ASPECT_DIMS[aspectKey] ?? { width: parentWidth, height: parentHeight };
-      return /* @__PURE__ */ (0, import_jsx_runtime84.jsxs)(AbsoluteFill, { style: { backgroundColor: "#0a0a0a", width: dims.width, height: dims.height }, children: [
-        vj.bgm && /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(Audio, { src: vj.bgm.src, volume: vj.bgm.baseVolume }),
-        vj.scenes.map((scene2) => {
-          const startFrame = Math.round((scene2.start ?? 0) * vjFps);
-          const durFrames = Math.round((scene2.duration ?? 1) * vjFps);
-          return /* @__PURE__ */ (0, import_jsx_runtime84.jsxs)(
-            Sequence,
-            {
-              from: startFrame,
-              durationInFrames: durFrames,
-              name: `${scene2.id}:${scene2.component}`,
-              children: [
-                /* @__PURE__ */ (0, import_jsx_runtime84.jsxs)(
-                  AbsoluteFill,
-                  {
-                    style: {
-                      backgroundColor: "#0c0c0e",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      padding: 60
-                    },
-                    children: [
-                      /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(
-                        "div",
-                        {
-                          style: {
-                            color: "#fafafa",
-                            fontSize: 48,
-                            fontWeight: 800,
-                            fontFamily: "Inter, system-ui, sans-serif",
-                            textAlign: "center",
-                            marginBottom: 16
-                          },
-                          children: scene2.props?.headline ?? scene2.id
-                        }
-                      ),
-                      scene2.props?.subhead && /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(
-                        "div",
-                        {
-                          style: {
-                            color: "#a1a1aa",
-                            fontSize: 28,
-                            fontFamily: "Inter, system-ui, sans-serif",
-                            textAlign: "center"
-                          },
-                          children: scene2.props.subhead
-                        }
-                      )
-                    ]
-                  }
-                ),
-                scene2.voiceover?.audio && /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(Audio, { src: scene2.voiceover.audio, volume: 1 })
-              ]
-            },
-            scene2.id
-          );
-        })
-      ] });
-    }
-    const streamTree = externalData.root ?? externalData;
-    const merged = {
-      ...streamTree,
-      width: streamTree.width ?? parentWidth,
-      height: streamTree.height ?? parentHeight,
-      fps: streamTree.fps ?? parentFps
-    };
-    return /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(
-      "div",
-      {
-        style: {
-          width: merged.width,
-          height: merged.height,
-          overflow: "hidden",
-          position: "relative"
-        },
-        children: /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(FolderLeaf, { stream: merged })
-      }
-    );
-  }, [externalData, loadError, parentFps, parentWidth, parentHeight]);
-  const renderAction = (a2) => {
-    const start = a2.start ?? 0;
-    const end = a2.end ?? (stream2.durationInSeconds ?? start + 1);
-    const dur = Math.max(0.1, end - start);
-    const durFrames = Math.max(1, Math.floor(parentFps * dur));
-    if (!stream2.src && stream2.children?.length) {
-      return /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(
-        Sequence,
-        {
-          durationInFrames: durFrames,
-          from: Math.floor(parentFps * start),
-          layout: "none",
-          showInTimeline: false,
-          children: /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(
-            Container,
-            {
-              id: stream2.id,
-              type: "include",
-              style: {
-                ...cssJS(stream2.style),
-                width: parentWidth,
-                height: parentHeight,
-                overflow: "hidden",
-                position: "relative"
-              },
-              className: `include ${toClassName(stream2.id ?? "")}`,
-              children: /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(FolderLeaf, { stream: stream2 })
-            }
-          )
-        },
-        a2.id
-      );
-    }
-    return /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(
-      Sequence,
-      {
-        durationInFrames: durFrames,
-        from: Math.floor(parentFps * start),
-        layout: "none",
-        showInTimeline: false,
-        children: externalData || loadError ? /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(
-          "div",
-          {
-            style: {
-              width: parentWidth,
-              height: parentHeight,
-              overflow: "hidden",
-              position: "relative"
-            },
-            children: renderExternalContent()
-          }
-        ) : /* @__PURE__ */ (0, import_jsx_runtime84.jsxs)(
-          "div",
-          {
-            style: {
-              width: parentWidth,
-              height: parentHeight,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#666",
-              fontSize: 20,
-              fontFamily: "monospace"
-            },
-            children: [
-              "Loading\u2026 ",
-              stream2.src
-            ]
-          }
-        )
-      },
-      a2.id
-    );
-  };
-  return /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(AudioContext2.Provider, { value: audioCtx, children: stream2.actions.map(renderAction) });
-}
-
-// src/types/Scene.tsx
-var React35 = __toESM(require_react(), 1);
-var import_jsx_runtime85 = __toESM(require_jsx_runtime(), 1);
-function SceneLeaf({ stream: stream2 }) {
-  const { Container } = React35.useContext(ComposeContext);
-  const parentAudio = React35.useContext(AudioContext2);
-  const audioCtx = React35.useMemo(
-    () => ({ id: stream2.id, parent: parentAudio }),
-    [stream2.id, parentAudio]
-  );
-  return /* @__PURE__ */ (0, import_jsx_runtime85.jsx)(AudioContext2.Provider, { value: audioCtx, children: /* @__PURE__ */ (0, import_jsx_runtime85.jsx)(
-    Container,
-    {
-      id: stream2.id,
-      type: "scene",
-      style: cssJS(stream2.style),
-      className: `scene ${toClassName(stream2.name ?? "")}`,
-      children: /* @__PURE__ */ (0, import_jsx_runtime85.jsx)(FolderLeaf, { stream: stream2 })
-    }
-  ) });
-}
-
-// src/types/Effect.tsx
-var React39 = __toESM(require_react(), 1);
-
-// src/types/keyframes.ts
-function parseKeyframeData(data) {
-  const styles = {};
-  const steps = [];
-  for (const [key, style2] of Object.entries(data)) {
-    const perc = parseFloat(key);
-    styles[String(perc)] = style2;
-    if (!steps.includes(perc)) steps.push(perc);
-  }
-  steps.sort((a2, b2) => b2 - a2);
-  return { steps, styles };
-}
-function getEasing(timing) {
-  if (!timing) return void 0;
-  const parts = timing.split(/[(),]/);
-  const fx = (parts[0] ?? "").trim();
-  switch (fx) {
-    case "linear":
-      return Easing.linear;
-    case "cubic-bezier":
-      return Easing.bezier(
-        parseFloat(parts[1] ?? "0"),
-        parseFloat(parts[2] ?? "0"),
-        parseFloat(parts[3] ?? "0"),
-        parseFloat(parts[4] ?? "0")
-      );
-    case "ease":
-      return Easing.ease;
-    case "ease-in":
-      return Easing.in(Easing.ease);
-    case "ease-out":
-      return Easing.out(Easing.ease);
-    case "ease-in-out":
-      return Easing.inOut(Easing.ease);
-    default:
-      return void 0;
-  }
-}
-function interpolateValue(from, to, fn) {
-  const numRe = /(-?[\d.]+)/g;
-  const toNums = to.match(numRe);
-  const fromNums = from.match(numRe);
-  if (!fromNums && !toNums) return to;
-  if (!fromNums || !toNums || fromNums.length !== toNums.length) return to;
-  let i = 0;
-  return from.replace(numRe, () => {
-    const result = fn([parseFloat(fromNums[i] ?? "0"), parseFloat(toNums[i] ?? "0")]);
-    i++;
-    return String(Math.round(result * 1e3) / 1e3);
-  });
-}
-function interpolateKeyframes(config2, frame, opts) {
-  const { fps, durationInSeconds, timingFunction } = opts;
-  const durationInFrames = durationInSeconds * fps;
-  if (durationInFrames <= 0) return null;
-  const perc = frame * 100 / durationInFrames;
-  const { steps, styles } = config2;
-  const i = steps.findIndex((s) => s <= perc);
-  if (i === -1) return null;
-  const fromPerc = steps[i];
-  const toPerc = steps[i - 1] ?? fromPerc;
-  const fromStyle = styles[String(fromPerc)];
-  const toStyle = styles[String(toPerc)] ?? fromStyle;
-  if (!fromStyle || !toStyle) return null;
-  const frameRange = [
-    Math.floor(fromPerc * durationInFrames / 100),
-    Math.floor(toPerc * durationInFrames / 100)
-  ];
-  const easing = getEasing(timingFunction || config2.timingFunction);
-  const result = {};
-  for (const key of Object.keys(toStyle)) {
-    if (key === "animationTimingFunction") continue;
-    const fromVal = fromStyle[key] ?? toStyle[key];
-    const toVal = toStyle[key] ?? fromVal;
-    if (!fromVal || !toVal) continue;
-    result[key] = interpolateValue(fromVal, toVal, (valueRange) => {
-      if (valueRange[0] === valueRange[1] || frameRange[0] === frameRange[1]) {
-        return valueRange[0];
-      }
-      return interpolate(frame, frameRange, valueRange, {
-        easing,
-        extrapolateLeft: "clamp",
-        extrapolateRight: "clamp"
-      });
-    });
-  }
-  return Object.keys(result).length > 0 ? result : null;
-}
-function resolveAnimation(name, custom2) {
-  if (custom2) return parseKeyframeData(custom2);
-  return builtinAnimations[name] ?? null;
-}
-var builtinAnimations = {
-  // ── Fades ──────────────────────────────────────────────────────────────
-  fadeIn: parseKeyframeData({
-    "0": { opacity: "0" },
-    "100": { opacity: "1" }
-  }),
-  fadeOut: parseKeyframeData({
-    "0": { opacity: "1" },
-    "100": { opacity: "0" }
-  }),
-  fadeInDown: parseKeyframeData({
-    "0": { opacity: "0", transform: "translate3d(0, -100%, 0)" },
-    "100": { opacity: "1", transform: "translate3d(0, 0, 0)" }
-  }),
-  fadeInUp: parseKeyframeData({
-    "0": { opacity: "0", transform: "translate3d(0, 100%, 0)" },
-    "100": { opacity: "1", transform: "translate3d(0, 0, 0)" }
-  }),
-  fadeInLeft: parseKeyframeData({
-    "0": { opacity: "0", transform: "translate3d(-100%, 0, 0)" },
-    "100": { opacity: "1", transform: "translate3d(0, 0, 0)" }
-  }),
-  fadeInRight: parseKeyframeData({
-    "0": { opacity: "0", transform: "translate3d(100%, 0, 0)" },
-    "100": { opacity: "1", transform: "translate3d(0, 0, 0)" }
-  }),
-  fadeOutDown: parseKeyframeData({
-    "0": { opacity: "1", transform: "translate3d(0, 0, 0)" },
-    "100": { opacity: "0", transform: "translate3d(0, 100%, 0)" }
-  }),
-  fadeOutUp: parseKeyframeData({
-    "0": { opacity: "1", transform: "translate3d(0, 0, 0)" },
-    "100": { opacity: "0", transform: "translate3d(0, -100%, 0)" }
-  }),
-  fadeOutLeft: parseKeyframeData({
-    "0": { opacity: "1", transform: "translate3d(0, 0, 0)" },
-    "100": { opacity: "0", transform: "translate3d(-100%, 0, 0)" }
-  }),
-  fadeOutRight: parseKeyframeData({
-    "0": { opacity: "1", transform: "translate3d(0, 0, 0)" },
-    "100": { opacity: "0", transform: "translate3d(100%, 0, 0)" }
-  }),
-  // ── Slides ─────────────────────────────────────────────────────────────
-  slideInDown: parseKeyframeData({
-    "0": { transform: "translate3d(0, -100%, 0)" },
-    "100": { transform: "translate3d(0, 0, 0)" }
-  }),
-  slideInUp: parseKeyframeData({
-    "0": { transform: "translate3d(0, 100%, 0)" },
-    "100": { transform: "translate3d(0, 0, 0)" }
-  }),
-  slideInLeft: parseKeyframeData({
-    "0": { transform: "translate3d(-100%, 0, 0)" },
-    "100": { transform: "translate3d(0, 0, 0)" }
-  }),
-  slideInRight: parseKeyframeData({
-    "0": { transform: "translate3d(100%, 0, 0)" },
-    "100": { transform: "translate3d(0, 0, 0)" }
-  }),
-  // ── Zooms ──────────────────────────────────────────────────────────────
-  zoomIn: parseKeyframeData({
-    "0": { opacity: "0", transform: "scale3d(0.3, 0.3, 0.3)" },
-    "50": { opacity: "1", transform: "scale3d(0.65, 0.65, 0.65)" },
-    "100": { opacity: "1", transform: "scale3d(1, 1, 1)" }
-  }),
-  zoomOut: parseKeyframeData({
-    "0": { opacity: "1", transform: "scale3d(1, 1, 1)" },
-    "50": { opacity: "0", transform: "scale3d(0.3, 0.3, 0.3)" },
-    "100": { opacity: "0", transform: "scale3d(0.3, 0.3, 0.3)" }
-  }),
-  // ── Attention seekers ──────────────────────────────────────────────────
-  pulse: parseKeyframeData({
-    "0": { transform: "scale3d(1, 1, 1)" },
-    "50": { transform: "scale3d(1.05, 1.05, 1.05)" },
-    "100": { transform: "scale3d(1, 1, 1)" }
-  }),
-  flash: parseKeyframeData({
-    "0": { opacity: "1" },
-    "25": { opacity: "0" },
-    "50": { opacity: "1" },
-    "75": { opacity: "0" },
-    "100": { opacity: "1" }
-  }),
-  bounce: parseKeyframeData({
-    "0": { transform: "translate3d(0, 0, 0)" },
-    "20": { transform: "translate3d(0, 0, 0)" },
-    "40": { transform: "translate3d(0, -30px, 0) scaleY(1.1)" },
-    "43": { transform: "translate3d(0, -30px, 0) scaleY(1.1)" },
-    "53": { transform: "translate3d(0, 0, 0)" },
-    "70": { transform: "translate3d(0, -15px, 0) scaleY(1.05)" },
-    "80": { transform: "translate3d(0, 0, 0) scaleY(0.95)" },
-    "90": { transform: "translate3d(0, -4px, 0) scaleY(1.02)" },
-    "100": { transform: "translate3d(0, 0, 0)" }
-  }),
-  heartBeat: parseKeyframeData({
-    "0": { transform: "scale(1)" },
-    "14": { transform: "scale(1.3)" },
-    "28": { transform: "scale(1)" },
-    "42": { transform: "scale(1.3)" },
-    "70": { transform: "scale(1)" },
-    "100": { transform: "scale(1)" }
-  }),
-  rubberBand: parseKeyframeData({
-    "0": { transform: "scale3d(1, 1, 1)" },
-    "30": { transform: "scale3d(1.25, 0.75, 1)" },
-    "40": { transform: "scale3d(0.75, 1.25, 1)" },
-    "50": { transform: "scale3d(1.15, 0.85, 1)" },
-    "65": { transform: "scale3d(0.95, 1.05, 1)" },
-    "75": { transform: "scale3d(1.05, 0.95, 1)" },
-    "100": { transform: "scale3d(1, 1, 1)" }
-  }),
-  shakeX: parseKeyframeData({
-    "0": { transform: "translate3d(0, 0, 0)" },
-    "10": { transform: "translate3d(-10px, 0, 0)" },
-    "20": { transform: "translate3d(10px, 0, 0)" },
-    "30": { transform: "translate3d(-10px, 0, 0)" },
-    "40": { transform: "translate3d(10px, 0, 0)" },
-    "50": { transform: "translate3d(-10px, 0, 0)" },
-    "60": { transform: "translate3d(10px, 0, 0)" },
-    "70": { transform: "translate3d(-10px, 0, 0)" },
-    "80": { transform: "translate3d(10px, 0, 0)" },
-    "90": { transform: "translate3d(-10px, 0, 0)" },
-    "100": { transform: "translate3d(0, 0, 0)" }
-  }),
-  // ── Bouncing entrances ─────────────────────────────────────────────────
-  bounceIn: parseKeyframeData({
-    "0": { opacity: "0", transform: "scale3d(0.3, 0.3, 0.3)" },
-    "20": { opacity: "0.3", transform: "scale3d(1.1, 1.1, 1.1)" },
-    "40": { opacity: "0.6", transform: "scale3d(0.9, 0.9, 0.9)" },
-    "60": { opacity: "1", transform: "scale3d(1.03, 1.03, 1.03)" },
-    "80": { opacity: "1", transform: "scale3d(0.97, 0.97, 0.97)" },
-    "100": { opacity: "1", transform: "scale3d(1, 1, 1)" }
-  }),
-  // ── Rotations ──────────────────────────────────────────────────────────
-  rotateIn: parseKeyframeData({
-    "0": { opacity: "0", transform: "rotate(-200deg)" },
-    "100": { opacity: "1", transform: "rotate(0deg)" }
-  }),
-  rotateOut: parseKeyframeData({
-    "0": { opacity: "1", transform: "rotate(0deg)" },
-    "100": { opacity: "0", transform: "rotate(200deg)" }
-  }),
-  rotateInDownLeft: parseKeyframeData({
-    "0": { opacity: "0", transform: "rotate3d(0, 0, 1, -45deg)" },
-    "100": { opacity: "1", transform: "rotate3d(0, 0, 1, 0deg)" }
-  }),
-  rotateInDownRight: parseKeyframeData({
-    "0": { opacity: "0", transform: "rotate3d(0, 0, 1, 45deg)" },
-    "100": { opacity: "1", transform: "rotate3d(0, 0, 1, 0deg)" }
-  }),
-  rotateInUpLeft: parseKeyframeData({
-    "0": { opacity: "0", transform: "rotate3d(0, 0, 1, 45deg)" },
-    "100": { opacity: "1", transform: "rotate3d(0, 0, 1, 0deg)" }
-  }),
-  rotateInUpRight: parseKeyframeData({
-    "0": { opacity: "0", transform: "rotate3d(0, 0, 1, -45deg)" },
-    "100": { opacity: "1", transform: "rotate3d(0, 0, 1, 0deg)" }
-  }),
-  // ── Flips ──────────────────────────────────────────────────────────────
-  flipInX: parseKeyframeData({
-    "0": { opacity: "0", transform: "perspective(400px) rotate3d(1, 0, 0, 90deg)" },
-    "40": { opacity: "1", transform: "perspective(400px) rotate3d(1, 0, 0, -20deg)" },
-    "60": { transform: "perspective(400px) rotate3d(1, 0, 0, 10deg)" },
-    "80": { transform: "perspective(400px) rotate3d(1, 0, 0, -5deg)" },
-    "100": { opacity: "1", transform: "perspective(400px)" }
-  }),
-  flipInY: parseKeyframeData({
-    "0": { opacity: "0", transform: "perspective(400px) rotate3d(0, 1, 0, 90deg)" },
-    "40": { opacity: "1", transform: "perspective(400px) rotate3d(0, 1, 0, -20deg)" },
-    "60": { transform: "perspective(400px) rotate3d(0, 1, 0, 10deg)" },
-    "80": { transform: "perspective(400px) rotate3d(0, 1, 0, -5deg)" },
-    "100": { opacity: "1", transform: "perspective(400px)" }
-  }),
-  // ── Slides out ─────────────────────────────────────────────────────────
-  slideOutDown: parseKeyframeData({
-    "0": { transform: "translate3d(0, 0, 0)" },
-    "100": { transform: "translate3d(0, 100%, 0)" }
-  }),
-  slideOutLeft: parseKeyframeData({
-    "0": { transform: "translate3d(0, 0, 0)" },
-    "100": { transform: "translate3d(-100%, 0, 0)" }
-  }),
-  slideOutRight: parseKeyframeData({
-    "0": { transform: "translate3d(0, 0, 0)" },
-    "100": { transform: "translate3d(100%, 0, 0)" }
-  }),
-  slideOutUp: parseKeyframeData({
-    "0": { transform: "translate3d(0, 0, 0)" },
-    "100": { transform: "translate3d(0, -100%, 0)" }
-  }),
-  // ── Zoom variants ──────────────────────────────────────────────────────
-  zoomInDown: parseKeyframeData({
-    "0": { opacity: "0", transform: "scale3d(0.1, 0.1, 0.1) translate3d(0, -1000px, 0)" },
-    "60": { opacity: "1", transform: "scale3d(0.475, 0.475, 0.475) translate3d(0, 60px, 0)" },
-    "100": { opacity: "1", transform: "scale3d(1, 1, 1) translate3d(0, 0, 0)" }
-  }),
-  zoomInLeft: parseKeyframeData({
-    "0": { opacity: "0", transform: "scale3d(0.1, 0.1, 0.1) translate3d(-1000px, 0, 0)" },
-    "60": { opacity: "1", transform: "scale3d(0.475, 0.475, 0.475) translate3d(10px, 0, 0)" },
-    "100": { opacity: "1", transform: "scale3d(1, 1, 1) translate3d(0, 0, 0)" }
-  }),
-  zoomInRight: parseKeyframeData({
-    "0": { opacity: "0", transform: "scale3d(0.1, 0.1, 0.1) translate3d(1000px, 0, 0)" },
-    "60": { opacity: "1", transform: "scale3d(0.475, 0.475, 0.475) translate3d(-10px, 0, 0)" },
-    "100": { opacity: "1", transform: "scale3d(1, 1, 1) translate3d(0, 0, 0)" }
-  }),
-  zoomInUp: parseKeyframeData({
-    "0": { opacity: "0", transform: "scale3d(0.1, 0.1, 0.1) translate3d(0, 1000px, 0)" },
-    "60": { opacity: "1", transform: "scale3d(0.475, 0.475, 0.475) translate3d(0, -60px, 0)" },
-    "100": { opacity: "1", transform: "scale3d(1, 1, 1) translate3d(0, 0, 0)" }
-  }),
-  // ── Attention seekers (extended) ───────────────────────────────────────
-  shakeY: parseKeyframeData({
-    "0": { transform: "translate3d(0, 0, 0)" },
-    "10": { transform: "translate3d(0, -10px, 0)" },
-    "20": { transform: "translate3d(0, 10px, 0)" },
-    "30": { transform: "translate3d(0, -10px, 0)" },
-    "40": { transform: "translate3d(0, 10px, 0)" },
-    "50": { transform: "translate3d(0, -10px, 0)" },
-    "60": { transform: "translate3d(0, 10px, 0)" },
-    "70": { transform: "translate3d(0, -10px, 0)" },
-    "80": { transform: "translate3d(0, 10px, 0)" },
-    "90": { transform: "translate3d(0, -10px, 0)" },
-    "100": { transform: "translate3d(0, 0, 0)" }
-  }),
-  swing: parseKeyframeData({
-    "20": { transform: "rotate3d(0, 0, 1, 15deg)" },
-    "40": { transform: "rotate3d(0, 0, 1, -10deg)" },
-    "60": { transform: "rotate3d(0, 0, 1, 5deg)" },
-    "80": { transform: "rotate3d(0, 0, 1, -5deg)" },
-    "100": { transform: "rotate3d(0, 0, 1, 0deg)" }
-  }),
-  tada: parseKeyframeData({
-    "0": { transform: "scale3d(1, 1, 1)" },
-    "10": { transform: "scale3d(0.9, 0.9, 0.9) rotate3d(0, 0, 1, -3deg)" },
-    "20": { transform: "scale3d(0.9, 0.9, 0.9) rotate3d(0, 0, 1, -3deg)" },
-    "30": { transform: "scale3d(1.1, 1.1, 1.1) rotate3d(0, 0, 1, 3deg)" },
-    "50": { transform: "scale3d(1.1, 1.1, 1.1) rotate3d(0, 0, 1, 3deg)" },
-    "70": { transform: "scale3d(1.1, 1.1, 1.1) rotate3d(0, 0, 1, 3deg)" },
-    "90": { transform: "scale3d(1.1, 1.1, 1.1) rotate3d(0, 0, 1, 3deg)" },
-    "100": { transform: "scale3d(1, 1, 1)" }
-  }),
-  wobble: parseKeyframeData({
-    "0": { transform: "translate3d(0, 0, 0)" },
-    "15": { transform: "translate3d(-25%, 0, 0) rotate3d(0, 0, 1, -5deg)" },
-    "30": { transform: "translate3d(20%, 0, 0) rotate3d(0, 0, 1, 3deg)" },
-    "45": { transform: "translate3d(-15%, 0, 0) rotate3d(0, 0, 1, -3deg)" },
-    "60": { transform: "translate3d(10%, 0, 0) rotate3d(0, 0, 1, 2deg)" },
-    "75": { transform: "translate3d(-5%, 0, 0) rotate3d(0, 0, 1, -1deg)" },
-    "100": { transform: "translate3d(0, 0, 0)" }
-  }),
-  jello: parseKeyframeData({
-    "0": { transform: "translate3d(0, 0, 0)" },
-    "11.1": { transform: "translate3d(0, 0, 0)" },
-    "22.2": { transform: "skewX(-12.5deg) skewY(-12.5deg)" },
-    "33.3": { transform: "skewX(6.25deg) skewY(6.25deg)" },
-    "44.4": { transform: "skewX(-3.125deg) skewY(-3.125deg)" },
-    "55.5": { transform: "skewX(1.5625deg) skewY(1.5625deg)" },
-    "66.6": { transform: "skewX(-0.78125deg) skewY(-0.78125deg)" },
-    "77.7": { transform: "skewX(0.390625deg) skewY(0.390625deg)" },
-    "88.8": { transform: "skewX(-0.1953125deg) skewY(-0.1953125deg)" },
-    "100": { transform: "translate3d(0, 0, 0)" }
-  }),
-  // ── Specials ───────────────────────────────────────────────────────────
-  rollIn: parseKeyframeData({
-    "0": { opacity: "0", transform: "translate3d(-100%, 0, 0) rotate3d(0, 0, 1, -120deg)" },
-    "100": { opacity: "1", transform: "translate3d(0, 0, 0)" }
-  }),
-  rollOut: parseKeyframeData({
-    "0": { opacity: "1", transform: "translate3d(0, 0, 0)" },
-    "100": { opacity: "0", transform: "translate3d(100%, 0, 0) rotate3d(0, 0, 1, 120deg)" }
-  }),
-  jackInTheBox: parseKeyframeData({
-    "0": { opacity: "0", transform: "scale(0.1) rotate(30deg)" },
-    "50": { transform: "rotate(-10deg)" },
-    "70": { transform: "rotate(3deg)" },
-    "100": { opacity: "1", transform: "scale(1)" }
-  }),
-  // ── Light speed ────────────────────────────────────────────────────────
-  lightSpeedIn: parseKeyframeData({
-    "0": { opacity: "0", transform: "translate3d(100%, 0, 0) skewX(-30deg)" },
-    "60": { opacity: "1", transform: "skewX(20deg)" },
-    "80": { transform: "skewX(-5deg)" },
-    "100": { opacity: "1", transform: "translate3d(0, 0, 0)" }
-  }),
-  lightSpeedOut: parseKeyframeData({
-    "0": { opacity: "1", transform: "translate3d(0, 0, 0) skewX(0)" },
-    "100": { opacity: "0", transform: "translate3d(100%, 0, 0) skewX(30deg)" }
-  })
-};
-
-// src/types/Effect.tsx
-var import_jsx_runtime86 = __toESM(require_jsx_runtime(), 1);
-function EffectWrapper({
-  stream: stream2,
-  children
-}) {
-  const frame = useCurrentFrame();
-  const { fps, width, height } = useVideoConfig();
-  const actions = stream2.actions ?? [];
-  const styles = React39.useMemo(() => {
-    const result = [];
-    for (const action2 of actions) {
-      const start = Math.ceil(action2.start * fps);
-      const end = Math.ceil(action2.end * fps);
-      const durationInFrames = end - start;
-      if (durationInFrames <= 0) continue;
-      const animation = stream2.animation;
-      const timingFn = stream2.animationTimingFunction;
-      const iterCount = stream2.animationIterationCount ?? 1;
-      const style2 = cssJS(action2.style) ?? {};
-      let currentFrame = frame;
-      if (iterCount > 0 && durationInFrames > 0) {
-        const iteration = Math.floor((frame - start) / durationInFrames);
-        if (iteration < iterCount) {
-          currentFrame = start + (frame - start) % durationInFrames;
-        }
-      }
-      if (currentFrame >= start && currentFrame < end) {
-        const actionFrame = currentFrame - start;
-        if (animation) {
-          const config2 = resolveAnimation(animation, stream2.customKeyframes);
-          if (config2) {
-            const animStyle = interpolateKeyframes(config2, actionFrame, {
-              fps,
-              durationInSeconds: durationInFrames / fps,
-              timingFunction: timingFn
-            });
-            if (animStyle) Object.assign(style2, animStyle);
-          }
-        }
-        if (Object.keys(style2).length > 0) {
-          result.push(style2);
-        }
-      }
-    }
-    return result;
-  }, [frame, fps, actions, stream2.animation, stream2.animationTimingFunction, stream2.animationIterationCount, stream2.customKeyframes]);
-  if (styles.length === 0) return /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(import_jsx_runtime86.Fragment, { children });
-  return /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(
-    "div",
-    {
-      style: Object.assign({ width, height, position: "absolute", inset: 0 }, ...styles),
-      className: "effect",
-      children
-    }
-  );
-}
-
-// src/types/Folder.tsx
-var import_jsx_runtime87 = __toESM(require_jsx_runtime(), 1);
-var Leaves = {
-  video: VideoLeaf,
-  audio: AudioLeaf,
-  image: ImageLeaf,
-  component: ComponentLeaf,
-  rhythm: RhythmLeaf,
-  map: MapLeaf,
-  include: IncludeLeaf,
-  scene: SceneLeaf
-};
-var TransitionPresets = {
-  fade,
-  slide: slide2,
-  wipe,
-  flip,
-  clockWipe
-};
-var NotSeries = ({ children }) => /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(import_jsx_runtime87.Fragment, { children });
-NotSeries.Sequence = ({ children }) => /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(import_jsx_runtime87.Fragment, { children });
-function FolderLeaf({ stream: stream2 }) {
-  const { fps, width, height } = useVideoConfig();
-  const { Container } = React41.useContext(ComposeContext);
-  const parentAudio = React41.useContext(AudioContext2);
-  const isSeries = !!stream2.isSeries;
-  const transition = stream2.transition;
-  const transitionTime = stream2.transitionTime ?? 0.5;
-  const isRoot = stream2.id === "root";
-  const TypedSeries = React41.useMemo(() => {
-    if (!isSeries) return NotSeries;
-    return transition ? TransitionSeries : Series;
-  }, [isSeries, transition]);
-  const transEl = React41.useMemo(() => {
-    if (!isSeries || !transition) return null;
-    const presentation = TransitionPresets[transition]?.(
-      transition === "clockWipe" ? { width, height } : void 0
-    );
-    return /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(
-      TransitionSeries.Transition,
-      {
-        presentation,
-        timing: linearTiming({ durationInFrames: Math.floor(fps * transitionTime) })
-      }
-    );
-  }, [isSeries, transition, transitionTime, fps, width, height]);
-  const visibleChildren = stream2.children.filter((c2) => c2.visible !== false);
-  const sequences = visibleChildren.map((child) => {
-    const dur = child.durationInSeconds ?? 0;
-    const durFrames = Math.max(1, Math.floor(dur * fps));
-    const SequenceWrap = TypedSeries.Sequence ?? Sequence;
-    const isLeaf = child.type !== "folder" && child.type !== "root" && child.type !== "effect";
-    const childContent = isLeaf ? React41.createElement(Leaves[child.type] ?? (() => null), { stream: child }) : child.type === "effect" ? /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(EffectWrapper, { stream: child, children: /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(FolderLeaf, { stream: child }) }) : React41.createElement(FolderLeaf, { stream: child });
-    const wrapped = /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(
-      Container,
-      {
-        id: child.id,
-        type: child.type,
-        style: cssJS(child.style),
-        className: `${child.type} ${toClassName(child.id ?? "")}`,
-        children: childContent
-      }
-    );
-    const seq = /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(SequenceWrap, { durationInFrames: durFrames, layout: "none", children: wrapped }, child.id);
-    if (child.isBackground && stream2.durationInSeconds) {
-      const times = Math.max(1, Math.ceil(stream2.durationInSeconds * fps / durFrames));
-      return /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(Loop, { durationInFrames: durFrames, times, showInTimeline: false, children: wrapped }, child.id);
-    }
-    return seq;
-  }).filter(Boolean);
-  if (isSeries && transEl) {
-    for (let i = 1; i < sequences.length; i += 2) {
-      sequences.splice(i, 0, React41.cloneElement(transEl, { key: `t${i}` }));
-    }
-  }
-  const audioCtx = React41.useMemo(
-    () => stream2.type !== "folder" ? { id: stream2.id, parent: parentAudio } : parentAudio,
-    [stream2.id, stream2.type, parentAudio]
-  );
-  if (visibleChildren.length === 0 || stream2.visible === false) return null;
-  const containerStyle3 = cssJS(stream2.style);
-  const orientation = isRoot ? width > height ? "landscape" : "portrait" : "";
-  return /* @__PURE__ */ (0, import_jsx_runtime87.jsxs)(AudioContext2.Provider, { value: audioCtx, children: [
-    stream2.stylesheet ? /* @__PURE__ */ (0, import_jsx_runtime87.jsx)("style", { children: stream2.stylesheet }) : null,
-    /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(
-      Container,
-      {
-        id: stream2.id,
-        type: stream2.type,
-        style: containerStyle3,
-        className: `${orientation} ${stream2.type}`.trim(),
-        children: isSeries ? /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(TypedSeries, { children: sequences }) : sequences
-      }
-    )
-  ] });
-}
-
-// src/types/Subtitle.tsx
-var React43 = __toESM(require_react(), 1);
-var import_jsx_runtime88 = __toESM(require_jsx_runtime(), 1);
-function resolveSubtitleSrc(src) {
-  if (src.startsWith("http://") || src.startsWith("https://") || src.startsWith("data:") || src.startsWith("/")) {
-    return src;
-  }
-  return staticFile(src);
-}
-var DEFAULT_BOX_STYLE = {
-  position: "absolute",
-  inset: 0,
-  display: "flex",
-  alignItems: "flex-end",
-  justifyContent: "center",
-  padding: "0 5% 8% 5%",
-  pointerEvents: "none",
-  zIndex: 100
-};
-var DEFAULT_TEXT_STYLE = {
-  color: "white",
-  fontSize: 56,
-  fontWeight: 700,
-  textAlign: "center",
-  textShadow: "0 2px 12px rgba(0,0,0,0.85)",
-  lineHeight: 1.2,
-  fontFamily: '"PingFang SC","Noto Sans CJK SC","Hiragino Sans","Helvetica Neue",sans-serif'
-};
-function SubtitleOverlay({ subtitle }) {
-  const { fps } = useVideoConfig();
-  const currentTime = useCurrentFrame() / fps;
-  const [cues, setCues] = React43.useState(null);
-  React43.useEffect(() => {
-    const { src } = subtitle;
-    if (src.includes("-->")) {
-      setCues(parseVTT(src));
-      return;
-    }
-    if (!/\.vtt(?:$|[?#])/.test(src)) {
-      setCues([{ startFrom: 0, endAt: Infinity, text: src }]);
-      return;
-    }
-    const handle = delayRender(`Loading subtitles: ${src}`);
-    let active = true;
-    let settled = false;
-    const finish = () => {
-      if (settled) return;
-      settled = true;
-      continueRender(handle);
-    };
-    fetch(resolveSubtitleSrc(src)).then((r) => {
-      if (!r.ok) throw new Error(`Failed to load subtitles (${r.status}): ${src}`);
-      return r.text();
-    }).then((text) => {
-      if (!active) return;
-      setCues(parseVTT(text));
-      finish();
-    }).catch((err) => {
-      if (!active) return;
-      settled = true;
-      cancelRender(err);
-    });
-    return () => {
-      active = false;
-      finish();
-    };
-  }, [subtitle.src]);
-  const cue = React43.useMemo(
-    () => cues?.find((c2) => c2.startFrom <= currentTime && c2.endAt > currentTime),
-    [cues, currentTime]
-  );
-  if (!cue) return null;
-  const boxCss = subtitle.style ? cssJS(subtitle.style) : {};
-  return /* @__PURE__ */ (0, import_jsx_runtime88.jsx)("div", { className: "caption-overlay subtitle-overlay", style: { ...DEFAULT_BOX_STYLE, ...boxCss }, children: /* @__PURE__ */ (0, import_jsx_runtime88.jsx)(
-    "span",
-    {
-      className: "caption",
-      style: { ...DEFAULT_TEXT_STYLE, fontSize: subtitle.fontSize ?? DEFAULT_TEXT_STYLE.fontSize },
-      dangerouslySetInnerHTML: { __html: cue.text }
-    }
-  ) });
-}
-
 // src/schema/index.ts
 var action = external_exports.object({
   id: external_exports.string().default(() => uid()),
@@ -48287,7 +47952,6 @@ var root = folder.extend({
   instruction: external_exports.string().optional(),
   metadata: external_exports.string().optional(),
   stylesheet: external_exports.string().optional().describe("global css; selectors use .type and .name"),
-  theme: external_exports.union([external_exports.string(), external_exports.record(external_exports.string(), external_exports.unknown())]).optional().describe("theme preset name, inline JSON string, or {base, ...overrides} object"),
   subtitle: subtitleOverlay.optional().describe("global subtitle overlay; src is a VTT file with absolute timestamps")
 });
 var video = base.extend({
@@ -48383,10 +48047,10 @@ var stream = external_exports.discriminatedUnion("type", [
 ]);
 
 // src/entry.tsx
-var import_jsx_runtime89 = __toESM(require_jsx_runtime(), 1);
-var DefaultContainer2 = ({ children, style: style2, className: className2 }) => /* @__PURE__ */ (0, import_jsx_runtime89.jsx)("div", { className: className2, style: { position: "absolute", inset: 0, ...style2 }, children });
-function RemotionEngine({ root: root2, compose, background = "#000", theme }) {
-  const parsed = React44.useMemo(() => {
+var import_jsx_runtime88 = __toESM(require_jsx_runtime(), 1);
+var DefaultContainer2 = ({ children, style: style2, className: className2 }) => /* @__PURE__ */ (0, import_jsx_runtime88.jsx)("div", { className: className2, style: { position: "absolute", inset: 0, ...style2 }, children });
+function RemotionEngine({ root: root2, compose, background = "#000" }) {
+  const parsed = React43.useMemo(() => {
     if (!root2) {
       return {
         id: "root",
@@ -48402,22 +48066,18 @@ function RemotionEngine({ root: root2, compose, background = "#000", theme }) {
     }
     return root.parse(root2);
   }, [root2]);
-  React44.useMemo(() => getDurationInSeconds(parsed, true), [parsed]);
-  const resolvedTheme = React44.useMemo(
-    () => resolveTheme(theme ?? root2?.theme),
-    [theme, root2]
-  );
-  const value = React44.useMemo(
+  React43.useMemo(() => getDurationInSeconds(parsed, true), [parsed]);
+  const value = React43.useMemo(
     () => ({
       Container: compose?.Container ?? DefaultContainer2,
       onError: compose?.onError
     }),
     [compose]
   );
-  return /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(ComposeContext.Provider, { value, children: /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(ThemeProvider, { theme: resolvedTheme, children: /* @__PURE__ */ (0, import_jsx_runtime89.jsxs)(AbsoluteFill, { style: { background: background || resolvedTheme.colors.background }, children: [
-    /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(FolderLeaf, { stream: parsed }),
-    parsed.subtitle && /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(SubtitleOverlay, { subtitle: parsed.subtitle })
-  ] }) }) });
+  return /* @__PURE__ */ (0, import_jsx_runtime88.jsx)(ComposeContext.Provider, { value, children: /* @__PURE__ */ (0, import_jsx_runtime88.jsxs)(AbsoluteFill, { style: { background }, children: [
+    /* @__PURE__ */ (0, import_jsx_runtime88.jsx)(FolderLeaf, { stream: parsed }),
+    parsed.subtitle && /* @__PURE__ */ (0, import_jsx_runtime88.jsx)(SubtitleOverlay, { subtitle: parsed.subtitle })
+  ] }) });
 }
 
 // src/player/browser.tsx
@@ -48468,7 +48128,6 @@ function PlayerApp() {
   const height = data.height || 1920;
   const durationInSeconds = getDurationInSeconds(data, true) || 5;
   const durationInFrames = Math.max(1, Math.ceil(durationInSeconds * fps));
-  const theme = resolveTheme(data.theme);
   return import_react127.default.createElement(
     "div",
     {
@@ -48479,8 +48138,7 @@ function PlayerApp() {
       component: RemotionEngine,
       inputProps: {
         root: data,
-        compose: {},
-        theme
+        compose: {}
       },
       durationInFrames,
       fps,

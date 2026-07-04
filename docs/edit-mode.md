@@ -149,7 +149,7 @@ Each edit call sends a structured prompt with a **recursive tree description** i
 You are editing sample-visual.json, a Remotion stream tree JSON.
 
 The stream tree (indentation shows nesting; timing in seconds):
-  root "root" (1080├ù1920, 30fps, series, transition:fade, theme:cinematic)
+  root "root" (1080×1920, 30fps, series, transition:fade)
     folder "scene-1" (parallel)
       component GradientBackground {type:"radial",animated:true,noise:true} [0ÔåÆ5s, bg]
       component AnimatedHeadline {"text":"Hello Remotion",...} [0.5ÔåÆ4.5s]

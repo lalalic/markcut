@@ -108,4 +108,3 @@ Source: `src/player/label-server.mjs`
 | Storyboard (video planning) | [storyboard.md](storyboard.md) |
 | Stream tree types | `SKILL.md` |
 | Dynamic components | [dynamic-components.md](dynamic-components.md) |
-| Theme system | [themes.md](themes.md) |

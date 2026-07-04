@@ -6,7 +6,6 @@
   "fps": 30,
   "isSeries": true,
   "transition": "fade",
-  "theme": "cinematic",
   "children": [
     {
       "id": "sunset",

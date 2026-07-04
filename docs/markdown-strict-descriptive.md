@@ -8,7 +8,7 @@ A markdown document compiled into a renderable scene tree.
 
 - Top heading `# video`
 - Optional YAML-style frontmatter block `---\n...\n---\n` at the very top
-- Root config line: `width height fps layout [theme]`
+- Root config line: `width height fps layout`
 - Scenes via `##`/`###`/`####` headings
 - Leaf nodes via `- typeToken ...` bullets
 - Inline JSX component definitions via ```jsx Name code fences
@@ -25,7 +25,6 @@ An optional YAML-ish block at the top of the document, delimited by `---`. Suppo
 width: 1080
 height: 1920
 fps: 30
-theme: neon
 imports:
   - StatCounter:
       from: npm:stat-counter
@@ -102,7 +101,7 @@ Body-level JSON `imports:[...]` is also supported:
 | `width` | canvas width | root |
 | `height` | canvas height | root |
 | `fps` | frame rate | root |
-| `theme` | preset name (string) | root |
+| `theme` | *removed — use `style` on root* | root |
 | `tts` | `{cli:"..", voice:"..", options:{..}}` JSON TTS config | root |
 | `stt` | `{model:"..", language:".."}` JSON STT config | root |
 | `layout` | `series\|parallel\|transitionSeries` | root, scene | 
@@ -308,7 +307,6 @@ tween(#000, #FFF)             — color interpolation
 width: 1080
 height: 1920
 fps: 30
-theme: neon
 imports:
   - StatCounter:
       from: npm:stat-counter

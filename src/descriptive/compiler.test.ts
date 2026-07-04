@@ -1036,9 +1036,8 @@ describe("compileDescriptiveRoot", () => {
     ).toThrow(/cannot resolve duration/i);
   });
 
-  it("preserves root-level theme, instruction, and stylesheet", () => {
+  it("preserves root-level instruction and stylesheet", () => {
     const compiled = compileDescriptiveRoot({
-      theme: "cinematic",
       instruction: "A stylish promo",
       stylesheet: "body { font-family: sans-serif; }",
       children: [
@@ -1046,7 +1045,6 @@ describe("compileDescriptiveRoot", () => {
       ],
     });
 
-    expect((compiled as any).theme).toBe("cinematic");
     expect((compiled as any).instruction).toBe("A stylish promo");
     expect(compiled.stylesheet).toBe("body { font-family: sans-serif; }");
   });
