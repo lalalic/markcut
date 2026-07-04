@@ -265,7 +265,7 @@ var require_react_production = __commonJS({
       }
       console.error(error49);
     };
-    var Children5 = {
+    var Children4 = {
       map: mapChildren,
       forEach: function(children, forEachFunc, forEachContext) {
         mapChildren(
@@ -297,7 +297,7 @@ var require_react_production = __commonJS({
       }
     };
     exports.Activity = REACT_ACTIVITY_TYPE;
-    exports.Children = Children5;
+    exports.Children = Children4;
     exports.Component = Component;
     exports.Fragment = REACT_FRAGMENT_TYPE;
     exports.Profiler = REACT_PROFILER_TYPE;
@@ -772,7 +772,7 @@ var require_scheduler = __commonJS({
 var require_react_dom_production = __commonJS({
   "node_modules/react-dom/cjs/react-dom.production.js"(exports) {
     "use strict";
-    var React51 = require_react();
+    var React46 = require_react();
     function formatProdErrorMessage(code) {
       var url2 = "https://react.dev/errors/" + code;
       if (1 < arguments.length) {
@@ -812,7 +812,7 @@ var require_react_dom_production = __commonJS({
         implementation
       };
     }
-    var ReactSharedInternals = React51.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
+    var ReactSharedInternals = React46.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
     function getCrossOriginStringAs(as, input) {
       if ("font" === as) return "";
       if ("string" === typeof input)
@@ -948,7 +948,7 @@ var require_react_dom_client_production = __commonJS({
   "node_modules/react-dom/cjs/react-dom-client.production.js"(exports) {
     "use strict";
     var Scheduler = require_scheduler();
-    var React51 = require_react();
+    var React46 = require_react();
     var ReactDOM = require_react_dom();
     function formatProdErrorMessage(code) {
       var url2 = "https://react.dev/errors/" + code;
@@ -1139,7 +1139,7 @@ var require_react_dom_client_production = __commonJS({
       return null;
     }
     var isArrayImpl = Array.isArray;
-    var ReactSharedInternals = React51.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
+    var ReactSharedInternals = React46.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
     var ReactDOMSharedInternals = ReactDOM.__DOM_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
     var sharedNotPendingObject = {
       pending: false,
@@ -3274,10 +3274,10 @@ var require_react_dom_client_production = __commonJS({
         refCount: 0
       };
     }
-    function releaseCache(cache3) {
-      cache3.refCount--;
-      0 === cache3.refCount && scheduleCallback$2(NormalPriority, function() {
-        cache3.controller.abort();
+    function releaseCache(cache2) {
+      cache2.refCount--;
+      0 === cache2.refCount && scheduleCallback$2(NormalPriority, function() {
+        cache2.controller.abort();
       });
     }
     var currentEntangledListeners = null;
@@ -8637,21 +8637,21 @@ var require_react_dom_client_production = __commonJS({
           case 23:
           case 22:
             if (null !== fiber.memoizedState && null !== fiber.memoizedState.cachePool) {
-              var cache3 = fiber.memoizedState.cachePool.pool;
-              null != cache3 && cache3.refCount++;
+              var cache2 = fiber.memoizedState.cachePool.pool;
+              null != cache2 && cache2.refCount++;
             }
             break;
           case 24:
             releaseCache(fiber.memoizedState.cache);
         }
-        cache3 = fiber.child;
-        if (null !== cache3) cache3.return = fiber, nextEffect = cache3;
+        cache2 = fiber.child;
+        if (null !== cache2) cache2.return = fiber, nextEffect = cache2;
         else
           a: for (fiber = deletedSubtreeRoot; null !== nextEffect; ) {
-            cache3 = nextEffect;
-            var sibling = cache3.sibling, returnFiber = cache3.return;
-            detachFiberAfterEffects(cache3);
-            if (cache3 === fiber) {
+            cache2 = nextEffect;
+            var sibling = cache2.sibling, returnFiber = cache2.return;
+            detachFiberAfterEffects(cache2);
+            if (cache2 === fiber) {
               nextEffect = null;
               break a;
             }
@@ -8666,8 +8666,8 @@ var require_react_dom_client_production = __commonJS({
     }
     var DefaultAsyncDispatcher = {
       getCacheForType: function(resourceType) {
-        var cache3 = readContext(CacheContext), cacheForType = cache3.data.get(resourceType);
-        void 0 === cacheForType && (cacheForType = resourceType(), cache3.data.set(resourceType, cacheForType));
+        var cache2 = readContext(CacheContext), cacheForType = cache2.data.get(resourceType);
+        void 0 === cacheForType && (cacheForType = resourceType(), cache2.data.set(resourceType, cacheForType));
         return cacheForType;
       },
       cacheSignal: function() {
@@ -11806,24 +11806,24 @@ var require_react_dom_client_production = __commonJS({
     var tagCaches = null;
     function getHydratableHoistableCache(type, keyAttribute, ownerDocument) {
       if (null === tagCaches) {
-        var cache3 = /* @__PURE__ */ new Map();
+        var cache2 = /* @__PURE__ */ new Map();
         var caches = tagCaches = /* @__PURE__ */ new Map();
-        caches.set(ownerDocument, cache3);
+        caches.set(ownerDocument, cache2);
       } else
-        caches = tagCaches, cache3 = caches.get(ownerDocument), cache3 || (cache3 = /* @__PURE__ */ new Map(), caches.set(ownerDocument, cache3));
-      if (cache3.has(type)) return cache3;
-      cache3.set(type, null);
+        caches = tagCaches, cache2 = caches.get(ownerDocument), cache2 || (cache2 = /* @__PURE__ */ new Map(), caches.set(ownerDocument, cache2));
+      if (cache2.has(type)) return cache2;
+      cache2.set(type, null);
       ownerDocument = ownerDocument.getElementsByTagName(type);
       for (caches = 0; caches < ownerDocument.length; caches++) {
         var node = ownerDocument[caches];
         if (!(node[internalHoistableMarker] || node[internalInstanceKey] || "link" === type && "stylesheet" === node.getAttribute("rel")) && "http://www.w3.org/2000/svg" !== node.namespaceURI) {
           var nodeKey = node.getAttribute(keyAttribute) || "";
           nodeKey = type + nodeKey;
-          var existing = cache3.get(nodeKey);
-          existing ? existing.push(node) : cache3.set(nodeKey, [node]);
+          var existing = cache2.get(nodeKey);
+          existing ? existing.push(node) : cache2.set(nodeKey, [node]);
         }
       }
-      return cache3;
+      return cache2;
     }
     function mountHoistable(hoistableRoot, type, instance) {
       hoistableRoot = hoistableRoot.ownerDocument || hoistableRoot;
@@ -12585,7 +12585,7 @@ var require_react_dom_client_production = __commonJS({
         0 === i && attemptExplicitHydrationTarget(target);
       }
     };
-    var isomorphicReactPackageVersion$jscomp$inline_1840 = React51.version;
+    var isomorphicReactPackageVersion$jscomp$inline_1840 = React46.version;
     if ("19.2.5" !== isomorphicReactPackageVersion$jscomp$inline_1840)
       throw Error(
         formatProdErrorMessage(
@@ -15893,10 +15893,10 @@ var decodeImage = async ({
   if (!selectedTrack) {
     throw new Error("No selected track");
   }
-  const cache3 = [];
+  const cache2 = [];
   let durationFound = null;
   const getFrameByIndex = async (frameIndex) => {
-    const foundInCache = cache3.find((c2) => c2.frameIndex === frameIndex);
+    const foundInCache = cache2.find((c2) => c2.frameIndex === frameIndex);
     if (foundInCache && foundInCache.frame) {
       return foundInCache;
     }
@@ -15907,7 +15907,7 @@ var decodeImage = async ({
     if (foundInCache) {
       foundInCache.frame = frame.image;
     } else {
-      cache3.push({
+      cache2.push({
         frame: frame.image,
         frameIndex,
         timeInSeconds: frame.image.timestamp / 1e6
@@ -15920,7 +15920,7 @@ var decodeImage = async ({
     };
   };
   const clearCache = (closeToTimeInSec) => {
-    const itemsInCache = cache3.filter((c2) => c2.frame);
+    const itemsInCache = cache2.filter((c2) => c2.frame);
     const sortByClosestToCurrentTime = itemsInCache.sort((a2, b2) => {
       const aDiff = Math.abs(a2.timeInSeconds - closeToTimeInSec);
       const bDiff = Math.abs(b2.timeInSeconds - closeToTimeInSec);
@@ -15943,7 +15943,7 @@ var decodeImage = async ({
       loopBehavior,
       timeInSec
     });
-    const framesBefore = cache3.filter((c2) => c2.timeInSeconds <= actualTimeInSec);
+    const framesBefore = cache2.filter((c2) => c2.timeInSeconds <= actualTimeInSec);
     const biggestIndex = framesBefore.map((c2) => c2.frameIndex).reduce((a2, b2) => Math.max(a2, b2), 0);
     let i = biggestIndex;
     while (true) {
@@ -15986,7 +15986,7 @@ var decodeImage = async ({
       timeInSec
     });
     await ensureFrameBeforeAndAfter({ timeInSec: actualTimeInSec, loopBehavior });
-    const itemsInCache = cache3.filter((c2) => c2.frame);
+    const itemsInCache = cache2.filter((c2) => c2.frame);
     const closest = itemsInCache.reduce((a2, b2) => {
       const aDiff = Math.abs(a2.timeInSeconds - actualTimeInSec);
       const bDiff = Math.abs(b2.timeInSeconds - actualTimeInSec);
@@ -27930,16 +27930,15 @@ var ThumbnailFn = ({
 var forward2 = import_react110.forwardRef;
 var Thumbnail = forward2(ThumbnailFn);
 
-// src/lite.entry.tsx
-var React45 = __toESM(require_react(), 1);
+// src/entry.tsx
+var React44 = __toESM(require_react(), 1);
 
 // src/context/index.tsx
 var React8 = __toESM(require_react(), 1);
 var import_jsx_runtime56 = __toESM(require_jsx_runtime(), 1);
 var DefaultContainer = ({ children, style: style2 }) => /* @__PURE__ */ (0, import_jsx_runtime56.jsx)("div", { style: { position: "absolute", inset: 0, ...style2 }, children });
 var ComposeContext = React8.createContext({
-  Container: DefaultContainer,
-  components: {}
+  Container: DefaultContainer
 });
 var AudioContext2 = React8.createContext(null);
 
@@ -42011,9 +42010,6 @@ var themeSchema = external_exports.object({
 // src/themes/index.tsx
 var import_jsx_runtime57 = __toESM(require_jsx_runtime(), 1);
 var ThemeContext = React9.createContext(themePresets.cinematic);
-function useTheme() {
-  return React9.useContext(ThemeContext);
-}
 function ThemeProvider({
   theme,
   children
@@ -42031,6 +42027,17 @@ function resolveTheme(input) {
       return themePresets.cinematic;
     }
   }
+  if ("base" in input && typeof input.base === "string" && themePresets[input.base]) {
+    const base2 = themePresets[input.base];
+    const { base: _base, ...overrides } = input;
+    const merged = { ...base2, ...overrides };
+    for (const section of ["colors", "fonts", "timing", "effects"]) {
+      if (overrides[section] && typeof overrides[section] === "object") {
+        merged[section] = { ...base2[section], ...overrides[section] };
+      }
+    }
+    return merged;
+  }
   try {
     return themeSchema.parse(input);
   } catch {
@@ -42039,7 +42046,7 @@ function resolveTheme(input) {
 }
 
 // src/types/Folder.tsx
-var React44 = __toESM(require_react(), 1);
+var React41 = __toESM(require_react(), 1);
 
 // node_modules/@remotion/transitions/dist/esm/index.mjs
 var import_react113 = __toESM(require_react(), 1);
@@ -44461,7 +44468,6 @@ function VideoLeaf({ stream: stream2 }) {
           OffthreadVideo,
           {
             src: resolvedSrc,
-            className: stream2.name,
             startFrom: Math.floor(startFrom * fps),
             endAt: Math.floor(startFrom * fps) + Math.floor((endAt - startFrom) * fps / playbackRate),
             muted: volume === 0 || !!audio2?.foreground,
@@ -44474,7 +44480,6 @@ function VideoLeaf({ stream: stream2 }) {
           OffthreadVideo,
           {
             src: resolvedSrc,
-            className: stream2.name,
             startFrom: Math.floor(startFrom * fps),
             endAt: Math.floor(startFrom * fps) + Math.floor((endAt - startFrom) * fps / playbackRate),
             muted: volume === 0 || !!audio2?.foreground,
@@ -44514,7 +44519,7 @@ function AudioLeaf({ stream: stream2 }) {
     return /* @__PURE__ */ (0, import_jsx_runtime79.jsx)(
       Sequence,
       {
-        name: stream2.title ?? stream2.name ?? stream2.src,
+        name: stream2.src ?? "audio",
         durationInFrames: Math.max(1, Math.floor(fps * (end - start))),
         from: Math.floor(fps * start),
         layout: "none",
@@ -44561,7 +44566,6 @@ function ImageLeaf({ stream: stream2 }) {
           Img,
           {
             src: resolvedSrc,
-            className: stream2.name,
             style: {
               width: "100%",
               height: "100%",
@@ -44579,259 +44583,251 @@ function ImageLeaf({ stream: stream2 }) {
   }) });
 }
 
-// src/types/Subtitle.tsx
-var React25 = __toESM(require_react(), 1);
-var import_jsx_runtime81 = __toESM(require_jsx_runtime(), 1);
-function resolveSubtitleSrc(src) {
-  if (src.startsWith("http://") || src.startsWith("https://") || src.startsWith("data:") || src.startsWith("/")) {
-    return src;
-  }
-  return staticFile(src);
-}
-function SubtitleLeaf({ stream: stream2 }) {
-  const { fps } = useVideoConfig();
-  const currentInSecond = useCurrentFrame() / fps;
-  const start = stream2.actions[0]?.start ?? 0;
-  const end = stream2.actions[0]?.end ?? start + 1;
-  const [loadedCues, setLoadedCues] = React25.useState(null);
-  React25.useEffect(() => {
-    if (stream2.cues?.length || !stream2.src) {
-      setLoadedCues(null);
-      return;
-    }
-    if (stream2.src.includes("-->")) {
-      setLoadedCues(parseVTT(stream2.src));
-      return;
-    }
-    if (!/\.vtt(?:$|[?#])/.test(stream2.src)) {
-      setLoadedCues(null);
-      return;
-    }
-    const handle = delayRender(`Loading subtitles: ${stream2.src}`);
-    let active = true;
-    let settled = false;
-    const finish = () => {
-      if (settled) return;
-      settled = true;
-      continueRender(handle);
-    };
-    fetch(resolveSubtitleSrc(stream2.src)).then((response) => {
-      if (!response.ok) {
-        throw new Error(`Failed to load subtitles (${response.status}): ${stream2.src}`);
-      }
-      return response.text();
-    }).then((text) => {
-      if (!active) return;
-      setLoadedCues(parseVTT(text));
-      finish();
-    }).catch((error49) => {
-      if (!active) return;
-      settled = true;
-      cancelRender(error49);
-    });
-    return () => {
-      active = false;
-      finish();
-    };
-  }, [stream2.cues, stream2.src]);
-  const cues = stream2.cues?.length ? stream2.cues : loadedCues;
-  const cue = React25.useMemo(() => {
-    if (cues?.length) {
-      return cues.find(
-        (c2) => c2.startFrom + start <= currentInSecond && c2.endAt + start > currentInSecond
-      );
-    }
-    if (stream2.src) {
-      if (stream2.src.includes("-->") || /\.vtt(?:$|[?#])/.test(stream2.src)) {
-        return void 0;
-      }
-      return {
-        text: stream2.src,
-        startFrom: 0,
-        endAt: end - start,
-        className: stream2.actions[0]?.effectId
-      };
-    }
-    return void 0;
-  }, [currentInSecond, cues, stream2, start, end]);
-  if (!cue) return null;
-  const css = stream2.style ? cssJS(stream2.style) : {};
-  const cueLocalT = currentInSecond - start - cue.startFrom;
-  const wantsKaraoke = (cue.className ?? "").includes("karaoke") || (cue.words?.length ?? 0) > 0;
-  let wordEls = null;
-  if (wantsKaraoke) {
-    const explicit = cue.words ?? [];
-    const tokens = explicit.length ? explicit : (() => {
-      const parts = cue.text.split(/\s+/).filter(Boolean);
-      const dur = Math.max(1e-3, cue.endAt - cue.startFrom);
-      const each = dur / Math.max(1, parts.length);
-      return parts.map((t, i) => ({ text: t, start: i * each, end: (i + 1) * each }));
-    })();
-    wordEls = tokens.map((w, i) => {
-      const active = cueLocalT >= w.start && cueLocalT < w.end;
-      return /* @__PURE__ */ (0, import_jsx_runtime81.jsxs)("span", { className: active ? "word word-active" : "word", children: [
-        w.text,
-        i < tokens.length - 1 ? " " : ""
-      ] }, i);
-    });
-  }
-  return /* @__PURE__ */ (0, import_jsx_runtime81.jsx)(
-    Sequence,
-    {
-      layout: "none",
-      durationInFrames: Math.max(1, Math.floor((cue.endAt - cue.startFrom) * fps)),
-      from: Math.floor(start * fps) + Math.floor(cue.startFrom * fps),
-      children: /* @__PURE__ */ (0, import_jsx_runtime81.jsx)("div", { className: `caption-overlay ${stream2.name ?? ""}`, style: { ...DEFAULT_BOX_STYLE, ...css }, children: wordEls ? /* @__PURE__ */ (0, import_jsx_runtime81.jsx)(
-        "span",
-        {
-          className: `caption ${cue.className ?? ""}`,
-          style: { ...DEFAULT_TEXT_STYLE, fontSize: stream2.fontSize ?? DEFAULT_TEXT_STYLE.fontSize, fontStyle: stream2.fontStyle },
-          children: wordEls
-        }
-      ) : /* @__PURE__ */ (0, import_jsx_runtime81.jsx)(
-        "span",
-        {
-          className: `caption ${cue.className ?? ""}`,
-          style: { ...DEFAULT_TEXT_STYLE, fontSize: stream2.fontSize ?? DEFAULT_TEXT_STYLE.fontSize, fontStyle: stream2.fontStyle },
-          dangerouslySetInnerHTML: { __html: cue.text }
-        }
-      ) })
-    }
-  );
-}
-var DEFAULT_BOX_STYLE = {
-  position: "absolute",
-  inset: 0,
-  display: "flex",
-  alignItems: "flex-end",
-  justifyContent: "center",
-  padding: "0 5% 8% 5%",
-  pointerEvents: "none",
-  zIndex: 100
-};
-var DEFAULT_TEXT_STYLE = {
-  color: "white",
-  fontSize: 56,
-  fontWeight: 700,
-  textAlign: "center",
-  textShadow: "0 2px 12px rgba(0,0,0,0.85)",
-  lineHeight: 1.2,
-  fontFamily: '"PingFang SC","Noto Sans CJK SC","Hiragino Sans","Helvetica Neue",sans-serif'
-};
-
-// src/types/Component.tsx
-var React27 = __toESM(require_react(), 1);
-
 // src/types/DynamicLoader.tsx
-var React26 = __toESM(require_react(), 1);
+var React25 = __toESM(require_react(), 1);
 if (typeof window !== "undefined") {
-  window.__React = React26;
+  window.__React = React25;
   window.__Remotion = esm_exports;
+  globalThis.React = React25;
 }
-var cache2 = /* @__PURE__ */ new Map();
-var inflight = /* @__PURE__ */ new Map();
-var dynamicImport = typeof window !== "undefined" ? new Function("url", "return import(url)") : null;
-async function loadComponent(url2) {
-  if (cache2.has(url2)) return cache2.get(url2);
-  if (!inflight.has(url2)) {
-    const promise2 = (async () => {
-      const response = await fetch(url2);
-      if (!response.ok) {
-        throw new Error(`Failed to load component from ${url2}: HTTP ${response.status}`);
+var reactShimInjected = false;
+function ensureReactShim() {
+  if (reactShimInjected) return;
+  if (typeof window === "undefined") return;
+  if (document.querySelector("#rmtr-react-shim")) {
+    reactShimInjected = true;
+    return;
+  }
+  try {
+    const blobReact = new Blob(
+      [
+        `
+        const R = globalThis.React;
+        export const {
+          useState,
+          useEffect,
+          useRef,
+          useMemo,
+          useCallback,
+          useContext,
+          createElement,
+          Fragment,
+          Suspense,
+          forwardRef,
+          Children,
+          isValidElement,
+          cloneElement,
+          createContext,
+          PureComponent,
+          Component,
+          lazy,
+        } = R;
+        export default R;
+      `
+      ],
+      { type: "application/javascript" }
+    );
+    const urlReact = URL.createObjectURL(blobReact);
+    const script = document.createElement("script");
+    script.type = "importmap";
+    script.id = "rmtr-react-shim";
+    script.textContent = JSON.stringify({
+      imports: {
+        react: urlReact
       }
-      const source = await response.text();
-      if (dynamicImport) {
-        try {
-          const blob = new Blob([source], { type: "text/javascript" });
-          const blobUrl = URL.createObjectURL(blob);
-          try {
-            const mod = await dynamicImport(blobUrl);
-            const Comp2 = mod.default ?? mod;
-            if (typeof Comp2 === "function") {
-              cache2.set(url2, Comp2);
-              return Comp2;
-            }
-          } finally {
-            URL.revokeObjectURL(blobUrl);
-          }
-        } catch {
+    });
+    document.head.appendChild(script);
+    reactShimInjected = true;
+  } catch {
+    reactShimInjected = true;
+  }
+}
+function externalizeReact(url2) {
+  try {
+    const u = new URL(url2);
+    if (u.hostname.endsWith("esm.sh")) {
+      const params = new URLSearchParams(u.search);
+      if (!params.has("external")) {
+        params.set("external", "react");
+      } else {
+        const val = params.get("external");
+        if (!val.split(",").includes("react")) {
+          params.set("external", `react,${val}`);
         }
       }
-      const module = { exports: {} };
-      const factory = new Function(
-        "module",
-        "exports",
-        "React",
-        "remotion",
-        source
-      );
-      factory(module, module.exports, React26, esm_exports);
-      const Comp = module.exports.default ?? module.exports;
-      if (typeof Comp !== "function") {
-        throw new Error(`Component at ${url2} did not export a function`);
-      }
-      cache2.set(url2, Comp);
-      return Comp;
-    })();
-    inflight.set(url2, promise2);
-    promise2.finally(() => inflight.delete(url2));
+      params.set("standalone", "");
+      u.search = params.toString();
+      return u.toString();
+    }
+  } catch {
   }
-  return inflight.get(url2);
+  return url2;
 }
-function useDynamicComponent(url2, onError) {
-  const cached2 = url2 ? cache2.get(url2) ?? null : null;
-  const needsLoad = !!url2 && !cached2;
-  const [handle] = React26.useState(
-    () => needsLoad ? delayRender(`Loading remote component: ${url2}`) : null
-  );
-  const [Comp, setComp] = React26.useState(() => cached2);
-  React26.useEffect(() => {
-    if (!url2 || !handle) return;
+var dynamicImport = typeof window !== "undefined" ? (url2) => import(
+  /* webpackIgnore: true */
+  url2
+) : null;
+var jsxCache = /* @__PURE__ */ new Map();
+var babelPromise = null;
+async function loadBabel() {
+  if (typeof window === "undefined" || !dynamicImport) return null;
+  if (!babelPromise) {
+    const babelUrl = externalizeReact("https://esm.sh/@babel/standalone@7.26.10");
+    ensureReactShim();
+    babelPromise = dynamicImport(babelUrl).then((m) => m?.default ?? m).catch(() => null);
+  }
+  return babelPromise;
+}
+function useJsxWithImports(jsx68, imports, onError) {
+  const cacheKey = React25.useMemo(() => {
+    if (!jsx68) return null;
+    const importKeys = imports ? Object.keys(imports).sort().join(",") : "";
+    return `${importKeys}
+${jsx68}`;
+  }, [jsx68, imports]);
+  const cached2 = cacheKey ? jsxCache.get(cacheKey) ?? null : null;
+  const needsLoad = !!cacheKey && !cached2;
+  const handleRef = React25.useRef(null);
+  if (needsLoad && !handleRef.current) {
+    handleRef.current = delayRender(`Compiling JSX with imports`);
+  }
+  const [Comp, setComp] = React25.useState(() => cached2);
+  React25.useEffect(() => {
+    if (!cacheKey || cached2) return;
     let active = true;
-    loadComponent(url2).then((C) => {
+    compileJsxWithImports(jsx68, imports ?? {}).then((C) => {
       if (active) setComp(() => C);
     }).catch((err) => {
-      onError?.(err, { url: url2 });
-    }).finally(() => {
-      continueRender(handle);
+      onError?.(err, { source: jsx68 });
     });
     return () => {
       active = false;
     };
-  }, [url2, handle, onError]);
+  }, [cacheKey, onError]);
+  React25.useEffect(() => {
+    if (Comp && handleRef.current) {
+      continueRender(handleRef.current);
+      handleRef.current = null;
+    }
+  }, [Comp]);
   return Comp;
+}
+async function compileJsxWithImports(usageJsx, imports) {
+  ensureReactShim();
+  const names = Object.keys(imports);
+  const loaded = /* @__PURE__ */ new Map();
+  await Promise.all(
+    names.map(async (name) => {
+      const url2 = imports[name];
+      if (url2.startsWith("__jsx__:")) return;
+      try {
+        const mod = await dynamicImport(externalizeReact(url2));
+        const Comp = mod.default ?? Object.values(mod).find((v) => typeof v === "function") ?? mod;
+        if (typeof Comp === "function") loaded.set(name, Comp);
+      } catch {
+      }
+    })
+  );
+  const Babel = await loadBabel();
+  if (!Babel || !dynamicImport) {
+    throw new Error("@babel/standalone failed to load; cannot compile JSX");
+  }
+  const importId = `__ri_${Math.random().toString(36).slice(2, 8)}`;
+  window[importId] = Object.fromEntries(loaded);
+  try {
+    const importDecls = names.filter((n) => loaded.has(n)).map((n) => `const ${n} = window["${importId}"]["${n}"];`).join("\n");
+    const source = `
+const React = window.__React;
+const { useCurrentFrame, interpolate, spring, useVideoConfig, Easing } = window.__Remotion;
+
+// Mutable refs updated on every render \u2014 tween() can read them
+var __frame = 0, __fpsVal = 30, __actionDurationFrames = 120;
+var __cache = {};
+var __easingRegistry = {
+  linear: undefined,
+  easeIn: Easing.in(Easing.ease),
+  easeOut: Easing.out(Easing.ease),
+  easeInOut: Easing.inOut(Easing.ease),
+  ease: Easing.ease,
+};
+
+// tween(from, to, easing) \u2014 returns interpolated value for current frame
+function tween(from, to, easing) {
+  var key = from + ',' + to + ',' + (easing || 'linear');
+  if (__cache[key] !== undefined) return __cache[key];
+  var easingFn = __easingRegistry[easing] || undefined;
+  var val = interpolate(__frame, [0, __actionDurationFrames], [from, to], {
+    extrapolateLeft: 'clamp',
+    extrapolateRight: 'clamp',
+    easing: easingFn,
+  });
+  __cache[key] = val;
+  return val;
+}
+// Clear cache when frame or action duration changes
+function __clearCache(f, dur) { if (f !== __frame || dur !== __actionDurationFrames) { __frame = f; __actionDurationFrames = dur; __cache = {}; } }
+
+${importDecls}
+
+function Wrapper(props) {
+  var frame = useCurrentFrame();
+  var fps = useVideoConfig().fps;
+  var action = props.action || {};
+  var startFrame = Math.floor((action.start || 0) * fps);
+  var endFrame = Math.floor((action.end || 1) * fps);
+  var actionDurationFrames = Math.max(1, endFrame - startFrame);
+  __clearCache(frame, actionDurationFrames);
+  __fpsVal = fps;
+  return (${usageJsx.trim()});
+}
+
+export default Wrapper;
+`;
+    const out = Babel.transform(source, {
+      filename: "component.jsx",
+      presets: [["react", { runtime: "classic" }], "typescript"]
+    });
+    const code = out.code ?? source;
+    const blob = new Blob([code], { type: "text/javascript" });
+    const blobUrl = URL.createObjectURL(blob);
+    try {
+      let Comp;
+      try {
+        const mod = await dynamicImport(blobUrl);
+        Comp = mod.default ?? mod;
+      } catch {
+        throw new Error("Compiled JSX did not export a function");
+      }
+      if (typeof Comp !== "function") {
+        throw new Error("Compiled JSX did not export a function");
+      }
+      jsxCache.set(`${names.sort().join(",")}
+${usageJsx}`, Comp);
+      return Comp;
+    } finally {
+      URL.revokeObjectURL(blobUrl);
+    }
+  } finally {
+    delete window[importId];
+  }
 }
 
 // src/types/Component.tsx
-var import_jsx_runtime82 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime81 = __toESM(require_jsx_runtime(), 1);
 function ComponentLeaf({ stream: stream2 }) {
   const { fps } = useVideoConfig();
-  const { components, onError } = React27.useContext(ComposeContext);
-  const RemoteComp = useDynamicComponent(
-    stream2.src,
-    onError ? (err, ctx) => onError(err, { id: stream2.id, type: stream2.type }) : void 0
-  );
-  const RegistryComp = components[stream2.componentName];
-  const Comp = stream2.src ? RemoteComp : RegistryComp;
-  if (!Comp) {
-    if (!stream2.src) {
-      onError?.(new Error(`unknown component: ${stream2.componentName}`), {
-        id: stream2.id,
-        type: stream2.type
-      });
-    }
-    return null;
-  }
-  return /* @__PURE__ */ (0, import_jsx_runtime82.jsx)(import_jsx_runtime82.Fragment, { children: stream2.actions.map((a2) => {
+  const Comp = useJsxWithImports(stream2.jsx, stream2.imports ?? void 0);
+  if (!Comp) return null;
+  return /* @__PURE__ */ (0, import_jsx_runtime81.jsx)(import_jsx_runtime81.Fragment, { children: stream2.actions.map((a2) => {
     const start = a2.start ?? 0;
     const end = a2.end ?? start + 1;
-    return /* @__PURE__ */ (0, import_jsx_runtime82.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime81.jsx)(
       Sequence,
       {
         durationInFrames: Math.max(1, Math.floor(fps * (end - start))),
         from: Math.floor(fps * start),
         layout: "none",
-        children: /* @__PURE__ */ (0, import_jsx_runtime82.jsx)(Comp, { ...stream2.props, action: a2 })
+        children: /* @__PURE__ */ (0, import_jsx_runtime81.jsx)(Comp, { action: a2 })
       },
       a2.id
     );
@@ -44839,7 +44835,7 @@ function ComponentLeaf({ stream: stream2 }) {
 }
 
 // src/types/Rhythm.tsx
-var import_jsx_runtime83 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime82 = __toESM(require_jsx_runtime(), 1);
 function resolveAudioSrc2(src) {
   if (/^(https?:|data:|blob:|file:|\/)/.test(src)) return src;
   return staticFile(src);
@@ -44849,19 +44845,19 @@ function RhythmLeaf({ stream: stream2 }) {
   const environment = useRemotionEnvironment();
   if (!stream2.src || environment.isStudio) return null;
   const resolvedSrc = resolveAudioSrc2(stream2.src);
-  return /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(import_jsx_runtime83.Fragment, { children: stream2.actions.map((a2) => {
+  return /* @__PURE__ */ (0, import_jsx_runtime82.jsx)(import_jsx_runtime82.Fragment, { children: stream2.actions.map((a2) => {
     const start = a2.start ?? 0;
     const end = a2.end ?? start + 1;
     const volume = a2.volume ?? stream2.volume ?? 1;
-    return /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime82.jsx)(
       Sequence,
       {
-        name: stream2.title ?? stream2.name ?? "rhythm",
+        name: stream2.src ?? "rhythm",
         durationInFrames: Math.max(1, Math.floor(fps * (end - start))),
         from: Math.floor(fps * start),
         layout: "none",
         showInTimeline: false,
-        children: /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(
+        children: /* @__PURE__ */ (0, import_jsx_runtime82.jsx)(
           Audio,
           {
             src: resolvedSrc,
@@ -44881,7 +44877,7 @@ function RhythmLeaf({ stream: stream2 }) {
 var import_react126 = __toESM(require_react(), 1);
 
 // node_modules/@vis.gl/react-google-maps/dist/index.modern.mjs
-var React30 = __toESM(require_react(), 1);
+var React26 = __toESM(require_react(), 1);
 var import_react125 = __toESM(require_react(), 1);
 var import_react_dom3 = __toESM(require_react_dom(), 1);
 var import_fast_deep_equal = __toESM(require_fast_deep_equal(), 1);
@@ -45825,13 +45821,13 @@ function useMapsLibrary(name) {
   return (ctx === null || ctx === void 0 ? void 0 : ctx.loadedLibraries[name]) || null;
 }
 var _a2;
-var { useLayoutEffect: useLayoutEffect15, useRef: useRef30 } = React30;
-var useBeforeEffect = (_a2 = React30.useInsertionEffect) !== null && _a2 !== void 0 ? _a2 : useLayoutEffect15;
+var { useLayoutEffect: useLayoutEffect15, useRef: useRef31 } = React26;
+var useBeforeEffect = (_a2 = React26.useInsertionEffect) !== null && _a2 !== void 0 ? _a2 : useLayoutEffect15;
 function forbiddenInRender() {
   throw new Error("useEffectEvent: invalid call during rendering.");
 }
 function useEffectEventPolyfill(fn) {
-  const ref = useRef30(forbiddenInRender);
+  const ref = useRef31(forbiddenInRender);
   useBeforeEffect(() => {
     ref.current = fn;
   }, [fn]);
@@ -47200,13 +47196,13 @@ var Rectangle = (0, import_react125.forwardRef)((props, ref) => {
 Rectangle.displayName = "Rectangle";
 
 // src/types/Map.tsx
-var import_jsx_runtime84 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime83 = __toESM(require_jsx_runtime(), 1);
 var GM_API_KEY = "AIzaSyC6x4jghg5ZggV5VTThu9JE4DwX9NlbN9U";
 function MapLeaf({ stream: stream2 }) {
   const { fps } = useVideoConfig();
   const waypoints = stream2.waypoints ?? [];
   if (waypoints.length === 0) return null;
-  return /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(import_jsx_runtime84.Fragment, { children: stream2.actions?.map((a2, i) => {
+  return /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(import_jsx_runtime83.Fragment, { children: stream2.actions?.map((a2, i) => {
     const start = a2.start ?? 0;
     const end = a2.end ?? start + 1;
     const durFrames = Math.max(1, Math.floor(fps * (end - start)));
@@ -47215,13 +47211,13 @@ function MapLeaf({ stream: stream2 }) {
     const mapType = stream2.mapType ?? "roadmap";
     const travelMode = stream2.travelMode ?? "DRIVING";
     const markerEmoji = stream2.routeMarker ?? "\u{1F697}";
-    return /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(
       Sequence,
       {
         durationInFrames: durFrames,
         from: Math.floor(fps * start),
         layout: "none",
-        children: /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(APIProvider, { apiKey: GM_API_KEY, children: /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(
+        children: /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(APIProvider, { apiKey: GM_API_KEY, children: /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(
           Map2,
           {
             mapId: String(stream2.id ?? i),
@@ -47233,7 +47229,7 @@ function MapLeaf({ stream: stream2 }) {
               zoomControl: false
             },
             style: { width: "100%", height: "100%", position: "absolute" },
-            children: /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(
+            children: /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(
               RouteWithMarker,
               {
                 waypoints,
@@ -47288,8 +47284,8 @@ function RouteWithMarker({
     setRouteIndex((prev) => prev);
   }, [routeIndex]);
   const position = useAnimatedPosition({ leg, actionDuration, waypoints });
-  return /* @__PURE__ */ (0, import_jsx_runtime84.jsxs)(import_jsx_runtime84.Fragment, { children: [
-    waypoints.map((wp, i) => /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(AdvancedMarker, { position: wp, children: wp.label ? /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime83.jsxs)(import_jsx_runtime83.Fragment, { children: [
+    waypoints.map((wp, i) => /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(AdvancedMarker, { position: wp, children: wp.label ? /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(
       "div",
       {
         style: {
@@ -47306,7 +47302,7 @@ function RouteWithMarker({
         children: wp.label
       }
     ) : null }, i)),
-    position ? /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(AdvancedMarker, { position, children: /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(Pin, { glyphText: markerEmoji, scale: 4 }) }) : null
+    position ? /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(AdvancedMarker, { position, children: /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(Pin, { glyphText: markerEmoji, scale: 4 }) }) : null
   ] });
 }
 function useAnimatedPosition({
@@ -47370,8 +47366,8 @@ function getCurrentStep(leg, currentInSecond) {
 }
 
 // src/types/Include.tsx
-var React39 = __toESM(require_react(), 1);
-var import_jsx_runtime85 = __toESM(require_jsx_runtime(), 1);
+var React30 = __toESM(require_react(), 1);
+var import_jsx_runtime84 = __toESM(require_jsx_runtime(), 1);
 var ASPECT_DIMS = {
   "16x9": { width: 1920, height: 1080 },
   "9x16": { width: 1080, height: 1920 },
@@ -47390,15 +47386,15 @@ function resolveIncludeSrc(src) {
 }
 function IncludeLeaf({ stream: stream2 }) {
   const { fps: parentFps, width: parentWidth, height: parentHeight } = useVideoConfig();
-  const { Container } = React39.useContext(ComposeContext);
-  const parentAudio = React39.useContext(AudioContext2);
+  const { Container } = React30.useContext(ComposeContext);
+  const parentAudio = React30.useContext(AudioContext2);
   if (!stream2.actions?.length) return null;
-  const [externalData, setExternalData] = React39.useState(null);
-  const [loadError, setLoadError] = React39.useState(null);
-  const [handle] = React39.useState(
+  const [externalData, setExternalData] = React30.useState(null);
+  const [loadError, setLoadError] = React30.useState(null);
+  const [handle] = React30.useState(
     () => stream2.src ? delayRender(`Loading include: ${stream2.src}`) : null
   );
-  React39.useEffect(() => {
+  React30.useEffect(() => {
     if (!stream2.src || !handle) return;
     let active = true;
     const url2 = resolveIncludeSrc(stream2.src);
@@ -47422,19 +47418,19 @@ function IncludeLeaf({ stream: stream2 }) {
       active = false;
     };
   }, [stream2.src, handle]);
-  React39.useMemo(() => {
+  React30.useMemo(() => {
     if (!stream2.src) {
       getDurationInSeconds(stream2, true);
     }
   }, [stream2, stream2.src]);
-  const audioCtx = React39.useMemo(
+  const audioCtx = React30.useMemo(
     () => ({ id: stream2.id, foreground: true, parent: parentAudio }),
     [stream2.id, parentAudio]
   );
-  const renderExternalContent = React39.useCallback(() => {
+  const renderExternalContent = React30.useCallback(() => {
     if (!externalData) return null;
     if (loadError) {
-      return /* @__PURE__ */ (0, import_jsx_runtime85.jsxs)("div", { style: { color: "#ff4444", fontSize: 24, padding: 40 }, children: [
+      return /* @__PURE__ */ (0, import_jsx_runtime84.jsxs)("div", { style: { color: "#ff4444", fontSize: 24, padding: 40 }, children: [
         "\u26A0 Include load error: ",
         loadError
       ] });
@@ -47444,19 +47440,19 @@ function IncludeLeaf({ stream: stream2 }) {
       const vjFps = vj.meta.fps ?? parentFps;
       const aspectKey = vj.meta.aspects?.[0] ?? "16x9";
       const dims = ASPECT_DIMS[aspectKey] ?? { width: parentWidth, height: parentHeight };
-      return /* @__PURE__ */ (0, import_jsx_runtime85.jsxs)(AbsoluteFill, { style: { backgroundColor: "#0a0a0a", width: dims.width, height: dims.height }, children: [
-        vj.bgm && /* @__PURE__ */ (0, import_jsx_runtime85.jsx)(Audio, { src: vj.bgm.src, volume: vj.bgm.baseVolume }),
+      return /* @__PURE__ */ (0, import_jsx_runtime84.jsxs)(AbsoluteFill, { style: { backgroundColor: "#0a0a0a", width: dims.width, height: dims.height }, children: [
+        vj.bgm && /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(Audio, { src: vj.bgm.src, volume: vj.bgm.baseVolume }),
         vj.scenes.map((scene2) => {
           const startFrame = Math.round((scene2.start ?? 0) * vjFps);
           const durFrames = Math.round((scene2.duration ?? 1) * vjFps);
-          return /* @__PURE__ */ (0, import_jsx_runtime85.jsxs)(
+          return /* @__PURE__ */ (0, import_jsx_runtime84.jsxs)(
             Sequence,
             {
               from: startFrame,
               durationInFrames: durFrames,
               name: `${scene2.id}:${scene2.component}`,
               children: [
-                /* @__PURE__ */ (0, import_jsx_runtime85.jsxs)(
+                /* @__PURE__ */ (0, import_jsx_runtime84.jsxs)(
                   AbsoluteFill,
                   {
                     style: {
@@ -47467,7 +47463,7 @@ function IncludeLeaf({ stream: stream2 }) {
                       padding: 60
                     },
                     children: [
-                      /* @__PURE__ */ (0, import_jsx_runtime85.jsx)(
+                      /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(
                         "div",
                         {
                           style: {
@@ -47481,7 +47477,7 @@ function IncludeLeaf({ stream: stream2 }) {
                           children: scene2.props?.headline ?? scene2.id
                         }
                       ),
-                      scene2.props?.subhead && /* @__PURE__ */ (0, import_jsx_runtime85.jsx)(
+                      scene2.props?.subhead && /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(
                         "div",
                         {
                           style: {
@@ -47496,7 +47492,7 @@ function IncludeLeaf({ stream: stream2 }) {
                     ]
                   }
                 ),
-                scene2.voiceover?.audio && /* @__PURE__ */ (0, import_jsx_runtime85.jsx)(Audio, { src: scene2.voiceover.audio, volume: 1 })
+                scene2.voiceover?.audio && /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(Audio, { src: scene2.voiceover.audio, volume: 1 })
               ]
             },
             scene2.id
@@ -47511,7 +47507,7 @@ function IncludeLeaf({ stream: stream2 }) {
       height: streamTree.height ?? parentHeight,
       fps: streamTree.fps ?? parentFps
     };
-    return /* @__PURE__ */ (0, import_jsx_runtime85.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(
       "div",
       {
         style: {
@@ -47520,7 +47516,7 @@ function IncludeLeaf({ stream: stream2 }) {
           overflow: "hidden",
           position: "relative"
         },
-        children: /* @__PURE__ */ (0, import_jsx_runtime85.jsx)(FolderLeaf, { stream: merged })
+        children: /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(FolderLeaf, { stream: merged })
       }
     );
   }, [externalData, loadError, parentFps, parentWidth, parentHeight]);
@@ -47530,14 +47526,14 @@ function IncludeLeaf({ stream: stream2 }) {
     const dur = Math.max(0.1, end - start);
     const durFrames = Math.max(1, Math.floor(parentFps * dur));
     if (!stream2.src && stream2.children?.length) {
-      return /* @__PURE__ */ (0, import_jsx_runtime85.jsx)(
+      return /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(
         Sequence,
         {
           durationInFrames: durFrames,
           from: Math.floor(parentFps * start),
           layout: "none",
           showInTimeline: false,
-          children: /* @__PURE__ */ (0, import_jsx_runtime85.jsx)(
+          children: /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(
             Container,
             {
               id: stream2.id,
@@ -47549,22 +47545,22 @@ function IncludeLeaf({ stream: stream2 }) {
                 overflow: "hidden",
                 position: "relative"
               },
-              className: `include ${toClassName(stream2.name ?? "")}`,
-              children: /* @__PURE__ */ (0, import_jsx_runtime85.jsx)(FolderLeaf, { stream: stream2 })
+              className: `include ${toClassName(stream2.id ?? "")}`,
+              children: /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(FolderLeaf, { stream: stream2 })
             }
           )
         },
         a2.id
       );
     }
-    return /* @__PURE__ */ (0, import_jsx_runtime85.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(
       Sequence,
       {
         durationInFrames: durFrames,
         from: Math.floor(parentFps * start),
         layout: "none",
         showInTimeline: false,
-        children: externalData || loadError ? /* @__PURE__ */ (0, import_jsx_runtime85.jsx)(
+        children: externalData || loadError ? /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(
           "div",
           {
             style: {
@@ -47575,7 +47571,7 @@ function IncludeLeaf({ stream: stream2 }) {
             },
             children: renderExternalContent()
           }
-        ) : /* @__PURE__ */ (0, import_jsx_runtime85.jsxs)(
+        ) : /* @__PURE__ */ (0, import_jsx_runtime84.jsxs)(
           "div",
           {
             style: {
@@ -47598,33 +47594,33 @@ function IncludeLeaf({ stream: stream2 }) {
       a2.id
     );
   };
-  return /* @__PURE__ */ (0, import_jsx_runtime85.jsx)(AudioContext2.Provider, { value: audioCtx, children: stream2.actions.map(renderAction) });
+  return /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(AudioContext2.Provider, { value: audioCtx, children: stream2.actions.map(renderAction) });
 }
 
 // src/types/Scene.tsx
-var React41 = __toESM(require_react(), 1);
-var import_jsx_runtime86 = __toESM(require_jsx_runtime(), 1);
+var React35 = __toESM(require_react(), 1);
+var import_jsx_runtime85 = __toESM(require_jsx_runtime(), 1);
 function SceneLeaf({ stream: stream2 }) {
-  const { Container } = React41.useContext(ComposeContext);
-  const parentAudio = React41.useContext(AudioContext2);
-  const audioCtx = React41.useMemo(
+  const { Container } = React35.useContext(ComposeContext);
+  const parentAudio = React35.useContext(AudioContext2);
+  const audioCtx = React35.useMemo(
     () => ({ id: stream2.id, parent: parentAudio }),
     [stream2.id, parentAudio]
   );
-  return /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(AudioContext2.Provider, { value: audioCtx, children: /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime85.jsx)(AudioContext2.Provider, { value: audioCtx, children: /* @__PURE__ */ (0, import_jsx_runtime85.jsx)(
     Container,
     {
       id: stream2.id,
       type: "scene",
       style: cssJS(stream2.style),
       className: `scene ${toClassName(stream2.name ?? "")}`,
-      children: /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(FolderLeaf, { stream: stream2 })
+      children: /* @__PURE__ */ (0, import_jsx_runtime85.jsx)(FolderLeaf, { stream: stream2 })
     }
   ) });
 }
 
 // src/types/Effect.tsx
-var React43 = __toESM(require_react(), 1);
+var React39 = __toESM(require_react(), 1);
 
 // src/types/keyframes.ts
 function parseKeyframeData(data) {
@@ -47859,11 +47855,158 @@ var builtinAnimations = {
   rotateOut: parseKeyframeData({
     "0": { opacity: "1", transform: "rotate(0deg)" },
     "100": { opacity: "0", transform: "rotate(200deg)" }
+  }),
+  rotateInDownLeft: parseKeyframeData({
+    "0": { opacity: "0", transform: "rotate3d(0, 0, 1, -45deg)" },
+    "100": { opacity: "1", transform: "rotate3d(0, 0, 1, 0deg)" }
+  }),
+  rotateInDownRight: parseKeyframeData({
+    "0": { opacity: "0", transform: "rotate3d(0, 0, 1, 45deg)" },
+    "100": { opacity: "1", transform: "rotate3d(0, 0, 1, 0deg)" }
+  }),
+  rotateInUpLeft: parseKeyframeData({
+    "0": { opacity: "0", transform: "rotate3d(0, 0, 1, 45deg)" },
+    "100": { opacity: "1", transform: "rotate3d(0, 0, 1, 0deg)" }
+  }),
+  rotateInUpRight: parseKeyframeData({
+    "0": { opacity: "0", transform: "rotate3d(0, 0, 1, -45deg)" },
+    "100": { opacity: "1", transform: "rotate3d(0, 0, 1, 0deg)" }
+  }),
+  // ── Flips ──────────────────────────────────────────────────────────────
+  flipInX: parseKeyframeData({
+    "0": { opacity: "0", transform: "perspective(400px) rotate3d(1, 0, 0, 90deg)" },
+    "40": { opacity: "1", transform: "perspective(400px) rotate3d(1, 0, 0, -20deg)" },
+    "60": { transform: "perspective(400px) rotate3d(1, 0, 0, 10deg)" },
+    "80": { transform: "perspective(400px) rotate3d(1, 0, 0, -5deg)" },
+    "100": { opacity: "1", transform: "perspective(400px)" }
+  }),
+  flipInY: parseKeyframeData({
+    "0": { opacity: "0", transform: "perspective(400px) rotate3d(0, 1, 0, 90deg)" },
+    "40": { opacity: "1", transform: "perspective(400px) rotate3d(0, 1, 0, -20deg)" },
+    "60": { transform: "perspective(400px) rotate3d(0, 1, 0, 10deg)" },
+    "80": { transform: "perspective(400px) rotate3d(0, 1, 0, -5deg)" },
+    "100": { opacity: "1", transform: "perspective(400px)" }
+  }),
+  // ── Slides out ─────────────────────────────────────────────────────────
+  slideOutDown: parseKeyframeData({
+    "0": { transform: "translate3d(0, 0, 0)" },
+    "100": { transform: "translate3d(0, 100%, 0)" }
+  }),
+  slideOutLeft: parseKeyframeData({
+    "0": { transform: "translate3d(0, 0, 0)" },
+    "100": { transform: "translate3d(-100%, 0, 0)" }
+  }),
+  slideOutRight: parseKeyframeData({
+    "0": { transform: "translate3d(0, 0, 0)" },
+    "100": { transform: "translate3d(100%, 0, 0)" }
+  }),
+  slideOutUp: parseKeyframeData({
+    "0": { transform: "translate3d(0, 0, 0)" },
+    "100": { transform: "translate3d(0, -100%, 0)" }
+  }),
+  // ── Zoom variants ──────────────────────────────────────────────────────
+  zoomInDown: parseKeyframeData({
+    "0": { opacity: "0", transform: "scale3d(0.1, 0.1, 0.1) translate3d(0, -1000px, 0)" },
+    "60": { opacity: "1", transform: "scale3d(0.475, 0.475, 0.475) translate3d(0, 60px, 0)" },
+    "100": { opacity: "1", transform: "scale3d(1, 1, 1) translate3d(0, 0, 0)" }
+  }),
+  zoomInLeft: parseKeyframeData({
+    "0": { opacity: "0", transform: "scale3d(0.1, 0.1, 0.1) translate3d(-1000px, 0, 0)" },
+    "60": { opacity: "1", transform: "scale3d(0.475, 0.475, 0.475) translate3d(10px, 0, 0)" },
+    "100": { opacity: "1", transform: "scale3d(1, 1, 1) translate3d(0, 0, 0)" }
+  }),
+  zoomInRight: parseKeyframeData({
+    "0": { opacity: "0", transform: "scale3d(0.1, 0.1, 0.1) translate3d(1000px, 0, 0)" },
+    "60": { opacity: "1", transform: "scale3d(0.475, 0.475, 0.475) translate3d(-10px, 0, 0)" },
+    "100": { opacity: "1", transform: "scale3d(1, 1, 1) translate3d(0, 0, 0)" }
+  }),
+  zoomInUp: parseKeyframeData({
+    "0": { opacity: "0", transform: "scale3d(0.1, 0.1, 0.1) translate3d(0, 1000px, 0)" },
+    "60": { opacity: "1", transform: "scale3d(0.475, 0.475, 0.475) translate3d(0, -60px, 0)" },
+    "100": { opacity: "1", transform: "scale3d(1, 1, 1) translate3d(0, 0, 0)" }
+  }),
+  // ── Attention seekers (extended) ───────────────────────────────────────
+  shakeY: parseKeyframeData({
+    "0": { transform: "translate3d(0, 0, 0)" },
+    "10": { transform: "translate3d(0, -10px, 0)" },
+    "20": { transform: "translate3d(0, 10px, 0)" },
+    "30": { transform: "translate3d(0, -10px, 0)" },
+    "40": { transform: "translate3d(0, 10px, 0)" },
+    "50": { transform: "translate3d(0, -10px, 0)" },
+    "60": { transform: "translate3d(0, 10px, 0)" },
+    "70": { transform: "translate3d(0, -10px, 0)" },
+    "80": { transform: "translate3d(0, 10px, 0)" },
+    "90": { transform: "translate3d(0, -10px, 0)" },
+    "100": { transform: "translate3d(0, 0, 0)" }
+  }),
+  swing: parseKeyframeData({
+    "20": { transform: "rotate3d(0, 0, 1, 15deg)" },
+    "40": { transform: "rotate3d(0, 0, 1, -10deg)" },
+    "60": { transform: "rotate3d(0, 0, 1, 5deg)" },
+    "80": { transform: "rotate3d(0, 0, 1, -5deg)" },
+    "100": { transform: "rotate3d(0, 0, 1, 0deg)" }
+  }),
+  tada: parseKeyframeData({
+    "0": { transform: "scale3d(1, 1, 1)" },
+    "10": { transform: "scale3d(0.9, 0.9, 0.9) rotate3d(0, 0, 1, -3deg)" },
+    "20": { transform: "scale3d(0.9, 0.9, 0.9) rotate3d(0, 0, 1, -3deg)" },
+    "30": { transform: "scale3d(1.1, 1.1, 1.1) rotate3d(0, 0, 1, 3deg)" },
+    "50": { transform: "scale3d(1.1, 1.1, 1.1) rotate3d(0, 0, 1, 3deg)" },
+    "70": { transform: "scale3d(1.1, 1.1, 1.1) rotate3d(0, 0, 1, 3deg)" },
+    "90": { transform: "scale3d(1.1, 1.1, 1.1) rotate3d(0, 0, 1, 3deg)" },
+    "100": { transform: "scale3d(1, 1, 1)" }
+  }),
+  wobble: parseKeyframeData({
+    "0": { transform: "translate3d(0, 0, 0)" },
+    "15": { transform: "translate3d(-25%, 0, 0) rotate3d(0, 0, 1, -5deg)" },
+    "30": { transform: "translate3d(20%, 0, 0) rotate3d(0, 0, 1, 3deg)" },
+    "45": { transform: "translate3d(-15%, 0, 0) rotate3d(0, 0, 1, -3deg)" },
+    "60": { transform: "translate3d(10%, 0, 0) rotate3d(0, 0, 1, 2deg)" },
+    "75": { transform: "translate3d(-5%, 0, 0) rotate3d(0, 0, 1, -1deg)" },
+    "100": { transform: "translate3d(0, 0, 0)" }
+  }),
+  jello: parseKeyframeData({
+    "0": { transform: "translate3d(0, 0, 0)" },
+    "11.1": { transform: "translate3d(0, 0, 0)" },
+    "22.2": { transform: "skewX(-12.5deg) skewY(-12.5deg)" },
+    "33.3": { transform: "skewX(6.25deg) skewY(6.25deg)" },
+    "44.4": { transform: "skewX(-3.125deg) skewY(-3.125deg)" },
+    "55.5": { transform: "skewX(1.5625deg) skewY(1.5625deg)" },
+    "66.6": { transform: "skewX(-0.78125deg) skewY(-0.78125deg)" },
+    "77.7": { transform: "skewX(0.390625deg) skewY(0.390625deg)" },
+    "88.8": { transform: "skewX(-0.1953125deg) skewY(-0.1953125deg)" },
+    "100": { transform: "translate3d(0, 0, 0)" }
+  }),
+  // ── Specials ───────────────────────────────────────────────────────────
+  rollIn: parseKeyframeData({
+    "0": { opacity: "0", transform: "translate3d(-100%, 0, 0) rotate3d(0, 0, 1, -120deg)" },
+    "100": { opacity: "1", transform: "translate3d(0, 0, 0)" }
+  }),
+  rollOut: parseKeyframeData({
+    "0": { opacity: "1", transform: "translate3d(0, 0, 0)" },
+    "100": { opacity: "0", transform: "translate3d(100%, 0, 0) rotate3d(0, 0, 1, 120deg)" }
+  }),
+  jackInTheBox: parseKeyframeData({
+    "0": { opacity: "0", transform: "scale(0.1) rotate(30deg)" },
+    "50": { transform: "rotate(-10deg)" },
+    "70": { transform: "rotate(3deg)" },
+    "100": { opacity: "1", transform: "scale(1)" }
+  }),
+  // ── Light speed ────────────────────────────────────────────────────────
+  lightSpeedIn: parseKeyframeData({
+    "0": { opacity: "0", transform: "translate3d(100%, 0, 0) skewX(-30deg)" },
+    "60": { opacity: "1", transform: "skewX(20deg)" },
+    "80": { transform: "skewX(-5deg)" },
+    "100": { opacity: "1", transform: "translate3d(0, 0, 0)" }
+  }),
+  lightSpeedOut: parseKeyframeData({
+    "0": { opacity: "1", transform: "translate3d(0, 0, 0) skewX(0)" },
+    "100": { opacity: "0", transform: "translate3d(100%, 0, 0) skewX(30deg)" }
   })
 };
 
 // src/types/Effect.tsx
-var import_jsx_runtime87 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime86 = __toESM(require_jsx_runtime(), 1);
 function EffectWrapper({
   stream: stream2,
   children
@@ -47871,7 +48014,7 @@ function EffectWrapper({
   const frame = useCurrentFrame();
   const { fps, width, height } = useVideoConfig();
   const actions = stream2.actions ?? [];
-  const styles = React43.useMemo(() => {
+  const styles = React39.useMemo(() => {
     const result = [];
     for (const action2 of actions) {
       const start = Math.ceil(action2.start * fps);
@@ -47909,8 +48052,8 @@ function EffectWrapper({
     }
     return result;
   }, [frame, fps, actions, stream2.animation, stream2.animationTimingFunction, stream2.animationIterationCount, stream2.customKeyframes]);
-  if (styles.length === 0) return /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(import_jsx_runtime87.Fragment, { children });
-  return /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(
+  if (styles.length === 0) return /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(import_jsx_runtime86.Fragment, { children });
+  return /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(
     "div",
     {
       style: Object.assign({ width, height, position: "absolute", inset: 0 }, ...styles),
@@ -47921,12 +48064,11 @@ function EffectWrapper({
 }
 
 // src/types/Folder.tsx
-var import_jsx_runtime88 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime87 = __toESM(require_jsx_runtime(), 1);
 var Leaves = {
   video: VideoLeaf,
   audio: AudioLeaf,
   image: ImageLeaf,
-  subtitle: SubtitleLeaf,
   component: ComponentLeaf,
   rhythm: RhythmLeaf,
   map: MapLeaf,
@@ -47940,26 +48082,26 @@ var TransitionPresets = {
   flip,
   clockWipe
 };
-var NotSeries = ({ children }) => /* @__PURE__ */ (0, import_jsx_runtime88.jsx)(import_jsx_runtime88.Fragment, { children });
-NotSeries.Sequence = ({ children }) => /* @__PURE__ */ (0, import_jsx_runtime88.jsx)(import_jsx_runtime88.Fragment, { children });
+var NotSeries = ({ children }) => /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(import_jsx_runtime87.Fragment, { children });
+NotSeries.Sequence = ({ children }) => /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(import_jsx_runtime87.Fragment, { children });
 function FolderLeaf({ stream: stream2 }) {
   const { fps, width, height } = useVideoConfig();
-  const { Container } = React44.useContext(ComposeContext);
-  const parentAudio = React44.useContext(AudioContext2);
+  const { Container } = React41.useContext(ComposeContext);
+  const parentAudio = React41.useContext(AudioContext2);
   const isSeries = !!stream2.isSeries;
   const transition = stream2.transition;
   const transitionTime = stream2.transitionTime ?? 0.5;
   const isRoot = stream2.id === "root";
-  const TypedSeries = React44.useMemo(() => {
+  const TypedSeries = React41.useMemo(() => {
     if (!isSeries) return NotSeries;
     return transition ? TransitionSeries : Series;
   }, [isSeries, transition]);
-  const transEl = React44.useMemo(() => {
+  const transEl = React41.useMemo(() => {
     if (!isSeries || !transition) return null;
     const presentation = TransitionPresets[transition]?.(
       transition === "clockWipe" ? { width, height } : void 0
     );
-    return /* @__PURE__ */ (0, import_jsx_runtime88.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(
       TransitionSeries.Transition,
       {
         presentation,
@@ -47973,49 +48115,132 @@ function FolderLeaf({ stream: stream2 }) {
     const durFrames = Math.max(1, Math.floor(dur * fps));
     const SequenceWrap = TypedSeries.Sequence ?? Sequence;
     const isLeaf = child.type !== "folder" && child.type !== "root" && child.type !== "effect";
-    const childContent = isLeaf ? React44.createElement(Leaves[child.type] ?? (() => null), { stream: child }) : child.type === "effect" ? /* @__PURE__ */ (0, import_jsx_runtime88.jsx)(EffectWrapper, { stream: child, children: /* @__PURE__ */ (0, import_jsx_runtime88.jsx)(FolderLeaf, { stream: child }) }) : React44.createElement(FolderLeaf, { stream: child });
-    const wrapped = child.type === "subtitle" ? childContent : /* @__PURE__ */ (0, import_jsx_runtime88.jsx)(
+    const childContent = isLeaf ? React41.createElement(Leaves[child.type] ?? (() => null), { stream: child }) : child.type === "effect" ? /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(EffectWrapper, { stream: child, children: /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(FolderLeaf, { stream: child }) }) : React41.createElement(FolderLeaf, { stream: child });
+    const wrapped = /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(
       Container,
       {
         id: child.id,
         type: child.type,
         style: cssJS(child.style),
-        className: `${child.type} ${toClassName(child.name ?? "")}`,
+        className: `${child.type} ${toClassName(child.id ?? "")}`,
         children: childContent
       }
     );
-    const seq = /* @__PURE__ */ (0, import_jsx_runtime88.jsx)(SequenceWrap, { durationInFrames: durFrames, layout: "none", children: wrapped }, child.id);
+    const seq = /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(SequenceWrap, { durationInFrames: durFrames, layout: "none", children: wrapped }, child.id);
     if (child.isBackground && stream2.durationInSeconds) {
       const times = Math.max(1, Math.ceil(stream2.durationInSeconds * fps / durFrames));
-      return /* @__PURE__ */ (0, import_jsx_runtime88.jsx)(Loop, { durationInFrames: durFrames, times, showInTimeline: false, children: wrapped }, child.id);
+      return /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(Loop, { durationInFrames: durFrames, times, showInTimeline: false, children: wrapped }, child.id);
     }
     return seq;
   }).filter(Boolean);
   if (isSeries && transEl) {
     for (let i = 1; i < sequences.length; i += 2) {
-      sequences.splice(i, 0, React44.cloneElement(transEl, { key: `t${i}` }));
+      sequences.splice(i, 0, React41.cloneElement(transEl, { key: `t${i}` }));
     }
   }
-  const audioCtx = React44.useMemo(
+  const audioCtx = React41.useMemo(
     () => stream2.type !== "folder" ? { id: stream2.id, parent: parentAudio } : parentAudio,
     [stream2.id, stream2.type, parentAudio]
   );
   if (visibleChildren.length === 0 || stream2.visible === false) return null;
   const containerStyle3 = cssJS(stream2.style);
   const orientation = isRoot ? width > height ? "landscape" : "portrait" : "";
-  return /* @__PURE__ */ (0, import_jsx_runtime88.jsxs)(AudioContext2.Provider, { value: audioCtx, children: [
-    stream2.stylesheet ? /* @__PURE__ */ (0, import_jsx_runtime88.jsx)("style", { children: stream2.stylesheet }) : null,
-    /* @__PURE__ */ (0, import_jsx_runtime88.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime87.jsxs)(AudioContext2.Provider, { value: audioCtx, children: [
+    stream2.stylesheet ? /* @__PURE__ */ (0, import_jsx_runtime87.jsx)("style", { children: stream2.stylesheet }) : null,
+    /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(
       Container,
       {
         id: stream2.id,
         type: stream2.type,
         style: containerStyle3,
-        className: `${orientation} ${stream2.type} ${stream2.name ?? ""}`.trim(),
-        children: isSeries ? /* @__PURE__ */ (0, import_jsx_runtime88.jsx)(TypedSeries, { children: sequences }) : sequences
+        className: `${orientation} ${stream2.type}`.trim(),
+        children: isSeries ? /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(TypedSeries, { children: sequences }) : sequences
       }
     )
   ] });
+}
+
+// src/types/Subtitle.tsx
+var React43 = __toESM(require_react(), 1);
+var import_jsx_runtime88 = __toESM(require_jsx_runtime(), 1);
+function resolveSubtitleSrc(src) {
+  if (src.startsWith("http://") || src.startsWith("https://") || src.startsWith("data:") || src.startsWith("/")) {
+    return src;
+  }
+  return staticFile(src);
+}
+var DEFAULT_BOX_STYLE = {
+  position: "absolute",
+  inset: 0,
+  display: "flex",
+  alignItems: "flex-end",
+  justifyContent: "center",
+  padding: "0 5% 8% 5%",
+  pointerEvents: "none",
+  zIndex: 100
+};
+var DEFAULT_TEXT_STYLE = {
+  color: "white",
+  fontSize: 56,
+  fontWeight: 700,
+  textAlign: "center",
+  textShadow: "0 2px 12px rgba(0,0,0,0.85)",
+  lineHeight: 1.2,
+  fontFamily: '"PingFang SC","Noto Sans CJK SC","Hiragino Sans","Helvetica Neue",sans-serif'
+};
+function SubtitleOverlay({ subtitle }) {
+  const { fps } = useVideoConfig();
+  const currentTime = useCurrentFrame() / fps;
+  const [cues, setCues] = React43.useState(null);
+  React43.useEffect(() => {
+    const { src } = subtitle;
+    if (src.includes("-->")) {
+      setCues(parseVTT(src));
+      return;
+    }
+    if (!/\.vtt(?:$|[?#])/.test(src)) {
+      setCues([{ startFrom: 0, endAt: Infinity, text: src }]);
+      return;
+    }
+    const handle = delayRender(`Loading subtitles: ${src}`);
+    let active = true;
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      continueRender(handle);
+    };
+    fetch(resolveSubtitleSrc(src)).then((r) => {
+      if (!r.ok) throw new Error(`Failed to load subtitles (${r.status}): ${src}`);
+      return r.text();
+    }).then((text) => {
+      if (!active) return;
+      setCues(parseVTT(text));
+      finish();
+    }).catch((err) => {
+      if (!active) return;
+      settled = true;
+      cancelRender(err);
+    });
+    return () => {
+      active = false;
+      finish();
+    };
+  }, [subtitle.src]);
+  const cue = React43.useMemo(
+    () => cues?.find((c2) => c2.startFrom <= currentTime && c2.endAt > currentTime),
+    [cues, currentTime]
+  );
+  if (!cue) return null;
+  const boxCss = subtitle.style ? cssJS(subtitle.style) : {};
+  return /* @__PURE__ */ (0, import_jsx_runtime88.jsx)("div", { className: "caption-overlay subtitle-overlay", style: { ...DEFAULT_BOX_STYLE, ...boxCss }, children: /* @__PURE__ */ (0, import_jsx_runtime88.jsx)(
+    "span",
+    {
+      className: "caption",
+      style: { ...DEFAULT_TEXT_STYLE, fontSize: subtitle.fontSize ?? DEFAULT_TEXT_STYLE.fontSize },
+      dangerouslySetInnerHTML: { __html: cue.text }
+    }
+  ) });
 }
 
 // src/schema/index.ts
@@ -48032,10 +48257,7 @@ var action = external_exports.object({
 });
 var BaseShape = {
   id: external_exports.string().default(() => uid()),
-  name: external_exports.string().optional(),
-  title: external_exports.string().optional(),
-  description: external_exports.string().optional().describe("human label for UI/organization (not rendered)"),
-  script: external_exports.string().optional().describe("narration/dialogue text for this node; agents write storyboard text here, later TTS'd to audio and STT'd to VTT subtitles"),
+  instruction: external_exports.string().optional().describe("visual intent or style guide for this node (not rendered)"),
   src: external_exports.string().optional(),
   style: external_exports.string().optional().describe("inline css"),
   visible: external_exports.boolean().default(true),
@@ -48051,15 +48273,22 @@ var folder = base.extend({
   shadow: external_exports.number().min(0).optional(),
   children: external_exports.array(external_exports.lazy(() => stream)).default(() => [])
 });
+var subtitleOverlay = external_exports.object({
+  src: external_exports.string().describe("path or URL to VTT file covering the full video duration"),
+  style: external_exports.string().optional().describe("inline css for the overlay container"),
+  fontSize: external_exports.union([external_exports.number(), external_exports.string()]).optional()
+});
 var root = folder.extend({
   id: external_exports.literal("root").default("root"),
   type: external_exports.literal("root").default("root"),
   width: external_exports.number().int().positive().default(1080),
   height: external_exports.number().int().positive().default(1920),
   fps: external_exports.number().int().positive().default(30),
-  description: external_exports.string().optional(),
+  instruction: external_exports.string().optional(),
   metadata: external_exports.string().optional(),
-  stylesheet: external_exports.string().optional().describe("global css; selectors use .type and .name")
+  stylesheet: external_exports.string().optional().describe("global css; selectors use .type and .name"),
+  theme: external_exports.union([external_exports.string(), external_exports.record(external_exports.string(), external_exports.unknown())]).optional().describe("theme preset name, inline JSON string, or {base, ...overrides} object"),
+  subtitle: subtitleOverlay.optional().describe("global subtitle overlay; src is a VTT file with absolute timestamps")
 });
 var video = base.extend({
   type: external_exports.literal("video").default("video"),
@@ -48083,32 +48312,10 @@ var image = base.extend({
   fit: external_exports.enum(["contain", "cover", "fill"]).default("contain"),
   actions: external_exports.array(action).min(1).default(() => [action.parse({})])
 });
-var subtitleWord = external_exports.object({
-  text: external_exports.string(),
-  start: external_exports.number().min(0),
-  end: external_exports.number().min(0)
-});
-var subtitleCue = external_exports.object({
-  startFrom: external_exports.number().min(0),
-  endAt: external_exports.number().min(0),
-  text: external_exports.string(),
-  className: external_exports.string().optional(),
-  words: external_exports.array(subtitleWord).optional()
-});
-var subtitle = base.extend({
-  type: external_exports.literal("subtitle").default("subtitle"),
-  src: external_exports.string().optional().describe("inline text or VTT url"),
-  cues: external_exports.array(subtitleCue).optional(),
-  fontSize: external_exports.union([external_exports.number(), external_exports.string()]).optional(),
-  fontStyle: external_exports.string().optional(),
-  captionType: external_exports.string().optional(),
-  actions: external_exports.array(action).min(1).default(() => [action.parse({})])
-});
 var component = base.extend({
   type: external_exports.literal("component").default("component"),
-  componentName: external_exports.string().describe("key in <ComposeProvider components={...}>"),
-  src: external_exports.string().optional().describe("URL of remote component bundle (ESM or CJS)"),
-  props: external_exports.record(external_exports.string(), external_exports.unknown()).default(() => ({})),
+  jsx: external_exports.string().describe("usage JSX expression compiled at runtime; tag names resolved from imports"),
+  imports: external_exports.record(external_exports.string(), external_exports.string()).optional().describe("resolved frontmatter imports: name \u2192 URL. Values prefixed `__jsx__:` are inline definitions."),
   actions: external_exports.array(action).min(1).default(() => [action.parse({})])
 });
 var effect = base.extend({
@@ -48137,8 +48344,9 @@ var include = base.extend({
 });
 var scene = base.extend({
   type: external_exports.literal("scene").default("scene"),
-  name: external_exports.string().optional().describe("scene title for storyboard UI"),
-  description: external_exports.string().optional().describe("scene description for storyboard UI"),
+  name: external_exports.string().optional().describe("scene name from heading"),
+  title: external_exports.string().optional().describe("scene display title"),
+  instruction: external_exports.string().optional().describe("scene visual intent for storyboard UI"),
   children: external_exports.array(external_exports.lazy(() => stream)).default(() => []),
   durationInSeconds: external_exports.number().optional().describe("set by engine; do not edit by hand")
 });
@@ -48166,7 +48374,6 @@ var stream = external_exports.discriminatedUnion("type", [
   video,
   audio,
   image,
-  subtitle,
   component,
   effect,
   rhythm,
@@ -48175,2107 +48382,43 @@ var stream = external_exports.discriminatedUnion("type", [
   scene
 ]);
 
-// src/lite.entry.tsx
+// src/entry.tsx
 var import_jsx_runtime89 = __toESM(require_jsx_runtime(), 1);
 var DefaultContainer2 = ({ children, style: style2, className: className2 }) => /* @__PURE__ */ (0, import_jsx_runtime89.jsx)("div", { className: className2, style: { position: "absolute", inset: 0, ...style2 }, children });
 function RemotionEngine({ root: root2, compose, background = "#000", theme }) {
-  const parsed = React45.useMemo(() => root.parse(root2), [root2]);
-  React45.useMemo(() => getDurationInSeconds(parsed, true), [parsed]);
-  const resolvedTheme = React45.useMemo(
+  const parsed = React44.useMemo(() => {
+    if (!root2) {
+      return {
+        id: "root",
+        type: "root",
+        width: 1080,
+        height: 1920,
+        fps: 30,
+        visible: true,
+        isSeries: false,
+        children: [],
+        durationInSeconds: 0.1
+      };
+    }
+    return root.parse(root2);
+  }, [root2]);
+  React44.useMemo(() => getDurationInSeconds(parsed, true), [parsed]);
+  const resolvedTheme = React44.useMemo(
     () => resolveTheme(theme ?? root2?.theme),
     [theme, root2]
   );
-  const value = React45.useMemo(
+  const value = React44.useMemo(
     () => ({
       Container: compose?.Container ?? DefaultContainer2,
-      components: compose?.components ?? {},
       onError: compose?.onError
     }),
     [compose]
   );
-  return /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(ComposeContext.Provider, { value, children: /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(ThemeProvider, { theme: resolvedTheme, children: /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(AbsoluteFill, { style: { background: background || resolvedTheme.colors.background }, children: /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(FolderLeaf, { stream: parsed }) }) }) });
+  return /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(ComposeContext.Provider, { value, children: /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(ThemeProvider, { theme: resolvedTheme, children: /* @__PURE__ */ (0, import_jsx_runtime89.jsxs)(AbsoluteFill, { style: { background: background || resolvedTheme.colors.background }, children: [
+    /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(FolderLeaf, { stream: parsed }),
+    parsed.subtitle && /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(SubtitleOverlay, { subtitle: parsed.subtitle })
+  ] }) }) });
 }
-
-// src/components/text/AnimatedHeadline.tsx
-var React46 = __toESM(require_react(), 1);
-var import_jsx_runtime90 = __toESM(require_jsx_runtime(), 1);
-function AnimatedHeadline({
-  text,
-  subtext,
-  split = "word",
-  gradient = false,
-  glow = true,
-  align = "center"
-}) {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const theme = useTheme();
-  const parts = React46.useMemo(() => {
-    if (split === "char") return text.split("");
-    if (split === "line") return text.split("\n");
-    return text.split(/\s+/);
-  }, [text, split]);
-  const separator = split === "char" ? "" : " ";
-  return /* @__PURE__ */ (0, import_jsx_runtime90.jsxs)(
-    "div",
-    {
-      style: {
-        position: "absolute",
-        inset: 0,
-        display: "flex",
-        flexDirection: "column",
-        alignItems: align === "left" ? "flex-start" : align === "right" ? "flex-end" : "center",
-        justifyContent: "center",
-        padding: "5%"
-      },
-      children: [
-        glow && /* @__PURE__ */ (0, import_jsx_runtime90.jsx)(
-          "div",
-          {
-            style: {
-              position: "absolute",
-              width: "40%",
-              height: "40%",
-              borderRadius: "50%",
-              background: `radial-gradient(circle, ${theme.colors.primary}33, transparent 70%)`,
-              filter: "blur(60px)",
-              opacity: interpolate(frame, [0, fps * 0.5], [0, 0.6], {
-                extrapolateRight: "clamp"
-              })
-            }
-          }
-        ),
-        /* @__PURE__ */ (0, import_jsx_runtime90.jsx)(
-          "div",
-          {
-            style: {
-              display: "flex",
-              flexWrap: "wrap",
-              justifyContent: align === "left" ? "flex-start" : align === "right" ? "flex-end" : "center",
-              gap: split === "char" ? 0 : "0 0.3em",
-              position: "relative",
-              zIndex: 1
-            },
-            children: parts.map((part, i) => {
-              const delay2 = i * theme.timing.stagger;
-              const prog = spring({
-                frame: frame - delay2,
-                fps,
-                config: {
-                  damping: theme.timing.spring.damping,
-                  stiffness: theme.timing.spring.stiffness,
-                  mass: theme.timing.spring.mass
-                }
-              });
-              const directions = [
-                { x: 0, y: 30 },
-                { x: -20, y: 0 },
-                { x: 20, y: 0 },
-                { x: 0, y: -30 }
-              ];
-              const dir = directions[i % directions.length];
-              const textStyle = gradient ? {
-                background: `linear-gradient(135deg, ${theme.colors.gradient[0]}, ${theme.colors.gradient[1]})`,
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text"
-              } : { color: theme.colors.text };
-              return /* @__PURE__ */ (0, import_jsx_runtime90.jsxs)(
-                "span",
-                {
-                  style: {
-                    fontFamily: theme.fonts.heading,
-                    fontSize: split === "char" ? "5em" : "4em",
-                    fontWeight: 800,
-                    lineHeight: 1.1,
-                    display: "inline-block",
-                    transform: `translate(${dir.x * (1 - prog)}px, ${dir.y * (1 - prog)}px) scale(${0.8 + 0.2 * prog})`,
-                    opacity: prog,
-                    filter: `blur(${(1 - prog) * 8}px)`,
-                    ...textStyle
-                  },
-                  children: [
-                    part,
-                    i < parts.length - 1 ? separator : ""
-                  ]
-                },
-                i
-              );
-            })
-          }
-        ),
-        subtext && /* @__PURE__ */ (0, import_jsx_runtime90.jsx)(
-          "div",
-          {
-            style: {
-              fontFamily: theme.fonts.body,
-              fontSize: "1.5em",
-              color: theme.colors.textMuted,
-              marginTop: "0.5em",
-              opacity: interpolate(frame, [fps * 0.8, fps * 1.2], [0, 1], {
-                extrapolateLeft: "clamp",
-                extrapolateRight: "clamp"
-              }),
-              filter: `blur(${interpolate(frame, [fps * 0.8, fps * 1.2], [6, 0], {
-                extrapolateLeft: "clamp",
-                extrapolateRight: "clamp"
-              })}px)`,
-              transform: `translateY(${interpolate(frame, [fps * 0.8, fps * 1.2], [15, 0], {
-                extrapolateLeft: "clamp",
-                extrapolateRight: "clamp"
-              })}px)`,
-              textAlign: align,
-              position: "relative",
-              zIndex: 1
-            },
-            children: subtext
-          }
-        ),
-        (() => {
-          const flashProg = spring({
-            frame: frame - theme.timing.stagger,
-            fps,
-            config: { damping: 20, stiffness: 300, mass: 0.5 }
-          });
-          return /* @__PURE__ */ (0, import_jsx_runtime90.jsx)(
-            "div",
-            {
-              style: {
-                position: "absolute",
-                width: "20%",
-                height: "4px",
-                background: `linear-gradient(90deg, transparent, ${theme.colors.primary}, transparent)`,
-                opacity: flashProg * (1 - flashProg) * 4,
-                bottom: "35%",
-                left: "40%",
-                zIndex: 1
-              }
-            }
-          );
-        })()
-      ]
-    }
-  );
-}
-
-// src/components/text/TypewriterText.tsx
-var import_jsx_runtime91 = __toESM(require_jsx_runtime(), 1);
-function TypewriterText({
-  text,
-  cursor = true,
-  cursorChar = "\u258C",
-  speed = 20
-}) {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const theme = useTheme();
-  const charsToShow = Math.floor(frame / fps * speed);
-  const displayText = text.slice(0, Math.min(charsToShow, text.length));
-  const done = charsToShow >= text.length;
-  const cursorOpacity = done ? frame / fps % 1 < 0.5 ? 1 : 0 : 1;
-  return /* @__PURE__ */ (0, import_jsx_runtime91.jsx)(
-    "div",
-    {
-      style: {
-        position: "absolute",
-        inset: 0,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "8%"
-      },
-      children: /* @__PURE__ */ (0, import_jsx_runtime91.jsxs)(
-        "div",
-        {
-          style: {
-            fontFamily: theme.fonts.mono,
-            fontSize: "2.5em",
-            color: theme.colors.text,
-            lineHeight: 1.4,
-            whiteSpace: "pre-wrap",
-            wordBreak: "break-word"
-          },
-          children: [
-            displayText,
-            cursor && /* @__PURE__ */ (0, import_jsx_runtime91.jsx)(
-              "span",
-              {
-                style: {
-                  color: theme.colors.primary,
-                  opacity: cursorOpacity
-                },
-                children: cursorChar
-              }
-            )
-          ]
-        }
-      )
-    }
-  );
-}
-
-// src/components/text/GlitchReveal.tsx
-var import_jsx_runtime92 = __toESM(require_jsx_runtime(), 1);
-function GlitchReveal({
-  text,
-  intensity = 0.7
-}) {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const theme = useTheme();
-  const glitchChars = "\u2588\u2593\u2592\u2591\u2580\u2584\u258C\u2590\u2503\u2501\u254B\u254B\u2573";
-  const revealProg = spring({
-    frame: frame - fps * 0.3,
-    fps,
-    config: { damping: 15, stiffness: 120, mass: 1 }
-  });
-  const glitchActive = frame < fps * 0.8;
-  const chars = text.split("").map((char, i) => {
-    const charRevealFrame = fps * 0.2 + i * 1.5;
-    const revealed = frame >= charRevealFrame;
-    if (revealed && revealProg > 0.5) return char;
-    if (!glitchActive && revealProg > 0.8) return char;
-    const seed = `${i}-${Math.floor(frame / 2)}`;
-    const randIdx = Math.floor(Math.abs(random(seed)) * glitchChars.length);
-    return char === " " ? " " : glitchChars[randIdx % glitchChars.length];
-  });
-  const splitAmount = glitchActive ? intensity * 3 * (1 - revealProg) : 0;
-  return /* @__PURE__ */ (0, import_jsx_runtime92.jsx)(
-    "div",
-    {
-      style: {
-        position: "absolute",
-        inset: 0,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "5%"
-      },
-      children: /* @__PURE__ */ (0, import_jsx_runtime92.jsxs)("div", { style: { position: "relative" }, children: [
-        splitAmount > 0 && /* @__PURE__ */ (0, import_jsx_runtime92.jsx)(
-          "div",
-          {
-            style: {
-              position: "absolute",
-              fontFamily: theme.fonts.heading,
-              fontSize: "4em",
-              fontWeight: 800,
-              color: "rgba(255,0,0,0.5)",
-              transform: `translate(${splitAmount}px, ${-splitAmount * 0.5}px)`,
-              mixBlendMode: "screen",
-              whiteSpace: "pre"
-            },
-            children: chars?.join("")
-          }
-        ),
-        splitAmount > 0 && /* @__PURE__ */ (0, import_jsx_runtime92.jsx)(
-          "div",
-          {
-            style: {
-              position: "absolute",
-              fontFamily: theme.fonts.heading,
-              fontSize: "4em",
-              fontWeight: 800,
-              color: "rgba(0,100,255,0.5)",
-              transform: `translate(${-splitAmount}px, ${splitAmount * 0.5}px)`,
-              mixBlendMode: "screen",
-              whiteSpace: "pre"
-            },
-            children: chars?.join("")
-          }
-        ),
-        /* @__PURE__ */ (0, import_jsx_runtime92.jsx)(
-          "div",
-          {
-            style: {
-              fontFamily: theme.fonts.heading,
-              fontSize: "4em",
-              fontWeight: 800,
-              color: theme.colors.text,
-              position: "relative",
-              whiteSpace: "pre"
-            },
-            children: chars?.join("")
-          }
-        )
-      ] })
-    }
-  );
-}
-
-// src/components/text/TextCard.tsx
-var import_jsx_runtime93 = __toESM(require_jsx_runtime(), 1);
-function TextCard({
-  text,
-  subtext,
-  align = "center",
-  backgroundColor,
-  textColor,
-  animation = "fade"
-}) {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const theme = useTheme();
-  const bg = backgroundColor || theme.colors.surface;
-  const color = textColor || theme.colors.text;
-  const entrance = spring({
-    frame,
-    fps,
-    config: { damping: 20, stiffness: 120, mass: 1 }
-  });
-  let transform2 = "";
-  let opacity2 = entrance;
-  if (animation === "slide-up") {
-    transform2 = `translateY(${(1 - entrance) * 40}px)`;
-  } else if (animation === "scale") {
-    transform2 = `scale(${0.8 + 0.2 * entrance})`;
-  } else if (animation === "none") {
-    opacity2 = 1;
-    transform2 = "none";
-  }
-  const textAlign = align === "left" ? "flex-start" : align === "right" ? "flex-end" : "center";
-  return /* @__PURE__ */ (0, import_jsx_runtime93.jsxs)("div", { style: {
-    position: "absolute",
-    inset: 0,
-    display: "flex",
-    flexDirection: "column",
-    alignItems: textAlign,
-    justifyContent: "center",
-    padding: "8%",
-    background: bg,
-    opacity: opacity2,
-    transform: transform2
-  }, children: [
-    /* @__PURE__ */ (0, import_jsx_runtime93.jsx)("div", { style: {
-      fontFamily: theme.fonts.heading,
-      fontSize: "3.5em",
-      fontWeight: 700,
-      lineHeight: 1.2,
-      color,
-      textAlign: align,
-      maxWidth: "80%"
-    }, children: text }),
-    subtext && /* @__PURE__ */ (0, import_jsx_runtime93.jsx)("div", { style: {
-      fontFamily: theme.fonts.body,
-      fontSize: "1.5em",
-      color: theme.colors.textMuted,
-      marginTop: "0.5em",
-      textAlign: align,
-      opacity: interpolate(frame, [fps * 0.3, fps * 0.6], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }),
-      transform: `translateY(${interpolate(frame, [fps * 0.3, fps * 0.6], [15, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" })}px)`
-    }, children: subtext })
-  ] });
-}
-
-// src/components/text/CalloutBox.tsx
-var import_jsx_runtime94 = __toESM(require_jsx_runtime(), 1);
-var TYPE_COLORS = {
-  info: { accent: "#3B82F6", bg: "#EFF6FF" },
-  warning: { accent: "#F59E0B", bg: "#FFFBEB" },
-  tip: { accent: "#10B981", bg: "#ECFDF5" },
-  quote: { accent: "#8B5CF6", bg: "#F5F3FF" }
-};
-var TYPE_ICONS = {
-  info: "i",
-  warning: "!",
-  tip: "\u2713",
-  quote: "\u201C"
-};
-function CalloutBox({
-  text,
-  type = "info",
-  icon,
-  author
-}) {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const theme = useTheme();
-  const colors = TYPE_COLORS[type] ?? TYPE_COLORS.info;
-  const displayIcon = icon || TYPE_ICONS[type] || "";
-  const slideIn = spring({
-    frame,
-    fps,
-    config: { damping: 15, stiffness: 120, mass: 0.8 }
-  });
-  const accentDraw = spring({
-    frame: frame - 5,
-    fps,
-    config: { damping: 20, stiffness: 150, mass: 0.5 }
-  });
-  return /* @__PURE__ */ (0, import_jsx_runtime94.jsx)("div", { style: {
-    position: "absolute",
-    inset: 0,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "10%",
-    transform: `translateX(${(1 - slideIn) * 30}px)`,
-    opacity: slideIn
-  }, children: /* @__PURE__ */ (0, import_jsx_runtime94.jsxs)("div", { style: {
-    display: "flex",
-    gap: 24,
-    background: colors.bg,
-    borderRadius: 16,
-    padding: "2em 2.5em",
-    maxWidth: "70%",
-    boxShadow: `0 4px 20px ${theme.colors.primary}15`,
-    position: "relative",
-    overflow: "hidden"
-  }, children: [
-    /* @__PURE__ */ (0, import_jsx_runtime94.jsx)("div", { style: {
-      position: "absolute",
-      left: 0,
-      top: 0,
-      bottom: 0,
-      width: 4,
-      background: colors.accent,
-      transform: `scaleY(${accentDraw})`,
-      transformOrigin: "top"
-    } }),
-    /* @__PURE__ */ (0, import_jsx_runtime94.jsx)("div", { style: {
-      width: 48,
-      height: 48,
-      borderRadius: 12,
-      background: colors.accent,
-      color: "#fff",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      fontFamily: theme.fonts.heading,
-      fontSize: "1.5em",
-      fontWeight: 700,
-      flexShrink: 0
-    }, children: displayIcon }),
-    /* @__PURE__ */ (0, import_jsx_runtime94.jsxs)("div", { style: { flex: 1 }, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime94.jsx)("div", { style: {
-        fontFamily: type === "quote" ? theme.fonts.heading : theme.fonts.body,
-        fontSize: type === "quote" ? "1.8em" : "1.4em",
-        fontStyle: type === "quote" ? "italic" : "normal",
-        color: theme.colors.text,
-        lineHeight: 1.4
-      }, children: text }),
-      author && /* @__PURE__ */ (0, import_jsx_runtime94.jsxs)("div", { style: {
-        fontFamily: theme.fonts.body,
-        fontSize: "1em",
-        color: theme.colors.textMuted,
-        marginTop: "0.8em",
-        opacity: interpolate(frame, [fps * 0.5, fps * 0.8], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" })
-      }, children: [
-        "\u2014 ",
-        author
-      ] })
-    ] })
-  ] }) });
-}
-
-// src/components/text/EndTag.tsx
-var import_jsx_runtime95 = __toESM(require_jsx_runtime(), 1);
-function EndTag({
-  title,
-  subtitle: subtitle2,
-  cta,
-  showShimmer = true
-}) {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const theme = useTheme();
-  const entrance = spring({
-    frame,
-    fps,
-    config: { damping: 18, stiffness: 100, mass: 1.2 }
-  });
-  const underlineDraw = spring({
-    frame: frame - fps * 0.3,
-    fps,
-    config: { damping: 20, stiffness: 150 }
-  });
-  const shimmerX = showShimmer ? interpolate(frame, [0, fps * 0.6], [-200, 1200], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }) : -200;
-  return /* @__PURE__ */ (0, import_jsx_runtime95.jsxs)("div", { style: {
-    position: "absolute",
-    inset: 0,
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    background: theme.colors.background,
-    padding: "5%",
-    opacity: entrance,
-    transform: `scale(${0.85 + 0.15 * entrance})`
-  }, children: [
-    subtitle2 && /* @__PURE__ */ (0, import_jsx_runtime95.jsx)("div", { style: {
-      fontFamily: theme.fonts.body,
-      fontSize: "1.2em",
-      color: theme.colors.textMuted,
-      textTransform: "uppercase",
-      letterSpacing: "0.3em",
-      marginBottom: "0.5em",
-      opacity: interpolate(frame, [fps * 0.2, fps * 0.5], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" })
-    }, children: subtitle2 }),
-    /* @__PURE__ */ (0, import_jsx_runtime95.jsxs)("div", { style: { position: "relative", marginBottom: "0.3em" }, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime95.jsx)("div", { style: {
-        fontFamily: theme.fonts.heading,
-        fontSize: "4em",
-        fontWeight: 800,
-        color: theme.colors.text,
-        textAlign: "center",
-        lineHeight: 1.1
-      }, children: title }),
-      /* @__PURE__ */ (0, import_jsx_runtime95.jsx)("div", { style: {
-        height: 4,
-        width: `${underlineDraw * 60}%`,
-        background: `linear-gradient(90deg, ${theme.colors.primary}, ${theme.colors.gradient[1]})`,
-        borderRadius: 2,
-        marginTop: 8,
-        marginLeft: `${(100 - underlineDraw * 60) / 2}%`
-      } })
-    ] }),
-    cta && /* @__PURE__ */ (0, import_jsx_runtime95.jsx)("div", { style: {
-      fontFamily: theme.fonts.body,
-      fontSize: "1.3em",
-      color: theme.colors.primary,
-      marginTop: "0.8em",
-      opacity: interpolate(frame, [fps * 0.6, fps * 0.9], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }),
-      transform: `translateY(${interpolate(frame, [fps * 0.6, fps * 0.9], [15, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" })}px)`
-    }, children: cta }),
-    showShimmer && /* @__PURE__ */ (0, import_jsx_runtime95.jsx)("div", { style: {
-      position: "absolute",
-      inset: 0,
-      background: `linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.15) 50%, transparent 100%)`,
-      transform: `translateX(${shimmerX}px)`,
-      pointerEvents: "none"
-    } })
-  ] });
-}
-
-// src/components/media/DeviceMockup.tsx
-var import_jsx_runtime96 = __toESM(require_jsx_runtime(), 1);
-function BrowserChrome({ title, theme }) {
-  return /* @__PURE__ */ (0, import_jsx_runtime96.jsxs)(
-    "div",
-    {
-      style: {
-        display: "flex",
-        alignItems: "center",
-        gap: 8,
-        padding: "10px 16px",
-        background: theme.colors.surface,
-        borderBottom: `1px solid ${theme.colors.background}`,
-        borderTopLeftRadius: 12,
-        borderTopRightRadius: 12
-      },
-      children: [
-        /* @__PURE__ */ (0, import_jsx_runtime96.jsxs)("div", { style: { display: "flex", gap: 6 }, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime96.jsx)("div", { style: { width: 12, height: 12, borderRadius: "50%", background: "#ff5f57" } }),
-          /* @__PURE__ */ (0, import_jsx_runtime96.jsx)("div", { style: { width: 12, height: 12, borderRadius: "50%", background: "#febc2e" } }),
-          /* @__PURE__ */ (0, import_jsx_runtime96.jsx)("div", { style: { width: 12, height: 12, borderRadius: "50%", background: "#28c840" } })
-        ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime96.jsx)(
-          "div",
-          {
-            style: {
-              flex: 1,
-              background: theme.colors.background,
-              borderRadius: 6,
-              padding: "5px 12px",
-              fontSize: 13,
-              color: theme.colors.textMuted,
-              fontFamily: theme.fonts.body,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap"
-            },
-            children: title || "localhost:3000"
-          }
-        )
-      ]
-    }
-  );
-}
-function PhoneFrame({ children, theme }) {
-  return /* @__PURE__ */ (0, import_jsx_runtime96.jsxs)(
-    "div",
-    {
-      style: {
-        border: `3px solid ${theme.colors.surface}`,
-        borderRadius: 36,
-        padding: "12px 4px",
-        background: theme.colors.surface,
-        position: "relative",
-        overflow: "hidden"
-      },
-      children: [
-        /* @__PURE__ */ (0, import_jsx_runtime96.jsx)(
-          "div",
-          {
-            style: {
-              position: "absolute",
-              top: 0,
-              left: "50%",
-              transform: "translateX(-50%)",
-              width: "35%",
-              height: 24,
-              background: theme.colors.surface,
-              borderBottomLeftRadius: 16,
-              borderBottomRightRadius: 16,
-              zIndex: 2
-            }
-          }
-        ),
-        /* @__PURE__ */ (0, import_jsx_runtime96.jsx)("div", { style: { borderRadius: 24, overflow: "hidden" }, children })
-      ]
-    }
-  );
-}
-function DeviceMockup({
-  device,
-  src,
-  title,
-  angle = 0,
-  shadow = true
-}) {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const theme = useTheme();
-  const entrance = spring({
-    frame,
-    fps,
-    config: { damping: 14, stiffness: 100, mass: 1.2 }
-  });
-  const scale = 0.85 + 0.15 * entrance;
-  const translateY = 40 * (1 - entrance);
-  const opacity2 = entrance;
-  const perspective = angle > 0 ? `perspective(1200px) rotateY(${angle * (1 - entrance * 0.5)}deg)` : "";
-  const content = /* @__PURE__ */ (0, import_jsx_runtime96.jsx)(
-    Img,
-    {
-      src,
-      style: {
-        width: "100%",
-        height: "100%",
-        objectFit: "cover",
-        display: "block"
-      }
-    }
-  );
-  const maxWidth = device === "phone" ? "35%" : device === "tablet" ? "55%" : "80%";
-  return /* @__PURE__ */ (0, import_jsx_runtime96.jsx)(
-    "div",
-    {
-      style: {
-        position: "absolute",
-        inset: 0,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center"
-      },
-      children: /* @__PURE__ */ (0, import_jsx_runtime96.jsx)(
-        "div",
-        {
-          style: {
-            maxWidth,
-            width: "100%",
-            transform: `scale(${scale}) translateY(${translateY}px) ${perspective}`,
-            opacity: opacity2,
-            filter: shadow ? `drop-shadow(0 25px 60px rgba(0,0,0,0.5))` : void 0
-          },
-          children: device === "phone" ? /* @__PURE__ */ (0, import_jsx_runtime96.jsx)(PhoneFrame, { theme, children: content }) : /* @__PURE__ */ (0, import_jsx_runtime96.jsxs)(
-            "div",
-            {
-              style: {
-                borderRadius: 12,
-                overflow: "hidden",
-                border: `1px solid ${theme.colors.surface}`
-              },
-              children: [
-                device === "browser" && /* @__PURE__ */ (0, import_jsx_runtime96.jsx)(BrowserChrome, { title, theme }),
-                device === "laptop" && /* @__PURE__ */ (0, import_jsx_runtime96.jsx)(BrowserChrome, { title, theme }),
-                content
-              ]
-            }
-          )
-        }
-      )
-    }
-  );
-}
-
-// src/components/media/CursorFlyover.tsx
-var React47 = __toESM(require_react(), 1);
-var import_jsx_runtime97 = __toESM(require_jsx_runtime(), 1);
-function CursorSVG({ color }) {
-  return /* @__PURE__ */ (0, import_jsx_runtime97.jsx)("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", children: /* @__PURE__ */ (0, import_jsx_runtime97.jsx)(
-    "path",
-    {
-      d: "M5 3L19 12L12 12L8 19L5 3Z",
-      fill: color,
-      stroke: "white",
-      strokeWidth: "1.5",
-      strokeLinejoin: "round"
-    }
-  ) });
-}
-function CursorFlyover({ src, steps }) {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const theme = useTheme();
-  const timings = React47.useMemo(() => {
-    let acc = 0;
-    return steps.map((s) => {
-      const start = acc;
-      acc += s.duration;
-      return { start, end: acc };
-    });
-  }, [steps]);
-  const currentTime = frame / fps;
-  let stepIdx = 0;
-  for (let i = 0; i < timings.length; i++) {
-    if (currentTime >= timings[i].start && currentTime < timings[i].end) {
-      stepIdx = i;
-      break;
-    }
-    if (i === timings.length - 1) stepIdx = i;
-  }
-  const step = steps[stepIdx];
-  const timing = timings[stepIdx];
-  const stepFrame = frame - timing.start * fps;
-  const prevStep = stepIdx > 0 ? steps[stepIdx - 1] : step;
-  const transitionFrames = fps * 0.3;
-  const t = Math.min(1, stepFrame / transitionFrames);
-  const ease = t * t * (3 - 2 * t);
-  const regionX = interpolate(ease, [0, 1], [prevStep.region.x, step.region.x]);
-  const regionY = interpolate(ease, [0, 1], [prevStep.region.y, step.region.y]);
-  const zoom = interpolate(ease, [0, 1], [prevStep.region.zoom, step.region.zoom]);
-  const cursorX = step.cursor ? interpolate(ease, [0, 1], [
-    prevStep.cursor?.x ?? step.cursor.x,
-    step.cursor.x
-  ]) : 50;
-  const cursorY = step.cursor ? interpolate(ease, [0, 1], [
-    prevStep.cursor?.y ?? step.cursor.y,
-    step.cursor.y
-  ]) : 50;
-  const clickProg = spring({
-    frame: stepFrame - transitionFrames,
-    fps,
-    config: { damping: 12, stiffness: 200, mass: 0.5 }
-  });
-  return /* @__PURE__ */ (0, import_jsx_runtime97.jsxs)(
-    "div",
-    {
-      style: {
-        position: "absolute",
-        inset: 0,
-        overflow: "hidden",
-        borderRadius: 12
-      },
-      children: [
-        /* @__PURE__ */ (0, import_jsx_runtime97.jsx)(
-          "div",
-          {
-            style: {
-              position: "absolute",
-              inset: 0,
-              transform: `scale(${zoom}) translate(${-regionX}%, ${-regionY}%)`,
-              transformOrigin: "center center",
-              transition: "none"
-            },
-            children: /* @__PURE__ */ (0, import_jsx_runtime97.jsx)(
-              Img,
-              {
-                src,
-                style: {
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover"
-                }
-              }
-            )
-          }
-        ),
-        step.cursor && /* @__PURE__ */ (0, import_jsx_runtime97.jsxs)(
-          "div",
-          {
-            style: {
-              position: "absolute",
-              left: `${cursorX}%`,
-              top: `${cursorY}%`,
-              transform: "translate(-2px, -2px)",
-              zIndex: 10,
-              filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.3))"
-            },
-            children: [
-              /* @__PURE__ */ (0, import_jsx_runtime97.jsx)(CursorSVG, { color: theme.colors.primary }),
-              clickProg > 0 && clickProg < 0.95 && /* @__PURE__ */ (0, import_jsx_runtime97.jsx)(
-                "div",
-                {
-                  style: {
-                    position: "absolute",
-                    left: 12,
-                    top: 12,
-                    width: 40 * clickProg,
-                    height: 40 * clickProg,
-                    borderRadius: "50%",
-                    border: `2px solid ${theme.colors.primary}`,
-                    opacity: 1 - clickProg,
-                    transform: "translate(-50%, -50%)"
-                  }
-                }
-              )
-            ]
-          }
-        ),
-        step.annotation && /* @__PURE__ */ (0, import_jsx_runtime97.jsx)(
-          "div",
-          {
-            style: {
-              position: "absolute",
-              bottom: "8%",
-              left: "50%",
-              transform: `translateX(-50%) translateY(${interpolate(
-                stepFrame,
-                [0, transitionFrames],
-                [20, 0],
-                { extrapolateRight: "clamp" }
-              )}px)`,
-              opacity: interpolate(stepFrame, [0, transitionFrames * 0.5], [0, 1], {
-                extrapolateRight: "clamp"
-              }),
-              background: `${theme.colors.surface}ee`,
-              padding: "12px 24px",
-              borderRadius: 8,
-              fontFamily: theme.fonts.body,
-              fontSize: "1.2em",
-              color: theme.colors.text,
-              whiteSpace: "nowrap",
-              zIndex: 5
-            },
-            children: step.annotation
-          }
-        )
-      ]
-    }
-  );
-}
-
-// src/components/media/ComparisonSlider.tsx
-var import_jsx_runtime98 = __toESM(require_jsx_runtime(), 1);
-function ComparisonSlider({
-  before,
-  after,
-  beforeLabel = "Before",
-  afterLabel = "After",
-  dividerStart = 0.1,
-  dividerEnd = 0.7
-}) {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const theme = useTheme();
-  const entrance = spring({
-    frame,
-    fps,
-    config: { damping: 14, stiffness: 100, mass: 1 }
-  });
-  const slideProg = spring({
-    frame: frame - fps * 0.5,
-    fps,
-    config: { damping: 20, stiffness: 80, mass: 1.5 }
-  });
-  const dividerPos = interpolate(slideProg, [0, 1], [dividerStart, dividerEnd]);
-  return /* @__PURE__ */ (0, import_jsx_runtime98.jsx)(
-    "div",
-    {
-      style: {
-        position: "absolute",
-        inset: 0,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        opacity: entrance,
-        transform: `scale(${0.9 + 0.1 * entrance})`
-      },
-      children: /* @__PURE__ */ (0, import_jsx_runtime98.jsxs)(
-        "div",
-        {
-          style: {
-            position: "relative",
-            width: "85%",
-            height: "70%",
-            borderRadius: 12,
-            overflow: "hidden",
-            boxShadow: "0 20px 60px rgba(0,0,0,0.4)"
-          },
-          children: [
-            /* @__PURE__ */ (0, import_jsx_runtime98.jsx)(
-              Img,
-              {
-                src: after,
-                style: {
-                  position: "absolute",
-                  inset: 0,
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover"
-                }
-              }
-            ),
-            /* @__PURE__ */ (0, import_jsx_runtime98.jsx)(
-              "div",
-              {
-                style: {
-                  position: "absolute",
-                  inset: 0,
-                  width: "100%",
-                  height: "100%",
-                  clipPath: `inset(0 ${(1 - dividerPos) * 100}% 0 0)`
-                },
-                children: /* @__PURE__ */ (0, import_jsx_runtime98.jsx)(
-                  Img,
-                  {
-                    src: before,
-                    style: {
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover"
-                    }
-                  }
-                )
-              }
-            ),
-            /* @__PURE__ */ (0, import_jsx_runtime98.jsx)(
-              "div",
-              {
-                style: {
-                  position: "absolute",
-                  left: `${dividerPos * 100}%`,
-                  top: 0,
-                  bottom: 0,
-                  width: 3,
-                  background: theme.colors.text,
-                  transform: "translateX(-50%)",
-                  zIndex: 2,
-                  boxShadow: "0 0 10px rgba(0,0,0,0.3)"
-                }
-              }
-            ),
-            /* @__PURE__ */ (0, import_jsx_runtime98.jsx)(
-              "div",
-              {
-                style: {
-                  position: "absolute",
-                  left: `${dividerPos * 100}%`,
-                  top: "50%",
-                  transform: "translate(-50%, -50%)",
-                  width: 40,
-                  height: 40,
-                  borderRadius: "50%",
-                  background: theme.colors.text,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  zIndex: 3,
-                  boxShadow: "0 2px 10px rgba(0,0,0,0.3)"
-                },
-                children: /* @__PURE__ */ (0, import_jsx_runtime98.jsx)("span", { style: { color: theme.colors.background, fontSize: 18, fontWeight: 700 }, children: "\u21D4" })
-              }
-            ),
-            /* @__PURE__ */ (0, import_jsx_runtime98.jsx)(
-              "div",
-              {
-                style: {
-                  position: "absolute",
-                  top: 16,
-                  left: 16,
-                  padding: "4px 12px",
-                  background: `${theme.colors.background}cc`,
-                  borderRadius: 6,
-                  fontFamily: theme.fonts.body,
-                  fontSize: 14,
-                  color: theme.colors.textMuted,
-                  zIndex: 1
-                },
-                children: beforeLabel
-              }
-            ),
-            /* @__PURE__ */ (0, import_jsx_runtime98.jsx)(
-              "div",
-              {
-                style: {
-                  position: "absolute",
-                  top: 16,
-                  right: 16,
-                  padding: "4px 12px",
-                  background: `${theme.colors.background}cc`,
-                  borderRadius: 6,
-                  fontFamily: theme.fonts.body,
-                  fontSize: 14,
-                  color: theme.colors.textMuted,
-                  zIndex: 1
-                },
-                children: afterLabel
-              }
-            )
-          ]
-        }
-      )
-    }
-  );
-}
-
-// src/components/data/StatCounter.tsx
-var import_jsx_runtime99 = __toESM(require_jsx_runtime(), 1);
-function StatCounter({
-  value,
-  label: label3,
-  prefix = "",
-  suffix = "",
-  decimals = 0
-}) {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const theme = useTheme();
-  const countProg = spring({
-    frame,
-    fps,
-    config: { damping: 30, stiffness: 80, mass: 1.5 }
-  });
-  const currentValue = interpolate(countProg, [0, 1], [0, value]);
-  const displayValue = decimals > 0 ? currentValue.toFixed(decimals) : Math.floor(currentValue).toLocaleString();
-  const entrance = spring({
-    frame,
-    fps,
-    config: { damping: 15, stiffness: 180, mass: 0.8 }
-  });
-  return /* @__PURE__ */ (0, import_jsx_runtime99.jsxs)(
-    "div",
-    {
-      style: {
-        position: "absolute",
-        inset: 0,
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        opacity: entrance,
-        transform: `scale(${0.8 + 0.2 * entrance})`
-      },
-      children: [
-        /* @__PURE__ */ (0, import_jsx_runtime99.jsxs)(
-          "div",
-          {
-            style: {
-              fontFamily: theme.fonts.heading,
-              fontSize: "6em",
-              fontWeight: 800,
-              background: `linear-gradient(135deg, ${theme.colors.gradient[0]}, ${theme.colors.gradient[1]})`,
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              backgroundClip: "text",
-              lineHeight: 1
-            },
-            children: [
-              prefix,
-              displayValue,
-              suffix
-            ]
-          }
-        ),
-        label3 && /* @__PURE__ */ (0, import_jsx_runtime99.jsx)(
-          "div",
-          {
-            style: {
-              fontFamily: theme.fonts.body,
-              fontSize: "1.5em",
-              color: theme.colors.textMuted,
-              marginTop: "0.3em",
-              opacity: interpolate(frame, [fps * 0.5, fps * 0.8], [0, 1], {
-                extrapolateLeft: "clamp",
-                extrapolateRight: "clamp"
-              })
-            },
-            children: label3
-          }
-        )
-      ]
-    }
-  );
-}
-
-// src/components/data/ProgressBar.tsx
-var import_jsx_runtime100 = __toESM(require_jsx_runtime(), 1);
-function ProgressBar({ items }) {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const theme = useTheme();
-  return /* @__PURE__ */ (0, import_jsx_runtime100.jsx)(
-    "div",
-    {
-      style: {
-        position: "absolute",
-        inset: 0,
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "center",
-        padding: "8%",
-        gap: "1.5em"
-      },
-      children: items.map((item, i) => {
-        const delay2 = i * theme.timing.stagger * 2;
-        const prog = spring({
-          frame: frame - delay2,
-          fps,
-          config: { damping: 20, stiffness: 100, mass: 1 }
-        });
-        const barWidth = interpolate(prog, [0, 1], [0, item.value]);
-        const entrance = spring({
-          frame: frame - delay2,
-          fps,
-          config: { damping: 15, stiffness: 180, mass: 0.8 }
-        });
-        return /* @__PURE__ */ (0, import_jsx_runtime100.jsxs)(
-          "div",
-          {
-            style: {
-              opacity: entrance,
-              transform: `translateX(${(1 - entrance) * 30}px)`
-            },
-            children: [
-              /* @__PURE__ */ (0, import_jsx_runtime100.jsxs)(
-                "div",
-                {
-                  style: {
-                    display: "flex",
-                    justifyContent: "space-between",
-                    marginBottom: 8,
-                    fontFamily: theme.fonts.body,
-                    fontSize: "1.1em"
-                  },
-                  children: [
-                    /* @__PURE__ */ (0, import_jsx_runtime100.jsx)("span", { style: { color: theme.colors.text }, children: item.label }),
-                    /* @__PURE__ */ (0, import_jsx_runtime100.jsxs)("span", { style: { color: theme.colors.textMuted }, children: [
-                      Math.floor(barWidth),
-                      "%"
-                    ] })
-                  ]
-                }
-              ),
-              /* @__PURE__ */ (0, import_jsx_runtime100.jsx)(
-                "div",
-                {
-                  style: {
-                    height: 8,
-                    background: `${theme.colors.surface}`,
-                    borderRadius: 4,
-                    overflow: "hidden"
-                  },
-                  children: /* @__PURE__ */ (0, import_jsx_runtime100.jsx)(
-                    "div",
-                    {
-                      style: {
-                        height: "100%",
-                        width: `${barWidth}%`,
-                        background: item.color ? item.color : `linear-gradient(90deg, ${theme.colors.gradient[0]}, ${theme.colors.gradient[1]})`,
-                        borderRadius: 4
-                      }
-                    }
-                  )
-                }
-              )
-            ]
-          },
-          i
-        );
-      })
-    }
-  );
-}
-
-// src/components/data/BarChart.tsx
-var import_jsx_runtime101 = __toESM(require_jsx_runtime(), 1);
-function BarChart({
-  data,
-  title,
-  colors: customColors,
-  showGrid = true,
-  showValues = true,
-  animationStyle = "grow-up"
-}) {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const theme = useTheme();
-  const colors = customColors || theme.colors.chart;
-  const maxValue = Math.max(...data.map((d) => d.value), 1);
-  const chartLeft = 140;
-  const chartRight = 1780;
-  const chartTop = title ? 160 : 80;
-  const chartBottom = 920;
-  const chartWidth = chartRight - chartLeft;
-  const chartHeight = chartBottom - chartTop;
-  const barGap = 12;
-  const barCount = data.length;
-  const totalGap = barGap * (barCount + 1);
-  const barWidth = Math.min((chartWidth - totalGap) / barCount, 120);
-  const actualTotalWidth = barCount * barWidth + (barCount + 1) * barGap;
-  const offsetX = chartLeft + (chartWidth - actualTotalWidth) / 2;
-  const gridLineCount = 5;
-  const gridLines = Array.from({ length: gridLineCount + 1 }, (_, i) => ({
-    value: maxValue / gridLineCount * i,
-    y: chartBottom - i / gridLineCount * chartHeight
-  }));
-  return /* @__PURE__ */ (0, import_jsx_runtime101.jsxs)("svg", { viewBox: "0 0 1920 1080", style: { width: "100%", height: "100%", position: "absolute", inset: 0 }, children: [
-    title && /* @__PURE__ */ (0, import_jsx_runtime101.jsx)(
-      "text",
-      {
-        x: 960,
-        y: 80,
-        textAnchor: "middle",
-        fill: theme.colors.text,
-        fontFamily: theme.fonts.heading,
-        fontWeight: 700,
-        fontSize: 48,
-        opacity: spring({ frame, fps, config: { damping: 20 } }),
-        children: title
-      }
-    ),
-    showGrid && gridLines.map((line, i) => {
-      const opacity2 = interpolate(frame, [0, 10], [0, 0.6], { extrapolateRight: "clamp" });
-      return /* @__PURE__ */ (0, import_jsx_runtime101.jsxs)("g", { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime101.jsx)(
-          "line",
-          {
-            x1: chartLeft,
-            y1: line.y,
-            x2: chartRight,
-            y2: line.y,
-            stroke: theme.colors.border,
-            strokeWidth: 1,
-            opacity: opacity2
-          }
-        ),
-        /* @__PURE__ */ (0, import_jsx_runtime101.jsx)(
-          "text",
-          {
-            x: chartLeft - 12,
-            y: line.y + 5,
-            textAnchor: "end",
-            fill: theme.colors.textMuted,
-            fontFamily: theme.fonts.body,
-            fontSize: 20,
-            opacity: opacity2,
-            children: formatValue(line.value)
-          }
-        )
-      ] }, `g-${i}`);
-    }),
-    /* @__PURE__ */ (0, import_jsx_runtime101.jsx)(
-      "line",
-      {
-        x1: chartLeft,
-        y1: chartTop,
-        x2: chartLeft,
-        y2: chartBottom,
-        stroke: theme.colors.border,
-        strokeWidth: 2,
-        opacity: interpolate(frame, [0, 8], [0, 1], { extrapolateRight: "clamp" })
-      }
-    ),
-    /* @__PURE__ */ (0, import_jsx_runtime101.jsx)(
-      "line",
-      {
-        x1: chartLeft,
-        y1: chartBottom,
-        x2: chartRight,
-        y2: chartBottom,
-        stroke: theme.colors.border,
-        strokeWidth: 2,
-        opacity: interpolate(frame, [0, 8], [0, 1], { extrapolateRight: "clamp" })
-      }
-    ),
-    data.map((datum, i) => {
-      const color = colors[i % colors.length];
-      const barX = offsetX + barGap + i * (barWidth + barGap);
-      const barHeightFull = datum.value / maxValue * chartHeight;
-      const delay2 = i * 4;
-      let progress;
-      if (animationStyle === "grow-up") {
-        progress = spring({ frame: frame - delay2, fps, config: { damping: 14, stiffness: 80 } });
-      } else if (animationStyle === "slide-in") {
-        progress = interpolate(frame, [delay2 + 5, delay2 + 25], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-      } else {
-        progress = spring({ frame: frame - delay2, fps, config: { damping: 8, stiffness: 200 } });
-      }
-      const barHeight = barHeightFull * progress;
-      const barY = chartBottom - barHeight;
-      const opacity2 = interpolate(frame, [delay2, delay2 + 6], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-      const xOffset = animationStyle === "slide-in" ? (1 - progress) * 40 : 0;
-      return /* @__PURE__ */ (0, import_jsx_runtime101.jsxs)("g", { opacity: opacity2, transform: `translate(${xOffset}, 0)`, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime101.jsx)(
-          "rect",
-          {
-            x: barX,
-            y: barY,
-            width: barWidth,
-            height: barHeight,
-            rx: 4,
-            fill: color
-          }
-        ),
-        showValues && /* @__PURE__ */ (0, import_jsx_runtime101.jsx)(
-          "text",
-          {
-            x: barX + barWidth / 2,
-            y: barY - 10,
-            textAnchor: "middle",
-            fill: theme.colors.text,
-            fontFamily: theme.fonts.body,
-            fontSize: 22,
-            fontWeight: 600,
-            children: formatValue(datum.value)
-          }
-        ),
-        /* @__PURE__ */ (0, import_jsx_runtime101.jsx)(
-          "text",
-          {
-            x: barX + barWidth / 2,
-            y: chartBottom + 30,
-            textAnchor: "middle",
-            fill: theme.colors.textMuted,
-            fontFamily: theme.fonts.body,
-            fontSize: 18,
-            children: datum.label
-          }
-        )
-      ] }, i);
-    })
-  ] });
-}
-function formatValue(v) {
-  if (v >= 1e6) return (v / 1e6).toFixed(1) + "M";
-  if (v >= 1e3) return (v / 1e3).toFixed(1) + "K";
-  return Math.floor(v).toLocaleString();
-}
-
-// src/components/data/LineChart.tsx
-var import_jsx_runtime102 = __toESM(require_jsx_runtime(), 1);
-function LineChart({
-  series,
-  title,
-  showGrid = true,
-  showMarkers = true,
-  showLegend = true,
-  animationStyle = "draw"
-}) {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const theme = useTheme();
-  const chartLeft = 140;
-  const chartRight = 1780;
-  const chartTop = title ? 200 : 120;
-  const chartBottom = 920;
-  const chartWidth = chartRight - chartLeft;
-  const chartHeight = chartBottom - chartTop;
-  const allValues = series.flatMap((s) => s.data.map((d) => d.value));
-  const maxValue = Math.max(...allValues, 1);
-  const allLabels = series[0]?.data.map((d) => d.label) || [];
-  const xStep = allLabels.length > 1 ? chartWidth / (allLabels.length - 1) : chartWidth;
-  const gridLineCount = 5;
-  const gridLines = Array.from({ length: gridLineCount + 1 }, (_, i) => ({
-    value: maxValue / gridLineCount * i,
-    y: chartBottom - i / gridLineCount * chartHeight
-  }));
-  return /* @__PURE__ */ (0, import_jsx_runtime102.jsxs)("svg", { viewBox: "0 0 1920 1080", style: { width: "100%", height: "100%", position: "absolute", inset: 0 }, children: [
-    title && /* @__PURE__ */ (0, import_jsx_runtime102.jsx)(
-      "text",
-      {
-        x: 960,
-        y: 80,
-        textAnchor: "middle",
-        fill: theme.colors.text,
-        fontFamily: theme.fonts.heading,
-        fontWeight: 700,
-        fontSize: 48,
-        children: title
-      }
-    ),
-    showGrid && gridLines.map((line, i) => /* @__PURE__ */ (0, import_jsx_runtime102.jsxs)("g", { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime102.jsx)(
-        "line",
-        {
-          x1: chartLeft,
-          y1: line.y,
-          x2: chartRight,
-          y2: line.y,
-          stroke: theme.colors.border,
-          strokeWidth: 1,
-          opacity: interpolate(frame, [0, 10], [0, 0.5], { extrapolateRight: "clamp" })
-        }
-      ),
-      /* @__PURE__ */ (0, import_jsx_runtime102.jsx)(
-        "text",
-        {
-          x: chartLeft - 12,
-          y: line.y + 5,
-          textAnchor: "end",
-          fill: theme.colors.textMuted,
-          fontFamily: theme.fonts.body,
-          fontSize: 20,
-          children: formatValue2(line.value)
-        }
-      )
-    ] }, `g-${i}`)),
-    /* @__PURE__ */ (0, import_jsx_runtime102.jsx)(
-      "line",
-      {
-        x1: chartLeft,
-        y1: chartTop,
-        x2: chartLeft,
-        y2: chartBottom,
-        stroke: theme.colors.border,
-        strokeWidth: 2
-      }
-    ),
-    /* @__PURE__ */ (0, import_jsx_runtime102.jsx)(
-      "line",
-      {
-        x1: chartLeft,
-        y1: chartBottom,
-        x2: chartRight,
-        y2: chartBottom,
-        stroke: theme.colors.border,
-        strokeWidth: 2
-      }
-    ),
-    allLabels.map((label3, i) => /* @__PURE__ */ (0, import_jsx_runtime102.jsx)(
-      "text",
-      {
-        x: chartLeft + i * xStep,
-        y: chartBottom + 30,
-        textAnchor: "middle",
-        fill: theme.colors.textMuted,
-        fontFamily: theme.fonts.body,
-        fontSize: 16,
-        children: label3
-      },
-      i
-    )),
-    series.map((s, si) => {
-      const color = s.color || theme.colors.chart[si % theme.colors.chart.length];
-      const points = s.data.map((d, i) => ({
-        x: chartLeft + i * xStep,
-        y: chartBottom - d.value / maxValue * chartHeight,
-        value: d.value
-      }));
-      const drawProgress = animationStyle === "draw" ? interpolate(frame, [si * 10, si * 10 + 30], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }) : interpolate(frame, [si * 10, si * 10 + 15], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-      const pathD = points.map((p, i) => {
-        const visibleLength = Math.floor(points.length * drawProgress);
-        if (i > visibleLength) return null;
-        const prev = points[Math.min(i, Math.max(0, visibleLength - 1))];
-        if (!prev) return null;
-        return `${i === 0 ? "M" : "L"} ${prev.x} ${prev.y}`;
-      }).filter(Boolean).join(" ");
-      return /* @__PURE__ */ (0, import_jsx_runtime102.jsxs)("g", { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime102.jsx)(
-          "path",
-          {
-            d: pathD,
-            fill: "none",
-            stroke: color,
-            strokeWidth: 3,
-            strokeLinecap: "round",
-            strokeLinejoin: "round",
-            opacity: interpolate(frame, [si * 10, si * 10 + 10], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" })
-          }
-        ),
-        /* @__PURE__ */ (0, import_jsx_runtime102.jsx)(
-          "path",
-          {
-            d: `${pathD} L ${points[points.length - 1]?.x || chartLeft} ${chartBottom} L ${points[0]?.x || chartLeft} ${chartBottom} Z`,
-            fill: color,
-            opacity: 0.1
-          }
-        ),
-        showMarkers && points.map((p, pi) => {
-          const markerShow = frame >= si * 10 + pi * 2;
-          return /* @__PURE__ */ (0, import_jsx_runtime102.jsxs)("g", { opacity: markerShow ? 1 : 0, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime102.jsx)("circle", { cx: p.x, cy: p.y, r: 5, fill: color, stroke: theme.colors.background, strokeWidth: 2 }),
-            /* @__PURE__ */ (0, import_jsx_runtime102.jsx)(
-              "text",
-              {
-                x: p.x,
-                y: p.y - 12,
-                textAnchor: "middle",
-                fill: theme.colors.text,
-                fontFamily: theme.fonts.body,
-                fontSize: 16,
-                fontWeight: 600,
-                children: formatValue2(p.value)
-              }
-            )
-          ] }, pi);
-        })
-      ] }, si);
-    }),
-    showLegend && series.length > 1 && /* @__PURE__ */ (0, import_jsx_runtime102.jsx)("g", { transform: `translate(${chartRight - 200}, ${chartTop})`, children: series.map((s, i) => {
-      const color = s.color || theme.colors.chart[i % theme.colors.chart.length];
-      return /* @__PURE__ */ (0, import_jsx_runtime102.jsxs)("g", { transform: `translate(0, ${i * 30})`, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime102.jsx)("rect", { x: 0, y: 0, width: 16, height: 16, rx: 3, fill: color }),
-        /* @__PURE__ */ (0, import_jsx_runtime102.jsx)("text", { x: 22, y: 13, fill: theme.colors.text, fontFamily: theme.fonts.body, fontSize: 14, children: s.name })
-      ] }, i);
-    }) })
-  ] });
-}
-function formatValue2(v) {
-  if (v >= 1e6) return (v / 1e6).toFixed(1) + "M";
-  if (v >= 1e3) return (v / 1e3).toFixed(1) + "K";
-  return Math.floor(v).toLocaleString();
-}
-
-// src/components/data/PieChart.tsx
-var import_jsx_runtime103 = __toESM(require_jsx_runtime(), 1);
-function PieChart({
-  data,
-  title,
-  colors: customColors,
-  donut = false,
-  showLegend = true,
-  animationStyle = "spin"
-}) {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const theme = useTheme();
-  const colors = customColors || theme.colors.chart;
-  const total = data.reduce((s, d) => s + d.value, 0) || 1;
-  const cx = 960;
-  const cy = 540;
-  const radius = Math.min(
-    showLegend ? 300 : 380,
-    title ? 340 : 400
-  );
-  const innerRadius = donut ? radius * 0.45 : 0;
-  let currentAngle = -Math.PI / 2;
-  const segments = data.map((d, i) => {
-    const sliceAngle = d.value / total * Math.PI * 2;
-    const startAngle = currentAngle;
-    const endAngle = currentAngle + sliceAngle;
-    currentAngle = endAngle;
-    return { ...d, startAngle, endAngle, color: colors[i % colors.length] };
-  });
-  const spinProgress = animationStyle === "spin" ? interpolate(frame, [0, 30], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }) : 1;
-  const labelOpacity = interpolate(frame, [20, 35], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  return /* @__PURE__ */ (0, import_jsx_runtime103.jsxs)("svg", { viewBox: "0 0 1920 1080", style: { width: "100%", height: "100%", position: "absolute", inset: 0 }, children: [
-    title && /* @__PURE__ */ (0, import_jsx_runtime103.jsx)(
-      "text",
-      {
-        x: 960,
-        y: 80,
-        textAnchor: "middle",
-        fill: theme.colors.text,
-        fontFamily: theme.fonts.heading,
-        fontWeight: 700,
-        fontSize: 48,
-        children: title
-      }
-    ),
-    /* @__PURE__ */ (0, import_jsx_runtime103.jsx)("g", { transform: `rotate(${spinProgress * 360 - 90}, ${cx}, ${cy})`, children: segments.map((seg, i) => {
-      const start = seg.startAngle;
-      const end = seg.endAngle;
-      const x1 = cx + radius * Math.cos(start);
-      const y1 = cy + radius * Math.sin(start);
-      const x2 = cx + radius * Math.cos(end);
-      const y2 = cy + radius * Math.sin(end);
-      const largeArc = end - start > Math.PI ? 1 : 0;
-      let pathD;
-      if (animationStyle === "sequential") {
-        const segProgress = interpolate(frame, [i * 5, i * 5 + 20], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-        const currentEnd = start + (end - start) * segProgress;
-        const cx2 = cx + radius * Math.cos(currentEnd);
-        const cy2 = cy + radius * Math.sin(currentEnd);
-        pathD = describeArc(cx, cy, radius, innerRadius, start, currentEnd);
-        if (segProgress <= 0) return null;
-      } else {
-        pathD = describeArc(cx, cy, radius, innerRadius, start, end);
-      }
-      return /* @__PURE__ */ (0, import_jsx_runtime103.jsxs)("g", { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime103.jsx)("path", { d: pathD, fill: seg.color, stroke: theme.colors.background, strokeWidth: 2 }),
-        showLegend && end - start > 0.3 && /* @__PURE__ */ (0, import_jsx_runtime103.jsxs)(
-          "text",
-          {
-            x: cx + (radius + innerRadius) / 2 * Math.cos(start + (end - start) / 2 + (animationStyle === "spin" ? spinProgress * 360 * Math.PI / 180 : 0)),
-            y: cy + (radius + innerRadius) / 2 * Math.sin(start + (end - start) / 2 + (animationStyle === "spin" ? spinProgress * 360 * Math.PI / 180 : 0)),
-            textAnchor: "middle",
-            dominantBaseline: "central",
-            fill: "#fff",
-            fontFamily: theme.fonts.body,
-            fontSize: 16,
-            fontWeight: 600,
-            opacity: labelOpacity,
-            children: [
-              Math.round(seg.value / total * 100),
-              "%"
-            ]
-          }
-        )
-      ] }, i);
-    }) }),
-    showLegend && /* @__PURE__ */ (0, import_jsx_runtime103.jsx)("g", { transform: `translate(${cx + radius + 60}, ${cy - segments.length * 18})`, children: segments.map((seg, i) => /* @__PURE__ */ (0, import_jsx_runtime103.jsxs)("g", { transform: `translate(0, ${i * 36})`, opacity: labelOpacity, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime103.jsx)("rect", { x: 0, y: 0, width: 16, height: 16, rx: 3, fill: seg.color }),
-      /* @__PURE__ */ (0, import_jsx_runtime103.jsx)("text", { x: 22, y: 13, fill: theme.colors.text, fontFamily: theme.fonts.body, fontSize: 14, children: seg.label }),
-      /* @__PURE__ */ (0, import_jsx_runtime103.jsx)("text", { x: 22, y: 28, fill: theme.colors.textMuted, fontFamily: theme.fonts.body, fontSize: 12, children: formatValue3(seg.value) })
-    ] }, i)) })
-  ] });
-}
-function describeArc(cx, cy, outerR, innerR, startAngle, endAngle) {
-  const x1 = cx + outerR * Math.cos(startAngle);
-  const y1 = cy + outerR * Math.sin(startAngle);
-  const x2 = cx + outerR * Math.cos(endAngle);
-  const y2 = cy + outerR * Math.sin(endAngle);
-  const x3 = cx + innerR * Math.cos(endAngle);
-  const y3 = cy + innerR * Math.sin(endAngle);
-  const x4 = cx + innerR * Math.cos(startAngle);
-  const y4 = cy + innerR * Math.sin(startAngle);
-  const largeArc = endAngle - startAngle > Math.PI ? 1 : 0;
-  if (innerR === 0) {
-    return `M ${cx} ${cy} L ${x1} ${y1} A ${outerR} ${outerR} 0 ${largeArc} 1 ${x2} ${y2} Z`;
-  }
-  return `M ${x4} ${y4} L ${x1} ${y1} A ${outerR} ${outerR} 0 ${largeArc} 1 ${x2} ${y2} L ${x3} ${y3} A ${innerR} ${innerR} 0 ${largeArc} 0 ${x4} ${y4} Z`;
-}
-function formatValue3(v) {
-  if (v >= 1e6) return (v / 1e6).toFixed(1) + "M";
-  if (v >= 1e3) return (v / 1e3).toFixed(1) + "K";
-  return Math.floor(v).toLocaleString();
-}
-
-// src/components/data/ComparisonCard.tsx
-var import_jsx_runtime104 = __toESM(require_jsx_runtime(), 1);
-function ComparisonCard({
-  title,
-  left,
-  right
-}) {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const theme = useTheme();
-  const dividerDraw = spring({
-    frame: frame - fps * 0.3,
-    fps,
-    config: { damping: 20, stiffness: 100 }
-  });
-  const leftEntrance = spring({
-    frame,
-    fps,
-    config: { damping: 18, stiffness: 100 }
-  });
-  const rightEntrance = spring({
-    frame: frame - fps * 0.15,
-    fps,
-    config: { damping: 18, stiffness: 100 }
-  });
-  return /* @__PURE__ */ (0, import_jsx_runtime104.jsxs)("div", { style: {
-    position: "absolute",
-    inset: 0,
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "6%",
-    background: theme.colors.background
-  }, children: [
-    title && /* @__PURE__ */ (0, import_jsx_runtime104.jsx)("div", { style: {
-      fontFamily: theme.fonts.heading,
-      fontSize: "2em",
-      fontWeight: 700,
-      color: theme.colors.text,
-      marginBottom: "1em",
-      opacity: leftEntrance
-    }, children: title }),
-    /* @__PURE__ */ (0, import_jsx_runtime104.jsxs)("div", { style: {
-      display: "flex",
-      gap: "5%",
-      width: "100%",
-      maxWidth: "80%",
-      alignItems: "stretch"
-    }, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime104.jsxs)("div", { style: {
-        flex: 1,
-        padding: "2em",
-        background: left.color || `${theme.colors.primary}15`,
-        borderRadius: 16,
-        textAlign: "center",
-        opacity: leftEntrance,
-        transform: `translateX(${(1 - leftEntrance) * -30}px)`
-      }, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime104.jsx)("div", { style: {
-          fontFamily: theme.fonts.body,
-          fontSize: "1em",
-          color: theme.colors.textMuted,
-          textTransform: "uppercase",
-          letterSpacing: "0.1em",
-          marginBottom: "0.5em"
-        }, children: left.label }),
-        /* @__PURE__ */ (0, import_jsx_runtime104.jsx)("div", { style: {
-          fontFamily: theme.fonts.heading,
-          fontSize: "3em",
-          fontWeight: 800,
-          color: left.color || theme.colors.primary
-        }, children: left.value }),
-        left.change !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime104.jsx)(ChangeBadge, { change: left.change })
-      ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime104.jsx)("div", { style: {
-        width: 2,
-        background: `linear-gradient(180deg, transparent, ${theme.colors.border}, transparent)`,
-        transform: `scaleY(${dividerDraw})`,
-        alignSelf: "stretch"
-      } }),
-      /* @__PURE__ */ (0, import_jsx_runtime104.jsxs)("div", { style: {
-        flex: 1,
-        padding: "2em",
-        background: right.color || `${theme.colors.gradient[1]}15`,
-        borderRadius: 16,
-        textAlign: "center",
-        opacity: rightEntrance,
-        transform: `translateX(${(1 - rightEntrance) * 30}px)`
-      }, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime104.jsx)("div", { style: {
-          fontFamily: theme.fonts.body,
-          fontSize: "1em",
-          color: theme.colors.textMuted,
-          textTransform: "uppercase",
-          letterSpacing: "0.1em",
-          marginBottom: "0.5em"
-        }, children: right.label }),
-        /* @__PURE__ */ (0, import_jsx_runtime104.jsx)("div", { style: {
-          fontFamily: theme.fonts.heading,
-          fontSize: "3em",
-          fontWeight: 800,
-          color: right.color || theme.colors.gradient[1]
-        }, children: right.value }),
-        right.change !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime104.jsx)(ChangeBadge, { change: right.change })
-      ] })
-    ] })
-  ] });
-}
-function ChangeBadge({ change }) {
-  const isUp = change > 0;
-  return /* @__PURE__ */ (0, import_jsx_runtime104.jsxs)("div", { style: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 4,
-    marginTop: "0.5em",
-    fontFamily: "monospace",
-    fontSize: "1.2em",
-    fontWeight: 700,
-    color: isUp ? "#10B981" : "#EF4444"
-  }, children: [
-    /* @__PURE__ */ (0, import_jsx_runtime104.jsx)("span", { children: isUp ? "\u2191" : "\u2193" }),
-    /* @__PURE__ */ (0, import_jsx_runtime104.jsxs)("span", { children: [
-      Math.abs(change),
-      "%"
-    ] })
-  ] });
-}
-
-// src/components/atmosphere/GradientBackground.tsx
-var import_jsx_runtime105 = __toESM(require_jsx_runtime(), 1);
-function GradientBackground({
-  type = "linear",
-  colors,
-  animated = true,
-  noise = false
-}) {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const theme = useTheme();
-  const c2 = colors ?? [theme.colors.background, theme.colors.surface, theme.colors.primary + "33"];
-  const angle = animated ? interpolate(frame, [0, fps * 10], [135, 315], { extrapolateRight: "extend" }) : 135;
-  let gradient;
-  if (type === "radial") {
-    const pos = animated ? `${50 + Math.sin(frame / fps) * 20}% ${50 + Math.cos(frame / fps) * 20}%` : "50% 50%";
-    gradient = `radial-gradient(ellipse at ${pos}, ${c2.join(", ")})`;
-  } else if (type === "conic") {
-    gradient = `conic-gradient(from ${angle}deg, ${c2.join(", ")})`;
-  } else {
-    gradient = `linear-gradient(${angle}deg, ${c2.join(", ")})`;
-  }
-  return /* @__PURE__ */ (0, import_jsx_runtime105.jsxs)("div", { style: { position: "absolute", inset: 0 }, children: [
-    /* @__PURE__ */ (0, import_jsx_runtime105.jsx)(
-      "div",
-      {
-        style: {
-          position: "absolute",
-          inset: 0,
-          background: gradient
-        }
-      }
-    ),
-    noise && /* @__PURE__ */ (0, import_jsx_runtime105.jsx)(
-      "div",
-      {
-        style: {
-          position: "absolute",
-          inset: 0,
-          opacity: 0.04,
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
-          backgroundSize: "256px 256px"
-        }
-      }
-    )
-  ] });
-}
-
-// src/components/atmosphere/ParticleField.tsx
-var React48 = __toESM(require_react(), 1);
-var import_jsx_runtime106 = __toESM(require_jsx_runtime(), 1);
-function ParticleField({
-  count = 40,
-  speed = 0.3,
-  size = [2, 6],
-  color
-}) {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const theme = useTheme();
-  const particleColor = color ?? theme.colors.primary;
-  const particles = React48.useMemo(() => {
-    return Array.from({ length: count }, (_, i) => ({
-      x: random(`px${i}`) * 100,
-      y: random(`py${i}`) * 100,
-      vx: (random(`vx${i}`) - 0.5) * speed * 2,
-      vy: (random(`vy${i}`) - 0.5) * speed * 2,
-      size: size[0] + random(`s${i}`) * (size[1] - size[0]),
-      opacity: 0.2 + random(`o${i}`) * 0.6
-    }));
-  }, [count, speed, size[0], size[1]]);
-  const t = frame / fps;
-  return /* @__PURE__ */ (0, import_jsx_runtime106.jsx)("div", { style: { position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none" }, children: particles.map((p, i) => {
-    const x = ((p.x + p.vx * t * 10) % 110 + 110) % 110 - 5;
-    const y = ((p.y + p.vy * t * 10) % 110 + 110) % 110 - 5;
-    const pulseOpacity = p.opacity * (0.7 + 0.3 * Math.sin(t * 2 + i));
-    return /* @__PURE__ */ (0, import_jsx_runtime106.jsx)(
-      "div",
-      {
-        style: {
-          position: "absolute",
-          left: `${x}%`,
-          top: `${y}%`,
-          width: p.size,
-          height: p.size,
-          borderRadius: "50%",
-          background: particleColor,
-          opacity: pulseOpacity,
-          filter: `blur(${p.size > 4 ? 1 : 0}px)`,
-          boxShadow: `0 0 ${p.size * 2}px ${particleColor}44`
-        }
-      },
-      i
-    );
-  }) });
-}
-
-// src/components/atmosphere/LightLeak.tsx
-var import_jsx_runtime107 = __toESM(require_jsx_runtime(), 1);
-function LightLeak({
-  intensity = 0.4,
-  color
-}) {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const theme = useTheme();
-  const leakColor = color ?? theme.colors.primary;
-  const t = frame / fps;
-  const spots = [
-    {
-      x: 30 + Math.sin(t * 0.5) * 40,
-      y: 20 + Math.cos(t * 0.3) * 30,
-      size: 50 + Math.sin(t * 0.7) * 20,
-      opacity: intensity * (0.5 + 0.5 * Math.sin(t * 0.4))
-    },
-    {
-      x: 70 + Math.cos(t * 0.4) * 30,
-      y: 70 + Math.sin(t * 0.6) * 25,
-      size: 40 + Math.cos(t * 0.5) * 15,
-      opacity: intensity * (0.3 + 0.3 * Math.cos(t * 0.5))
-    }
-  ];
-  return /* @__PURE__ */ (0, import_jsx_runtime107.jsx)(
-    "div",
-    {
-      style: {
-        position: "absolute",
-        inset: 0,
-        overflow: "hidden",
-        pointerEvents: "none",
-        mixBlendMode: "screen"
-      },
-      children: spots.map((spot, i) => /* @__PURE__ */ (0, import_jsx_runtime107.jsx)(
-        "div",
-        {
-          style: {
-            position: "absolute",
-            left: `${spot.x}%`,
-            top: `${spot.y}%`,
-            width: `${spot.size}%`,
-            height: `${spot.size}%`,
-            borderRadius: "50%",
-            background: `radial-gradient(circle, ${leakColor}${Math.floor(spot.opacity * 255).toString(16).padStart(2, "0")}, transparent 70%)`,
-            transform: "translate(-50%, -50%)",
-            filter: "blur(40px)"
-          }
-        },
-        i
-      ))
-    }
-  );
-}
-
-// src/components/layout/SplitScreen.tsx
-var React49 = __toESM(require_react(), 1);
-var import_jsx_runtime108 = __toESM(require_jsx_runtime(), 1);
-function SplitScreen({
-  direction = "horizontal",
-  ratio = 0.5,
-  gap = 16,
-  children
-}) {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const theme = useTheme();
-  const entrance = spring({
-    frame,
-    fps,
-    config: { damping: 14, stiffness: 120, mass: 1 }
-  });
-  const childArray = React49.Children.toArray(children);
-  const left = childArray[0];
-  const right = childArray[1];
-  const isH = direction === "horizontal";
-  return /* @__PURE__ */ (0, import_jsx_runtime108.jsxs)(
-    "div",
-    {
-      style: {
-        position: "absolute",
-        inset: 0,
-        display: "flex",
-        flexDirection: isH ? "row" : "column",
-        gap,
-        padding: gap,
-        opacity: entrance
-      },
-      children: [
-        /* @__PURE__ */ (0, import_jsx_runtime108.jsx)(
-          "div",
-          {
-            style: {
-              flex: `0 0 calc(${ratio * 100}% - ${gap / 2}px)`,
-              overflow: "hidden",
-              borderRadius: 12,
-              position: "relative",
-              transform: `translateX(${isH ? (1 - entrance) * -30 : 0}px) translateY(${!isH ? (1 - entrance) * -30 : 0}px)`
-            },
-            children: left
-          }
-        ),
-        /* @__PURE__ */ (0, import_jsx_runtime108.jsx)(
-          "div",
-          {
-            style: {
-              flex: 1,
-              overflow: "hidden",
-              borderRadius: 12,
-              position: "relative",
-              transform: `translateX(${isH ? (1 - entrance) * 30 : 0}px) translateY(${!isH ? (1 - entrance) * 30 : 0}px)`
-            },
-            children: right
-          }
-        )
-      ]
-    }
-  );
-}
-
-// src/components/layout/SpotlightReveal.tsx
-var import_jsx_runtime109 = __toESM(require_jsx_runtime(), 1);
-function SpotlightReveal({
-  x = 50,
-  y = 50,
-  maxRadius = 100,
-  color,
-  children
-}) {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const theme = useTheme();
-  const prog = spring({
-    frame,
-    fps,
-    config: { damping: 18, stiffness: 80, mass: 1.2 }
-  });
-  const radius = interpolate(prog, [0, 1], [0, maxRadius]);
-  const bgColor = color ?? theme.colors.background;
-  return /* @__PURE__ */ (0, import_jsx_runtime109.jsxs)("div", { style: { position: "absolute", inset: 0 }, children: [
-    /* @__PURE__ */ (0, import_jsx_runtime109.jsx)("div", { style: { position: "absolute", inset: 0 }, children }),
-    /* @__PURE__ */ (0, import_jsx_runtime109.jsx)(
-      "div",
-      {
-        style: {
-          position: "absolute",
-          inset: 0,
-          background: bgColor,
-          maskImage: `radial-gradient(circle ${radius}vw at ${x}% ${y}%, transparent 100%, black 100%)`,
-          WebkitMaskImage: `radial-gradient(circle ${radius}vw at ${x}% ${y}%, transparent 100%, black 100%)`,
-          pointerEvents: "none"
-        }
-      }
-    )
-  ] });
-}
-
-// src/components/index.ts
-var builtinComponents = {
-  AnimatedHeadline,
-  TypewriterText,
-  GlitchReveal,
-  TextCard,
-  CalloutBox,
-  EndTag,
-  DeviceMockup,
-  CursorFlyover,
-  ComparisonSlider,
-  StatCounter,
-  ProgressBar,
-  BarChart,
-  LineChart,
-  PieChart,
-  ComparisonCard,
-  GradientBackground,
-  ParticleField,
-  LightLeak,
-  SplitScreen,
-  SpotlightReveal
-};
-
-// src/templates/schema.ts
-var templateSlot = external_exports.object({
-  name: external_exports.string(),
-  type: external_exports.enum(["text", "image", "video", "number", "color", "boolean"]),
-  label: external_exports.string(),
-  default: external_exports.unknown().optional(),
-  required: external_exports.boolean().default(false),
-  constraints: external_exports.object({
-    maxLength: external_exports.number().optional(),
-    aspectRatio: external_exports.string().optional(),
-    min: external_exports.number().optional(),
-    max: external_exports.number().optional()
-  }).optional()
-});
-var templateMeta = external_exports.object({
-  id: external_exports.string(),
-  name: external_exports.string(),
-  description: external_exports.string(),
-  category: external_exports.enum(["marketing", "demo", "social", "presentation"]),
-  aspects: external_exports.array(external_exports.enum(["16x9", "9x16", "1x1"])).default(["16x9"]),
-  duration: external_exports.number().describe("estimated seconds"),
-  theme: external_exports.string().default("cinematic"),
-  slots: external_exports.array(templateSlot),
-  streamTree: external_exports.unknown().describe("stream tree JSON with ${slot.name} placeholders")
-});
 
 // src/player/browser.tsx
 function PlayerApp() {
@@ -50336,7 +48479,7 @@ function PlayerApp() {
       component: RemotionEngine,
       inputProps: {
         root: data,
-        compose: { components: builtinComponents },
+        compose: {},
         theme
       },
       durationInFrames,

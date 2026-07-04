@@ -11,8 +11,6 @@ export interface ComposeContextValue {
     style?: React.CSSProperties;
     className?: string;
   }>>;
-  /** Host-registered components, addressable by `componentName`. */
-  components: Record<string, React.ComponentType<any>>;
   /** Optional callback for non-fatal render errors. */
   onError?: (err: unknown, ctx: { id: string; type: string }) => void;
 }
@@ -23,7 +21,6 @@ const DefaultContainer: ComposeContextValue["Container"] = ({ children, style })
 
 export const ComposeContext = React.createContext<ComposeContextValue>({
   Container: DefaultContainer,
-  components: {},
 });
 
 export interface AudioContextValue {

@@ -84,9 +84,24 @@ export interface DescriptiveImage extends DescriptiveBaseNode {
 
 export interface DescriptiveComponent extends DescriptiveBaseNode {
   type: "component";
-  componentName: string;
-  src?: string;
-  props?: Record<string, unknown>;
+  /** Inline JSX usage expression, compiled at runtime with frontmatter imports in scope.
+   *  e.g. "<BarChart data={[{name:'A',value:80}]} />".
+   *  Component tag names are resolved from root.imports. */
+  jsx: string;
+}
+
+/** Single entry in the frontmatter `imports:` array.
+ *  Defines where a component comes from and how to load it. */
+export interface ImportEntry {
+  /** Component name (used as JSX tag and lookup key). */
+  name: string;
+  /** Source spec: `npm:`, `git:`, `github:`, `https://`, or local path. */
+  from?: string;
+  /** Named export to pick from the module (default: "default"). */
+  exports?: string;
+  /** Inline JSX component definition source (alternative to `from`).
+   *  e.g. "export default ({text}) => <span>{text}</span>" */
+  jsx?: string;
 }
 
 export interface DescriptiveRhythm extends DescriptiveBaseNode {
@@ -178,6 +193,8 @@ export interface DescriptiveRoot {
   transitionTime?: number;
   /** Global subtitle overlay. src = VTT file with absolute timestamps. Set by resolveScripts pipeline. */
   subtitle?: SubtitleOverlay;
+  /** Frontmatter imports: array of named component registrations. */
+  imports?: ImportEntry[];
   children: DescriptiveNode[];
 }
 
@@ -326,12 +343,22 @@ function compileLeaf(node: Exclude<DescriptiveNode, DescriptiveContainer | Descr
       return { stream, duration: end };
     }
     case "component": {
+      const registry = (node as any)._resolvedRegistry as Map<string, ResolvedImport> | undefined;
+
+      // Build the imports map for runtime (name → resolved URL)
+      const importsMap: Record<string, string> = {};
+      if (registry) {
+        for (const [name, def] of registry) {
+          if (def.src) importsMap[name] = def.src;
+          else if (def.definitionJsx) importsMap[name] = `__jsx__:${name}`;
+        }
+      }
+
       const stream: Component = {
         ...base,
         type: "component",
-        componentName: node.componentName,
-        src: node.src,
-        props: node.props ?? {},
+        jsx: node.jsx,
+        imports: Object.keys(importsMap).length ? importsMap : undefined,
         actions: [action],
       };
       return { stream, duration: end };
@@ -686,6 +713,65 @@ function compileContainer(node: DescriptiveContainer, ctx: CompileContext, paren
   return { stream, duration };
 }
 
+// ── Frontmatter imports resolver ──────────────────────────────────────────
+//
+// Resolves `root.imports` (ImportEntry[]) and attaches the registry to every
+// component node so `compileLeaf` can build the runtime `imports` map.
+//
+// Each ImportEntry can have:
+//   - `from:`  — source spec (npm:/git:/github:/https:/path) → resolved to URL
+//   - `jsx:`   — inline JSX component definition source
+//   - `exports:` — named export to pick (default: "default")
+
+/** Resolved import data carried through to compilation. */
+interface ResolvedImport {
+  /** Resolved URL from `from:` spec. */
+  src?: string;
+  /** Inline component definition JSX source (from imports entry `jsx:`). */
+  definitionJsx?: string;
+  /** Named export to pick from the module. */
+  exports?: string;
+}
+
+export function resolveComponentImportSpec(spec: string): string {
+  const s = spec.trim();
+  if (s.startsWith("npm:")) return `https://esm.sh/${s.slice(4)}`;
+  if (s.startsWith("git:")) return `https://esm.sh/gh/${s.slice(4)}`;
+  if (s.startsWith("github:")) return `https://esm.sh/gh/${s.slice(7)}`;
+  return s;
+}
+
+function resolveComponentSources(root: DescriptiveRoot): Map<string, ResolvedImport> {
+  const registry = new Map<string, ResolvedImport>();
+  const entries = root.imports;
+  if (!entries || !entries.length) return registry;
+
+  for (const entry of entries) {
+    if (!entry.name) continue;
+    const resolved: ResolvedImport = { exports: entry.exports };
+    if (entry.from) {
+      resolved.src = resolveComponentImportSpec(entry.from);
+    }
+    if (entry.jsx) {
+      resolved.definitionJsx = entry.jsx;
+    }
+    registry.set(entry.name, resolved);
+  }
+  if (registry.size === 0) return registry;
+
+  const visit = (node: DescriptiveNode): void => {
+    if (node.type === "component") {
+      (node as any)._resolvedRegistry = registry;
+    }
+    const children = (node as { children?: DescriptiveNode[] }).children;
+    if (Array.isArray(children)) {
+      for (const c of children) visit(c);
+    }
+  };
+  for (const c of root.children) visit(c);
+  return registry;
+}
+
 export function compileDescriptiveRoot(input: DescriptiveRoot, options: CompileOptions = {}): Root {
   const ctx: CompileContext = {
     mode: options.mode ?? "strict",
@@ -694,6 +780,9 @@ export function compileDescriptiveRoot(input: DescriptiveRoot, options: CompileO
       ...(options.defaults ?? {}),
     },
   };
+
+  // Resolve frontmatter imports / inline component defs onto each component node.
+  resolveComponentSources(input);
 
   ensureUniqueIds(input.children, "root", ctx.mode);
 

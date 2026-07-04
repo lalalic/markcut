@@ -34,8 +34,8 @@ describe("resolveMediaDurations", () => {
       ],
     };
     const result = await resolveMediaDurations(root);
-    expect(result.children[0]!.endAt).toBe(5);
-    expect(result.children[0]!.duration).toBeUndefined();
+    expect((result.children[0] as any).endAt).toBe(5);
+    expect((result.children[0] as any).duration).toBeUndefined();
   });
 
   it("handles skip regex", async () => {

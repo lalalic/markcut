@@ -1,0 +1,24 @@
+{
+  "id": "root",
+  "type": "root",
+  "width": 640,
+  "height": 480,
+  "fps": 30,
+  "isSeries": false,
+  "children": [
+    {
+      "id": "scene-jsx-tween",
+      "type": "folder",
+      "isSeries": false,
+      "children": [
+        {
+          "id": "jsx-tween",
+          "type": "component",
+          "jsx": "<svg viewBox='0 0 400 300' style={{width:'100%',height:'100%',background:'#1a1a2e',padding:20}}><rect x={0} y={0} width={400} height={300} fill='#1a1a2e' rx={8}/><line x1={60} y1={20} x2={60} y2={250} stroke='#444' strokeWidth={1}/><line x1={60} y1={250} x2={370} y2={250} stroke='#444' strokeWidth={1}/><text x={55} y={tween(0,200)>0?260-tween(0,200)+'':245} textAnchor='end' fill='#888' fontSize={12}>{Math.round(tween(0,80))}</text><rect x={85} y={260-tween(0,200)} width={65} height={tween(0,200)} fill='#E38627' rx={4}/><text x={117} y={278} textAnchor='middle' fill='#aaa' fontSize={15}>A</text><text x={55} y={tween(0,150)>0?260-tween(0,150)+'':245} textAnchor='end' fill='#888' fontSize={12}>{Math.round(tween(0,60))}</text><rect x={170} y={260-tween(0,150)} width={65} height={tween(0,150)} fill='#C13C37' rx={4}/><text x={202} y={278} textAnchor='middle' fill='#aaa' fontSize={15}>B</text><text x={55} y={tween(0,100)>0?260-tween(0,100)+'':245} textAnchor='end' fill='#888' fontSize={12}>{Math.round(tween(0,40))}</text><rect x={255} y={260-tween(0,100)} width={65} height={tween(0,100)} fill='#6A2135' rx={4}/><text x={287} y={278} textAnchor='middle' fill='#aaa' fontSize={15}>C</text></svg>",
+          "imports": {},
+          "actions": [{ "start": 0, "end": 4 }]
+        }
+      ]
+    }
+  ]
+}

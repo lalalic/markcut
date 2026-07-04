@@ -98,16 +98,19 @@ export const image = base.extend({
 export type Image = z.infer<typeof image>;
 
 /**
- * Lite component: references a host-registered React component by `name`.
- * Props are JSON-serializable. No JSX parsing, no eval.
+ * Component node — JSX usage expression compiled at runtime.
  *
- * Full bundle adds a `jsx` field with react-jsx-parser, kept opt-in.
+ * The `jsx` field is a React JSX expression (e.g. "<BarChart data={...} />").
+ * Component tag names are resolved from the `imports` map at runtime.
+ *
+ * The `imports` map is populated by the descriptive compiler from frontmatter
+ * `imports:` entries. Each key is a component name, each value is a URL or
+ * `__jsx__:name` for inline definitions.
  */
 export const component = base.extend({
   type: z.literal("component").default("component"),
-  componentName: z.string().describe("key in <ComposeProvider components={...}>"),
-  src: z.string().optional().describe("URL of remote component bundle (ESM or CJS)"),
-  props: z.record(z.string(), z.unknown()).default(() => ({})),
+  jsx: z.string().describe("usage JSX expression compiled at runtime; tag names resolved from imports"),
+  imports: z.record(z.string(), z.string()).optional().describe("resolved frontmatter imports: name → URL. Values prefixed `__jsx__:` are inline definitions."),
   actions: z.array(action).min(1).default(() => [action.parse({})]),
 });
 export type Component = z.infer<typeof component>;

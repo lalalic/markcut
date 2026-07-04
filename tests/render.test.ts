@@ -957,3 +957,149 @@ describe("Video startFrom/endAt Trimming", () => {
     expect(getFrameFileSize(framePhoto)).toBeGreaterThan(5000);
   });
 });
+
+// ───────────────────────────────────────────────────────────────────────────
+// 17. Component DynamicLoader
+// ───────────────────────────────────────────────────────────────────────────
+
+describe("Component DynamicLoader", () => {
+  /** Zod-parse a fixture to verify the stream tree schema accepts it. */
+  async function parseFixture(name: string): Promise<any> {
+    const { root: rootSchema } = await import("../src/schema/index");
+    const { readFileSync } = await import("node:fs");
+    const path = fixturePath(name);
+    const raw = JSON.parse(readFileSync(path, "utf-8"));
+    const data = raw.root ?? raw;
+    return rootSchema.parse(data);
+  }
+
+  it("parses component with src URL (remote bundle)", async () => {
+    const parsed = await parseFixture("component-single-src.json");
+
+    const comp = parsed.children[0];
+    expect(comp.type).toBe("component");
+    expect(comp.componentName).toBe("StatCounter");
+    expect(comp.src).toBe("https://esm.sh/stat-counter");
+    expect(comp.props).toEqual({ value: 42, label: "Growth" });
+    expect(comp.actions).toHaveLength(1);
+    expect(comp.actions[0].start).toBe(0);
+    expect(comp.actions[0].end).toBe(2);
+  });
+
+  it("parses component with jsx + imports map", async () => {
+    const parsed = await parseFixture("component-jsx-usage.json");
+
+    // Scene 1: jsx usage with imports
+    const scene1 = parsed.children[0];
+    expect(scene1.type).toBe("folder");
+    const jsxComp = scene1.children[0];
+    expect(jsxComp.type).toBe("component");
+    expect(jsxComp.jsx).toBe("<StatCounter value={42} label='Test' />");
+    expect(jsxComp.componentName).toBe("");
+    expect(jsxComp.imports).toEqual({
+      StatCounter: "https://esm.sh/stat-counter",
+      Logo: "https://esm.sh/gh/user/logo",
+    });
+
+    // Scene 2: inline definition marker
+    const scene2 = parsed.children[1];
+    const inlineComp = scene2.children[0];
+    expect(inlineComp.type).toBe("component");
+    expect(inlineComp.componentName).toBe("InlineBadge");
+    expect(inlineComp.imports.InlineBadge).toBe("__jsx__:InlineBadge");
+  });
+
+  it("parses all component modes fixture", async () => {
+    const parsed = await parseFixture("component-all-modes.json");
+
+    expect(parsed.children).toHaveLength(4);
+
+    // Mode 1: host-registered (no src, no jsx)
+    const hostScene = parsed.children[0];
+    expect(hostScene.type).toBe("scene");
+    const hostComp = hostScene.children[1]; // skip isBackground
+    expect(hostComp.type).toBe("component");
+    expect(hostComp.componentName).toBe("AnimatedHeadline");
+    expect(hostComp.src).toBeUndefined();
+    expect(hostComp.jsx).toBeUndefined();
+
+    // Mode 2: remote src
+    const remoteScene = parsed.children[1];
+    const remoteComp = remoteScene.children[0];
+    expect(remoteComp.type).toBe("component");
+    expect(remoteComp.componentName).toBe("ExternalWidget");
+    expect(remoteComp.src).toBe("https://esm.sh/react-widget@1.0.0");
+
+    // Mode 3: jsx usage
+    const jsxScene = parsed.children[2];
+    const jsxComp = jsxScene.children[0];
+    expect(jsxComp.type).toBe("component");
+    expect(jsxComp.jsx).toContain("<Counter value={99}");
+    expect(jsxComp.imports).toBeDefined();
+    expect(jsxComp.imports.Counter).toBe("https://esm.sh/counter-component");
+    expect(jsxComp.imports.Badge).toBe("https://esm.sh/badge-component");
+
+    // Mode 4: imports map with src + __jsx__ prefix
+    const impScene = parsed.children[3];
+    const impComp = impScene.children[0];
+    expect(impComp.type).toBe("component");
+    expect(impComp.src).toContain("esm.sh/gh/myorg/assets/Logo.tsx");
+    expect(impComp.imports.Footer).toBe("__jsx__:Footer");
+    expect(impComp.imports.Icon).toContain("esm.sh/gh/myorg/assets/Icon.tsx");
+  });
+
+  it("parses component-dynamic fixture (host + remote mix)", async () => {
+    const parsed = await parseFixture("component-dynamic.json");
+
+    // First scene: host-registered component
+    const hostScene = parsed.children[0];
+    const hostComp = hostScene.children[0];
+    expect(hostComp.type).toBe("component");
+    expect(hostComp.componentName).toBe("AnimatedHeadline");
+    expect(hostComp.src).toBeUndefined();
+    expect(hostComp.imports).toBeUndefined();
+
+    // Second scene: remote src component
+    const remoteScene = parsed.children[1];
+    const remoteComp = remoteScene.children[0];
+    expect(remoteComp.type).toBe("component");
+    expect(remoteComp.componentName).toBe("RemoteBadge");
+    expect(remoteComp.src).toContain("esm.sh/gh/user/remotion-component-example");
+    expect(remoteComp.props).toEqual({ label: "Remote" });
+  });
+
+  it("renders component with src URL (requires network, may skip)", async () => {
+    // Try rendering with a src URL component — if it fails due to network/404,
+    // the test should not crash (engine returns null for unresolvable components)
+    try {
+      const output = renderFixture(fixturePath("component-single-src.json"), {
+        outputName: "component-src.mp4",
+        timeout: RENDER_TIMEOUT,
+      });
+      const info = getVideoInfo(output);
+      expect(info.width).toBe(1080);
+      expect(info.height).toBe(1920);
+      expect(info.fileSizeBytes).toBeGreaterThan(1000);
+    } catch (err: any) {
+      // Component URL may be unresolvable in CI — that's OK
+      if (err.message.includes("HTTP 404") || err.message.includes("fetch failed")) {
+        console.warn("  Skipping src render: component URL not available");
+        return;
+      }
+      throw err;
+    }
+  });
+
+  it("renders component-dynamic fixture (host-registered fallback)", async () => {
+    // Host-registered components render via ComposeProvider.
+    // Remote src components will fail silently (null render), but the scene
+    // with the host-registered component should still produce output.
+    const output = renderFixture(fixturePath("component-dynamic.json"), {
+      outputName: "component-dynamic.mp4",
+      timeout: RENDER_TIMEOUT,
+    });
+    const info = getVideoInfo(output);
+    expect(info.width).toBe(640);
+    expect(info.fileSizeBytes).toBeGreaterThan(1000);
+  });
+});

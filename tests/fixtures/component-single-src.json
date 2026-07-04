@@ -1,0 +1,19 @@
+{
+  "id": "root",
+  "type": "root",
+  "width": 1080,
+  "height": 1920,
+  "fps": 30,
+  "isSeries": true,
+  "children": [
+    {
+      "id": "c-single-jsx",
+      "type": "component",
+      "jsx": "<PieChart data={[{value:40,color:'#E38627'},{value:30,color:'#C13C37'},{value:20,color:'#6A2135'}]} lineWidth={20} rounded={true} animate={false} />",
+      "imports": {
+        "PieChart": "https://esm.sh/react-minimal-pie-chart@9.1.2"
+      },
+      "actions": [{ "start": 0, "end": 2 }]
+    }
+  ]
+}

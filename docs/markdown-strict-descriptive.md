@@ -7,9 +7,56 @@ Complete reference for deterministic LLM video generation. No inference.
 A markdown document compiled into a renderable scene tree.
 
 - Top heading `# video`
+- Optional YAML-style frontmatter block `---\n...\n---\n` at the very top
 - Root config line: `width height fps layout [theme]`
 - Scenes via `##`/`###`/`####` headings
 - Leaf nodes via `- typeToken ...` bullets
+- Inline JSX component definitions via ```jsx Name code fences
+
+## Frontmatter
+
+An optional YAML-ish block at the top of the document, delimited by `---`. Supports:
+
+- **Scalar root keys**: `width`, `height`, `fps`, `theme`, `tts`, `stt`, `layout`, etc.
+- **`imports:`** array: each entry defines a component's origin (name + from/jsx/exports)
+
+```yaml
+---
+width: 1080
+height: 1920
+fps: 30
+theme: neon
+imports:
+  - StatCounter:
+      from: npm:stat-counter
+  - Logo:
+      from: github:foo/bar/src/Logo.tsx
+  - Banner:
+      from: https://cdn.example.com/banner.js
+  - InlineBadge:
+      jsx: |
+        export default ({text}) => <span style={{...}}>{text}</span>
+---
+```
+
+Each import entry has:
+- **`name`** — component name (used as JSX tag and lookup key)
+- **`from:`** — source spec (see below)
+- **`exports:`** — named export to pick (default: `"default"`)
+- **`jsx:`** — inline component definition source (alternative to `from:`)
+
+`from:` spec forms:
+
+| Prefix | Resolves to |
+|---|---|
+| `npm:pkg` | `https://esm.sh/pkg` |
+| `npm:pkg@1.2.3/Comp.js` | `https://esm.sh/pkg@1.2.3/Comp.js` |
+| `git:user/repo` | `https://esm.sh/gh/user/repo` |
+| `git:user/repo@br/path` | `https://esm.sh/gh/user/repo@br/path` |
+| `github:user/repo@br/...` | same as `git:` |
+| `https://...`, `http://...`, path | used as-is |
+
+Body-level JSON `imports:[...]` is also supported:
 
 ## Key Reference (use these names)
 
@@ -24,7 +71,7 @@ A markdown document compiled into a renderable scene tree.
 | `layout` | `series\|parallel\|transitionSeries` | root, scene | 
 | `transition` | `fade\|slide\|wipe\|flip\|clockWipe` | transitionSeries |
 | `transitionTime` | seconds | transitionSeries |
-| `src` | media path/URL | leaves |
+| `src` | media path/URL (for image/video/audio/include) | leaves (not component) |
 | `duration` | seconds | leaves |
 | `start` | parallel-only offset | parallel children |
 | `startFrom` | trim from source start | video, audio |
@@ -34,8 +81,9 @@ A markdown document compiled into a renderable scene tree.
 | `fit` | `contain\|cover\|fill` | image |
 | `loop` | int >1 | audio |
 | `playbackRate` | number | video |
-| `componentName` | registry key | component |
+| `componentName` | *removed — use `jsx:` instead* | component |
 | `props` | `{...}` JSON | component |
+| `jsx` | usage JSX expression (`"<ComA value={42} />"`); compiled at runtime with frontmatter imports in scope | component |
 | `animation` | builtin name or `custom` | effect |
 | `customKeyframes` | `{...}` JSON | effect |
 | `waypoints` | `[lat,lng,"label";...]` | map |
@@ -91,11 +139,36 @@ Subtitles are configured at the root level as a VTT overlay, not as tree nodes. 
 
 ### `component`
 
-When: charts, headlines, mockups. Required: `componentName`, `duration`.
+When: JSX expression rendered at runtime with frontmatter imports in scope. Required: `jsx`, plus `duration`.
 
-Built-in names: `AnimatedHeadline`, `TypewriterText`, `GlitchReveal`, `TextCard`, `CalloutBox`, `EndTag`, `DeviceMockup`, `CursorFlyover`, `ComparisonSlider`, `StatCounter`, `ProgressBar`, `BarChart`, `LineChart`, `PieChart`, `ComparisonCard`, `GradientBackground`, `ParticleField`, `LightLeak`, `SplitScreen`, `SpotlightReveal`.
+All external components must be registered in frontmatter `imports:`. Component nodes use `jsx:"<TagName ... />"` to reference them.
 
-`- component componentName:StatCounter duration:2 props:{value:42,label:"Growth"}`
+Two ways to register components:
+
+1. **Frontmatter `imports:`** — declare origin (`from:`, `jsx:`, `exports:`)
+2. **```jsx Name** code fences — shorthand for `{ name, jsx: "..." }` entries
+
+```md
+# Frontmatter: declares origins
+---
+imports:
+  - StatCounter:
+      from: npm:stat-counter
+  - Logo:
+      from: github:myorg/design/src/Logo.tsx
+  - Greeting:
+      jsx: |
+        export default ({name}) => <h1>Hello {name}</h1>
+---
+
+# JSX usage (references frontmatter components as tags)
+- component dr:1 jsx:"<StatCounter value={42} />"
+
+# JSX block (registers inline component)
+\`\`\`jsx Greeting
+export default ({name}) => <h1 style={{color:"#fff"}}>Hello {name}</h1>
+\`\`\`
+```
 
 ### `rhythm`
 
@@ -146,19 +219,66 @@ When: external video JSON. Required: `src` + `duration`, or inline `children`.
 3. Leaves as `- type ...` bullets under scenes.
 4. Verify each leaf has resolvable duration.
 
+## Tween Animation
+
+Animate numeric props over time by using `tween(from?, to, easing?)` expressions inside JSX usage expressions. Tweens resolve at render time using Remotion's `interpolate()`.
+
+### Usage
+
+Call `tween(from, to)` directly as a function inside the usage expression — it's available in the compiled scope:
+
+```md
+- component duration:4 jsx:"<BarChart data={[{name:'A',value:tween(0,80)},{name:'B',value:tween(0,60)}]} keys={['value']} indexBy='name' />"
+```
+
+You can also use `tween()` in inline SVG:
+
+```md
+- component duration:4 jsx:"<svg viewBox='0 0 400 300'><rect y={260-tween(0,200)} width={80} height={tween(0,200)} fill='#E38627' /></svg>"
+```
+
+### Supported syntax
+
+```
+tween(to)                     — 0 → to, linear
+tween(from, to)               — from → to, linear
+tween(from, to, easeOut)      — with easing
+tween(from, to, spring)       — spring animation
+tween(#000, #FFF)             — color interpolation
+```
+
+### Important notes
+
+- Tween values only work on `component` nodes.
+- Frame range is derived from the component's `duration` (minus `start` offset).
+- `tween()` uses Remotion's `interpolate()` with the component's action duration.
+- At frame 0, `tween(from, to)` returns `from`.
+
 ## Self-Check
 
 - [ ] Root has width, height, fps, layout.
 - [ ] Every scene has ≥1 child.
 - [ ] No bare values; all explicit `key:value`.
 - [ ] No `start` outside parallel.
-- [ ] All `componentName` from the built-in list (or host-registered).
+- [ ] No `src` on component nodes.
+- [ ] Every component `jsx:` references a name in frontmatter `imports:` or a ```jsx code block.
+- [ ] Every `jsx:` on a component node is a usage expression (JSX tag), not a definition.
 
 ## Example
 
 ```md
+---
+width: 1080
+height: 1920
+fps: 30
+theme: neon
+imports:
+  - StatCounter:
+      from: npm:stat-counter
+  - Logo:
+      from: github:myorg/design-system/src/Logo.tsx
+---
 # video
-width:1080 height:1920 fps:30 layout:series theme:neon script:"A short memory film"
 
 ## Hook
 layout:parallel script:"Set location and emotional tone"
@@ -170,8 +290,20 @@ layout:transitionSeries transition:fade transitionTime:0.4 script:"Move through 
 - video src:clips/fire.mp4 startFrom:1 endAt:4
 
 ## Stat
-- component componentName:StatCounter duration:2 props:{value:42,label:"S'mores"}
+- component duration:2 jsx:"<StatCounter value={42} label='S-mores' />"
+
+## Logo
+- component dr:1 jsx:"<Logo />"
+
+## JSX usage
+- component duration:1 jsx:"<StatCounter value={99} />"
 
 ## Route
 - map duration:3 travelMode:DRIVING waypoints:[37.7749,-122.4194,"SF";34.0522,-118.2437,"LA"]
+
+\`\`\`jsx Greeting
+export default function Greeting({ name }) {
+  return <h1 style={{fontSize: 80, color: "#fff"}}>Hello {name}</h1>;
+}
+\`\`\`
 ```

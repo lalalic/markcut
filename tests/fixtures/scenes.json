@@ -18,12 +18,7 @@
         {
           "id": "scene-1-headline",
           "type": "component",
-          "componentName": "AnimatedHeadline",
-          "props": {
-            "text": "Scene Rendering Works",
-            "subtext": "Testing the scene type in stream tree",
-            "gradient": true
-          },
+          "jsx": "<div style={{background:'linear-gradient(135deg,#667eea,#764ba2)',padding:'30px',borderRadius:'12px',textAlign:'center'}}><h2 style={{color:'white',fontSize:'28px',margin:0}}>Scene Rendering Works</h2><p style={{color:'rgba(255,255,255,0.7)',fontSize:'14px',marginTop:'8px'}}>Testing the scene type in stream tree</p></div>",
           "actions": [{ "start": 0, "end": 3 }]
         }
       ]
@@ -37,12 +32,7 @@
         {
           "id": "scene-2-headline",
           "type": "component",
-          "componentName": "AnimatedHeadline",
-          "props": {
-            "text": "Test Complete",
-            "subtext": "All scene types render correctly",
-            "gradient": true
-          },
+          "jsx": "<div style={{background:'linear-gradient(135deg,#764ba2,#667eea)',padding:'30px',borderRadius:'12px',textAlign:'center'}}><h2 style={{color:'white',fontSize:'28px',margin:0}}>Test Complete</h2><p style={{color:'rgba(255,255,255,0.7)',fontSize:'14px',marginTop:'8px'}}>All scene types render correctly</p></div>",
           "actions": [{ "start": 0, "end": 2 }]
         }
       ]

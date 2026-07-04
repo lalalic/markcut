@@ -1,0 +1,31 @@
+{
+  "root": {
+    "id": "root",
+    "type": "root",
+    "width": 640,
+    "height": 480,
+    "fps": 30,
+    "isSeries": true,
+    "children": [
+      {
+        "id": "scene-pie",
+        "type": "folder",
+        "isSeries": false,
+        "children": [
+          {
+            "id": "pie-chart",
+          "type": "component",
+          "jsx": "<PieChart data={[{value:40,color:'#E38627'},{value:30,color:'#C13C37'},{value:20,color:'#6A2135'}]} lineWidth={20} rounded={true} animate={false} paddingAngle={2} label={false} />",
+          "imports": {
+            "PieChart": "https://esm.sh/react-minimal-pie-chart@9.1.2"
+          },
+          "actions": [{ "start": 0, "end": 4 }]
+              "label": false
+            },
+            "actions": [{ "start": 0, "end": 4 }]
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -93,23 +93,13 @@ If `cues` omitted and `src` is plain text, renders as a single caption for `dura
 
 ### `component`
 
-When to use: built-in or host-registered React component (charts, headlines, mockups).
+When to use: JSX expression rendered at runtime with frontmatter imports in scope.
 
 | Field | Required | Type | Notes |
 |---|---|---|---|
 | `type` | yes | `"component"` | |
-| `componentName` | yes | string | registry key (see list below) |
-| `props` | opt | object | JSON-serializable |
-| `src` | opt | string | remote ESM/CJS bundle URL |
-| `duration` | yes | number | |
-
-Built-in `componentName` values:
-
-- **Text**: `AnimatedHeadline`, `TypewriterText`, `GlitchReveal`, `TextCard`, `CalloutBox`, `EndTag`
-- **Media**: `DeviceMockup`, `CursorFlyover`, `ComparisonSlider`
-- **Data**: `StatCounter`, `ProgressBar`, `BarChart`, `LineChart`, `PieChart`, `ComparisonCard`
-- **Atmosphere**: `GradientBackground`, `ParticleField`, `LightLeak`
-- **Layout**: `SplitScreen`, `SpotlightReveal`
+| `jsx` | yes | string | JSX usage expression, e.g. `"<BarChart data={...} />"` |
+| `duration` | yes | number |
 
 ### `rhythm`
 
@@ -175,6 +165,72 @@ When to use: embed an external video JSON (stream tree or scene-based).
 | `children` | opt | node[] | inline fallback if no `src` |
 | `duration` | cond | number | required if `src` set |
 | `volume` | opt | number | |
+
+## Imports
+
+External React components are registered via `root.imports`. Each entry defines the component's name and origin (`from:` URL or `jsx:` inline definition).
+
+### Root-level imports array
+
+```json
+{
+  "imports": [
+    { "name": "BarChart", "from": "npm:@nivo/bar" },
+    { "name": "Logo", "from": "git:myorg/assets/src/Logo.tsx" },
+    { "name": "Greeting", "jsx": "export default ({name}) => <h1 style={{color:'#fff'}}>Hello {name}</h1>" }
+  ]
+}
+```
+
+### Import entry fields
+
+| Field | Required | Type | Notes |
+|---|---|---|---|
+| `name` | yes | string | component name — used as JSX tag in usage expressions |
+| `from` | cond | string | source spec (see below); alternative to `jsx` |
+| `jsx` | cond | string | inline component definition source (e.g. `"export default ({text}) => <span>{text}</span>"`) |
+| `exports` | opt | string | named export to pick from the module (default: `"default"`) |
+
+### `from:` spec forms
+
+| Pattern | Resolves to |
+|---|---|
+| `npm:pkg` | `https://esm.sh/pkg` |
+| `npm:pkg@1.2.3` | `https://esm.sh/pkg@1.2.3` |
+| `git:user/repo` | `https://esm.sh/gh/user/repo` |
+| `git:user/repo@branch/path` | `https://esm.sh/gh/user/repo@branch/path` |
+| `github:user/repo` | same as `git:` |
+| `https://...`, `http://...`, local path | used as-is |
+
+### Using imports in component nodes
+
+Components reference imports by name as JSX tags in the usage expression. The compiler passes the resolved `imports` map through to the stream node for runtime resolution:
+
+```json
+{
+  "type": "component",
+  "jsx": "<BarChart data={[{name:'A',value:80},{name:'B',value:60},{name:'C',value:40}]} keys={['value']} indexBy='name' />",
+  "duration": 4
+}
+```
+
+Inline `jsx:` definitions in the imports array are also available as JSX tags in usage expressions:
+
+```json
+{
+  "imports": [
+    { "name": "Greeting", "jsx": "export default ({name}) => <h1 style={{color:'#fff'}}>Hello {name}</h1>" }
+  ]
+}
+// ...
+{ "type": "component", "jsx": "<Greeting name='World' />", "duration": 2 }
+```
+
+> Components defined via `jsx:` inline definitions are compiled at runtime with Babel and loaded as blob URLs. They have access to `useCurrentFrame()`, `interpolate()`, and other Remotion hooks.
+
+### Imports in markdown
+
+The markdown descriptive format supports the same `imports:` array in YAML frontmatter, plus ` ```jsx Name ` code fence blocks for inline definitions. See [Markdown Strict Descriptive](markdown-strict-descriptive.md#component) for details.
 
 ## Common Metadata Fields
 
@@ -291,6 +347,72 @@ Whisper models: `tiny` (fastest, default), `base`, `small`, `medium`, `large`.
 --stt-model tiny
 --stt-language en
 
+## Tween Animation
+
+Animate numeric props over time using `tween(from?, to, easing?)` expressions in component props. Tweens resolve at render time using Remotion's `interpolate()`, producing smooth frame-by-frame animation.
+
+### Syntax
+
+```
+tween(to)                     — 0 → to, linear
+tween(from, to)               — from → to, linear
+tween(from, to, easeOut)      — from → to, with easing
+tween(from, to, spring)       — from → to, spring animation
+tween(from, to, spring(damping:12)) — spring with custom params
+tween(#000, #FFF)             — color hex → hex
+tween(#000, #FFF, easeInOut)  — color hex with easing
+```
+
+### Usage in JSX expressions
+
+Place `tween(...)` expressions inside JSX usage expressions. The engine compiles the JSX at runtime and resolves each `tween()` call to an animated number at each frame:
+
+```json
+{
+  "type": "component",
+  "jsx": "<BarChart data={[{name:'A',value:tween(0,80)},{name:'B',value:tween(0,60)},{name:'C',value:tween(0,40)}]} keys={['value']} indexBy='name' />",
+  "duration": 4
+}
+```
+
+This animates the bars from 0 to their target heights over 4 seconds. At frame 0 all values are 0; they interpolate linearly to 80, 60, 40 by the end.
+
+You can also use `tween()` in inline SVG expressions:
+
+```json
+{
+  "type": "component",
+  "jsx": "<svg viewBox='0 0 400 300'><rect y={260 - tween(0, 200)} width={80} height={tween(0, 200)} fill='#E38627' /></svg>",
+  "duration": 4
+}
+```
+
+### Supported easings
+
+| Name | Remotion mapping |
+|---|---|
+| `linear` (default) | identity |
+| `ease`, `easeIn` | `Easing.in(Easing.ease)` |
+| `easeOut` | `Easing.out(Easing.ease)` |
+| `easeInOut` | `Easing.inOut(Easing.ease)` |
+| `spring` | `spring()` from remotion |
+| `spring(damping:N, mass:N)` | spring with custom config |
+
+### Color tween
+
+Hexadecimal colors can be interpolated:
+
+```json
+{ "fill": "tween(#000000, #ff0000)" }
+```
+
+### Important notes
+
+- Tween values only work inside `component` nodes (not on `image`, `video`, `audio`, etc.).
+- The frame range is derived from the **action duration** (the `duration` field for the component minus its `start` offset).
+- The `tween()` function uses Remotion's `interpolate()` under the hood, with the frame range set to the component's action duration.
+- At frame 0, `tween(from, to)` returns `from`. The component receives the initial value immediately.
+
 ## Generation Workflow
 
 1. Choose `width`/`height`/`fps`/`layout`/`theme`.
@@ -347,7 +469,7 @@ Whisper models: `tiny` (fastest, default), `base`, `small`, `medium`, `large`.
       "title": "Stat",
       "layout": "parallel",
       "children": [
-        { "type": "component", "componentName": "StatCounter", "props": { "value": 42, "label": "S'mores" }, "duration": 2 }
+        { "type": "component", "jsx": "<StatCounter value={42} label='S-mores' />", "duration": 2 }
       ]
     }
   ]

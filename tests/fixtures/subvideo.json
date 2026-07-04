@@ -23,8 +23,7 @@
         {
           "id": "title-intro",
           "type": "component",
-          "componentName": "AnimatedHeadline",
-          "props": { "text": "Main Video" },
+          "jsx": "<div style={{background:'#667eea',color:'white',padding:'30px',borderRadius:'12px',textAlign:'center'}}><h2 style={{margin:0,fontSize:'28px'}}>Main Video</h2></div>",
           "actions": [{ "start": 0, "end": 2 }]
         }
       ]
@@ -51,8 +50,7 @@
         {
           "id": "title-outro",
           "type": "component",
-          "componentName": "AnimatedHeadline",
-          "props": { "text": "Back to Main" },
+          "jsx": "<div style={{background:'#764ba2',color:'white',padding:'30px',borderRadius:'12px',textAlign:'center'}}><h2 style={{margin:0,fontSize:'28px'}}>Back to Main</h2></div>",
           "actions": [{ "start": 0, "end": 2 }]
         }
       ]

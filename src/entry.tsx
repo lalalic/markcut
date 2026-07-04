@@ -35,7 +35,23 @@ const DefaultContainer: ComposeContextValue["Container"] = ({ children, style, c
 );
 
 export function RemotionEngine({ root, compose, background = "#000", theme }: RemotionEngineProps) {
-  const parsed = React.useMemo<Root>(() => rootSchema.parse(root), [root]);
+  const parsed = React.useMemo<Root>(() => {
+    if (!root) {
+      // Return a minimal valid root when no data is provided (e.g. studio placeholder)
+      return {
+        id: "root",
+        type: "root",
+        width: 1080,
+        height: 1920,
+        fps: 30,
+        visible: true,
+        isSeries: false,
+        children: [],
+        durationInSeconds: 0.1,
+      } as unknown as Root;
+    }
+    return rootSchema.parse(root) as unknown as Root;
+  }, [root]);
 
   // engine pre-pass: stamp durationInSeconds onto every node
   React.useMemo(() => getDurationInSeconds(parsed as any, true), [parsed]);
@@ -48,7 +64,6 @@ export function RemotionEngine({ root, compose, background = "#000", theme }: Re
   const value = React.useMemo<ComposeContextValue>(
     () => ({
       Container: compose?.Container ?? DefaultContainer,
-      components: compose?.components ?? {},
       onError: compose?.onError,
     }),
     [compose],
@@ -93,16 +108,11 @@ export * from "./schema/index";
 export * from "./context/index";
 export * from "./descriptive/compiler";
 export * from "./descriptive/markdown";
-export {
-  resolveMediaDurations,
-  resolveScripts,
-  resolveAll,
-} from "./descriptive/resolve";
-export type {
-  ResolveMediaOptions,
-  ResolveScriptOptions,
-  ResolveAllOptions,
-} from "./descriptive/resolve";
 export { getDurationInSeconds } from "./utils/index";
-export { preloadComponents } from "./types/DynamicLoader";
+export { preloadComponents, useJsxWithImports } from "./types/DynamicLoader";
 export { builtinAnimations } from "./types/keyframes";
+export { resolveTheme } from "./themes";
+// Resolve functions (TTS, STT, media probe) are available via
+// import from "markcut/descriptive-resolve" for CLI use.
+// Not re-exported from entry to avoid bundling Node.js modules
+// (node:child_process, node:fs, etc.) into the browser-side render bundle.
