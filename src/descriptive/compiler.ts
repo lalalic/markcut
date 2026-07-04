@@ -195,6 +195,8 @@ export interface DescriptiveRoot {
   subtitle?: SubtitleOverlay;
   /** Frontmatter imports: array of named component registrations. */
   imports?: ImportEntry[];
+  /** Raw imports block source (from \`\`\`imports code fence). Parsed by parseImportsBlock. */
+  importsBlock?: string;
   children: DescriptiveNode[];
 }
 
@@ -733,6 +735,66 @@ interface ResolvedImport {
   exports?: string;
 }
 
+/**
+ * Parse an \`\`\`imports code block into ImportEntry[].
+ *
+ * Supports:
+ *   export { Name } from "spec"             — remote import
+ *   export { Name as Alias } from "spec"    — aliased remote import
+ *   export { Name1, Name2 } from "spec"     — multiple from same source
+ *   export function Name(...) { ... }       — inline component definition
+ *   export default function Name(...) { ... } — inline default definition
+ */
+export function parseImportsBlock(source: string): ImportEntry[] {
+  const entries: ImportEntry[] = [];
+  const lines = source.split("\n");
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i]!.trim();
+
+    // export { Name } from "spec"  — single or multiple
+    // export { Name as Alias } from "spec"
+    const namedReExport = /^export\s+\{\s*([^}]+)\}\s+from\s+["'`](.+?)["'`]\s*;?\s*$/.exec(line);
+    if (namedReExport) {
+      const namesStr = namedReExport[1]!;
+      const fromSpec = namedReExport[2]!;
+      // Parse each name (handles "Name" and "Name as Alias")
+      for (const part of namesStr.split(",")) {
+        const trimmed = part.trim();
+        const asMatch = /^(.+?)\s+as\s+(.+)$/i.exec(trimmed);
+        const name = asMatch ? asMatch[2]!.trim() : trimmed;
+        entries.push({ name, from: fromSpec });
+      }
+      i++;
+      continue;
+    }
+
+    // export function Name(...) { ... }  or  export default function Name(...) { ... }
+    const funcExport = /^export(?:\s+default)?\s+function\s+(\w+)\s*\(/.exec(line);
+    if (funcExport) {
+      const name = funcExport[1]!;
+      // Collect the full function body
+      const bodyLines: string[] = [line];
+      let braceDepth = (line.match(/{/g) || []).length - (line.match(/}/g) || []).length;
+      i++;
+      while (i < lines.length && braceDepth > 0) {
+        const bl = lines[i]!;
+        bodyLines.push(bl);
+        braceDepth += (bl.match(/{/g) || []).length;
+        braceDepth -= (bl.match(/}/g) || []).length;
+        i++;
+      }
+      entries.push({ name, jsx: bodyLines.join("\n") });
+      continue;
+    }
+
+    i++;
+  }
+
+  return entries;
+}
+
 export function resolveComponentImportSpec(spec: string): string {
   const s = spec.trim();
   if (s.startsWith("npm:")) return `https://esm.sh/${s.slice(4)}`;
@@ -743,7 +805,12 @@ export function resolveComponentImportSpec(spec: string): string {
 
 function resolveComponentSources(root: DescriptiveRoot): Map<string, ResolvedImport> {
   const registry = new Map<string, ResolvedImport>();
-  const entries = root.imports;
+
+  // If importsBlock is present, parse it into ImportEntry[] (overrides frontmatter imports)
+  let entries = root.imports;
+  if (root.importsBlock) {
+    entries = parseImportsBlock(root.importsBlock);
+  }
   if (!entries || !entries.length) return registry;
 
   for (const entry of entries) {

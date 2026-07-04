@@ -45,6 +45,33 @@ Each import entry has:
 - **`exports:`** — named export to pick (default: `"default"`)
 - **`jsx:`** — inline component definition source (alternative to `from:`)
 
+### Imports block (preferred)
+
+Instead of YAML `imports:` in frontmatter, use a `` ```imports `` code block anywhere in the document. The block contains JavaScript `export` statements that register components. This is simpler for LLMs to generate and avoids YAML syntax issues.
+
+````
+```imports
+export { PieChart } from "npm:recharts"
+export { BarChart, LineChart } from "npm:recharts"
+export { StatCounter as Counter } from "npm:stat-counter"
+export function Hello({ name }) {
+  return <div style={{color: '#fff'}}>Hello {name}</div>;
+}
+```
+````
+
+If an imports block is present, it **takes precedence** over the frontmatter `imports:` array.
+
+Supported patterns inside the block:
+
+| Pattern | Effect |
+|---|---|
+| `export { Name } from "spec"` | Registers `Name` from the resolved source |
+| `export { Name as Alias } from "spec"` | Registers under `Alias` instead |
+| `export { N1, N2 } from "spec"` | Registers multiple from the same source |
+| `export function Name(...) { ... }` | Inline component definition |
+| `export default function Name(...) { ... }` | Inline component definition (default) |
+
 `from:` spec forms:
 
 | Prefix | Resolves to |

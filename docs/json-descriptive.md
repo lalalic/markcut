@@ -202,6 +202,10 @@ External React components are registered via `root.imports`. Each entry defines 
 | `github:user/repo` | same as `git:` |
 | `https://...`, `http://...`, local path | used as-is |
 
+### Imports block (markdown only)
+
+The `` ```imports `` code block is a markdown-only feature. See [Markdown Strict Descriptive](markdown-strict-descriptive.md#frontmatter) for the full reference.
+
 ### Using imports in component nodes
 
 Components reference imports by name as JSX tags in the usage expression. The compiler passes the resolved `imports` map through to the stream node for runtime resolution:
