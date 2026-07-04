@@ -52,14 +52,20 @@ Percentages `"0"`–`"100"` map to action duration. Any numeric CSS property wor
 
 ## 2. Remote Components (load from URL)
 
-Load a React component from a remote URL at render time:
+Register remote components via `import` in a `` ```js imports `` block:
+
+````
+```js imports
+import { Badge } from "https://cdn.example.com/components/badge.js"
+```
+````
+
+Then reference them in component JSX:
 
 ```json
 {
   "type": "component",
-  "componentName": "RemoteBadge",
-  "src": "https://cdn.example.com/components/badge.js",
-  "props": { "text": "LIVE", "color": "#ff0000" },
+  "jsx": "<Badge text='LIVE' color='#ff0000' />",
   "actions": [{ "start": 0, "end": 3 }]
 }
 ```

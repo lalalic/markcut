@@ -94,7 +94,7 @@ describe("parseMarkdownDescriptive", () => {
   });
 
   it("accepts full-word type tokens", () => {
-    const doc = `# video\nlo:series\n## Intro lo:parallel\n- image cover.jpg dr:2\n- video clip.mp4 sf:1 ea:3\n- audio bgm.mp3 dr:3 vol:0.5\n- component AnimatedHeadline dr:2\n- effect fadeIn\n  - image card.jpg dr:1\n- map dr:2 wp:[37.77,-122.41,\"SF\";34.05,-118.24,\"LA\"]`;
+    const doc = `# video\nlo:series\n## Intro lo:parallel\n- image cover.jpg dr:2\n- video clip.mp4 sf:1 ea:3\n- audio bgm.mp3 dr:3 vol:0.5\n- component dr:2 jsx:\"<AnimatedHeadline />\"\n- effect fadeIn\n  - image card.jpg dr:1\n- map dr:2 wp:[37.77,-122.41,\"SF\";34.05,-118.24,\"LA\"]`;
     const parsed = parseMarkdownDescriptive(doc, { mode: "compatible" });
 
     const scene = parsed.children[0]! as any;
@@ -178,7 +178,7 @@ width:1920 height:1080 fps:30 layout:series
     const doc = `# video
 lo:ser
 ## Demo
-- component componentName:AnimatedHeadline dr:3 props:{text:"Hello",gradient:true}`;
+- component dr:3 jsx:"<AnimatedHeadline text='Hello' gradient />"`;
     const parsed = parseMarkdownDescriptive(doc, { mode: "compatible" });
 
     const scene = parsed.children[0]! as any;
@@ -337,7 +337,7 @@ imports:
 ---
 # video
 ## Demo
-- component componentName:ComA dr:2`;
+- component dr:2 jsx:"<ComA />"`;
       const parsed = parseMarkdownDescriptive(doc, { mode: "strict" });
       expect(parsed.imports).toBeDefined();
       expect(parsed.imports!.length).toBe(3);
@@ -349,7 +349,7 @@ imports:
       const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
       const scene = compiled.children[0]! as any;
       const c = scene.children[0]!!;
-      expect((c as any).src).toBe("https://esm.sh/stat-counter");
+      expect((c as any).imports.ComA).toBe("https://esm.sh/stat-counter");
     });
 
     it("parses JSON array imports on a single line", () => {
@@ -357,7 +357,7 @@ imports:
 imports: [{"name":"ComA","from":"npm:pkg"},{"name":"ComB","from":"npm:other"}]
 ---
 # video
-- component componentName:ComA dr:1`;
+- component dr:1 jsx:"<ComA />"`;
       const parsed = parseMarkdownDescriptive(doc, { mode: "strict" });
       expect(parsed.imports).toEqual([
         { name: "ComA", from: "npm:pkg" },
@@ -375,7 +375,7 @@ imports:
 ---
 # video
 ## Demo
-- component componentName:Badge dr:1`;
+- component dr:1 jsx:"<Badge />"`;
       const parsed = parseMarkdownDescriptive(doc, { mode: "strict" });
       expect(parsed.imports).toBeDefined();
       expect(parsed.imports![0]).toEqual({
@@ -392,7 +392,7 @@ height: 480
 ---
 # video
 ## Demo
-- component componentName:Hello dr:1
+- component dr:1 jsx:"<Hello />"
 
 \`\`\`jsx Hello
 export default function Hello({ value }) {
@@ -437,12 +437,12 @@ export default function Unnamed() { return null; }
     it("supports inline jsx: key on a component node (usage JSX)", () => {
       const doc = `# video
 ## Scene
-- component componentName:Foo dr:1 jsx:"<Foo />"`;
+- component dr:1 jsx:"<Foo />"`;
       const parsed = parseMarkdownDescriptive(doc, { mode: "strict" });
       const scene = parsed.children[0]! as any;
       const c = scene.children[0]!!;
       expect(c.jsx).toBe("<Foo />");
-      expect(c.componentName as any).toBe("Foo");
+      expect(c.jsx).toContain("Foo");
     });
 
     it("component node can have jsx: only (no componentName)", () => {
@@ -451,10 +451,10 @@ imports:[{"name":"Greeting","from":"npm:greeting"}]
 ## Scene
 - component dr:1 jsx:"<Greeting name='World' />"`;
       const parsed = parseMarkdownDescriptive(doc, { mode: "strict" });
-      const scene = parsed.children[0]! as any;
-      const c = scene.children[0]!!;
+      const scene = parsed.children[0] as any;
+      const c = scene.children[0];
       expect(c.jsx).toBe("<Greeting name='World' />");
-      expect(c.componentName as any).toBeUndefined();
+      expect(c.jsx).toContain("Greeting");
 
       const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
       const compiledScene = compiled.children[0]! as any;
@@ -468,13 +468,13 @@ imports:[{"name":"Greeting","from":"npm:greeting"}]
       const doc = `# video
 imports:[{"name":"Logo","from":"npm:logo-pkg"}]
 ## Scene
-- component componentName:Logo dr:1`;
+- component dr:1 jsx:"<Logo />"`;
       const parsed = parseMarkdownDescriptive(doc, { mode: "strict" });
       expect(parsed.imports).toEqual([{ name: "Logo", from: "npm:logo-pkg" }]);
 
       const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
       const scene = compiled.children[0]! as any;
-      expect(scene.children[0]!!.src).toBe("https://esm.sh/logo-pkg");
+      expect(scene.children[0]!!.imports.Logo).toBe("https://esm.sh/logo-pkg");
     });
 
     // ── Import source types in frontmatter ─────────────────────────────────
@@ -487,11 +487,11 @@ imports:
 ---
 # video
 ## Scene
-- component componentName:CompA dr:1`;
+- component dr:1 jsx:"<CompA />"`;
       const parsed = parseMarkdownDescriptive(doc);
       expect(parsed.imports![0]!.from).toBe("npm:some-pkg");
       const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
-      expect((compiled.children[0]! as any).children[0]!.src).toBe("https://esm.sh/some-pkg");
+      expect((compiled.children[0]! as any).children[0]!.imports.CompA).toBe("https://esm.sh/some-pkg");
     });
 
     it("frontmatter imports with from:npm@version", () => {
@@ -502,13 +502,13 @@ imports:
 ---
 # video
 ## Scene
-- component componentName:Chart dr:1
+- component dr:1 jsx:"<Chart />"
 - component dr:1 jsx:"<Chart />"`;
       const parsed = parseMarkdownDescriptive(doc);
       expect(parsed.imports![0]!.from).toBe("npm:chart-js@4.5.0");
       const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
       const [byName, byJsx] = (compiled.children[0]! as any).children;
-      expect(byName.src).toBe("https://esm.sh/chart-js@4.5.0");
+      expect(byName.imports.Chart).toBe("https://esm.sh/chart-js@4.5.0");
       expect(byJsx.imports.Chart).toBe("https://esm.sh/chart-js@4.5.0");
     });
 
@@ -520,10 +520,10 @@ imports:
 ---
 # video
 ## Scene
-- component componentName:Badge dr:1`;
+- component dr:1 jsx:"<Badge />"`;
       const parsed = parseMarkdownDescriptive(doc);
       const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
-      expect((compiled.children[0]! as any).children[0]!.src).toBe(
+      expect((compiled.children[0]! as any).children[0]!.imports.Badge).toBe(
         "https://esm.sh/gh/myorg/badge-component@master/src/Badge.tsx",
       );
     });
@@ -536,10 +536,10 @@ imports:
 ---
 # video
 ## Scene
-- component componentName:Logo dr:1`;
+- component dr:1 jsx:"<Logo />"`;
       const parsed = parseMarkdownDescriptive(doc);
       const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
-      expect((compiled.children[0]! as any).children[0]!.src).toBe(
+      expect((compiled.children[0]! as any).children[0]!.imports.Logo).toBe(
         "https://esm.sh/gh/team/logo-assets",
       );
     });
@@ -552,10 +552,10 @@ imports:
 ---
 # video
 ## Scene
-- component componentName:Widget dr:1`;
+- component dr:1 jsx:"<Widget />"`;
       const parsed = parseMarkdownDescriptive(doc);
       const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
-      expect((compiled.children[0]! as any).children[0]!.src).toBe(
+      expect((compiled.children[0]! as any).children[0]!.imports.Widget).toBe(
         "https://cdn.example.com/widget.mjs",
       );
     });
@@ -568,10 +568,10 @@ imports:
 ---
 # video
 ## Scene
-- component componentName:DevUI dr:1`;
+- component dr:1 jsx:"<DevUI />"`;
       const parsed = parseMarkdownDescriptive(doc);
       const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
-      expect((compiled.children[0]! as any).children[0]!.src).toBe(
+      expect((compiled.children[0]! as any).children[0]!.imports.DevUI).toBe(
         "http://localhost:5173/src/components/DevPanel.tsx",
       );
     });
@@ -584,10 +584,10 @@ imports:
 ---
 # video
 ## Scene
-- component componentName:LocalComp dr:1`;
+- component dr:1 jsx:"<LocalComp />"`;
       const parsed = parseMarkdownDescriptive(doc);
       const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
-      expect((compiled.children[0]! as any).children[0]!.src).toBe(
+      expect((compiled.children[0]! as any).children[0]!.imports.LocalComp).toBe(
         "./components/MyWidget.tsx",
       );
     });
@@ -600,10 +600,10 @@ imports:
 ---
 # video
 ## Scene
-- component componentName:Helper dr:1`;
+- component dr:1 jsx:"<Helper />"`;
       const parsed = parseMarkdownDescriptive(doc);
       const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
-      expect((compiled.children[0]! as any).children[0]!.src).toBe(
+      expect((compiled.children[0]! as any).children[0]!.imports.Helper).toBe(
         "/Users/me/lib/helper.tsx",
       );
     });
@@ -619,7 +619,7 @@ imports:
 ---
 # video
 ## Scene
-- component componentName:Counter dr:1`;
+- component dr:1 jsx:"<Counter />"`;
       const parsed = parseMarkdownDescriptive(doc);
       expect(parsed.imports![0]).toEqual({ name: "Counter", from: "npm:stat-counter", exports: "StatCounter" });
     });
@@ -632,7 +632,7 @@ imports:
 ---
 # video
 ## Scene
-- component componentName:Greeting dr:1`;
+- component dr:1 jsx:"<Greeting />"`;
       const parsed = parseMarkdownDescriptive(doc);
       expect(parsed.imports![0]!.name).toBe("Greeting");
       expect(parsed.imports![0]!.jsx).toContain("export default");
@@ -649,7 +649,7 @@ imports:
 ---
 # video
 ## Scene
-- component componentName:Card dr:1`;
+- component dr:1 jsx:"<Card />"`;
       const parsed = parseMarkdownDescriptive(doc);
       expect(parsed.imports![0]!.from).toBe("npm:card-component");
       expect(parsed.imports![0]!.jsx).toBeDefined();
@@ -666,13 +666,11 @@ imports:
 ---
 # video
 ## Scene
-- component componentName:StatBox dr:2 props:{value:10,label:"Score"}`;
+- component dr:2 jsx:"<StatBox value={10} label='Score' />"`;
       const parsed = parseMarkdownDescriptive(doc);
       const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
       const c = (compiled.children[0]! as any).children[0]!;
-      expect(c.componentName as any).toBe("StatBox");
-      expect(c.src).toBe("https://esm.sh/stat-box");
-      expect(c.props).toEqual({ value: 10, label: "Score" });
+      expect(c.imports.StatBox).toBe("https://esm.sh/stat-box");
     });
 
     it("component node with jsx only (no componentName)", () => {
@@ -682,7 +680,6 @@ imports:
       const parsed = parseMarkdownDescriptive(doc, { mode: "strict" });
       const c = (parsed.children[0]! as any).children[0]!;
       expect(c.jsx).toBe("<Greeting name='World' />");
-      expect(c.componentName as any).toBeUndefined();
     });
 
     it("component node with jsx referencing imported components", () => {
@@ -707,12 +704,11 @@ imports:
     it("component node with both componentName and jsx", () => {
       const doc = `# video
 ## Scene
-- component componentName:Widget dr:2 jsx:"<Widget mode='dark' />" props:{mode:"light"}`;
+- component dr:2 jsx:"<Widget mode='dark' />"`;
       const parsed = parseMarkdownDescriptive(doc, { mode: "strict" });
       const c = (parsed.children[0]! as any).children[0]!;
-      expect(c.componentName as any).toBe("Widget");
       expect(c.jsx).toBe("<Widget mode='dark' />");
-      expect(c.props).toEqual({ mode: "light" });
+      // props merged into jsx expression
     });
 
     // ── Multiple imports + mixed component nodes ──────────────────────────
@@ -732,10 +728,10 @@ imports:
 ---
 # video
 ## Scene
-- component componentName:Counter dr:1 props:{value:5}
-- component componentName:Logo dr:1
-- component componentName:Badge dr:1 props:{label:"New"}
-- component componentName:Chart dr:1`;
+- component dr:1 jsx:"<Counter />" props:{value:5}
+- component dr:1 jsx:"<Logo />"
+- component dr:1 jsx:"<Badge />" props:{label:"New"}
+- component dr:1 jsx:"<Chart />"`;
       const parsed = parseMarkdownDescriptive(doc);
       expect(parsed.imports).toHaveLength(4);
       const names = parsed.imports!.map((e) => e.name);
@@ -743,11 +739,11 @@ imports:
 
       const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
       const children = (compiled.children[0]! as any).children;
-      expect(children[0]!.src).toBe("https://esm.sh/counter-lib");
-      expect(children[1]!.src).toBe("https://esm.sh/gh/org/design-system/src/Logo.tsx");
+      expect(children[0]!.imports.Counter).toBe("https://esm.sh/counter-lib");
+      expect(children[1]!.imports.Logo).toBe("https://esm.sh/gh/org/design-system/src/Logo.tsx");
       expect(children[2]!.src).toBeUndefined();
       expect(children[2]!.imports.Badge).toBe("__jsx__:Badge");
-      expect(children[3]!.src).toBe("https://cdn.example.com/chart.js");
+      expect(children[3]!.imports.Chart).toBe("https://cdn.example.com/chart.js");
     });
 
     it("jsx usage node with no frontmatter imports (host-registered fallback)", () => {
@@ -766,7 +762,7 @@ imports:
       // jsx can contain spaces, commas, quotes — the pipe | syntax on the bullet
       const doc = `# video
 ## Scene
-- component dr:2 componentName:Counter jsx:"<Counter value={42} suffix='%' />"`;
+- component dr:2 jsx:"<Counter value={42} suffix='%' />"`;
       const parsed = parseMarkdownDescriptive(doc, { mode: "strict" });
       const c = (parsed.children[0]! as any).children[0]!;
       expect(c.jsx).toBe("<Counter value={42} suffix='%' />");
