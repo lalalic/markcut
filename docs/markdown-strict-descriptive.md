@@ -81,11 +81,17 @@ The `export { Name }` lines are optional — the `import` already registers the 
 | Prefix | Resolves to |
 |---|---|
 | `npm:pkg` | `https://esm.sh/pkg` |
-| `npm:pkg@1.2.3/Comp.js` | `https://esm.sh/pkg@1.2.3/Comp.js` |
+| `npm:pkg@1.2.3` | `https://esm.sh/pkg@1.2.3` |
+| `npm:pkg#module/path` | `https://esm.sh/pkg/module/path` — internal module |
+| `npm:@scope/pkg#module` | `https://esm.sh/@scope/pkg/module` |
 | `git:user/repo` | `https://esm.sh/gh/user/repo` |
 | `git:user/repo@br/path` | `https://esm.sh/gh/user/repo@br/path` |
 | `github:user/repo@br/...` | same as `git:` |
 | `https://...`, `http://...`, path | used as-is |
+
+The `#module` suffix separates the package name from an internal module path. It works with all prefixes: `npm:pkg#sub/path`, `git:user/repo#src/Comp.tsx`, etc. The `#` is replaced with `/` in the resolved URL.
+
+Body-level JSON `imports:[...]` is also supported:
 
 Body-level JSON `imports:[...]` is also supported:
 

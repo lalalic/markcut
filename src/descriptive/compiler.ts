@@ -819,10 +819,19 @@ export function parseImportsBlock(source: string): ImportEntry[] {
 }
 export function resolveComponentImportSpec(spec: string): string {
   const s = spec.trim();
-  if (s.startsWith("npm:")) return `https://esm.sh/${s.slice(4)}`;
-  if (s.startsWith("git:")) return `https://esm.sh/gh/${s.slice(4)}`;
-  if (s.startsWith("github:")) return `https://esm.sh/gh/${s.slice(7)}`;
-  return s;
+  // Split on # to separate package from internal module path
+  // e.g. npm:@lalalic/recharts#a/b/c → npm:@lalalic/recharts / a/b/c
+  const hashIdx = s.indexOf("#");
+  const pkg = hashIdx >= 0 ? s.slice(0, hashIdx) : s;
+  const subpath = hashIdx >= 0 ? s.slice(hashIdx + 1) : "";
+
+  let base: string;
+  if (pkg.startsWith("npm:")) base = `https://esm.sh/${pkg.slice(4)}`;
+  else if (pkg.startsWith("git:")) base = `https://esm.sh/gh/${pkg.slice(4)}`;
+  else if (pkg.startsWith("github:")) base = `https://esm.sh/gh/${pkg.slice(7)}`;
+  else base = pkg;
+
+  return subpath ? `${base}/${subpath}` : base;
 }
 
 function resolveComponentSources(root: DescriptiveRoot): Map<string, ResolvedImport> {

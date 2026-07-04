@@ -42,13 +42,27 @@ describe("resolveComponentImportSpec", () => {
     expect(resolveComponentImportSpec("../relative/up/Comp.js")).toBe("../relative/up/Comp.js");
   });
 
+  it("resolves npm:pkg#module to esm.sh with subpath", () => {
+    expect(resolveComponentImportSpec("npm:recharts#es/BarChart")).toBe("https://esm.sh/recharts/es/BarChart");
+    expect(resolveComponentImportSpec("npm:@lalalic/recharts#a/b/c")).toBe("https://esm.sh/@lalalic/recharts/a/b/c");
+  });
+
+  it("resolves git:user/repo#path to esm.sh/gh with subpath", () => {
+    expect(resolveComponentImportSpec("git:user/repo#src/Comp.tsx")).toBe("https://esm.sh/gh/user/repo/src/Comp.tsx");
+  });
+
+  it("resolves github:user/repo#path like git:", () => {
+    expect(resolveComponentImportSpec("github:team/lib#src/index.ts")).toBe("https://esm.sh/gh/team/lib/src/index.ts");
+  });
+
   it("trims whitespace from spec", () => {
     expect(resolveComponentImportSpec("  npm:pkg  ")).toBe("https://esm.sh/pkg");
     expect(resolveComponentImportSpec("  github:user/repo  ")).toBe("https://esm.sh/gh/user/repo");
     expect(resolveComponentImportSpec("  https://cdn.example.com/c.js  ")).toBe("https://cdn.example.com/c.js");
-  });
-});
 
+
+});
+  });
 describe("parseImportsBlock", () => {
   it("parses named re-exports: export { Name } from \"spec\"", () => {
     const entries = parseImportsBlock(`export { PieChart } from "npm:recharts"`);
