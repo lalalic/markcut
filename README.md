@@ -35,6 +35,8 @@ storyboard.md  ──[parse]──▶  DescriptiveRoot  ──[compile]──▶
 |---|---|
 | **Markdown input** | Write `## Scene` headings, `- bullet` leaves. Components via `jsx:"<Tag />"` syntax |
 | **JS imports block** | `` ```js imports `` code fence with real ESM `import` statements instead of YAML |
+| **Dynamic components** | Load any React component from npm, GitHub, or any URL via `import { X } from "npm:pkg"` |
+| **Tween animation** | `tween(from, to)` function calls in JSX for frame-accurate numeric animation |
 | **Compiled input** | Pre-compiled stream tree for direct Remotion rendering |
 | **TTS narration** | `script` field → edge-tts CLI → WAV audio. Configurable engine (mlx-audio, custom) |
 | **STT subtitles** | TTS audio → whisper → VTT → root subtitle overlay |
@@ -67,8 +69,23 @@ Components are registered via frontmatter `imports:` or a `` ```js imports `` co
 ```js imports
 import { DeviceMockup } from "npm:mockup-component"
 import { StatCounter } from "npm:stat-counter"
+
+// Inline component definition
+export function Greeting({ name }) {
+  return <h1 style={{color: '#fff'}}>Hello {name}</h1>;
+}
 ```
 ````
+
+### Dynamic Components
+
+Any React component from npm, GitHub, or any URL can be imported and used directly in JSX expressions. The engine loads them at render time via esm.sh — no build step required.
+
+```markdown
+- component duration:3 jsx:"<PieChart data={[{value:40,color:'#E38627'}]} />"
+```
+
+Inline components can be defined entirely in the imports block using `export function`, making the video self-contained with no external files.
 
 ## Docs
 
