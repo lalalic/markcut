@@ -12,69 +12,31 @@ import type {
   DescriptiveRoot,
   DescriptiveScene,
   DescriptiveVideo,
-  ImportEntry,
 } from "./compiler";
 
 export interface MarkdownParseOptions {
-  mode?: "strict" | "compatible";
+  /** Deprecated — only strict mode is supported. */
+  mode?: "strict";
 }
 
 type ParentNode = DescriptiveRoot | DescriptiveScene | DescriptiveContainer | DescriptiveEffect | DescriptiveInclude;
 
-const LAYOUT_VALUES = new Set(["ser", "par", "ts", "series", "parallel", "transitionSeries", "transition"] as const);
+const LAYOUT_VALUES = new Set(["series", "parallel", "transitionSeries", "transition"] as const);
 const TRANSITION_VALUES = new Set(["fade", "slide", "wipe", "flip", "clockWipe"] as const);
 
 const TYPE_TOKENS: Record<string, string> = {
-  i: "image",
   image: "image",
-  v: "video",
   video: "video",
-  a: "audio",
   audio: "audio",
-  c: "component",
   component: "component",
-  r: "rhythm",
   rhythm: "rhythm",
-  in: "include",
   include: "include",
-  fx: "effect",
   effect: "effect",
-  m: "map",
   map: "map",
-  ser: "series",
-  par: "parallel",
-  ts: "transitionSeries",
   series: "series",
   parallel: "parallel",
   transitionSeries: "transitionSeries",
-  transition: "transitionSeries",
 };
-
-const KEY_ALIASES: Record<string, string> = {
-  w: "width",
-  h: "height",
-  lo: "layout",
-  dsc: "instruction",
-  inst: "instruction",
-  q: "script",
-  dr: "duration",
-  st: "start",
-  sf: "startFrom",
-  ea: "endAt",
-  vol: "volume",
-  tr: "transition",
-  tt: "transitionTime",
-  p: "props",
-  wp: "waypoints",
-  tm: "travelMode",
-  rm: "routeMarker",
-};
-
-function mapLayout(value: string): "series" | "parallel" | "transitionSeries" {
-  if (value === "ser" || value === "series") return "series";
-  if (value === "par" || value === "parallel") return "parallel";
-  return "transitionSeries";
-}
 
 function isQuoted(token: string): boolean {
   return token.length >= 2 && token.startsWith('"') && token.endsWith('"');
@@ -120,7 +82,9 @@ function splitTokens(line: string): string[] {
   return out;
 }
 
-function parseNumberMaybe(v: string): number | string {
+function parseNumberMaybe(v: string): number | string | boolean {
+  if (v === "true") return true;
+  if (v === "false") return false;
   const n = Number(v);
   return Number.isFinite(n) ? n : v;
 }
@@ -170,92 +134,52 @@ function parseProps(raw: string): unknown {
   }
 }
 
-function inferTypeFromSrc(src: string): string | null {
-  const m = /\.([a-zA-Z0-9]+)(?:[?#].*)?$/.exec(src);
-  const ext = m?.[1]?.toLowerCase();
-  if (!ext) return null;
-  if (["png", "jpg", "jpeg", "webp", "gif"].includes(ext)) return "image";
-  if (["mp4", "mov", "mkv", "webm"].includes(ext)) return "video";
-  if (["mp3", "wav", "m4a", "aac", "flac"].includes(ext)) return "audio";
-  if (ext === "vtt") return null; // VTT → root.subtitle.src, not a tree node
-  if (ext === "json") return "include";
-  return null;
-}
-
-function parseKeyValueTokens(tokens: string[], mode: "strict" | "compatible"): Record<string, unknown> {
+function parseKeyValueTokens(tokens: string[]): Record<string, unknown> {
   const out: Record<string, unknown> = {};
-  let pendingTransition = false;
 
   for (const token of tokens) {
     const idx = token.indexOf(":");
     if (idx > 0) {
-      const rawKey = token.slice(0, idx);
+      const key = token.slice(0, idx);
       const rawVal = token.slice(idx + 1);
-      const key = KEY_ALIASES[rawKey] ?? rawKey;
       let val: unknown = unquote(rawVal);
 
       if (key === "layout") {
         const s = String(val);
         if (LAYOUT_VALUES.has(s as any)) {
-          val = mapLayout(s);
-        } else if (mode === "strict") {
+          val = s;
+        } else {
           throw new Error(`invalid layout value: ${s}`);
         }
       }
       if (key === "transition") {
         const s = String(val);
-        if (!TRANSITION_VALUES.has(s as any) && mode === "strict") {
+        if (!TRANSITION_VALUES.has(s as any)) {
           throw new Error(`invalid transition value: ${s}`);
         }
       }
 
       if (key === "waypoints") val = parseWaypoints(String(val));
       else if (key === "props" || key === "imports" || key === "components") val = parseProps(String(val));
+      else if (key === "spots" || key === "customKeyframes") val = parseProps(String(val));
       else if (key !== "instruction" && key !== "script" && key !== "tts" && key !== "stt" && key !== "jsx") {
         val = parseNumberMaybe(String(val));
       }
       out[key] = val;
-      if (key === "transition") pendingTransition = true;
       continue;
     }
 
-    if (mode === "compatible") {
-      if (LAYOUT_VALUES.has(token as any) && out.layout == null) {
-        out.layout = mapLayout(token);
-        continue;
-      }
-      if (TRANSITION_VALUES.has(token as any) && out.transition == null) {
-        out.transition = token;
-        pendingTransition = true;
-        continue;
-      }
-      if (pendingTransition && out.transitionTime == null) {
-        const n = Number(token);
-        if (Number.isFinite(n)) {
-          out.transitionTime = n;
-          pendingTransition = false;
-          continue;
-        }
-      }
-      if (isQuoted(token) && out.script == null) {
-        out.script = unquote(token);
-        continue;
-      }
-    }
-
-    if (mode === "strict") {
-      throw new Error(`unrecognized token: ${token}`);
-    }
+    throw new Error(`unrecognized token: ${token}`);
   }
 
   return out;
 }
 
-function parseHeaderScene(line: string, mode: "strict" | "compatible"): DescriptiveScene {
+function parseHeaderScene(line: string): DescriptiveScene {
   const text = line.replace(/^#+\s*/, "").trim();
   const tokens = splitTokens(text);
   const nameToken = tokens.shift();
-  const attrs = parseKeyValueTokens(tokens, mode);
+  const attrs = parseKeyValueTokens(tokens);
 
   // Scene name from heading text (first token), title from " - " separator
   let sceneName: string | undefined;
@@ -291,7 +215,7 @@ function pushChild(parent: ParentNode, child: DescriptiveNode): void {
   parent.children.push(child);
 }
 
-function parseNodeLine(content: string, mode: "strict" | "compatible"): DescriptiveNode {
+function parseNodeLine(content: string): DescriptiveNode {
   const tokens = splitTokens(content);
   if (tokens.length === 0) throw new Error("empty node line");
 
@@ -315,25 +239,12 @@ function parseNodeLine(content: string, mode: "strict" | "compatible"): Descript
   }
 
   if (!type) {
-    firstPositional = tokens[0];
-    if (firstPositional && firstPositional.indexOf(":") === -1 && !isQuoted(firstPositional) && !LAYOUT_VALUES.has(firstPositional as any)) {
-      type = inferTypeFromSrc(firstPositional) ?? undefined;
-      if (type && mode === "compatible") {
-        tokens.shift();
-      }
-    }
-  }
-
-  if (!type) {
-    if (mode === "strict") {
-      throw new Error(`missing or unknown node type: ${typeToken}`);
-    }
-    throw new Error(`unable to infer node type: ${content}`);
+    throw new Error(`missing or unknown node type: ${typeToken}`);
   }
 
   // Container bullets
   if (type === "series" || type === "parallel" || type === "transitionSeries") {
-    const attrs = parseKeyValueTokens(tokens, mode);
+    const attrs = parseKeyValueTokens(tokens);
     const node: DescriptiveContainer = {
       type: type as any,
       instruction: attrs.instruction as any,
@@ -347,7 +258,7 @@ function parseNodeLine(content: string, mode: "strict" | "compatible"): Descript
 
   // Effect can be container-like.
   if (type === "effect") {
-    const attrs = parseKeyValueTokens(tokens, mode);
+    const attrs = parseKeyValueTokens(tokens);
     // Compat: first positional token is the animation name
     const animation = attrs.animation as string | undefined ?? firstPositional;
     const node: DescriptiveEffect = {
@@ -365,11 +276,7 @@ function parseNodeLine(content: string, mode: "strict" | "compatible"): Descript
     return node;
   }
 
-  const attrs = parseKeyValueTokens(tokens, mode);
-
-  if (mode === "compatible" && firstPositional && type && attrs.script == null && isQuoted(firstPositional)) {
-    attrs.script = unquote(firstPositional);
-  }
+  const attrs = parseKeyValueTokens(tokens);
 
   switch (type) {
     case "image": {
@@ -383,6 +290,9 @@ function parseNodeLine(content: string, mode: "strict" | "compatible"): Descript
         start: attrs.start as any,
         instruction: attrs.instruction as any,
         script: attrs.script as any,
+        visible: attrs.visible as any,
+        isBackground: attrs.isBackground as any,
+        style: attrs.style as any,
       };
       return node;
     }
@@ -397,8 +307,14 @@ function parseNodeLine(content: string, mode: "strict" | "compatible"): Descript
         startFrom: attrs.startFrom as any,
         endAt: attrs.endAt as any,
         volume: attrs.volume as any,
+        playbackRate: attrs.playbackRate as any,
+        width: attrs.width as any,
+        height: attrs.height as any,
         instruction: attrs.instruction as any,
         script: attrs.script as any,
+        visible: attrs.visible as any,
+        isBackground: attrs.isBackground as any,
+        style: attrs.style as any,
       };
       return node;
     }
@@ -413,8 +329,13 @@ function parseNodeLine(content: string, mode: "strict" | "compatible"): Descript
         startFrom: attrs.startFrom as any,
         endAt: attrs.endAt as any,
         volume: attrs.volume as any,
+        foreground: attrs.foreground as any,
+        loop: attrs.loop as any,
         instruction: attrs.instruction as any,
         script: attrs.script as any,
+        visible: attrs.visible as any,
+        isBackground: attrs.isBackground as any,
+        style: attrs.style as any,
       };
       return node;
     }
@@ -428,6 +349,9 @@ function parseNodeLine(content: string, mode: "strict" | "compatible"): Descript
         start: attrs.start as any,
         instruction: attrs.instruction as any,
         script: attrs.script as any,
+        visible: attrs.visible as any,
+        isBackground: attrs.isBackground as any,
+        style: attrs.style as any,
       };
       return node;
     }
@@ -440,8 +364,12 @@ function parseNodeLine(content: string, mode: "strict" | "compatible"): Descript
         duration: attrs.duration as any,
         start: attrs.start as any,
         volume: attrs.volume as any,
+        spots: attrs.spots as any,
         instruction: attrs.instruction as any,
         script: attrs.script as any,
+        visible: attrs.visible as any,
+        isBackground: attrs.isBackground as any,
+        style: attrs.style as any,
       };
       return node;
     }
@@ -455,6 +383,9 @@ function parseNodeLine(content: string, mode: "strict" | "compatible"): Descript
         volume: attrs.volume as any,
         instruction: attrs.instruction as any,
         script: attrs.script as any,
+        visible: attrs.visible as any,
+        isBackground: attrs.isBackground as any,
+        style: attrs.style as any,
       };
       return node;
     }
@@ -466,8 +397,16 @@ function parseNodeLine(content: string, mode: "strict" | "compatible"): Descript
         start: attrs.start as any,
         routeMarker: attrs.routeMarker as any,
         travelMode: attrs.travelMode as any,
+        routeColor: attrs.routeColor as any,
+        routeWeight: attrs.routeWeight as any,
+        zoom: attrs.zoom as any,
+        center: attrs.center as any,
+        mapType: attrs.mapType as any,
         instruction: attrs.instruction as any,
         script: attrs.script as any,
+        visible: attrs.visible as any,
+        isBackground: attrs.isBackground as any,
+        style: attrs.style as any,
       };
       return node;
     }
@@ -476,22 +415,21 @@ function parseNodeLine(content: string, mode: "strict" | "compatible"): Descript
   }
 }
 
-export function parseMarkdownDescriptive(markdown: string, options: MarkdownParseOptions = {}): DescriptiveRoot {
-  const mode = options.mode ?? "strict";
+export function parseMarkdownDescriptive(markdown: string, _options: MarkdownParseOptions = {}): DescriptiveRoot {
   const lines = markdown.replace(/\r\n/g, "\n").split("\n");
 
   const root: DescriptiveRoot = { children: [] };
 
   // ── Frontmatter: `---\n...\n---\n` at the very top ──────────────────────
-  // Supports `imports:` as an array of named entries, plus root attrs.
+  // Supports root attrs (width, height, fps, tts, stt, etc.).
+  // Imports go in ~~~js imports code blocks, not frontmatter.
   let startIdx = 0;
   while (startIdx < lines.length && lines[startIdx]!.trim() === "") startIdx++;
   if (lines[startIdx]?.trim() === "---") {
     const closeIdx = findFrontmatterClose(lines, startIdx + 1);
     if (closeIdx > startIdx) {
       const fm = parseFrontmatterBlock(lines.slice(startIdx + 1, closeIdx));
-      if (fm.imports) root.imports = fm.imports;
-      if (fm.rootAttrs) applyRootAttrs(root, fm.rootAttrs, mode);
+      if (fm.rootAttrs) applyRootAttrs(root, fm.rootAttrs);
       // Replace consumed lines with blanks so line indices stay stable
       for (let i = startIdx; i <= closeIdx; i++) lines[i] = "";
     }
@@ -500,15 +438,14 @@ export function parseMarkdownDescriptive(markdown: string, options: MarkdownPars
   const sceneStack: Array<{ level: number; scene: DescriptiveScene }> = [];
   let bulletStack: Array<{ indent: number; parent: ParentNode }> = [{ indent: -1, parent: root }];
 
-  // ── JSX code fences: ```jsx Name ... ``` → frontmatter import entry ─────
   let i = 0;
   while (i < lines.length) {
     const raw = lines[i]!;
     const line = raw.trimEnd();
     if (!line.trim()) { i++; continue; }
 
-    // Fenced code block detection
-    const fenceOpen = /^(`{3,})(\w*)\s*(.*)?$/.exec(line.trim());
+    // Fenced code block detection: ~~~js imports ... ~~~  or  ```js imports ... ```
+    const fenceOpen = /^(~{3,}|`{3,})(\w*)\s*(.*)?$/.exec(line.trim());
     if (fenceOpen) {
       const fence = fenceOpen[1]!;
       const lang = (fenceOpen[2] ?? "").toLowerCase();
@@ -522,15 +459,7 @@ export function parseMarkdownDescriptive(markdown: string, options: MarkdownPars
         buf.push(candidate);
         j++;
       }
-      // lang jsx OR tsx with a name → register as import entry
-      if ((lang === "jsx" || lang === "tsx") && meta) {
-        const name = meta.split(/\s+/)[0]!;
-        const source = buf.join("\n");
-        if (!root.imports) root.imports = [];
-        root.imports.push({ name, jsx: source });
-      }
-      // lang "js" with meta "imports" → store raw source for compiler to parse
-      // Also handles bare "imports" language for backward compat
+      // Only ~~~js imports / ~~~imports blocks are recognized
       if ((lang === "js" && meta === "imports") || lang === "imports") {
         root.importsBlock = buf.join("\n");
       }
@@ -548,7 +477,7 @@ export function parseMarkdownDescriptive(markdown: string, options: MarkdownPars
     const heading = /^(#{2,6})\s+(.*)$/.exec(line.trim());
     if (heading) {
       const level = heading[1]!.length;
-      const scene = parseHeaderScene(heading[0]!, mode);
+      const scene = parseHeaderScene(heading[0]!);
 
       while (sceneStack.length && sceneStack[sceneStack.length - 1]!.level >= level) {
         sceneStack.pop();
@@ -576,7 +505,7 @@ export function parseMarkdownDescriptive(markdown: string, options: MarkdownPars
         bulletStack.pop();
       }
       const parent = bulletStack[bulletStack.length - 1]?.parent ?? sceneStack[sceneStack.length - 1]?.scene ?? root;
-      const node = parseNodeLine(content, mode);
+      const node = parseNodeLine(content);
       pushChild(parent, node);
 
       if (
@@ -585,7 +514,8 @@ export function parseMarkdownDescriptive(markdown: string, options: MarkdownPars
         node.type === "parallel" ||
         node.type === "transitionSeries" ||
         node.type === "effect" ||
-        node.type === "include"
+        node.type === "include" ||
+        node.type === "rhythm"
       ) {
         bulletStack.push({ indent, parent: node as ParentNode });
       }
@@ -594,7 +524,7 @@ export function parseMarkdownDescriptive(markdown: string, options: MarkdownPars
     }
 
     const tokens = splitTokens(line.trim());
-    const attrs = parseKeyValueTokens(tokens, mode);
+    const attrs = parseKeyValueTokens(tokens);
 
     // If we're inside a scene and haven't hit bullets yet, treat as scene metadata
     const currentScene = sceneStack[sceneStack.length - 1]?.scene;
@@ -628,23 +558,12 @@ export function parseMarkdownDescriptive(markdown: string, options: MarkdownPars
             continue;
         }
       }
-      // Handle bare tokens (compatible mode: par, ts fade 0.4, "script text")
-      if (mode === "compatible") {
-        for (const token of tokens) {
-          if (LAYOUT_VALUES.has(token as any) && !currentScene.layout) {
-            currentScene.layout = mapLayout(token);
-          } else if (TRANSITION_VALUES.has(token as any) && !currentScene.transition) {
-            currentScene.transition = token as any;
-          } else if (isQuoted(token) && !currentScene.script) {
-            currentScene.script = unquote(token);
-          }
-        }
-      }
+
       i++;
       continue;
     }
 
-    applyRootAttrs(root, attrs, mode);
+    applyRootAttrs(root, attrs);
     i++;
   }
 
@@ -660,22 +579,13 @@ function findFrontmatterClose(lines: string[], startIdx: number): number {
 }
 
 interface ParsedFrontmatter {
-  imports?: ImportEntry[];
   rootAttrs?: Record<string, unknown>;
 }
 
 /**
- * Minimal YAML-ish frontmatter parser. Supports:
- *   - scalar `key: value` lines (value may be JSON object/array)
- *   - `imports:` as JSON array or YAML array of named entries:
- *       imports: [{name:"ComA",from:"npm:pkg"}, {name:"B",jsx:"..."}]
- *       imports:
- *         - ComA:
- *             from: npm:stat-counter
- *             exports: default
- *         - InlineBadge:
- *             jsx: |
- *               export default...
+ * Minimal YAML-ish frontmatter parser.
+ * Supports scalar `key: value` lines (value may be JSON object/array).
+ * Imports go in ~~~js imports code blocks, not frontmatter.
  *
  * Not a full YAML parser — deliberately small and forgiving.
  */
@@ -694,30 +604,23 @@ function parseFrontmatterBlock(body: string[]): ParsedFrontmatter {
     const value = m[2]!.trim();
 
     if (!value) {
-      // Multi-line block: either a YAML array or map
-      if (key === "imports") {
-        const result = parseImportEntries(body, i + 1);
-        out.imports = result.entries;
-        i = result.endIdx; // skip past parsed entries
-      } else {
-        // Multi-line map: collect indented `name: value` lines
-        const map: Record<string, string> = {};
-        let j = i + 1;
-        while (j < body.length) {
-          const sub = body[j]!;
-          if (!sub.trim()) { j++; continue; }
-          if (!/^\s+\S/.test(sub)) break;
-          const trimmed = sub.trim();
-          const sm = /^([^\s:]+)\s*:\s*(.*)$/.exec(trimmed);
-          if (!sm) break;
-          map[sm[1]!] = sm[2]!.trim();
-          j++;
-        }
-        if (Object.keys(map).length) {
-          out.rootAttrs![key] = map;
-        }
-        i = j - 1; // outer loop will increment
+      // Multi-line map: collect indented `name: value` lines
+      const map: Record<string, string> = {};
+      let j = i + 1;
+      while (j < body.length) {
+        const sub = body[j]!;
+        if (!sub.trim()) { j++; continue; }
+        if (!/^\s+\S/.test(sub)) break;
+        const trimmed = sub.trim();
+        const sm = /^([^\s:]+)\s*:\s*(.*)$/.exec(trimmed);
+        if (!sm) break;
+        map[sm[1]!] = sm[2]!.trim();
+        j++;
       }
+      if (Object.keys(map).length) {
+        out.rootAttrs![key] = map;
+      }
+      i = j - 1; // outer loop will increment
       i++;
       continue;
     }
@@ -727,116 +630,16 @@ function parseFrontmatterBlock(body: string[]): ParsedFrontmatter {
     if (value.startsWith("{") || value.startsWith("[")) {
       try { parsed = JSON.parse(value); } catch { /* keep as string */ }
     }
-    if (key === "imports" && Array.isArray(parsed)) {
-      out.imports = parsed as ImportEntry[];
-    } else {
-      out.rootAttrs![key] = parsed;
-    }
+    out.rootAttrs![key] = parsed;
     i++;
   }
   return out;
 }
 
-/**
- * Parse YAML array of import entries:
- *   - ComA:
- *       from: npm:stat-counter
- *       exports: default
- *   - InlineBadge:
- *       jsx: export default...
- *   - ComB
- *
- * Each array item is either a bare name (just `- Name`) or a mapping
- * (`- Name:\n    key: value\n    key: value`).
- */
-function parseImportEntries(body: string[], start: number): { entries: ImportEntry[]; endIdx: number } {
-  const entries: ImportEntry[] = [];
-  let i = start;
-  while (i < body.length) {
-    const raw = body[i]!;
-    const line = raw.trim();
-    if (!line) { i++; continue; }
-    if (line.startsWith("#")) { i++; continue; }
 
-    // Stop at next top-level key or end of imports block
-    if (/^[a-zA-Z_]/.test(line) && !line.startsWith("-")) break;
-
-    const itemMatch = /^-\s+(.*)$/.exec(line);
-    if (!itemMatch) { i++; continue; }
-
-    const item = itemMatch[1]!.trim();
-    const colonIdx = item.indexOf(":");
-    
-    if (colonIdx === -1) {
-      // Bare name: `- ComB`
-      const name = item.trim();
-      if (name) entries.push({ name });
-      i++;
-      continue;
-    }
-
-    const name = item.slice(0, colonIdx).trim();
-    const rest = item.slice(colonIdx + 1).trim();
-    
-    // Collect nested keys from subsequent indented lines
-    const sub: Record<string, string> = {};
-    
-    if (rest) {
-      // Inline: `- ComA: {from: "npm:pkg"}` (JSON) or just `- ComA: from: npm:pkg`
-      if (rest.startsWith("{")) {
-        try {
-          const parsed = JSON.parse(rest);
-          Object.assign(sub, parsed);
-        } catch { /* ignore */ }
-      } else {
-        const sm = /^([^\s:]+)\s*:\s*(.*)$/.exec(rest);
-        if (sm) sub[sm[1]!] = sm[2]!.trim();
-      }
-    }
-
-    // Read indented lines
-    let j = i + 1;
-    while (j < body.length) {
-      const subLine = body[j]!;
-      if (!subLine.trim()) { j++; continue; }
-      if (!/^\s{2,}\S/.test(subLine)) break; // not indented enough
-      const trimmed = subLine.trim();
-      if (trimmed.startsWith("#")) { j++; continue; }
-      const sm = /^([^\s:]+)\s*:\s*(.*)$/.exec(trimmed);
-      if (!sm) break;
-      const sk = sm[1]!;
-      const sv = sm[2]!.trim();
-      // Handle multi-line `|` value
-      if (sv === "|") {
-        const valueBuf: string[] = [];
-        let k = j + 1;
-        while (k < body.length && /^\s{4,}/.test(body[k]!)) {
-          valueBuf.push(body[k]!.trim());
-          k++;
-        }
-        sub[sk] = valueBuf.join("\n");
-        j = k;
-      } else {
-        sub[sk] = sv;
-        j++;
-      }
-    }
-
-    if (name) {
-      entries.push({
-        name,
-        from: sub.from,
-        exports: sub.exports,
-        jsx: sub.jsx,
-      });
-    }
-    i = j;
-  }
-  return { entries, endIdx: i };
-}
 
 /** Apply a key/value bag onto the DescriptiveRoot using the same rules as the body parser. */
-function applyRootAttrs(root: DescriptiveRoot, attrs: Record<string, unknown>, mode: "strict" | "compatible"): void {
+function applyRootAttrs(root: DescriptiveRoot, attrs: Record<string, unknown>): void {
   for (const [k, v] of Object.entries(attrs)) {
     switch (k) {
       case "width":
@@ -872,14 +675,8 @@ function applyRootAttrs(root: DescriptiveRoot, attrs: Record<string, unknown>, m
       case "stt":
         root.stt = v as any;
         break;
-      case "imports":
-        if (Array.isArray(v)) {
-          if (!root.imports) root.imports = [];
-          root.imports.push(...(v as ImportEntry[]));
-        }
-        break;
       default:
-        if (mode === "strict") throw new Error(`unknown root key: ${k}`);
+        throw new Error(`unknown root key: ${k}`);
     }
   }
 }

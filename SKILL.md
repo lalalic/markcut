@@ -8,7 +8,7 @@ description: >-
 ## Stream Tree Specs
 
 Everything video is a **stream tree**. it support 2 formats, markdown and json. 
-- markdown: see [docs/markdown-strict-descriptive.md](docs/markdown-strict-descriptive.md) for full details.
+- markdown: see [docs/markdown-descriptive.md](docs/markdown-descriptive.md) for full details.
 - json: see [docs/json-descriptive.md](docs/json-descriptive.md) for full details.
 
 ---
@@ -35,7 +35,7 @@ Labels save to `labels.json`. See [docs/label-mode.md](docs/label-mode.md) for:
 Use `scene` nodes to organize your video. Each scene has `title`, `instruction`, `script` (TTS narration), `children`. Scenes can nest inside other scenes.
 
 ```bash
-see [docs/markdown-strict-descriptive.md](docs/markdown-strict-descriptive.md) for full details.
+see [docs/markdown-descriptive.md](docs/markdown-descriptive.md) for full details.
 
 ### 3. Assemble — render stream tree to MP4
 
@@ -55,10 +55,10 @@ npx markcut <command> [options]
 
 | Command | Description |
 |---------|-------------|
-| `render <file.json>` | Render stream tree to MP4 |
-| `preview <file.json>` | Open Remotion Studio |
-| `preview <file.json> --label` | Label clips in a simplified stream tree |
-| `preview <file.json> --edit` | Live editing loop (auto-reload on file change) |
+| `render <file>` | Render stream tree to MP4 |
+| `preview <file>` | Open Remotion Studio |
+| `preview <file> --label` | Label clips in a simplified stream tree |
+| `preview <file> --edit` | Live editing loop (auto-reload on file change) |
 
 ### Options
 
@@ -97,5 +97,4 @@ some common issues (photo or video can't be displayed, audio missing), take belo
 |-------|------|
 | Label system (browse, label, export labels.json) | [docs/label-mode.md](docs/label-mode.md) |
 | Dynamic components (remote, custom, effects) | [docs/dynamic-components.md](docs/dynamic-components.md) |
-| Theme system (presets, customization) | [docs/themes.md](docs/themes.md) |
 | Player servers (label + edit mode) | [docs/edit-mode.md](docs/edit-mode.md) |

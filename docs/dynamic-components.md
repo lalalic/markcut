@@ -52,13 +52,13 @@ Percentages `"0"`–`"100"` map to action duration. Any numeric CSS property wor
 
 ## 2. Remote Components (load from URL)
 
-Register remote components via `import` in a `` ```js imports `` block:
+Register remote components via `import` in a `` ~~~js imports `` block:
 
-````
-```js imports
-import { Badge } from "https://cdn.example.com/components/badge.js"
 ```
-````
+~~~js imports
+import { Badge } from "https://cdn.example.com/components/badge.js"
+~~~
+```
 
 Then reference them in component JSX:
 
@@ -143,8 +143,7 @@ export const builtinComponents = { ..., Badge };
 ```json
 {
   "type": "component",
-  "componentName": "Badge",
-  "props": { "text": "NEW", "color": "#ff6b35" },
+  "jsx": "<Badge text='NEW' color='#ff6b35' />",
   "actions": [{ "start": 1, "end": 4 }]
 }
 ```
