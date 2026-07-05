@@ -15,6 +15,11 @@ function PlayerApp() {
   const [data, setData] = React.useState<any>(null);
   const [refreshKey, setRefreshKey] = React.useState(0);
 
+  // Parse URL params for agent automation
+  const urlParams = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
+  const autoPlay = urlParams.get("autoplay") === "true";
+  const startAt = parseFloat(urlParams.get("start") || "0") || 0;
+
   const loadData = useCallback(() => {
     setReady(false);
     fetch("/api/video-data")
@@ -85,6 +90,8 @@ function PlayerApp() {
       allowFullscreen: true,
       clickToPlay: false,
       doubleClickToFullscreen: true,
+      autoPlay: autoPlay,
+      initialFrame: Math.floor(startAt * fps),
     })
   );
 }

@@ -772,7 +772,7 @@ var require_scheduler = __commonJS({
 var require_react_dom_production = __commonJS({
   "node_modules/react-dom/cjs/react-dom.production.js"(exports) {
     "use strict";
-    var React45 = require_react();
+    var React46 = require_react();
     function formatProdErrorMessage(code) {
       var url2 = "https://react.dev/errors/" + code;
       if (1 < arguments.length) {
@@ -812,7 +812,7 @@ var require_react_dom_production = __commonJS({
         implementation
       };
     }
-    var ReactSharedInternals = React45.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
+    var ReactSharedInternals = React46.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
     function getCrossOriginStringAs(as, input) {
       if ("font" === as) return "";
       if ("string" === typeof input)
@@ -948,7 +948,7 @@ var require_react_dom_client_production = __commonJS({
   "node_modules/react-dom/cjs/react-dom-client.production.js"(exports) {
     "use strict";
     var Scheduler = require_scheduler();
-    var React45 = require_react();
+    var React46 = require_react();
     var ReactDOM = require_react_dom();
     function formatProdErrorMessage(code) {
       var url2 = "https://react.dev/errors/" + code;
@@ -1139,7 +1139,7 @@ var require_react_dom_client_production = __commonJS({
       return null;
     }
     var isArrayImpl = Array.isArray;
-    var ReactSharedInternals = React45.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
+    var ReactSharedInternals = React46.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
     var ReactDOMSharedInternals = ReactDOM.__DOM_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
     var sharedNotPendingObject = {
       pending: false,
@@ -2279,7 +2279,7 @@ var require_react_dom_client_production = __commonJS({
     var SyntheticClipboardEvent = createSyntheticEvent(ClipboardEventInterface);
     var CompositionEventInterface = assign({}, EventInterface, { data: 0 });
     var SyntheticCompositionEvent = createSyntheticEvent(CompositionEventInterface);
-    var normalizeKey = {
+    var normalizeKey2 = {
       Esc: "Escape",
       Spacebar: " ",
       Left: "ArrowLeft",
@@ -2347,7 +2347,7 @@ var require_react_dom_client_production = __commonJS({
     var KeyboardEventInterface = assign({}, UIEventInterface, {
       key: function(nativeEvent) {
         if (nativeEvent.key) {
-          var key = normalizeKey[nativeEvent.key] || nativeEvent.key;
+          var key = normalizeKey2[nativeEvent.key] || nativeEvent.key;
           if ("Unidentified" !== key) return key;
         }
         return "keypress" === nativeEvent.type ? (nativeEvent = getEventCharCode(nativeEvent), 13 === nativeEvent ? "Enter" : String.fromCharCode(nativeEvent)) : "keydown" === nativeEvent.type || "keyup" === nativeEvent.type ? translateToKey[nativeEvent.keyCode] || "Unidentified" : "";
@@ -12585,7 +12585,7 @@ var require_react_dom_client_production = __commonJS({
         0 === i && attemptExplicitHydrationTarget(target);
       }
     };
-    var isomorphicReactPackageVersion$jscomp$inline_1840 = React45.version;
+    var isomorphicReactPackageVersion$jscomp$inline_1840 = React46.version;
     if ("19.2.5" !== isomorphicReactPackageVersion$jscomp$inline_1840)
       throw Error(
         formatProdErrorMessage(
@@ -12788,7 +12788,7 @@ var require_fast_deep_equal = __commonJS({
 });
 
 // src/player/browser.tsx
-var import_react127 = __toESM(require_react(), 1);
+var import_react128 = __toESM(require_react(), 1);
 var import_client = __toESM(require_client(), 1);
 
 // node_modules/@remotion/player/dist/esm/index.mjs
@@ -27931,7 +27931,7 @@ var forward2 = import_react110.forwardRef;
 var Thumbnail = forward2(ThumbnailFn);
 
 // src/entry.tsx
-var React43 = __toESM(require_react(), 1);
+var React44 = __toESM(require_react(), 1);
 
 // src/context/index.tsx
 var React8 = __toESM(require_react(), 1);
@@ -27943,7 +27943,7 @@ var ComposeContext = React8.createContext({
 var AudioContext2 = React8.createContext(null);
 
 // src/types/Folder.tsx
-var React39 = __toESM(require_react(), 1);
+var React41 = __toESM(require_react(), 1);
 
 // node_modules/@remotion/transitions/dist/esm/index.mjs
 var import_react113 = __toESM(require_react(), 1);
@@ -30481,11 +30481,113 @@ function ImageLeaf({ stream: stream2 }) {
 }
 
 // src/types/DynamicLoader.tsx
-var React19 = __toESM(require_react(), 1);
+var React25 = __toESM(require_react(), 1);
+
+// src/components/Markdown.tsx
+var import_react125 = __toESM(require_react(), 1);
+var import_jsx_runtime80 = __toESM(require_jsx_runtime(), 1);
+function mdToHtml(src) {
+  if (!src) return "";
+  let html = src;
+  html = html.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
+  html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  html = html.replace(/\*(.+?)\*/g, "<em>$1</em>");
+  html = html.replace(
+    /\[([^\]]+)\]\(([^)]+)\)/g,
+    '<a href="$2" style="color:inherit;text-decoration:underline">$1</a>'
+  );
+  html = html.replace(/^---+$/gm, "<hr />");
+  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_m, lang, code) => {
+    return `<pre><code${lang ? ` class="language-${lang}"` : ""}>${code.trim()}</code></pre>`;
+  });
+  html = html.replace(
+    /^(>+)\s?(.+)$/gm,
+    (_m, depth, text) => {
+      const tag = "blockquote".repeat(Math.min(depth.length, 3));
+      return `${tag}>${text}`;
+    }
+  );
+  html = html.replace(/((?:<blockquote>[^<]*<\/blockquote>\s*)+)/g, (_m, block) => {
+    const content = block.replace(/<\/?blockquote>/g, "").trim();
+    return `<blockquote style="border-left:4px solid rgba(255,255,255,0.3);padding-left:1em;margin:0.5em 0">${content}</blockquote>`;
+  });
+  html = html.replace(
+    /^\|(.+)\|\s*$/gm,
+    (_m, row) => {
+      const cells = row.split("|").map((c2) => c2.trim());
+      if (cells.every((c2) => /^-+$/.test(c2))) return "";
+      return `<tr>${cells.map((c2) => `<td>${c2}</td>`).join("")}</tr>`;
+    }
+  );
+  html = html.replace(/((?:<tr>.*?<\/tr>\s*)+)/g, (_m, rows) => {
+    const cleaned = rows.replace(/\n\s*/g, "");
+    return `<table style="width:100%;border-collapse:collapse;margin:0.5em 0">${cleaned}</table>`;
+  });
+  html = html.replace(/<td>/g, '<td style="border:1px solid rgba(255,255,255,0.2);padding:0.4em 0.6em">');
+  html = html.replace(/^(\s*)[-*+]\s+(.+)$/gm, (_m, indent, text) => {
+    const depth = Math.floor(indent.length / 2);
+    return `<li data-depth="${depth}">${text}</li>`;
+  });
+  html = html.replace(/((?:<li[^>]*>.*?<\/li>\s*)+)/g, (_m, items) => {
+    return `<ul style="list-style:none;padding:0;margin:0.5em 0">${items}</ul>`;
+  });
+  html = html.replace(
+    /<li data-depth="(\d)">/g,
+    (_m, d) => {
+      const bullet = d === "0" ? "\u25CF" : d === "1" ? "\u25CB" : "\u25AA";
+      return `<li style="margin:0.2em 0;padding-left:${1.5 + Number(d) * 1.2}em"><span style="display:inline-block;width:1.2em;text-align:center">${bullet}</span>`;
+    }
+  );
+  html = html.replace(/^\d+\.\s+(.+)$/gm, "<li class='ol'>$1</li>");
+  html = html.replace(
+    /((?:<li class='ol'>.*?<\/li>\s*)+)/g,
+    `<ol style="margin:0.5em 0;padding-left:1.5em">$1</ol>`
+  );
+  html = html.replace(/<li class='ol'>/g, "<li>");
+  html = html.replace(/^### (.+)$/gm, '<h3 style="font-size:1.3em;margin:0.6em 0 0.3em">$1</h3>');
+  html = html.replace(/^## (.+)$/gm, '<h2 style="font-size:1.6em;margin:0.6em 0 0.3em">$1</h2>');
+  html = html.replace(/^# (.+)$/gm, '<h1 style="font-size:2em;margin:0.4em 0 0.2em">$1</h1>');
+  html = html.replace(/\n\n+/g, "</p><p>");
+  html = html.replace(/\n/g, " ");
+  if (!/^<(h[123]|p|ul|ol|table|blockquote|pre|hr)/.test(html)) {
+    html = `<p>${html}</p>`;
+  }
+  return html;
+}
+function Markdown({ children, style: style2, className: className2 }) {
+  const { width, height } = useVideoConfig();
+  const text = typeof children === "string" ? children : "";
+  const html = import_react125.default.useMemo(() => mdToHtml(text), [text]);
+  return /* @__PURE__ */ (0, import_jsx_runtime80.jsx)(
+    "div",
+    {
+      className: className2,
+      style: {
+        width,
+        height,
+        padding: "60px 80px",
+        fontFamily: "'Helvetica Neue', 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif",
+        fontSize: 28,
+        lineHeight: 1.6,
+        color: "#fff",
+        textShadow: "0 1px 3px rgba(0,0,0,0.3)",
+        boxSizing: "border-box",
+        overflow: "hidden",
+        ...style2
+      },
+      dangerouslySetInnerHTML: { __html: html }
+    }
+  );
+}
+
+// src/types/DynamicLoader.tsx
+var __BUILTINS = { Markdown };
 if (typeof window !== "undefined") {
-  window.__React = React19;
+  window.__React = React25;
   window.__Remotion = esm_exports;
-  globalThis.React = React19;
+  window.__Builtins = __BUILTINS;
+  globalThis.React = React25;
 }
 var reactShimInjected = false;
 function ensureReactShim() {
@@ -30575,33 +30677,33 @@ async function loadBabel() {
   }
   return babelPromise;
 }
-function useJsxWithImports(jsx68, imports, onError) {
-  const cacheKey = React19.useMemo(() => {
-    if (!jsx68) return null;
+function useJsxWithImports(jsx69, imports, onError) {
+  const cacheKey = React25.useMemo(() => {
+    if (!jsx69) return null;
     const importKeys = imports ? Object.keys(imports).sort().join(",") : "";
     return `${importKeys}
-${jsx68}`;
-  }, [jsx68, imports]);
+${jsx69}`;
+  }, [jsx69, imports]);
   const cached2 = cacheKey ? jsxCache.get(cacheKey) ?? null : null;
   const needsLoad = !!cacheKey && !cached2;
-  const handleRef = React19.useRef(null);
+  const handleRef = React25.useRef(null);
   if (needsLoad && !handleRef.current) {
     handleRef.current = delayRender(`Compiling JSX with imports`);
   }
-  const [Comp, setComp] = React19.useState(() => cached2);
-  React19.useEffect(() => {
+  const [Comp, setComp] = React25.useState(() => cached2);
+  React25.useEffect(() => {
     if (!cacheKey || cached2) return;
     let active = true;
-    compileJsxWithImports(jsx68, imports ?? {}).then((C) => {
+    compileJsxWithImports(jsx69, imports ?? {}).then((C) => {
       if (active) setComp(() => C);
     }).catch((err) => {
-      onError?.(err, { source: jsx68 });
+      onError?.(err, { source: jsx69 });
     });
     return () => {
       active = false;
     };
   }, [cacheKey, onError]);
-  React19.useEffect(() => {
+  React25.useEffect(() => {
     if (Comp && handleRef.current) {
       continueRender(handleRef.current);
       handleRef.current = null;
@@ -30665,6 +30767,8 @@ function tween(from, to, easing) {
 function __clearCache(f, dur) { if (f !== __frame || dur !== __actionDurationFrames) { __frame = f; __actionDurationFrames = dur; __cache = {}; } }
 
 ${importDecls}
+// Built-in components available without registration
+const Markdown = window["__Builtins"]["Markdown"];
 
 function Wrapper(props) {
   var frame = useCurrentFrame();
@@ -30710,21 +30814,21 @@ ${usageJsx}`, Comp);
 }
 
 // src/types/Component.tsx
-var import_jsx_runtime80 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime81 = __toESM(require_jsx_runtime(), 1);
 function ComponentLeaf({ stream: stream2 }) {
   const { fps } = useVideoConfig();
   const Comp = useJsxWithImports(stream2.jsx, stream2.imports ?? void 0);
   if (!Comp) return null;
-  return /* @__PURE__ */ (0, import_jsx_runtime80.jsx)(import_jsx_runtime80.Fragment, { children: stream2.actions.map((a2) => {
+  return /* @__PURE__ */ (0, import_jsx_runtime81.jsx)(import_jsx_runtime81.Fragment, { children: stream2.actions.map((a2) => {
     const start = a2.start ?? 0;
     const end = a2.end ?? start + 1;
-    return /* @__PURE__ */ (0, import_jsx_runtime80.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime81.jsx)(
       Sequence,
       {
         durationInFrames: Math.max(1, Math.floor(fps * (end - start))),
         from: Math.floor(fps * start),
         layout: "none",
-        children: /* @__PURE__ */ (0, import_jsx_runtime80.jsx)(Comp, { action: a2 })
+        children: /* @__PURE__ */ (0, import_jsx_runtime81.jsx)(Comp, { action: a2 })
       },
       a2.id
     );
@@ -30732,7 +30836,7 @@ function ComponentLeaf({ stream: stream2 }) {
 }
 
 // src/types/Rhythm.tsx
-var import_jsx_runtime81 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime82 = __toESM(require_jsx_runtime(), 1);
 function resolveAudioSrc2(src) {
   if (/^(https?:|data:|blob:|file:|\/)/.test(src)) return src;
   return staticFile(src);
@@ -30742,11 +30846,11 @@ function RhythmLeaf({ stream: stream2 }) {
   const environment = useRemotionEnvironment();
   if (!stream2.src || environment.isStudio) return null;
   const resolvedSrc = resolveAudioSrc2(stream2.src);
-  return /* @__PURE__ */ (0, import_jsx_runtime81.jsx)(import_jsx_runtime81.Fragment, { children: stream2.actions.map((a2) => {
+  return /* @__PURE__ */ (0, import_jsx_runtime82.jsx)(import_jsx_runtime82.Fragment, { children: stream2.actions.map((a2) => {
     const start = a2.start ?? 0;
     const end = a2.end ?? start + 1;
     const volume = a2.volume ?? stream2.volume ?? 1;
-    return /* @__PURE__ */ (0, import_jsx_runtime81.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime82.jsx)(
       Sequence,
       {
         name: stream2.src ?? "rhythm",
@@ -30754,7 +30858,7 @@ function RhythmLeaf({ stream: stream2 }) {
         from: Math.floor(fps * start),
         layout: "none",
         showInTimeline: false,
-        children: /* @__PURE__ */ (0, import_jsx_runtime81.jsx)(
+        children: /* @__PURE__ */ (0, import_jsx_runtime82.jsx)(
           Audio,
           {
             src: resolvedSrc,
@@ -30771,11 +30875,11 @@ function RhythmLeaf({ stream: stream2 }) {
 }
 
 // src/types/Map.tsx
-var import_react126 = __toESM(require_react(), 1);
+var import_react127 = __toESM(require_react(), 1);
 
 // node_modules/@vis.gl/react-google-maps/dist/index.modern.mjs
-var React25 = __toESM(require_react(), 1);
-var import_react125 = __toESM(require_react(), 1);
+var React26 = __toESM(require_react(), 1);
+var import_react126 = __toESM(require_react(), 1);
 var import_react_dom3 = __toESM(require_react_dom(), 1);
 var import_fast_deep_equal = __toESM(require_fast_deep_equal(), 1);
 var VERSION2 = "1.8.3";
@@ -30906,7 +31010,7 @@ var DEFAULT_SOLUTION_CHANNEL = "GMP_visgl_rgmlibrary_v1_default";
 var DEFAULT_INTERNAL_USAGE_ATTRIBUTION_IDS = [
   `gmp_visgl_reactgooglemaps_v${VERSION2}`
 ];
-var APIProviderContext = import_react125.default.createContext(null);
+var APIProviderContext = import_react126.default.createContext(null);
 var loadingStatus = APILoadingStatus.NOT_LOADED;
 var serializedApiParams;
 var listeners2 = /* @__PURE__ */ new Set();
@@ -30918,7 +31022,7 @@ function updateLoadingStatus(status) {
   listeners2.forEach((listener) => listener(loadingStatus));
 }
 function useMapInstances() {
-  const [mapInstances, setMapInstances] = (0, import_react125.useState)({});
+  const [mapInstances, setMapInstances] = (0, import_react126.useState)({});
   const addMapInstance = (mapInstance, id = "default") => {
     setMapInstances((instances) => Object.assign(Object.assign({}, instances), { [id]: mapInstance }));
   };
@@ -30936,7 +31040,7 @@ function useMapInstances() {
   return { mapInstances, addMapInstance, removeMapInstance, clearMapInstances };
 }
 function useMap3DInstances() {
-  const [map3dInstances, setMap3DInstances] = (0, import_react125.useState)({});
+  const [map3dInstances, setMap3DInstances] = (0, import_react126.useState)({});
   const addMap3DInstance = (map3dInstance, id = "default") => {
     setMap3DInstances((instances) => Object.assign(Object.assign({}, instances), { [id]: map3dInstance }));
   };
@@ -30960,11 +31064,11 @@ function useMap3DInstances() {
 }
 function useGoogleMapsApiLoader(props) {
   const { onLoad, onError, apiKey, version: version3, libraries = [], region, language, authReferrerPolicy, channel, solutionChannel, fetchAppCheckToken } = props;
-  const [status, setStatus] = (0, import_react125.useState)(loadingStatus);
-  const [loadedLibraries, addLoadedLibrary] = (0, import_react125.useReducer)((loadedLibraries2, action2) => {
+  const [status, setStatus] = (0, import_react126.useState)(loadingStatus);
+  const [loadedLibraries, addLoadedLibrary] = (0, import_react126.useReducer)((loadedLibraries2, action2) => {
     return loadedLibraries2[action2.name] ? loadedLibraries2 : Object.assign(Object.assign({}, loadedLibraries2), { [action2.name]: action2.value });
   }, {});
-  const currentSerializedParams = (0, import_react125.useMemo)(() => {
+  const currentSerializedParams = (0, import_react126.useMemo)(() => {
     const params = {
       apiKey,
       version: version3,
@@ -30986,7 +31090,7 @@ function useGoogleMapsApiLoader(props) {
     channel,
     solutionChannel
   ]);
-  const importLibraryCallback = (0, import_react125.useCallback)((name) => __awaiter(this, void 0, void 0, function* () {
+  const importLibraryCallback = (0, import_react126.useCallback)((name) => __awaiter(this, void 0, void 0, function* () {
     if (loadedLibraries[name]) {
       return loadedLibraries[name];
     }
@@ -30994,14 +31098,14 @@ function useGoogleMapsApiLoader(props) {
     addLoadedLibrary({ name, value: res });
     return res;
   }), [loadedLibraries]);
-  (0, import_react125.useEffect)(() => {
+  (0, import_react126.useEffect)(() => {
     listeners2.add(setStatus);
     setStatus(loadingStatus);
     return () => {
       listeners2.delete(setStatus);
     };
   }, []);
-  (0, import_react125.useEffect)(
+  (0, import_react126.useEffect)(
     () => {
       (() => __awaiter(this, void 0, void 0, function* () {
         var _a3, _b;
@@ -31061,7 +31165,7 @@ function useGoogleMapsApiLoader(props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [currentSerializedParams, onLoad, onError, importLibraryCallback, libraries]
   );
-  (0, import_react125.useEffect)(() => {
+  (0, import_react126.useEffect)(() => {
     if (status !== APILoadingStatus.LOADED)
       return;
     const settings = google.maps.Settings.getInstance();
@@ -31078,7 +31182,7 @@ function useGoogleMapsApiLoader(props) {
   };
 }
 function useInternalUsageAttributionIds(props) {
-  return (0, import_react125.useMemo)(() => props.disableUsageAttribution ? null : DEFAULT_INTERNAL_USAGE_ATTRIBUTION_IDS, [props.disableUsageAttribution]);
+  return (0, import_react126.useMemo)(() => props.disableUsageAttribution ? null : DEFAULT_INTERNAL_USAGE_ATTRIBUTION_IDS, [props.disableUsageAttribution]);
 }
 var APIProvider = (props) => {
   const { children } = props, loaderProps = __rest(props, ["children"]);
@@ -31086,7 +31190,7 @@ var APIProvider = (props) => {
   const { map3dInstances, addMap3DInstance, removeMap3DInstance, clearMap3DInstances } = useMap3DInstances();
   const { status, loadedLibraries, importLibrary: importLibrary2 } = useGoogleMapsApiLoader(loaderProps);
   const internalUsageAttributionIds = useInternalUsageAttributionIds(loaderProps);
-  const contextValue = (0, import_react125.useMemo)(() => ({
+  const contextValue = (0, import_react126.useMemo)(() => ({
     mapInstances,
     addMapInstance,
     removeMapInstance,
@@ -31113,13 +31217,13 @@ var APIProvider = (props) => {
     importLibrary2,
     internalUsageAttributionIds
   ]);
-  return import_react125.default.createElement(APIProviderContext.Provider, { value: contextValue }, children);
+  return import_react126.default.createElement(APIProviderContext.Provider, { value: contextValue }, children);
 };
 function useMapEvents(map2, props) {
   for (const propName of eventPropNames) {
     const handler = props[propName];
     const eventType = propNameToEventType[propName];
-    (0, import_react125.useEffect)(() => {
+    (0, import_react126.useEffect)(() => {
       if (!map2)
         return;
       if (!handler)
@@ -31223,14 +31327,14 @@ var mouseEventTypes = [
 ];
 var eventPropNames = Object.keys(propNameToEventType);
 function useMemoized(value, isEqual) {
-  const ref = (0, import_react125.useRef)(value);
+  const ref = (0, import_react126.useRef)(value);
   if (!isEqual(value, ref.current)) {
     ref.current = value;
   }
   return ref.current;
 }
 function useCustomCompareEffect(effect2, dependencies, isEqual) {
-  (0, import_react125.useEffect)(effect2, [useMemoized(dependencies, isEqual)]);
+  (0, import_react126.useEffect)(effect2, [useMemoized(dependencies, isEqual)]);
 }
 function useDeepCompareEffect(effect2, dependencies) {
   useCustomCompareEffect(effect2, dependencies, import_fast_deep_equal.default);
@@ -31288,12 +31392,12 @@ function useMapOptions(map2, mapProps) {
 }
 function useApiLoadingStatus() {
   var _a3;
-  return ((_a3 = (0, import_react125.useContext)(APIProviderContext)) === null || _a3 === void 0 ? void 0 : _a3.status) || APILoadingStatus.NOT_LOADED;
+  return ((_a3 = (0, import_react126.useContext)(APIProviderContext)) === null || _a3 === void 0 ? void 0 : _a3.status) || APILoadingStatus.NOT_LOADED;
 }
 function useDeckGLCameraUpdate(map2, props) {
   const { viewport, viewState } = props;
   const isDeckGlControlled = !!viewport;
-  (0, import_react125.useLayoutEffect)(() => {
+  (0, import_react126.useLayoutEffect)(() => {
     if (!map2 || !viewState)
       return;
     const { latitude, longitude, bearing: heading, pitch: tilt, zoom } = viewState;
@@ -31382,7 +31486,7 @@ function useMapCameraParams(map2, cameraStateRef, mapProps) {
   const zoom = Number.isFinite(mapProps.zoom) ? mapProps.zoom : null;
   const heading = Number.isFinite(mapProps.heading) ? mapProps.heading : null;
   const tilt = Number.isFinite(mapProps.tilt) ? mapProps.tilt : null;
-  (0, import_react125.useLayoutEffect)(() => {
+  (0, import_react126.useLayoutEffect)(() => {
     if (!map2)
       return;
     const nextCamera = {};
@@ -31425,22 +31529,22 @@ var AuthFailureMessage = () => {
     background: "#dddddd",
     padding: "1rem 1.5rem"
   };
-  return import_react125.default.createElement(
+  return import_react126.default.createElement(
     "div",
     { style: style2 },
-    import_react125.default.createElement("h2", null, "Error: AuthFailure"),
-    import_react125.default.createElement(
+    import_react126.default.createElement("h2", null, "Error: AuthFailure"),
+    import_react126.default.createElement(
       "p",
       null,
       "A problem with your API key prevents the map from rendering correctly. Please make sure the value of the ",
-      import_react125.default.createElement("code", null, "APIProvider.apiKey"),
+      import_react126.default.createElement("code", null, "APIProvider.apiKey"),
       " prop is correct. Check the error-message in the console for further details."
     )
   );
 };
 function useCallbackRef() {
-  const [el, setEl] = (0, import_react125.useState)(null);
-  const ref = (0, import_react125.useCallback)((value) => setEl(value), [setEl]);
+  const [el, setEl] = (0, import_react126.useState)(null);
+  const ref = (0, import_react126.useCallback)((value) => setEl(value), [setEl]);
   return [el, ref];
 }
 function useApiIsLoaded() {
@@ -31448,7 +31552,7 @@ function useApiIsLoaded() {
   return status === APILoadingStatus.LOADED;
 }
 function useForceUpdate() {
-  const [, forceUpdate] = (0, import_react125.useReducer)((x) => x + 1, 0);
+  const [, forceUpdate] = (0, import_react126.useReducer)((x) => x + 1, 0);
   return forceUpdate;
 }
 function handleBoundsChange(map2, ref) {
@@ -31469,13 +31573,13 @@ function handleBoundsChange(map2, ref) {
 }
 function useTrackedCameraStateRef(map2) {
   const forceUpdate = useForceUpdate();
-  const ref = (0, import_react125.useRef)({
+  const ref = (0, import_react126.useRef)({
     center: { lat: 0, lng: 0 },
     heading: 0,
     tilt: 0,
     zoom: 0
   });
-  (0, import_react125.useEffect)(() => {
+  (0, import_react126.useEffect)(() => {
     if (!map2)
       return;
     const listener = google.maps.event.addListener(map2, "bounds_changed", () => {
@@ -31504,7 +31608,7 @@ var CachedMapStack = class {
 CachedMapStack.entries = {};
 function useMapInstance(props, context) {
   const apiIsLoaded = useApiIsLoaded();
-  const [map2, setMap] = (0, import_react125.useState)(null);
+  const [map2, setMap] = (0, import_react126.useState)(null);
   const [container3, containerRef] = useCallbackRef();
   const cameraStateRef = useTrackedCameraStateRef(map2);
   const { id, defaultBounds, defaultCenter, defaultZoom, defaultHeading, defaultTilt, reuseMaps, renderingType, colorScheme } = props, mapOptions = __rest(props, ["id", "defaultBounds", "defaultCenter", "defaultZoom", "defaultHeading", "defaultTilt", "reuseMaps", "renderingType", "colorScheme"]);
@@ -31533,8 +31637,8 @@ function useMapInstance(props, context) {
   for (const key of Object.keys(mapOptions))
     if (mapOptions[key] === void 0)
       delete mapOptions[key];
-  const savedMapStateRef = (0, import_react125.useRef)(void 0);
-  (0, import_react125.useEffect)(
+  const savedMapStateRef = (0, import_react126.useRef)(void 0);
+  (0, import_react126.useEffect)(
     () => {
       if (!container3 || !apiIsLoaded)
         return;
@@ -31603,10 +31707,10 @@ function useMapInstance(props, context) {
   );
   return [map2, containerRef, cameraStateRef];
 }
-var GoogleMapsContext = import_react125.default.createContext(null);
+var GoogleMapsContext = import_react126.default.createContext(null);
 var Map2 = (props) => {
   const { children, id, className: className2, style: style2 } = props;
-  const context = (0, import_react125.useContext)(APIProviderContext);
+  const context = (0, import_react126.useContext)(APIProviderContext);
   const loadingStatus2 = useApiLoadingStatus();
   if (!context) {
     throw new Error("<Map> can only be used inside an <ApiProvider> component.");
@@ -31617,7 +31721,7 @@ var Map2 = (props) => {
   useMapOptions(map2, props);
   const isDeckGlControlled = useDeckGLCameraUpdate(map2, props);
   const isControlledExternally = !!props.controlled;
-  (0, import_react125.useEffect)(() => {
+  (0, import_react126.useEffect)(() => {
     if (!map2)
       return;
     if (isDeckGlControlled) {
@@ -31649,7 +31753,7 @@ var Map2 = (props) => {
     lat = center.lat;
     lng = center.lng;
   }
-  const cameraOptions = (0, import_react125.useMemo)(() => {
+  const cameraOptions = (0, import_react126.useMemo)(() => {
     var _a3, _b, _c;
     return {
       center: { lat: lat !== null && lat !== void 0 ? lat : 0, lng: lng !== null && lng !== void 0 ? lng : 0 },
@@ -31658,7 +31762,7 @@ var Map2 = (props) => {
       tilt: (_c = props.tilt) !== null && _c !== void 0 ? _c : 0
     };
   }, [lat, lng, props.zoom, props.heading, props.tilt]);
-  (0, import_react125.useLayoutEffect)(() => {
+  (0, import_react126.useLayoutEffect)(() => {
     if (!map2 || !isControlledExternally)
       return;
     map2.moveCamera(cameraOptions);
@@ -31667,22 +31771,22 @@ var Map2 = (props) => {
     });
     return () => listener.remove();
   }, [map2, isControlledExternally, cameraOptions]);
-  const combinedStyle = (0, import_react125.useMemo)(() => Object.assign({
+  const combinedStyle = (0, import_react126.useMemo)(() => Object.assign({
     width: "100%",
     height: "100%",
     position: "relative",
     // when using deckgl, the map should be sent to the back
     zIndex: isDeckGlControlled ? -1 : 0
   }, style2), [style2, isDeckGlControlled]);
-  const contextValue = (0, import_react125.useMemo)(() => ({ map: map2 }), [map2]);
+  const contextValue = (0, import_react126.useMemo)(() => ({ map: map2 }), [map2]);
   if (loadingStatus2 === APILoadingStatus.AUTH_FAILURE) {
-    return import_react125.default.createElement(
+    return import_react126.default.createElement(
       "div",
       { style: Object.assign({ position: "relative" }, className2 ? {} : combinedStyle), className: className2 },
-      import_react125.default.createElement(AuthFailureMessage, null)
+      import_react126.default.createElement(AuthFailureMessage, null)
     );
   }
-  return import_react125.default.createElement("div", Object.assign({ ref: mapRef, "data-testid": "map", style: className2 ? void 0 : combinedStyle, className: className2 }, id ? { id } : {}), map2 ? import_react125.default.createElement(GoogleMapsContext.Provider, { value: contextValue }, children) : null);
+  return import_react126.default.createElement("div", Object.assign({ ref: mapRef, "data-testid": "map", style: className2 ? void 0 : combinedStyle, className: className2 }, id ? { id } : {}), map2 ? import_react126.default.createElement(GoogleMapsContext.Provider, { value: contextValue }, children) : null);
 };
 Map2.deckGLViewProps = true;
 var shownMessages = /* @__PURE__ */ new Set();
@@ -31694,8 +31798,8 @@ function logErrorOnce(...args) {
   }
 }
 var useMap = (id = null) => {
-  const ctx = (0, import_react125.useContext)(APIProviderContext);
-  const { map: map2 } = (0, import_react125.useContext)(GoogleMapsContext) || {};
+  const ctx = (0, import_react126.useContext)(APIProviderContext);
+  const { map: map2 } = (0, import_react126.useContext)(GoogleMapsContext) || {};
   if (ctx === null) {
     logErrorOnce("useMap(): failed to retrieve APIProviderContext. Make sure that the <APIProvider> component exists and that the component you are calling `useMap()` from is a sibling of the <APIProvider>.");
     return null;
@@ -31709,8 +31813,8 @@ var useMap = (id = null) => {
 };
 function useMapsLibrary(name) {
   const apiIsLoaded = useApiIsLoaded();
-  const ctx = (0, import_react125.useContext)(APIProviderContext);
-  (0, import_react125.useEffect)(() => {
+  const ctx = (0, import_react126.useContext)(APIProviderContext);
+  (0, import_react126.useEffect)(() => {
     if (!apiIsLoaded || !ctx)
       return;
     void ctx.importLibrary(name);
@@ -31718,8 +31822,8 @@ function useMapsLibrary(name) {
   return (ctx === null || ctx === void 0 ? void 0 : ctx.loadedLibraries[name]) || null;
 }
 var _a;
-var { useLayoutEffect: useLayoutEffect15, useRef: useRef31 } = React25;
-var useBeforeEffect = (_a = React25.useInsertionEffect) !== null && _a !== void 0 ? _a : useLayoutEffect15;
+var { useLayoutEffect: useLayoutEffect15, useRef: useRef31 } = React26;
+var useBeforeEffect = (_a = React26.useInsertionEffect) !== null && _a !== void 0 ? _a : useLayoutEffect15;
 function forbiddenInRender() {
   throw new Error("useEffectEvent: invalid call during rendering.");
 }
@@ -31736,7 +31840,7 @@ var noop$1 = () => {
 function useMapsEventListener(target, name, callback) {
   const eventFn = useEffectEvent(callback !== null && callback !== void 0 ? callback : noop$1);
   const isCallbackDefined = Boolean(callback);
-  (0, import_react125.useEffect)(() => {
+  (0, import_react126.useEffect)(() => {
     if (!target || !name || !isCallbackDefined)
       return;
     const listener = google.maps.event.addListener(target, name, eventFn);
@@ -31744,7 +31848,7 @@ function useMapsEventListener(target, name, callback) {
   }, [target, name, isCallbackDefined]);
 }
 function usePropBinding(object2, prop, value) {
-  (0, import_react125.useEffect)(() => {
+  (0, import_react126.useEffect)(() => {
     if (!object2)
       return;
     object2[prop] = value;
@@ -31755,7 +31859,7 @@ var noop = () => {
 function useDomEventListener(target, name, callback) {
   const eventFn = useEffectEvent(callback !== null && callback !== void 0 ? callback : noop);
   const isCallbackDefined = Boolean(callback);
-  (0, import_react125.useEffect)(() => {
+  (0, import_react126.useEffect)(() => {
     if (!target || !name || !isCallbackDefined)
       return;
     const listenerCallback = eventFn;
@@ -31806,7 +31910,7 @@ function isVersionGreaterEqual(major, minor) {
   const currentMinor = parseInt(version3[1], 10);
   return currentMajor > major || currentMajor === major && currentMinor >= minor;
 }
-var AdvancedMarkerContext = import_react125.default.createContext(null);
+var AdvancedMarkerContext = import_react126.default.createContext(null);
 var AdvancedMarkerAnchorPoint = {
   TOP_LEFT: ["0%", "0%"],
   TOP_CENTER: ["50%", "0%"],
@@ -31826,30 +31930,30 @@ var AdvancedMarkerAnchorPoint = {
   BOTTOM_RIGHT: ["100%", "100%"],
   CENTER: ["50%", "50%"]
 };
-var AdvancedMarker = (0, import_react125.forwardRef)((props, ref) => {
+var AdvancedMarker = (0, import_react126.forwardRef)((props, ref) => {
   const { children, style: style2, className: className2, anchorPoint } = props;
   const [marker, contentContainer] = useAdvancedMarker(props);
-  const advancedMarkerContextValue = (0, import_react125.useMemo)(() => marker ? { marker } : null, [marker]);
-  (0, import_react125.useImperativeHandle)(ref, () => marker, [marker]);
+  const advancedMarkerContextValue = (0, import_react126.useMemo)(() => marker ? { marker } : null, [marker]);
+  (0, import_react126.useImperativeHandle)(ref, () => marker, [marker]);
   if (!contentContainer)
     return null;
-  return import_react125.default.createElement(AdvancedMarkerContext.Provider, { value: advancedMarkerContextValue }, (0, import_react_dom3.createPortal)(import_react125.default.createElement(MarkerContent, { anchorPoint, styles: style2, className: className2 }, children), contentContainer));
+  return import_react126.default.createElement(AdvancedMarkerContext.Provider, { value: advancedMarkerContextValue }, (0, import_react_dom3.createPortal)(import_react126.default.createElement(MarkerContent, { anchorPoint, styles: style2, className: className2 }, children), contentContainer));
 });
 AdvancedMarker.displayName = "AdvancedMarker";
 function isElementNode(node) {
   return node.nodeType === Node.ELEMENT_NODE;
 }
 var MarkerContent = ({ children, styles, className: className2 }) => {
-  return import_react125.default.createElement("div", { className: className2, style: styles }, children);
+  return import_react126.default.createElement("div", { className: className2, style: styles }, children);
 };
 function useAdvancedMarker(props) {
-  const [marker, setMarker] = (0, import_react125.useState)(null);
-  const [contentContainer, setContentContainer] = (0, import_react125.useState)(null);
+  const [marker, setMarker] = (0, import_react126.useState)(null);
+  const [contentContainer, setContentContainer] = (0, import_react126.useState)(null);
   const map2 = useMap();
   const markerLibrary = useMapsLibrary("marker");
   const { children, onClick, className: className2, onMouseEnter, onMouseLeave, onDrag, onDragStart, onDragEnd, collisionBehavior, clickable, draggable, position, title, zIndex, anchorPoint, anchorLeft, anchorTop } = props;
-  const numChildren = import_react125.Children.count(children);
-  (0, import_react125.useEffect)(() => {
+  const numChildren = import_react126.Children.count(children);
+  (0, import_react126.useEffect)(() => {
     if (!map2 || !markerLibrary)
       return;
     const newMarker = new markerLibrary.AdvancedMarkerElement();
@@ -31868,7 +31972,7 @@ function useAdvancedMarker(props) {
       setContentContainer(null);
     };
   }, [map2, markerLibrary, numChildren]);
-  (0, import_react125.useEffect)(() => {
+  (0, import_react126.useEffect)(() => {
     if (!(marker === null || marker === void 0 ? void 0 : marker.content) || !isElementNode(marker.content) || numChildren > 0)
       return;
     marker.content.className = className2 !== null && className2 !== void 0 ? className2 : "";
@@ -31878,7 +31982,7 @@ function useAdvancedMarker(props) {
   usePropBinding(marker, "title", title !== null && title !== void 0 ? title : "");
   usePropBinding(marker, "zIndex", zIndex);
   usePropBinding(marker, "collisionBehavior", collisionBehavior);
-  (0, import_react125.useEffect)(() => {
+  (0, import_react126.useEffect)(() => {
     if (!marker)
       return;
     if (draggable !== void 0)
@@ -31888,7 +31992,7 @@ function useAdvancedMarker(props) {
     else
       marker.gmpDraggable = false;
   }, [marker, draggable, onDrag, onDragEnd, onDragStart]);
-  (0, import_react125.useEffect)(() => {
+  (0, import_react126.useEffect)(() => {
     if (!marker)
       return;
     const gmpClickable = clickable !== void 0 ? clickable : Boolean(onClick) || Boolean(onMouseEnter) || Boolean(onMouseLeave);
@@ -31909,7 +32013,7 @@ function useAdvancedMarker(props) {
   return [marker, contentContainer];
 }
 function useAdvancedMarkerAnchoring(marker, anchorPoint, anchorLeft, anchorTop, hasChildren) {
-  (0, import_react125.useEffect)(() => {
+  (0, import_react126.useEffect)(() => {
     if (!marker || !hasChildren)
       return;
     const anchorOptionsSupported = isVersionGreaterEqual(3, 62);
@@ -31946,10 +32050,10 @@ function useAdvancedMarkerAnchoring(marker, anchorPoint, anchorLeft, anchorTop, 
 function useCircle(props) {
   var _a3, _b, _c;
   const { onClick, onDrag, onDragStart, onDragEnd, onMouseOver, onMouseOut, onRadiusChanged, onCenterChanged, center, defaultCenter, radius, defaultRadius } = props, destructuredOptions = __rest(props, ["onClick", "onDrag", "onDragStart", "onDragEnd", "onMouseOver", "onMouseOut", "onRadiusChanged", "onCenterChanged", "center", "defaultCenter", "radius", "defaultRadius"]);
-  const [circle, setCircle] = (0, import_react125.useState)(null);
+  const [circle, setCircle] = (0, import_react126.useState)(null);
   const map2 = useMap();
   const circleOptions = useMemoized(Object.assign(Object.assign({}, destructuredOptions), { clickable: (_a3 = destructuredOptions.clickable) !== null && _a3 !== void 0 ? _a3 : Boolean(onClick), draggable: (_b = destructuredOptions.draggable) !== null && _b !== void 0 ? _b : Boolean(onDrag || onDragStart || onDragEnd || onCenterChanged), editable: (_c = destructuredOptions.editable) !== null && _c !== void 0 ? _c : Boolean(onRadiusChanged) }), import_fast_deep_equal.default);
-  (0, import_react125.useEffect)(() => {
+  (0, import_react126.useEffect)(() => {
     if (!map2) {
       if (map2 === void 0)
         console.error("<Circle> has to be inside a Map component.");
@@ -31977,19 +32081,19 @@ function useCircle(props) {
   useMapsEventListener(circle, "center_changed", onCenterChanged ? () => {
     onCenterChanged(circle === null || circle === void 0 ? void 0 : circle.getCenter());
   } : null);
-  (0, import_react125.useEffect)(() => {
+  (0, import_react126.useEffect)(() => {
     if (!circle)
       return;
     circle.setOptions(circleOptions);
   }, [circle, circleOptions]);
-  (0, import_react125.useEffect)(() => {
+  (0, import_react126.useEffect)(() => {
     if (!circle || !center)
       return;
     if (!latLngEquals(center, circle.getCenter())) {
       circle.setCenter(center);
     }
   }, [circle, center]);
-  (0, import_react125.useEffect)(() => {
+  (0, import_react126.useEffect)(() => {
     if (!circle || radius === void 0)
       return;
     if (radius !== circle.getRadius()) {
@@ -31998,10 +32102,10 @@ function useCircle(props) {
   }, [circle, radius]);
   return circle;
 }
-var Circle = (0, import_react125.forwardRef)((props, ref) => {
+var Circle = (0, import_react126.forwardRef)((props, ref) => {
   const circle = useCircle(props);
-  (0, import_react125.useImperativeHandle)(ref, () => circle, [circle]);
-  return import_react125.default.createElement(import_react125.default.Fragment, null);
+  (0, import_react126.useImperativeHandle)(ref, () => circle, [circle]);
+  return import_react126.default.createElement(import_react126.default.Fragment, null);
 });
 Circle.displayName = "Circle";
 function setValueForStyles(element, styles, prevStyles) {
@@ -32123,12 +32227,12 @@ function getPathsArray(polygon) {
 function usePolygon(props) {
   var _a3, _b, _c;
   const { onClick, onDrag, onDragStart, onDragEnd, onMouseOver, onMouseOut, onPathsChanged, polygon: externalPolygon, encodedPaths, paths, defaultPaths } = props, destructuredOptions = __rest(props, ["onClick", "onDrag", "onDragStart", "onDragEnd", "onMouseOver", "onMouseOut", "onPathsChanged", "polygon", "encodedPaths", "paths", "defaultPaths"]);
-  const [polygon, setPolygon] = (0, import_react125.useState)(null);
+  const [polygon, setPolygon] = (0, import_react126.useState)(null);
   const map2 = useMap();
   const geometryLibrary = useMapsLibrary("geometry");
-  const isUpdatingRef = (0, import_react125.useRef)(false);
+  const isUpdatingRef = (0, import_react126.useRef)(false);
   const polygonOptions = useMemoized(Object.assign(Object.assign({}, destructuredOptions), { clickable: (_a3 = destructuredOptions.clickable) !== null && _a3 !== void 0 ? _a3 : Boolean(onClick), draggable: (_b = destructuredOptions.draggable) !== null && _b !== void 0 ? _b : Boolean(onDrag || onDragStart || onDragEnd || onPathsChanged), editable: (_c = destructuredOptions.editable) !== null && _c !== void 0 ? _c : Boolean(onPathsChanged) }), import_fast_deep_equal.default);
-  (0, import_react125.useEffect)(() => {
+  (0, import_react126.useEffect)(() => {
     if (!map2) {
       if (map2 === void 0)
         console.error("<Polygon> has to be inside a Map component.");
@@ -32168,7 +32272,7 @@ function usePolygon(props) {
       onPathsChanged(getPathsArray(polygon));
     }
   });
-  (0, import_react125.useEffect)(() => {
+  (0, import_react126.useEffect)(() => {
     if (!polygon || !onPathsChanged)
       return;
     const listeners3 = [];
@@ -32209,12 +32313,12 @@ function usePolygon(props) {
     polygonOptions.editable,
     polygonOptions.draggable
   ]);
-  (0, import_react125.useEffect)(() => {
+  (0, import_react126.useEffect)(() => {
     if (!polygon)
       return;
     polygon.setOptions(polygonOptions);
   }, [polygon, polygonOptions]);
-  (0, import_react125.useEffect)(() => {
+  (0, import_react126.useEffect)(() => {
     if (!polygon || !paths)
       return;
     if (!Array.isArray(paths))
@@ -32228,7 +32332,7 @@ function usePolygon(props) {
       isUpdatingRef.current = false;
     }
   }, [polygon, paths]);
-  (0, import_react125.useEffect)(() => {
+  (0, import_react126.useEffect)(() => {
     if (!polygon || !encodedPaths || !geometryLibrary)
       return;
     isUpdatingRef.current = true;
@@ -32238,21 +32342,21 @@ function usePolygon(props) {
   }, [polygon, encodedPaths, geometryLibrary]);
   return polygon;
 }
-var Polygon = (0, import_react125.forwardRef)((props, ref) => {
+var Polygon = (0, import_react126.forwardRef)((props, ref) => {
   const polygon = usePolygon(props);
-  (0, import_react125.useImperativeHandle)(ref, () => polygon, [polygon]);
-  return import_react125.default.createElement(import_react125.default.Fragment, null);
+  (0, import_react126.useImperativeHandle)(ref, () => polygon, [polygon]);
+  return import_react126.default.createElement(import_react126.default.Fragment, null);
 });
 Polygon.displayName = "Polygon";
 function usePolyline(props) {
   var _a3, _b, _c;
   const { onClick, onDrag, onDragStart, onDragEnd, onMouseOver, onMouseOut, onPathChanged, polyline: externalPolyline, encodedPath, path, defaultPath } = props, destructuredOptions = __rest(props, ["onClick", "onDrag", "onDragStart", "onDragEnd", "onMouseOver", "onMouseOut", "onPathChanged", "polyline", "encodedPath", "path", "defaultPath"]);
-  const [polyline, setPolyline] = (0, import_react125.useState)(null);
+  const [polyline, setPolyline] = (0, import_react126.useState)(null);
   const map2 = useMap();
   const geometryLibrary = useMapsLibrary("geometry");
-  const isUpdatingRef = (0, import_react125.useRef)(false);
+  const isUpdatingRef = (0, import_react126.useRef)(false);
   const polylineOptions = useMemoized(Object.assign(Object.assign({}, destructuredOptions), { clickable: (_a3 = destructuredOptions.clickable) !== null && _a3 !== void 0 ? _a3 : Boolean(onClick), draggable: (_b = destructuredOptions.draggable) !== null && _b !== void 0 ? _b : Boolean(onDrag || onDragStart || onDragEnd || onPathChanged), editable: (_c = destructuredOptions.editable) !== null && _c !== void 0 ? _c : Boolean(onPathChanged) }), import_fast_deep_equal.default);
-  (0, import_react125.useEffect)(() => {
+  (0, import_react126.useEffect)(() => {
     if (!map2) {
       if (map2 === void 0)
         console.error("<Polyline> has to be inside a Map component.");
@@ -32292,7 +32396,7 @@ function usePolyline(props) {
       onPathChanged(polyline.getPath().getArray());
     }
   });
-  (0, import_react125.useEffect)(() => {
+  (0, import_react126.useEffect)(() => {
     if (!polyline || !onPathChanged)
       return;
     const mvcPath = polyline.getPath();
@@ -32319,12 +32423,12 @@ function usePolyline(props) {
     polylineOptions.editable,
     polylineOptions.draggable
   ]);
-  (0, import_react125.useEffect)(() => {
+  (0, import_react126.useEffect)(() => {
     if (!polyline)
       return;
     polyline.setOptions(polylineOptions);
   }, [polyline, polylineOptions]);
-  (0, import_react125.useEffect)(() => {
+  (0, import_react126.useEffect)(() => {
     if (!polyline || !path)
       return;
     const currentPath = polyline.getPath();
@@ -32334,7 +32438,7 @@ function usePolyline(props) {
       isUpdatingRef.current = false;
     }
   }, [polyline, path]);
-  (0, import_react125.useEffect)(() => {
+  (0, import_react126.useEffect)(() => {
     if (!polyline || !encodedPath || !geometryLibrary)
       return;
     isUpdatingRef.current = true;
@@ -32344,10 +32448,10 @@ function usePolyline(props) {
   }, [polyline, encodedPath, geometryLibrary]);
   return polyline;
 }
-var Polyline = (0, import_react125.forwardRef)((props, ref) => {
+var Polyline = (0, import_react126.forwardRef)((props, ref) => {
   const polyline = usePolyline(props);
-  (0, import_react125.useImperativeHandle)(ref, () => polyline, [polyline]);
-  return import_react125.default.createElement(import_react125.default.Fragment, null);
+  (0, import_react126.useImperativeHandle)(ref, () => polyline, [polyline]);
+  return import_react126.default.createElement(import_react126.default.Fragment, null);
 });
 Polyline.displayName = "Polyline";
 var DEFAULT_CAMERA_STATE = {
@@ -32371,8 +32475,8 @@ function updateCameraState(map3d, ref, prop) {
 }
 function useTrackedCameraStateRef3D(map3d) {
   const forceUpdate = useForceUpdate();
-  const ref = (0, import_react125.useRef)(Object.assign({}, DEFAULT_CAMERA_STATE));
-  (0, import_react125.useEffect)(() => {
+  const ref = (0, import_react126.useRef)(Object.assign({}, DEFAULT_CAMERA_STATE));
+  (0, import_react126.useEffect)(() => {
     if (!map3d)
       return;
     const listeners3 = [];
@@ -32395,16 +32499,16 @@ function useTrackedCameraStateRef3D(map3d) {
 }
 function useMap3DInstance(props) {
   const maps3dLib = useMapsLibrary("maps3d");
-  const [customElementReady, setCustomElementReady] = (0, import_react125.useState)(false);
+  const [customElementReady, setCustomElementReady] = (0, import_react126.useState)(false);
   const [, containerRef] = useCallbackRef();
   const [map3d, map3dRef] = useCallbackRef();
   const cameraStateRef = useTrackedCameraStateRef3D(map3d);
-  (0, import_react125.useEffect)(() => {
+  (0, import_react126.useEffect)(() => {
     customElements.whenDefined("gmp-map-3d").then(() => {
       setCustomElementReady(true);
     });
   }, []);
-  (0, import_react125.useEffect)(
+  (0, import_react126.useEffect)(
     () => {
       if (!map3d)
         return;
@@ -32481,7 +32585,7 @@ function useMap3DCameraParams(map3d, cameraStateRef, props) {
   const heading = (_e = props.heading) !== null && _e !== void 0 ? _e : null;
   const tilt = (_f = props.tilt) !== null && _f !== void 0 ? _f : null;
   const roll = (_g = props.roll) !== null && _g !== void 0 ? _g : null;
-  (0, import_react125.useLayoutEffect)(() => {
+  (0, import_react126.useLayoutEffect)(() => {
     var _a4;
     if (!map3d)
       return;
@@ -32563,7 +32667,7 @@ function useMap3DEvents(map3d, props) {
   useMap3DEvent(map3d, "gmp-tiltchange", onTiltChanged, createCameraEvent);
   useMap3DEvent(map3d, "gmp-rangechange", onRangeChanged, createCameraEvent);
   useMap3DEvent(map3d, "gmp-rollchange", onRollChanged, createCameraEvent);
-  (0, import_react125.useEffect)(() => {
+  (0, import_react126.useEffect)(() => {
     if (!map3d || !onCameraChanged)
       return;
     const handler = () => {
@@ -32578,7 +32682,7 @@ function useMap3DEvents(map3d, props) {
       }
     };
   }, [map3d, onCameraChanged]);
-  (0, import_react125.useEffect)(() => {
+  (0, import_react126.useEffect)(() => {
     if (!map3d || !onClick)
       return;
     const handler = (ev) => {
@@ -32587,7 +32691,7 @@ function useMap3DEvents(map3d, props) {
     map3d.addEventListener("gmp-click", handler);
     return () => map3d.removeEventListener("gmp-click", handler);
   }, [map3d, onClick]);
-  (0, import_react125.useEffect)(() => {
+  (0, import_react126.useEffect)(() => {
     if (!map3d || !onSteadyChange)
       return;
     const handler = (ev) => {
@@ -32606,7 +32710,7 @@ function useMap3DEvents(map3d, props) {
   }));
 }
 function useMap3DEvent(map3d, eventName, handler, createEvent) {
-  (0, import_react125.useEffect)(() => {
+  (0, import_react126.useEffect)(() => {
     if (!map3d || !handler)
       return;
     const listener = () => {
@@ -32630,7 +32734,7 @@ var MAP_3D_OPTION_KEYS = /* @__PURE__ */ new Set([
   "mode"
 ]);
 function useMap3DOptions(map3d, props) {
-  const options = (0, import_react125.useMemo)(() => {
+  const options = (0, import_react126.useMemo)(() => {
     const result = {};
     const keys = Object.keys(props);
     for (const key of keys) {
@@ -32649,15 +32753,15 @@ function useMap3DOptions(map3d, props) {
     Object.assign(map3d, options);
   }, [map3d, options]);
 }
-var GoogleMaps3DContext = import_react125.default.createContext(null);
+var GoogleMaps3DContext = import_react126.default.createContext(null);
 var DEFAULT_CONTAINER_STYLE = {
   width: "100%",
   height: "100%",
   position: "relative"
 };
-var Map3D = (0, import_react125.forwardRef)((props, ref) => {
+var Map3D = (0, import_react126.forwardRef)((props, ref) => {
   const { children, id, className: className2, style: style2 } = props;
-  const context = (0, import_react125.useContext)(APIProviderContext);
+  const context = (0, import_react126.useContext)(APIProviderContext);
   if (!context) {
     throw new Error("<Map3D> can only be used inside an <APIProvider> component.");
   }
@@ -32666,7 +32770,7 @@ var Map3D = (0, import_react125.forwardRef)((props, ref) => {
   useMap3DCameraParams(map3d, cameraStateRef, props);
   useMap3DEvents(map3d, props);
   useMap3DOptions(map3d, props);
-  (0, import_react125.useEffect)(() => {
+  (0, import_react126.useEffect)(() => {
     if (!map3d)
       return;
     const instanceId = id !== null && id !== void 0 ? id : "default";
@@ -32675,7 +32779,7 @@ var Map3D = (0, import_react125.forwardRef)((props, ref) => {
       removeMap3DInstance(instanceId);
     };
   }, [map3d, id]);
-  (0, import_react125.useImperativeHandle)(ref, () => ({
+  (0, import_react126.useImperativeHandle)(ref, () => ({
     map3d,
     flyCameraAround: (options) => {
       map3d === null || map3d === void 0 ? void 0 : map3d.flyCameraAround(options);
@@ -32687,34 +32791,34 @@ var Map3D = (0, import_react125.forwardRef)((props, ref) => {
       map3d === null || map3d === void 0 ? void 0 : map3d.stopCameraAnimation();
     }
   }), [map3d]);
-  const combinedStyle = (0, import_react125.useMemo)(() => Object.assign(Object.assign({}, DEFAULT_CONTAINER_STYLE), style2), [style2]);
-  const contextValue = (0, import_react125.useMemo)(() => ({ map3d }), [map3d]);
+  const combinedStyle = (0, import_react126.useMemo)(() => Object.assign(Object.assign({}, DEFAULT_CONTAINER_STYLE), style2), [style2]);
+  const contextValue = (0, import_react126.useMemo)(() => ({ map3d }), [map3d]);
   if (!isReady) {
-    return import_react125.default.createElement("div", Object.assign({ ref: containerRef, "data-testid": "map-3d", style: className2 ? void 0 : combinedStyle, className: className2 }, id ? { id } : {}));
+    return import_react126.default.createElement("div", Object.assign({ ref: containerRef, "data-testid": "map-3d", style: className2 ? void 0 : combinedStyle, className: className2 }, id ? { id } : {}));
   }
-  return import_react125.default.createElement(
+  return import_react126.default.createElement(
     "div",
     Object.assign({ ref: containerRef, "data-testid": "map-3d", style: className2 ? void 0 : combinedStyle, className: className2 }, id ? { id } : {}),
-    import_react125.default.createElement("gmp-map-3d", { ref: map3dRef, style: { width: "100%", height: "100%" } }, map3d && import_react125.default.createElement(GoogleMaps3DContext.Provider, { value: contextValue }, children))
+    import_react126.default.createElement("gmp-map-3d", { ref: map3dRef, style: { width: "100%", height: "100%" } }, map3d && import_react126.default.createElement(GoogleMaps3DContext.Provider, { value: contextValue }, children))
   );
 });
 Map3D.displayName = "Map3D";
-var Marker3DContext = (0, import_react125.createContext)(null);
-var Marker3D = (0, import_react125.forwardRef)(function Marker3D2(props, ref) {
+var Marker3DContext = (0, import_react126.createContext)(null);
+var Marker3D = (0, import_react126.forwardRef)(function Marker3D2(props, ref) {
   const { children, onClick, position, altitudeMode, collisionBehavior, drawsWhenOccluded, extruded, label: label3, sizePreserved, zIndex, title } = props;
   const isInteractive = Boolean(onClick);
-  const [marker, setMarker] = (0, import_react125.useState)(null);
-  const [contentHandledExternally, setContentHandledExternally] = (0, import_react125.useState)(false);
-  const contentContainer = (0, import_react125.useMemo)(() => {
+  const [marker, setMarker] = (0, import_react126.useState)(null);
+  const [contentHandledExternally, setContentHandledExternally] = (0, import_react126.useState)(false);
+  const contentContainer = (0, import_react126.useMemo)(() => {
     const container3 = document.createElement("div");
     container3.style.display = "none";
     document.body.appendChild(container3);
     return container3;
   }, []);
-  (0, import_react125.useEffect)(() => {
+  (0, import_react126.useEffect)(() => {
     return () => contentContainer.remove();
   }, [contentContainer]);
-  const markerRef = (0, import_react125.useCallback)((node) => {
+  const markerRef = (0, import_react126.useCallback)((node) => {
     setMarker(node);
     if (typeof ref === "function") {
       ref(node);
@@ -32723,7 +32827,7 @@ var Marker3D = (0, import_react125.forwardRef)(function Marker3D2(props, ref) {
     }
   }, [ref]);
   useDomEventListener(marker, "gmp-click", onClick);
-  (0, import_react125.useLayoutEffect)(() => {
+  (0, import_react126.useLayoutEffect)(() => {
     if (contentHandledExternally)
       return;
     if (!marker || !contentContainer)
@@ -32746,7 +32850,7 @@ var Marker3D = (0, import_react125.forwardRef)(function Marker3D2(props, ref) {
       }
     }
   }, [marker, contentContainer, children, contentHandledExternally]);
-  const contextValue = (0, import_react125.useMemo)(() => ({ marker, setContentHandledExternally }), [marker]);
+  const contextValue = (0, import_react126.useMemo)(() => ({ marker, setContentHandledExternally }), [marker]);
   usePropBinding(marker, "position", position);
   usePropBinding(marker, "altitudeMode", altitudeMode);
   usePropBinding(marker, "collisionBehavior", collisionBehavior);
@@ -32756,20 +32860,20 @@ var Marker3D = (0, import_react125.forwardRef)(function Marker3D2(props, ref) {
   usePropBinding(marker, "sizePreserved", sizePreserved);
   usePropBinding(marker, "zIndex", zIndex);
   usePropBinding(marker, "title", title !== null && title !== void 0 ? title : "");
-  return import_react125.default.createElement(
+  return import_react126.default.createElement(
     Marker3DContext.Provider,
     { value: contextValue },
-    isInteractive ? import_react125.default.createElement("gmp-marker-3d-interactive", { ref: markerRef }) : import_react125.default.createElement("gmp-marker-3d", { ref: markerRef }),
+    isInteractive ? import_react126.default.createElement("gmp-marker-3d-interactive", { ref: markerRef }) : import_react126.default.createElement("gmp-marker-3d", { ref: markerRef }),
     (0, import_react_dom3.createPortal)(children, contentContainer)
   );
 });
 Marker3D.displayName = "Marker3D";
-var Popover = (0, import_react125.forwardRef)(function Popover2(props, ref) {
+var Popover = (0, import_react126.forwardRef)(function Popover2(props, ref) {
   var _a3;
   const { children, headerContent, style: style2, className: className2, open = true, position, anchor, anchorId, altitudeMode, lightDismissDisabled, autoPanDisabled, onClose } = props;
-  const [popover, setPopover] = (0, import_react125.useState)(null);
-  const prevStyleRef = (0, import_react125.useRef)(null);
-  (0, import_react125.useImperativeHandle)(ref, () => popover, [popover]);
+  const [popover, setPopover] = (0, import_react126.useState)(null);
+  const prevStyleRef = (0, import_react126.useRef)(null);
+  (0, import_react126.useImperativeHandle)(ref, () => popover, [popover]);
   usePopoverCloseObserver(popover, open, onClose);
   usePropBinding(popover, "open", open !== null && open !== void 0 ? open : false);
   usePropBinding(popover, "altitudeMode", altitudeMode);
@@ -32777,27 +32881,27 @@ var Popover = (0, import_react125.forwardRef)(function Popover2(props, ref) {
   usePropBinding(popover, "autoPanDisabled", autoPanDisabled);
   const positionAnchor = (_a3 = anchor !== null && anchor !== void 0 ? anchor : anchorId) !== null && _a3 !== void 0 ? _a3 : position;
   usePropBinding(popover, "positionAnchor", positionAnchor);
-  (0, import_react125.useLayoutEffect)(() => {
+  (0, import_react126.useLayoutEffect)(() => {
     if (!popover)
       return;
     setValueForStyles(popover, style2 || null, prevStyleRef.current);
     prevStyleRef.current = style2 || null;
   }, [popover, style2]);
-  return import_react125.default.createElement(
+  return import_react126.default.createElement(
     "gmp-popover",
     { ref: setPopover, className: className2 },
-    headerContent && import_react125.default.createElement("div", { slot: "header" }, headerContent),
+    headerContent && import_react126.default.createElement("div", { slot: "header" }, headerContent),
     children
   );
 });
 Popover.displayName = "Popover";
 function usePopoverCloseObserver(popover, open, onClose) {
-  const previousOpenState = (0, import_react125.useRef)(void 0);
-  const openPropRef = (0, import_react125.useRef)(open);
-  (0, import_react125.useEffect)(() => {
+  const previousOpenState = (0, import_react126.useRef)(void 0);
+  const openPropRef = (0, import_react126.useRef)(open);
+  (0, import_react126.useEffect)(() => {
     openPropRef.current = open;
   }, [open]);
-  (0, import_react125.useEffect)(() => {
+  (0, import_react126.useEffect)(() => {
     if (!popover || !onClose)
       return;
     const observer = new MutationObserver((mutations) => {
@@ -32822,11 +32926,11 @@ function usePopoverCloseObserver(popover, open, onClose) {
   }, [popover, onClose]);
 }
 function useMarker(props) {
-  const [marker, setMarker] = (0, import_react125.useState)(null);
+  const [marker, setMarker] = (0, import_react126.useState)(null);
   const map2 = useMap();
   const { onClick, onDrag, onDragStart, onDragEnd, onMouseOver, onMouseOut } = props, markerOptions = __rest(props, ["onClick", "onDrag", "onDragStart", "onDragEnd", "onMouseOver", "onMouseOut"]);
   const { position, draggable } = markerOptions;
-  (0, import_react125.useEffect)(() => {
+  (0, import_react126.useEffect)(() => {
     if (!map2) {
       if (map2 === void 0)
         console.error("<Marker> has to be inside a Map component.");
@@ -32840,7 +32944,7 @@ function useMarker(props) {
       setMarker(null);
     };
   }, [map2]);
-  (0, import_react125.useEffect)(() => {
+  (0, import_react126.useEffect)(() => {
     if (!marker)
       return;
     const m = marker;
@@ -32871,40 +32975,40 @@ function useMarker(props) {
     onMouseOver,
     onMouseOut
   ]);
-  (0, import_react125.useEffect)(() => {
+  (0, import_react126.useEffect)(() => {
     if (!marker)
       return;
     if (markerOptions)
       marker.setOptions(markerOptions);
   }, [marker, markerOptions]);
-  (0, import_react125.useEffect)(() => {
+  (0, import_react126.useEffect)(() => {
     if (draggable || !position || !marker)
       return;
     marker.setPosition(position);
   }, [draggable, position, marker]);
   return marker;
 }
-var Marker = (0, import_react125.forwardRef)((props, ref) => {
+var Marker = (0, import_react126.forwardRef)((props, ref) => {
   const marker = useMarker(props);
-  (0, import_react125.useImperativeHandle)(ref, () => marker, [marker]);
-  return import_react125.default.createElement(import_react125.default.Fragment, null);
+  (0, import_react126.useImperativeHandle)(ref, () => marker, [marker]);
+  return import_react126.default.createElement(import_react126.default.Fragment, null);
 });
 Marker.displayName = "Marker";
 var PinLegacy = (props) => {
-  const advancedMarkerContext = (0, import_react125.useContext)(AdvancedMarkerContext);
-  const marker3dContext = (0, import_react125.useContext)(Marker3DContext);
+  const advancedMarkerContext = (0, import_react126.useContext)(AdvancedMarkerContext);
+  const marker3dContext = (0, import_react126.useContext)(Marker3DContext);
   const advancedMarker = advancedMarkerContext === null || advancedMarkerContext === void 0 ? void 0 : advancedMarkerContext.marker;
   const marker3d = marker3dContext === null || marker3dContext === void 0 ? void 0 : marker3dContext.marker;
   const setContentHandledExternally = marker3dContext === null || marker3dContext === void 0 ? void 0 : marker3dContext.setContentHandledExternally;
-  const glyphContainer = (0, import_react125.useMemo)(() => document.createElement("div"), []);
+  const glyphContainer = (0, import_react126.useMemo)(() => document.createElement("div"), []);
   const markerLibrary = useMapsLibrary("marker");
-  (0, import_react125.useEffect)(() => {
+  (0, import_react126.useEffect)(() => {
     if (marker3d && setContentHandledExternally) {
       setContentHandledExternally(true);
       return () => setContentHandledExternally(false);
     }
   }, [marker3d, setContentHandledExternally]);
-  (0, import_react125.useEffect)(() => {
+  (0, import_react126.useEffect)(() => {
     if (!marker3d || !markerLibrary)
       return;
     const pinViewOptions = Object.assign({}, props);
@@ -32919,7 +33023,7 @@ var PinLegacy = (props) => {
     return () => {
     };
   }, [marker3d, markerLibrary, glyphContainer, props]);
-  (0, import_react125.useEffect)(() => {
+  (0, import_react126.useEffect)(() => {
     var _a3;
     if (marker3d)
       return;
@@ -32932,7 +33036,7 @@ var PinLegacy = (props) => {
     if (props.glyph && props.children) {
       logErrorOnce("The <Pin> component only uses children to render the glyph if both the glyph property and children are present.");
     }
-    if (import_react125.Children.count(props.children) > 1) {
+    if (import_react126.Children.count(props.children) > 1) {
       logErrorOnce("Passing multiple children to the <Pin> component might lead to unexpected results.");
     }
     const pinViewOptions = Object.assign({}, props);
@@ -32952,20 +33056,20 @@ var PinLegacy = (props) => {
 };
 var PinModern = (props) => {
   const { children } = props;
-  const advancedMarkerContext = (0, import_react125.useContext)(AdvancedMarkerContext);
-  const marker3dContext = (0, import_react125.useContext)(Marker3DContext);
+  const advancedMarkerContext = (0, import_react126.useContext)(AdvancedMarkerContext);
+  const marker3dContext = (0, import_react126.useContext)(Marker3DContext);
   const advancedMarker = advancedMarkerContext === null || advancedMarkerContext === void 0 ? void 0 : advancedMarkerContext.marker;
   const marker3d = marker3dContext === null || marker3dContext === void 0 ? void 0 : marker3dContext.marker;
   const setContentHandledExternally = marker3dContext === null || marker3dContext === void 0 ? void 0 : marker3dContext.setContentHandledExternally;
-  const glyphContainer = (0, import_react125.useMemo)(() => document.createElement("div"), []);
+  const glyphContainer = (0, import_react126.useMemo)(() => document.createElement("div"), []);
   const markerLibrary = useMapsLibrary("marker");
-  (0, import_react125.useEffect)(() => {
+  (0, import_react126.useEffect)(() => {
     if (marker3d && setContentHandledExternally) {
       setContentHandledExternally(true);
       return () => setContentHandledExternally(false);
     }
   }, [marker3d, setContentHandledExternally]);
-  (0, import_react125.useEffect)(() => {
+  (0, import_react126.useEffect)(() => {
     if (!marker3d || !markerLibrary)
       return;
     const pinOptions = Object.assign({}, props);
@@ -32980,7 +33084,7 @@ var PinModern = (props) => {
     return () => {
     };
   }, [marker3d, markerLibrary, glyphContainer, children, props]);
-  (0, import_react125.useEffect)(() => {
+  (0, import_react126.useEffect)(() => {
     var _a3;
     if (marker3d)
       return;
@@ -32993,7 +33097,7 @@ var PinModern = (props) => {
     if ((props.glyphSrc || props.glyphText) && children) {
       logErrorOnce("The <Pin> component only uses children to render the glyph if both glyphSrc/glyphText and children are present.");
     }
-    if (import_react125.Children.count(children) > 1) {
+    if (import_react126.Children.count(children) > 1) {
       logErrorOnce("Passing multiple children to the <Pin> component might lead to unexpected results.");
     }
     const pinOptions = Object.assign({}, props);
@@ -33021,7 +33125,7 @@ var PinModern = (props) => {
 var Pin = (props) => {
   var _a3;
   const markerLibrary = useMapsLibrary("marker");
-  const isModern = (0, import_react125.useMemo)(() => {
+  const isModern = (0, import_react126.useMemo)(() => {
     if (!markerLibrary)
       return false;
     return typeof customElements !== "undefined" && customElements.get("gmp-pin") !== void 0;
@@ -33033,20 +33137,20 @@ var Pin = (props) => {
     const isUrl = glyph instanceof URL || typeof glyph === "string" && glyph.startsWith("http");
     const finalGlyphText = glyphText !== null && glyphText !== void 0 ? glyphText : typeof glyph === "string" && !isUrl ? glyph : void 0;
     const finalGlyphSrc = glyphSrc !== null && glyphSrc !== void 0 ? glyphSrc : isUrl ? String(glyph) : void 0;
-    return import_react125.default.createElement(PinModern, Object.assign({}, restProps, { glyphText: finalGlyphText, glyphSrc: finalGlyphSrc }));
+    return import_react126.default.createElement(PinModern, Object.assign({}, restProps, { glyphText: finalGlyphText, glyphSrc: finalGlyphSrc }));
   } else {
     const { glyph, glyphSrc, glyphText } = props, restProps = __rest(props, ["glyph", "glyphSrc", "glyphText"]);
     const finalGlyph = (_a3 = glyph !== null && glyph !== void 0 ? glyph : glyphSrc) !== null && _a3 !== void 0 ? _a3 : glyphText;
-    return import_react125.default.createElement(PinLegacy, Object.assign({}, restProps, { glyph: finalGlyph }));
+    return import_react126.default.createElement(PinLegacy, Object.assign({}, restProps, { glyph: finalGlyph }));
   }
 };
 function useRectangle(props) {
   var _a3, _b, _c;
   const { onClick, onDrag, onDragStart, onDragEnd, onMouseOver, onMouseOut, onBoundsChanged, bounds, defaultBounds } = props, destructuredOptions = __rest(props, ["onClick", "onDrag", "onDragStart", "onDragEnd", "onMouseOver", "onMouseOut", "onBoundsChanged", "bounds", "defaultBounds"]);
-  const [rectangle, setRectangle] = (0, import_react125.useState)(null);
+  const [rectangle, setRectangle] = (0, import_react126.useState)(null);
   const map2 = useMap();
   const rectangleOptions = useMemoized(Object.assign(Object.assign({}, destructuredOptions), { clickable: (_a3 = destructuredOptions.clickable) !== null && _a3 !== void 0 ? _a3 : Boolean(onClick), draggable: (_b = destructuredOptions.draggable) !== null && _b !== void 0 ? _b : Boolean(onDrag || onDragStart || onDragEnd || onBoundsChanged), editable: (_c = destructuredOptions.editable) !== null && _c !== void 0 ? _c : Boolean(onBoundsChanged) }), import_fast_deep_equal.default);
-  (0, import_react125.useEffect)(() => {
+  (0, import_react126.useEffect)(() => {
     if (!map2) {
       if (map2 === void 0)
         console.error("<Rectangle> has to be inside a Map component.");
@@ -33069,12 +33173,12 @@ function useRectangle(props) {
   useMapsEventListener(rectangle, "bounds_changed", onBoundsChanged ? () => {
     onBoundsChanged(rectangle === null || rectangle === void 0 ? void 0 : rectangle.getBounds());
   } : null);
-  (0, import_react125.useEffect)(() => {
+  (0, import_react126.useEffect)(() => {
     if (!rectangle)
       return;
     rectangle.setOptions(rectangleOptions);
   }, [rectangle, rectangleOptions]);
-  (0, import_react125.useEffect)(() => {
+  (0, import_react126.useEffect)(() => {
     if (!rectangle || !bounds)
       return;
     if (!boundsEquals(bounds, rectangle.getBounds())) {
@@ -33083,23 +33187,23 @@ function useRectangle(props) {
   }, [rectangle, bounds]);
   return rectangle;
 }
-var Rectangle = (0, import_react125.forwardRef)((props, ref) => {
+var Rectangle = (0, import_react126.forwardRef)((props, ref) => {
   const rectangle = useRectangle(props);
-  (0, import_react125.useImperativeHandle)(ref, () => rectangle, [
+  (0, import_react126.useImperativeHandle)(ref, () => rectangle, [
     rectangle
   ]);
-  return import_react125.default.createElement(import_react125.default.Fragment, null);
+  return import_react126.default.createElement(import_react126.default.Fragment, null);
 });
 Rectangle.displayName = "Rectangle";
 
 // src/types/Map.tsx
-var import_jsx_runtime82 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime83 = __toESM(require_jsx_runtime(), 1);
 var GM_API_KEY = "AIzaSyC6x4jghg5ZggV5VTThu9JE4DwX9NlbN9U";
 function MapLeaf({ stream: stream2 }) {
   const { fps } = useVideoConfig();
   const waypoints = stream2.waypoints ?? [];
   if (waypoints.length === 0) return null;
-  return /* @__PURE__ */ (0, import_jsx_runtime82.jsx)(import_jsx_runtime82.Fragment, { children: stream2.actions?.map((a2, i) => {
+  return /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(import_jsx_runtime83.Fragment, { children: stream2.actions?.map((a2, i) => {
     const start = a2.start ?? 0;
     const end = a2.end ?? start + 1;
     const durFrames = Math.max(1, Math.floor(fps * (end - start)));
@@ -33108,13 +33212,13 @@ function MapLeaf({ stream: stream2 }) {
     const mapType = stream2.mapType ?? "roadmap";
     const travelMode = stream2.travelMode ?? "DRIVING";
     const markerEmoji = stream2.routeMarker ?? "\u{1F697}";
-    return /* @__PURE__ */ (0, import_jsx_runtime82.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(
       Sequence,
       {
         durationInFrames: durFrames,
         from: Math.floor(fps * start),
         layout: "none",
-        children: /* @__PURE__ */ (0, import_jsx_runtime82.jsx)(APIProvider, { apiKey: GM_API_KEY, children: /* @__PURE__ */ (0, import_jsx_runtime82.jsx)(
+        children: /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(APIProvider, { apiKey: GM_API_KEY, children: /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(
           Map2,
           {
             mapId: String(stream2.id ?? i),
@@ -33126,7 +33230,7 @@ function MapLeaf({ stream: stream2 }) {
               zoomControl: false
             },
             style: { width: "100%", height: "100%", position: "absolute" },
-            children: /* @__PURE__ */ (0, import_jsx_runtime82.jsx)(
+            children: /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(
               RouteWithMarker,
               {
                 waypoints,
@@ -33150,10 +33254,10 @@ function RouteWithMarker({
 }) {
   const map2 = useMap();
   const routesLibrary = useMapsLibrary("routes");
-  const [leg, setLeg] = import_react126.default.useState(null);
-  const [routeIndex, setRouteIndex] = import_react126.default.useState(0);
-  const handle = import_react126.default.useRef(null);
-  import_react126.default.useEffect(() => {
+  const [leg, setLeg] = import_react127.default.useState(null);
+  const [routeIndex, setRouteIndex] = import_react127.default.useState(0);
+  const handle = import_react127.default.useRef(null);
+  import_react127.default.useEffect(() => {
     if (!routesLibrary || !map2 || waypoints.length < 2) return;
     const renderHandle = delayRender("Loading map directions...");
     handle.current = renderHandle;
@@ -33177,12 +33281,12 @@ function RouteWithMarker({
       renderer.setMap(null);
     };
   }, [routesLibrary, map2, waypoints, travelMode]);
-  import_react126.default.useEffect(() => {
+  import_react127.default.useEffect(() => {
     setRouteIndex((prev) => prev);
   }, [routeIndex]);
   const position = useAnimatedPosition({ leg, actionDuration, waypoints });
-  return /* @__PURE__ */ (0, import_jsx_runtime82.jsxs)(import_jsx_runtime82.Fragment, { children: [
-    waypoints.map((wp, i) => /* @__PURE__ */ (0, import_jsx_runtime82.jsx)(AdvancedMarker, { position: wp, children: wp.label ? /* @__PURE__ */ (0, import_jsx_runtime82.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime83.jsxs)(import_jsx_runtime83.Fragment, { children: [
+    waypoints.map((wp, i) => /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(AdvancedMarker, { position: wp, children: wp.label ? /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(
       "div",
       {
         style: {
@@ -33199,7 +33303,7 @@ function RouteWithMarker({
         children: wp.label
       }
     ) : null }, i)),
-    position ? /* @__PURE__ */ (0, import_jsx_runtime82.jsx)(AdvancedMarker, { position, children: /* @__PURE__ */ (0, import_jsx_runtime82.jsx)(Pin, { glyphText: markerEmoji, scale: 4 }) }) : null
+    position ? /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(AdvancedMarker, { position, children: /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(Pin, { glyphText: markerEmoji, scale: 4 }) }) : null
   ] });
 }
 function useAnimatedPosition({
@@ -33209,7 +33313,7 @@ function useAnimatedPosition({
 }) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  return import_react126.default.useMemo(() => {
+  return import_react127.default.useMemo(() => {
     if (!leg || !leg.duration?.value) {
       if (waypoints.length < 2) return null;
       const t = Math.min(frame / (actionDuration * fps), 1);
@@ -33263,8 +33367,8 @@ function getCurrentStep(leg, currentInSecond) {
 }
 
 // src/types/Include.tsx
-var React27 = __toESM(require_react(), 1);
-var import_jsx_runtime83 = __toESM(require_jsx_runtime(), 1);
+var React30 = __toESM(require_react(), 1);
+var import_jsx_runtime84 = __toESM(require_jsx_runtime(), 1);
 var ASPECT_DIMS = {
   "16x9": { width: 1920, height: 1080 },
   "9x16": { width: 1080, height: 1920 },
@@ -33283,15 +33387,15 @@ function resolveIncludeSrc(src) {
 }
 function IncludeLeaf({ stream: stream2 }) {
   const { fps: parentFps, width: parentWidth, height: parentHeight } = useVideoConfig();
-  const { Container } = React27.useContext(ComposeContext);
-  const parentAudio = React27.useContext(AudioContext2);
+  const { Container } = React30.useContext(ComposeContext);
+  const parentAudio = React30.useContext(AudioContext2);
   if (!stream2.actions?.length) return null;
-  const [externalData, setExternalData] = React27.useState(null);
-  const [loadError, setLoadError] = React27.useState(null);
-  const [handle] = React27.useState(
+  const [externalData, setExternalData] = React30.useState(null);
+  const [loadError, setLoadError] = React30.useState(null);
+  const [handle] = React30.useState(
     () => stream2.src ? delayRender(`Loading include: ${stream2.src}`) : null
   );
-  React27.useEffect(() => {
+  React30.useEffect(() => {
     if (!stream2.src || !handle) return;
     let active = true;
     const url2 = resolveIncludeSrc(stream2.src);
@@ -33315,19 +33419,19 @@ function IncludeLeaf({ stream: stream2 }) {
       active = false;
     };
   }, [stream2.src, handle]);
-  React27.useMemo(() => {
+  React30.useMemo(() => {
     if (!stream2.src) {
       getDurationInSeconds(stream2, true);
     }
   }, [stream2, stream2.src]);
-  const audioCtx = React27.useMemo(
+  const audioCtx = React30.useMemo(
     () => ({ id: stream2.id, foreground: true, parent: parentAudio }),
     [stream2.id, parentAudio]
   );
-  const renderExternalContent = React27.useCallback(() => {
+  const renderExternalContent = React30.useCallback(() => {
     if (!externalData) return null;
     if (loadError) {
-      return /* @__PURE__ */ (0, import_jsx_runtime83.jsxs)("div", { style: { color: "#ff4444", fontSize: 24, padding: 40 }, children: [
+      return /* @__PURE__ */ (0, import_jsx_runtime84.jsxs)("div", { style: { color: "#ff4444", fontSize: 24, padding: 40 }, children: [
         "\u26A0 Include load error: ",
         loadError
       ] });
@@ -33337,19 +33441,19 @@ function IncludeLeaf({ stream: stream2 }) {
       const vjFps = vj.meta.fps ?? parentFps;
       const aspectKey = vj.meta.aspects?.[0] ?? "16x9";
       const dims = ASPECT_DIMS[aspectKey] ?? { width: parentWidth, height: parentHeight };
-      return /* @__PURE__ */ (0, import_jsx_runtime83.jsxs)(AbsoluteFill, { style: { backgroundColor: "#0a0a0a", width: dims.width, height: dims.height }, children: [
-        vj.bgm && /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(Audio, { src: vj.bgm.src, volume: vj.bgm.baseVolume }),
+      return /* @__PURE__ */ (0, import_jsx_runtime84.jsxs)(AbsoluteFill, { style: { backgroundColor: "#0a0a0a", width: dims.width, height: dims.height }, children: [
+        vj.bgm && /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(Audio, { src: vj.bgm.src, volume: vj.bgm.baseVolume }),
         vj.scenes.map((scene2) => {
           const startFrame = Math.round((scene2.start ?? 0) * vjFps);
           const durFrames = Math.round((scene2.duration ?? 1) * vjFps);
-          return /* @__PURE__ */ (0, import_jsx_runtime83.jsxs)(
+          return /* @__PURE__ */ (0, import_jsx_runtime84.jsxs)(
             Sequence,
             {
               from: startFrame,
               durationInFrames: durFrames,
               name: `${scene2.id}:${scene2.component}`,
               children: [
-                /* @__PURE__ */ (0, import_jsx_runtime83.jsxs)(
+                /* @__PURE__ */ (0, import_jsx_runtime84.jsxs)(
                   AbsoluteFill,
                   {
                     style: {
@@ -33360,7 +33464,7 @@ function IncludeLeaf({ stream: stream2 }) {
                       padding: 60
                     },
                     children: [
-                      /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(
+                      /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(
                         "div",
                         {
                           style: {
@@ -33374,7 +33478,7 @@ function IncludeLeaf({ stream: stream2 }) {
                           children: scene2.props?.headline ?? scene2.id
                         }
                       ),
-                      scene2.props?.subhead && /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(
+                      scene2.props?.subhead && /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(
                         "div",
                         {
                           style: {
@@ -33389,7 +33493,7 @@ function IncludeLeaf({ stream: stream2 }) {
                     ]
                   }
                 ),
-                scene2.voiceover?.audio && /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(Audio, { src: scene2.voiceover.audio, volume: 1 })
+                scene2.voiceover?.audio && /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(Audio, { src: scene2.voiceover.audio, volume: 1 })
               ]
             },
             scene2.id
@@ -33404,7 +33508,7 @@ function IncludeLeaf({ stream: stream2 }) {
       height: streamTree.height ?? parentHeight,
       fps: streamTree.fps ?? parentFps
     };
-    return /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(
       "div",
       {
         style: {
@@ -33413,7 +33517,7 @@ function IncludeLeaf({ stream: stream2 }) {
           overflow: "hidden",
           position: "relative"
         },
-        children: /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(FolderLeaf, { stream: merged })
+        children: /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(FolderLeaf, { stream: merged })
       }
     );
   }, [externalData, loadError, parentFps, parentWidth, parentHeight]);
@@ -33423,14 +33527,14 @@ function IncludeLeaf({ stream: stream2 }) {
     const dur = Math.max(0.1, end - start);
     const durFrames = Math.max(1, Math.floor(parentFps * dur));
     if (!stream2.src && stream2.children?.length) {
-      return /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(
+      return /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(
         Sequence,
         {
           durationInFrames: durFrames,
           from: Math.floor(parentFps * start),
           layout: "none",
           showInTimeline: false,
-          children: /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(
+          children: /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(
             Container,
             {
               id: stream2.id,
@@ -33443,21 +33547,21 @@ function IncludeLeaf({ stream: stream2 }) {
                 position: "relative"
               },
               className: `include ${toClassName(stream2.id ?? "")}`,
-              children: /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(FolderLeaf, { stream: stream2 })
+              children: /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(FolderLeaf, { stream: stream2 })
             }
           )
         },
         a2.id
       );
     }
-    return /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(
       Sequence,
       {
         durationInFrames: durFrames,
         from: Math.floor(parentFps * start),
         layout: "none",
         showInTimeline: false,
-        children: externalData || loadError ? /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(
+        children: externalData || loadError ? /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(
           "div",
           {
             style: {
@@ -33468,7 +33572,7 @@ function IncludeLeaf({ stream: stream2 }) {
             },
             children: renderExternalContent()
           }
-        ) : /* @__PURE__ */ (0, import_jsx_runtime83.jsxs)(
+        ) : /* @__PURE__ */ (0, import_jsx_runtime84.jsxs)(
           "div",
           {
             style: {
@@ -33491,33 +33595,33 @@ function IncludeLeaf({ stream: stream2 }) {
       a2.id
     );
   };
-  return /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(AudioContext2.Provider, { value: audioCtx, children: stream2.actions.map(renderAction) });
+  return /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(AudioContext2.Provider, { value: audioCtx, children: stream2.actions.map(renderAction) });
 }
 
 // src/types/Scene.tsx
-var React30 = __toESM(require_react(), 1);
-var import_jsx_runtime84 = __toESM(require_jsx_runtime(), 1);
+var React35 = __toESM(require_react(), 1);
+var import_jsx_runtime85 = __toESM(require_jsx_runtime(), 1);
 function SceneLeaf({ stream: stream2 }) {
-  const { Container } = React30.useContext(ComposeContext);
-  const parentAudio = React30.useContext(AudioContext2);
-  const audioCtx = React30.useMemo(
+  const { Container } = React35.useContext(ComposeContext);
+  const parentAudio = React35.useContext(AudioContext2);
+  const audioCtx = React35.useMemo(
     () => ({ id: stream2.id, parent: parentAudio }),
     [stream2.id, parentAudio]
   );
-  return /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(AudioContext2.Provider, { value: audioCtx, children: /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime85.jsx)(AudioContext2.Provider, { value: audioCtx, children: /* @__PURE__ */ (0, import_jsx_runtime85.jsx)(
     Container,
     {
       id: stream2.id,
       type: "scene",
       style: cssJS(stream2.style),
       className: `scene ${toClassName(stream2.name ?? "")}`,
-      children: /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(FolderLeaf, { stream: stream2 })
+      children: /* @__PURE__ */ (0, import_jsx_runtime85.jsx)(FolderLeaf, { stream: stream2 })
     }
   ) });
 }
 
 // src/types/Effect.tsx
-var React35 = __toESM(require_react(), 1);
+var React39 = __toESM(require_react(), 1);
 
 // src/types/keyframes.ts
 function parseKeyframeData(data) {
@@ -33903,7 +34007,7 @@ var builtinAnimations = {
 };
 
 // src/types/Effect.tsx
-var import_jsx_runtime85 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime86 = __toESM(require_jsx_runtime(), 1);
 function EffectWrapper({
   stream: stream2,
   children
@@ -33911,7 +34015,7 @@ function EffectWrapper({
   const frame = useCurrentFrame();
   const { fps, width, height } = useVideoConfig();
   const actions = stream2.actions ?? [];
-  const styles = React35.useMemo(() => {
+  const styles = React39.useMemo(() => {
     const result = [];
     for (const action2 of actions) {
       const start = Math.ceil(action2.start * fps);
@@ -33949,8 +34053,8 @@ function EffectWrapper({
     }
     return result;
   }, [frame, fps, actions, stream2.animation, stream2.animationTimingFunction, stream2.animationIterationCount, stream2.customKeyframes]);
-  if (styles.length === 0) return /* @__PURE__ */ (0, import_jsx_runtime85.jsx)(import_jsx_runtime85.Fragment, { children });
-  return /* @__PURE__ */ (0, import_jsx_runtime85.jsx)(
+  if (styles.length === 0) return /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(import_jsx_runtime86.Fragment, { children });
+  return /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(
     "div",
     {
       style: Object.assign({ width, height, position: "absolute", inset: 0 }, ...styles),
@@ -33961,7 +34065,7 @@ function EffectWrapper({
 }
 
 // src/types/Folder.tsx
-var import_jsx_runtime86 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime87 = __toESM(require_jsx_runtime(), 1);
 var Leaves = {
   video: VideoLeaf,
   audio: AudioLeaf,
@@ -33979,26 +34083,26 @@ var TransitionPresets = {
   flip,
   clockWipe
 };
-var NotSeries = ({ children }) => /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(import_jsx_runtime86.Fragment, { children });
-NotSeries.Sequence = ({ children }) => /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(import_jsx_runtime86.Fragment, { children });
+var NotSeries = ({ children }) => /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(import_jsx_runtime87.Fragment, { children });
+NotSeries.Sequence = ({ children }) => /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(import_jsx_runtime87.Fragment, { children });
 function FolderLeaf({ stream: stream2 }) {
   const { fps, width, height } = useVideoConfig();
-  const { Container } = React39.useContext(ComposeContext);
-  const parentAudio = React39.useContext(AudioContext2);
+  const { Container } = React41.useContext(ComposeContext);
+  const parentAudio = React41.useContext(AudioContext2);
   const isSeries = !!stream2.isSeries;
   const transition = stream2.transition;
   const transitionTime = stream2.transitionTime ?? 0.5;
   const isRoot = stream2.id === "root";
-  const TypedSeries = React39.useMemo(() => {
+  const TypedSeries = React41.useMemo(() => {
     if (!isSeries) return NotSeries;
     return transition ? TransitionSeries : Series;
   }, [isSeries, transition]);
-  const transEl = React39.useMemo(() => {
+  const transEl = React41.useMemo(() => {
     if (!isSeries || !transition) return null;
     const presentation = TransitionPresets[transition]?.(
       transition === "clockWipe" ? { width, height } : void 0
     );
-    return /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(
       TransitionSeries.Transition,
       {
         presentation,
@@ -34012,8 +34116,8 @@ function FolderLeaf({ stream: stream2 }) {
     const durFrames = Math.max(1, Math.floor(dur * fps));
     const SequenceWrap = TypedSeries.Sequence ?? Sequence;
     const isLeaf = child.type !== "folder" && child.type !== "root" && child.type !== "effect";
-    const childContent = isLeaf ? React39.createElement(Leaves[child.type] ?? (() => null), { stream: child }) : child.type === "effect" ? /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(EffectWrapper, { stream: child, children: /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(FolderLeaf, { stream: child }) }) : React39.createElement(FolderLeaf, { stream: child });
-    const wrapped = /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(
+    const childContent = isLeaf ? React41.createElement(Leaves[child.type] ?? (() => null), { stream: child }) : child.type === "effect" ? /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(EffectWrapper, { stream: child, children: /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(FolderLeaf, { stream: child }) }) : React41.createElement(FolderLeaf, { stream: child });
+    const wrapped = /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(
       Container,
       {
         id: child.id,
@@ -34023,43 +34127,43 @@ function FolderLeaf({ stream: stream2 }) {
         children: childContent
       }
     );
-    const seq = /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(SequenceWrap, { durationInFrames: durFrames, layout: "none", children: wrapped }, child.id);
+    const seq = /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(SequenceWrap, { durationInFrames: durFrames, layout: "none", children: wrapped }, child.id);
     if (child.isBackground && stream2.durationInSeconds) {
       const times = Math.max(1, Math.ceil(stream2.durationInSeconds * fps / durFrames));
-      return /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(Loop, { durationInFrames: durFrames, times, showInTimeline: false, children: wrapped }, child.id);
+      return /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(Loop, { durationInFrames: durFrames, times, showInTimeline: false, children: wrapped }, child.id);
     }
     return seq;
   }).filter(Boolean);
   if (isSeries && transEl) {
     for (let i = 1; i < sequences.length; i += 2) {
-      sequences.splice(i, 0, React39.cloneElement(transEl, { key: `t${i}` }));
+      sequences.splice(i, 0, React41.cloneElement(transEl, { key: `t${i}` }));
     }
   }
-  const audioCtx = React39.useMemo(
+  const audioCtx = React41.useMemo(
     () => stream2.type !== "folder" ? { id: stream2.id, parent: parentAudio } : parentAudio,
     [stream2.id, stream2.type, parentAudio]
   );
   if (visibleChildren.length === 0 || stream2.visible === false) return null;
   const containerStyle3 = cssJS(stream2.style);
   const orientation = isRoot ? width > height ? "landscape" : "portrait" : "";
-  return /* @__PURE__ */ (0, import_jsx_runtime86.jsxs)(AudioContext2.Provider, { value: audioCtx, children: [
-    stream2.stylesheet ? /* @__PURE__ */ (0, import_jsx_runtime86.jsx)("style", { children: stream2.stylesheet }) : null,
-    /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime87.jsxs)(AudioContext2.Provider, { value: audioCtx, children: [
+    stream2.stylesheet ? /* @__PURE__ */ (0, import_jsx_runtime87.jsx)("style", { children: stream2.stylesheet }) : null,
+    /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(
       Container,
       {
         id: stream2.id,
         type: stream2.type,
         style: containerStyle3,
         className: `${orientation} ${stream2.type}`.trim(),
-        children: isSeries ? /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(TypedSeries, { children: sequences }) : sequences
+        children: isSeries ? /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(TypedSeries, { children: sequences }) : sequences
       }
     )
   ] });
 }
 
 // src/types/Subtitle.tsx
-var React41 = __toESM(require_react(), 1);
-var import_jsx_runtime87 = __toESM(require_jsx_runtime(), 1);
+var React43 = __toESM(require_react(), 1);
+var import_jsx_runtime88 = __toESM(require_jsx_runtime(), 1);
 function resolveSubtitleSrc(src) {
   if (src.startsWith("http://") || src.startsWith("https://") || src.startsWith("data:") || src.startsWith("/")) {
     return src;
@@ -34088,8 +34192,8 @@ var DEFAULT_TEXT_STYLE = {
 function SubtitleOverlay({ subtitle }) {
   const { fps } = useVideoConfig();
   const currentTime = useCurrentFrame() / fps;
-  const [cues, setCues] = React41.useState(null);
-  React41.useEffect(() => {
+  const [cues, setCues] = React43.useState(null);
+  React43.useEffect(() => {
     const { src } = subtitle;
     if (src.includes("-->")) {
       setCues(parseVTT(src));
@@ -34124,13 +34228,13 @@ function SubtitleOverlay({ subtitle }) {
       finish();
     };
   }, [subtitle.src]);
-  const cue = React41.useMemo(
+  const cue = React43.useMemo(
     () => cues?.find((c2) => c2.startFrom <= currentTime && c2.endAt > currentTime),
     [cues, currentTime]
   );
   if (!cue) return null;
   const boxCss = subtitle.style ? cssJS(subtitle.style) : {};
-  return /* @__PURE__ */ (0, import_jsx_runtime87.jsx)("div", { className: "caption-overlay subtitle-overlay", style: { ...DEFAULT_BOX_STYLE, ...boxCss }, children: /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime88.jsx)("div", { className: "caption-overlay subtitle-overlay", style: { ...DEFAULT_BOX_STYLE, ...boxCss }, children: /* @__PURE__ */ (0, import_jsx_runtime88.jsx)(
     "span",
     {
       className: "caption",
@@ -48046,11 +48150,864 @@ var stream = external_exports.discriminatedUnion("type", [
   scene
 ]);
 
+// node_modules/js-yaml/dist/js-yaml.mjs
+var NOT_RESOLVED = /* @__PURE__ */ Symbol("NOT_RESOLVED");
+var MERGE_KEY = /* @__PURE__ */ Symbol("MERGE_KEY");
+function defineScalarTag(tagName, options) {
+  return {
+    tagName,
+    nodeKind: "scalar",
+    implicit: options.implicit ?? false,
+    matchByTagPrefix: options.matchByTagPrefix ?? false,
+    implicitFirstChars: options.implicitFirstChars ?? null,
+    resolve: options.resolve,
+    identify: options.identify ?? null,
+    represent: options.represent ?? ((data) => String(data)),
+    representTagName: options.representTagName ?? null
+  };
+}
+function defineSequenceTag(tagName, options) {
+  const carrierIsResult = options.finalize === void 0;
+  return {
+    tagName,
+    nodeKind: "sequence",
+    implicit: false,
+    matchByTagPrefix: options.matchByTagPrefix ?? false,
+    create: options.create,
+    addItem: options.addItem,
+    finalize: options.finalize ?? ((carrier) => carrier),
+    carrierIsResult,
+    identify: options.identify ?? null,
+    represent: options.represent ?? ((data) => data),
+    representTagName: options.representTagName ?? null
+  };
+}
+function defineMappingTag(tagName, options) {
+  const carrierIsResult = options.finalize === void 0;
+  return {
+    tagName,
+    nodeKind: "mapping",
+    implicit: false,
+    matchByTagPrefix: options.matchByTagPrefix ?? false,
+    create: options.create,
+    addPair: options.addPair,
+    has: options.has,
+    keys: options.keys,
+    get: options.get,
+    finalize: options.finalize ?? ((carrier) => carrier),
+    carrierIsResult,
+    identify: options.identify ?? null,
+    represent: options.represent ?? ((data) => data),
+    representTagName: options.representTagName ?? null
+  };
+}
+var strTag = defineScalarTag("tag:yaml.org,2002:str", {
+  resolve: (source) => source,
+  identify: (data) => typeof data === "string"
+});
+var NULL_VALUES$1 = [
+  "",
+  "~",
+  "null",
+  "Null",
+  "NULL"
+];
+var nullCoreTag = defineScalarTag("tag:yaml.org,2002:null", {
+  implicit: true,
+  implicitFirstChars: [
+    "",
+    "~",
+    "n",
+    "N"
+  ],
+  resolve: (source) => {
+    if (NULL_VALUES$1.indexOf(source) !== -1) return null;
+    return NOT_RESOLVED;
+  },
+  identify: (object2) => object2 === null,
+  represent: () => "null"
+});
+var nullJsonTag = defineScalarTag("tag:yaml.org,2002:null", {
+  implicit: true,
+  implicitFirstChars: ["n"],
+  resolve: (source, isExplicit) => {
+    if (source === "null" || isExplicit && source === "") return null;
+    return NOT_RESOLVED;
+  },
+  identify: (object2) => object2 === null,
+  represent: () => "null"
+});
+var NULL_VALUES = [
+  "",
+  "~",
+  "null",
+  "Null",
+  "NULL"
+];
+var nullYaml11Tag = defineScalarTag("tag:yaml.org,2002:null", {
+  implicit: true,
+  implicitFirstChars: [
+    "",
+    "~",
+    "n",
+    "N"
+  ],
+  resolve: (source) => {
+    if (NULL_VALUES.indexOf(source) !== -1) return null;
+    return NOT_RESOLVED;
+  },
+  identify: (object2) => object2 === null,
+  represent: () => "null"
+});
+var TRUE_VALUES$2 = [
+  "true",
+  "True",
+  "TRUE"
+];
+var FALSE_VALUES$2 = [
+  "false",
+  "False",
+  "FALSE"
+];
+var boolCoreTag = defineScalarTag("tag:yaml.org,2002:bool", {
+  implicit: true,
+  implicitFirstChars: [
+    "t",
+    "T",
+    "f",
+    "F"
+  ],
+  resolve: (source) => {
+    if (TRUE_VALUES$2.indexOf(source) !== -1) return true;
+    if (FALSE_VALUES$2.indexOf(source) !== -1) return false;
+    return NOT_RESOLVED;
+  },
+  identify: (object2) => Object.prototype.toString.call(object2) === "[object Boolean]",
+  represent: (object2) => object2 ? "true" : "false"
+});
+var TRUE_VALUES$1 = ["true"];
+var FALSE_VALUES$1 = ["false"];
+var boolJsonTag = defineScalarTag("tag:yaml.org,2002:bool", {
+  implicit: true,
+  implicitFirstChars: ["t", "f"],
+  resolve: (source) => {
+    if (TRUE_VALUES$1.indexOf(source) !== -1) return true;
+    if (FALSE_VALUES$1.indexOf(source) !== -1) return false;
+    return NOT_RESOLVED;
+  },
+  identify: (object2) => Object.prototype.toString.call(object2) === "[object Boolean]",
+  represent: (object2) => object2 ? "true" : "false"
+});
+var TRUE_VALUES = [
+  "true",
+  "True",
+  "TRUE",
+  "y",
+  "Y",
+  "yes",
+  "Yes",
+  "YES",
+  "on",
+  "On",
+  "ON"
+];
+var FALSE_VALUES = [
+  "false",
+  "False",
+  "FALSE",
+  "n",
+  "N",
+  "no",
+  "No",
+  "NO",
+  "off",
+  "Off",
+  "OFF"
+];
+var boolYaml11Tag = defineScalarTag("tag:yaml.org,2002:bool", {
+  implicit: true,
+  implicitFirstChars: [
+    "y",
+    "Y",
+    "n",
+    "N",
+    "t",
+    "T",
+    "f",
+    "F",
+    "o",
+    "O"
+  ],
+  resolve: (source) => {
+    if (TRUE_VALUES.indexOf(source) !== -1) return true;
+    if (FALSE_VALUES.indexOf(source) !== -1) return false;
+    return NOT_RESOLVED;
+  },
+  identify: (object2) => Object.prototype.toString.call(object2) === "[object Boolean]",
+  represent: (object2) => object2 ? "true" : "false"
+});
+var YAML_INTEGER_IMPLICIT_PATTERN$1 = /* @__PURE__ */ new RegExp("^(?:0o[0-7]+|0x[0-9a-fA-F]+|[-+]?[0-9]+)$");
+var YAML_INTEGER_EXPLICIT_PATTERN$1 = /* @__PURE__ */ new RegExp("^(?:[-+]?0b[0-1]+|[-+]?0o[0-7]+|[-+]?0x[0-9a-fA-F]+|[-+]?[0-9]+)$");
+function parseYamlInteger$2(source) {
+  let value = source;
+  let sign = 1;
+  if (value[0] === "-" || value[0] === "+") {
+    if (value[0] === "-") sign = -1;
+    value = value.slice(1);
+  }
+  if (value.startsWith("0b")) return sign * parseInt(value.slice(2), 2);
+  if (value.startsWith("0o")) return sign * parseInt(value.slice(2), 8);
+  if (value.startsWith("0x")) return sign * parseInt(value.slice(2), 16);
+  return sign * parseInt(value, 10);
+}
+function resolveYamlInteger$2(source, isExplicit) {
+  if (isExplicit) {
+    if (!YAML_INTEGER_EXPLICIT_PATTERN$1.test(source)) return NOT_RESOLVED;
+  } else if (!YAML_INTEGER_IMPLICIT_PATTERN$1.test(source)) return NOT_RESOLVED;
+  const result = parseYamlInteger$2(source);
+  return Number.isFinite(result) ? result : NOT_RESOLVED;
+}
+var intCoreTag = defineScalarTag("tag:yaml.org,2002:int", {
+  implicit: true,
+  implicitFirstChars: [
+    "-",
+    "+",
+    ..."0123456789"
+  ],
+  resolve: resolveYamlInteger$2,
+  identify: (object2) => Number.isInteger(object2) && !Object.is(object2, -0) && object2.toString(10).indexOf("e") < 0,
+  represent: (object2) => object2.toString(10)
+});
+var YAML_INTEGER_IMPLICIT_PATTERN = /* @__PURE__ */ new RegExp("^-?(?:0|[1-9][0-9]*)$");
+var YAML_INTEGER_EXPLICIT_PATTERN = /* @__PURE__ */ new RegExp("^(?:[-+]?0b[0-1]+|[-+]?0o[0-7]+|[-+]?0x[0-9a-fA-F]+|[-+]?[0-9]+)$");
+function parseYamlInteger$1(source) {
+  let value = source;
+  let sign = 1;
+  if (value[0] === "-" || value[0] === "+") {
+    if (value[0] === "-") sign = -1;
+    value = value.slice(1);
+  }
+  if (value.startsWith("0b")) return sign * parseInt(value.slice(2), 2);
+  if (value.startsWith("0o")) return sign * parseInt(value.slice(2), 8);
+  if (value.startsWith("0x")) return sign * parseInt(value.slice(2), 16);
+  return sign * parseInt(value, 10);
+}
+function resolveYamlInteger$1(source, isExplicit) {
+  if (isExplicit) {
+    if (!YAML_INTEGER_EXPLICIT_PATTERN.test(source)) return NOT_RESOLVED;
+  } else if (!YAML_INTEGER_IMPLICIT_PATTERN.test(source)) return NOT_RESOLVED;
+  const result = parseYamlInteger$1(source);
+  return Number.isFinite(result) ? result : NOT_RESOLVED;
+}
+var intJsonTag = defineScalarTag("tag:yaml.org,2002:int", {
+  implicit: true,
+  implicitFirstChars: ["-", ..."0123456789"],
+  resolve: resolveYamlInteger$1,
+  identify: (object2) => Number.isInteger(object2) && !Object.is(object2, -0) && object2.toString(10).indexOf("e") < 0,
+  represent: (object2) => object2.toString(10)
+});
+var YAML_INTEGER_PATTERN = /* @__PURE__ */ new RegExp("^(?:[-+]?0b[0-1_]+|[-+]?0[0-7_]+|[-+]?0x[0-9a-fA-F_]+|[-+]?[0-9][0-9_]*(?::[0-5]?[0-9])+|[-+]?(?:0|[1-9][0-9_]*))$");
+function parseYamlInteger(source) {
+  let value = source.replace(/_/g, "");
+  let sign = 1;
+  if (value[0] === "-" || value[0] === "+") {
+    if (value[0] === "-") sign = -1;
+    value = value.slice(1);
+  }
+  if (value.startsWith("0b")) return sign * parseInt(value.slice(2), 2);
+  if (value.startsWith("0x")) return sign * parseInt(value.slice(2), 16);
+  if (value.includes(":")) {
+    let result = 0;
+    for (const part of value.split(":")) result = result * 60 + Number(part);
+    return sign * result;
+  }
+  if (value !== "0" && value[0] === "0") return sign * parseInt(value, 8);
+  return sign * parseInt(value, 10);
+}
+function resolveYamlInteger(source) {
+  if (!YAML_INTEGER_PATTERN.test(source)) return NOT_RESOLVED;
+  const result = parseYamlInteger(source);
+  return Number.isFinite(result) ? result : NOT_RESOLVED;
+}
+var intYaml11Tag = defineScalarTag("tag:yaml.org,2002:int", {
+  implicit: true,
+  implicitFirstChars: [
+    "-",
+    "+",
+    ..."0123456789"
+  ],
+  resolve: resolveYamlInteger,
+  identify: (object2) => Number.isInteger(object2) && !Object.is(object2, -0) && object2.toString(10).indexOf("e") < 0,
+  represent: (object2) => object2.toString(10)
+});
+var YAML_FLOAT_PATTERN$1 = /* @__PURE__ */ new RegExp("^(?:[-+]?[0-9]+(?:\\.[0-9]*)?(?:[eE][-+]?[0-9]+)?|[-+]?\\.[0-9]+(?:[eE][-+]?[0-9]+)?|[-+]?\\.(?:inf|Inf|INF)|\\.(?:nan|NaN|NAN))$");
+var YAML_FLOAT_SPECIAL_PATTERN$1 = /* @__PURE__ */ new RegExp("^(?:[-+]?\\.(?:inf|Inf|INF)|\\.(?:nan|NaN|NAN))$");
+function resolveYamlFloat$2(source) {
+  if (!YAML_FLOAT_PATTERN$1.test(source)) return NOT_RESOLVED;
+  let value = source.toLowerCase();
+  const sign = value[0] === "-" ? -1 : 1;
+  if ("+-".includes(value[0])) value = value.slice(1);
+  if (value === ".inf") return sign === 1 ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
+  if (value === ".nan") return NaN;
+  const result = sign * parseFloat(value);
+  if (Number.isFinite(result) || YAML_FLOAT_SPECIAL_PATTERN$1.test(source)) return result;
+  return NOT_RESOLVED;
+}
+function representYamlFloat$2(object2) {
+  if (isNaN(object2)) return ".nan";
+  if (object2 === Number.POSITIVE_INFINITY) return ".inf";
+  if (object2 === Number.NEGATIVE_INFINITY) return "-.inf";
+  if (Object.is(object2, -0)) return "-0.0";
+  const result = object2.toString(10);
+  return /^[-+]?[0-9]+e/.test(result) ? result.replace("e", ".e") : result;
+}
+var floatCoreTag = defineScalarTag("tag:yaml.org,2002:float", {
+  implicit: true,
+  implicitFirstChars: [
+    "-",
+    "+",
+    ".",
+    ..."0123456789"
+  ],
+  resolve: resolveYamlFloat$2,
+  identify: (object2) => typeof object2 === "number" && (!Number.isInteger(object2) || Object.is(object2, -0) || object2.toString(10).indexOf("e") >= 0),
+  represent: representYamlFloat$2
+});
+var YAML_FLOAT_IMPLICIT_PATTERN = /* @__PURE__ */ new RegExp("^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]*)?(?:[eE][-+]?[0-9]+)?$");
+var YAML_FLOAT_EXPLICIT_PATTERN = /* @__PURE__ */ new RegExp("^(?:[-+]?[0-9]+(?:\\.[0-9]*)?(?:[eE][-+]?[0-9]+)?|[-+]?\\.[0-9]+(?:[eE][-+]?[0-9]+)?|[-+]?\\.(?:inf|Inf|INF)|\\.(?:nan|NaN|NAN))$");
+function resolveYamlFloat$1(source, isExplicit) {
+  if (isExplicit) {
+    if (!YAML_FLOAT_EXPLICIT_PATTERN.test(source)) return NOT_RESOLVED;
+    let value = source.toLowerCase();
+    const sign = value[0] === "-" ? -1 : 1;
+    if ("+-".includes(value[0])) value = value.slice(1);
+    if (value === ".inf") return sign === 1 ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
+    if (value === ".nan") return NaN;
+    const result2 = sign * parseFloat(value);
+    return Number.isFinite(result2) ? result2 : NOT_RESOLVED;
+  }
+  if (!YAML_FLOAT_IMPLICIT_PATTERN.test(source)) return NOT_RESOLVED;
+  const result = Number(source);
+  if (Number.isFinite(result)) return result;
+  return NOT_RESOLVED;
+}
+function representYamlFloat$1(object2) {
+  if (isNaN(object2)) return ".nan";
+  if (object2 === Number.POSITIVE_INFINITY) return ".inf";
+  if (object2 === Number.NEGATIVE_INFINITY) return "-.inf";
+  if (Object.is(object2, -0)) return "-0.0";
+  const result = object2.toString(10);
+  return /^[-+]?[0-9]+e/.test(result) ? result.replace("e", ".e") : result;
+}
+var floatJsonTag = defineScalarTag("tag:yaml.org,2002:float", {
+  implicit: true,
+  implicitFirstChars: ["-", ..."0123456789"],
+  resolve: resolveYamlFloat$1,
+  identify: (object2) => typeof object2 === "number" && (!Number.isInteger(object2) || Object.is(object2, -0) || object2.toString(10).indexOf("e") >= 0),
+  represent: representYamlFloat$1
+});
+var YAML_FLOAT_PATTERN = /* @__PURE__ */ new RegExp("^(?:[-+]?(?:(?:[0-9][0-9_]*)?\\.[0-9_]*)(?:[eE][-+][0-9]+)?|[-+]?[0-9][0-9_]*(?::[0-5]?[0-9])+\\.[0-9_]*|[-+]?\\.(?:inf|Inf|INF)|\\.(?:nan|NaN|NAN))$");
+var YAML_FLOAT_SPECIAL_PATTERN = /* @__PURE__ */ new RegExp("^(?:[-+]?\\.(?:inf|Inf|INF)|\\.(?:nan|NaN|NAN))$");
+function resolveYamlFloat(source) {
+  if (!YAML_FLOAT_PATTERN.test(source)) return NOT_RESOLVED;
+  let value = source.toLowerCase().replace(/_/g, "");
+  const sign = value[0] === "-" ? -1 : 1;
+  if ("+-".includes(value[0])) value = value.slice(1);
+  if (value === ".inf") return sign === 1 ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
+  if (value === ".nan") return NaN;
+  let result = 0;
+  if (value.includes(":")) {
+    for (const part of value.split(":")) result = result * 60 + Number(part);
+    result *= sign;
+  } else result = sign * parseFloat(value);
+  if (Number.isFinite(result) || YAML_FLOAT_SPECIAL_PATTERN.test(source)) return result;
+  return NOT_RESOLVED;
+}
+function representYamlFloat(object2) {
+  if (isNaN(object2)) return ".nan";
+  if (object2 === Number.POSITIVE_INFINITY) return ".inf";
+  if (object2 === Number.NEGATIVE_INFINITY) return "-.inf";
+  if (Object.is(object2, -0)) return "-0.0";
+  const result = object2.toString(10);
+  return /^[-+]?[0-9]+e/.test(result) ? result.replace("e", ".e") : result;
+}
+var floatYaml11Tag = defineScalarTag("tag:yaml.org,2002:float", {
+  implicit: true,
+  implicitFirstChars: [
+    "-",
+    "+",
+    ".",
+    ..."0123456789"
+  ],
+  resolve: resolveYamlFloat,
+  identify: (object2) => typeof object2 === "number" && (!Number.isInteger(object2) || Object.is(object2, -0) || object2.toString(10).indexOf("e") >= 0),
+  represent: representYamlFloat
+});
+var mergeTag = defineScalarTag("tag:yaml.org,2002:merge", {
+  implicit: true,
+  implicitFirstChars: ["<"],
+  resolve: (source, isExplicit) => {
+    if (source === "<<" || isExplicit && source === "") return MERGE_KEY;
+    return NOT_RESOLVED;
+  }
+});
+var BASE64_PATTERN = /^[A-Za-z0-9+/]*={0,2}$/;
+function resolveYamlBinary(source) {
+  const input = source.replace(/\s/g, "");
+  if (input.length % 4 !== 0 || !BASE64_PATTERN.test(input)) return NOT_RESOLVED;
+  const binary = atob(input);
+  const result = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index++) result[index] = binary.charCodeAt(index);
+  return result;
+}
+function representYamlBinary(object2) {
+  let binary = "";
+  for (let index = 0; index < object2.length; index++) binary += String.fromCharCode(object2[index]);
+  return btoa(binary);
+}
+var binaryTag = defineScalarTag("tag:yaml.org,2002:binary", {
+  resolve: resolveYamlBinary,
+  identify: (object2) => Object.prototype.toString.call(object2) === "[object Uint8Array]",
+  represent: representYamlBinary
+});
+var YAML_DATE_REGEXP = /* @__PURE__ */ new RegExp("^([0-9][0-9][0-9][0-9])-([0-9][0-9])-([0-9][0-9])$");
+var YAML_TIMESTAMP_REGEXP = /* @__PURE__ */ new RegExp("^([0-9][0-9][0-9][0-9])-([0-9][0-9]?)-([0-9][0-9]?)(?:[Tt]|[ \\t]+)([0-9][0-9]?):([0-9][0-9]):([0-9][0-9])(?:\\.([0-9]*))?(?:[ \\t]*(Z|([-+])([0-9][0-9]?)(?::([0-9][0-9]))?))?$");
+function resolveYamlTimestamp(source) {
+  let match = YAML_DATE_REGEXP.exec(source);
+  if (match === null) match = YAML_TIMESTAMP_REGEXP.exec(source);
+  if (match === null) return NOT_RESOLVED;
+  const year = +match[1];
+  const month = +match[2] - 1;
+  const day = +match[3];
+  if (!match[4]) {
+    const date6 = new Date(Date.UTC(year, month, day));
+    if (date6.getUTCFullYear() !== year || date6.getUTCMonth() !== month || date6.getUTCDate() !== day) return NOT_RESOLVED;
+    return date6;
+  }
+  const hour = +match[4];
+  const minute = +match[5];
+  const second = +match[6];
+  let fraction = 0;
+  if (hour > 23 || minute > 59 || second > 59) return NOT_RESOLVED;
+  if (match[7]) {
+    let value = match[7].slice(0, 3);
+    while (value.length < 3) value += "0";
+    fraction = +value;
+  }
+  const date5 = new Date(Date.UTC(year, month, day, hour, minute, second, fraction));
+  if (date5.getUTCFullYear() !== year || date5.getUTCMonth() !== month || date5.getUTCDate() !== day) return NOT_RESOLVED;
+  if (match[9]) {
+    const offsetHour = +match[10];
+    const offsetMinute = +(match[11] || 0);
+    if (offsetHour > 23 || offsetMinute > 59) return NOT_RESOLVED;
+    const offset = (offsetHour * 60 + offsetMinute) * 6e4;
+    date5.setTime(date5.getTime() - (match[9] === "-" ? -offset : offset));
+  }
+  return date5;
+}
+var timestampTag = defineScalarTag("tag:yaml.org,2002:timestamp", {
+  implicit: true,
+  implicitFirstChars: [..."0123456789"],
+  resolve: resolveYamlTimestamp,
+  identify: (object2) => object2 instanceof Date,
+  represent: (object2) => object2.toISOString()
+});
+var seqTag = defineSequenceTag("tag:yaml.org,2002:seq", {
+  create: () => [],
+  addItem: (container3, item) => {
+    container3.push(item);
+  },
+  identify: Array.isArray
+});
+function isPlainObject2(data) {
+  if (data === null || typeof data !== "object" || Array.isArray(data)) return false;
+  const prototype = Object.getPrototypeOf(data);
+  return prototype === null || prototype === Object.prototype;
+}
+var omapTag = defineSequenceTag("tag:yaml.org,2002:omap", {
+  create: () => ({
+    list: [],
+    seen: /* @__PURE__ */ new Set()
+  }),
+  addItem: (carrier, item) => {
+    let key;
+    if (item instanceof Map) {
+      if (item.size !== 1) return "cannot resolve an ordered map item";
+      key = item.keys().next().value;
+    } else if (isPlainObject2(item)) {
+      const itemKeys = Object.keys(item);
+      if (itemKeys.length !== 1) return "cannot resolve an ordered map item";
+      key = itemKeys[0];
+    } else return "cannot resolve an ordered map item";
+    if (carrier.seen.has(key)) return "duplicate key in ordered map";
+    carrier.seen.add(key);
+    carrier.list.push(item);
+    return "";
+  },
+  finalize: (carrier) => carrier.list
+});
+var pairsTag = defineSequenceTag("tag:yaml.org,2002:pairs", {
+  create: () => [],
+  addItem: (container3, item) => {
+    if (item instanceof Map) {
+      if (item.size !== 1) return "cannot resolve a pairs item";
+      container3.push(item.entries().next().value);
+      return "";
+    }
+    if (Object.prototype.toString.call(item) !== "[object Object]") return "cannot resolve a pairs item";
+    const object2 = item;
+    const keys = Object.keys(object2);
+    if (keys.length !== 1) return "cannot resolve a pairs item";
+    container3.push([keys[0], object2[keys[0]]]);
+    return "";
+  }
+});
+var mapTag = defineMappingTag("tag:yaml.org,2002:map", {
+  create: () => ({}),
+  identify: isPlainObject2,
+  represent: (o) => {
+    const map2 = /* @__PURE__ */ new Map();
+    for (const key of Object.keys(o)) map2.set(key, o[key]);
+    return map2;
+  },
+  addPair: (container3, key, value) => {
+    if (key !== null && typeof key === "object") return "object-based map does not support complex keys";
+    const normalizedKey = String(key);
+    if (normalizedKey === "__proto__") Object.defineProperty(container3, normalizedKey, {
+      value,
+      enumerable: true,
+      configurable: true,
+      writable: true
+    });
+    else container3[normalizedKey] = value;
+    return "";
+  },
+  has: (container3, key) => {
+    if (key !== null && typeof key === "object") return false;
+    return Object.prototype.hasOwnProperty.call(container3, String(key));
+  },
+  keys: (container3) => Object.keys(container3),
+  get: (container3, key) => container3[String(key)]
+});
+var setTag = defineMappingTag("tag:yaml.org,2002:set", {
+  create: () => /* @__PURE__ */ new Set(),
+  identify: (data) => data instanceof Set,
+  represent: (data) => {
+    const map2 = /* @__PURE__ */ new Map();
+    for (const key of data) map2.set(key, null);
+    return map2;
+  },
+  addPair: (container3, key, value) => {
+    if (value !== null) return "cannot resolve a set item";
+    container3.add(key);
+    return "";
+  },
+  has: (container3, key) => container3.has(key),
+  keys: (container3) => container3.keys(),
+  get: () => null
+});
+function createTagDefinitionMap() {
+  return {
+    scalar: {},
+    sequence: {},
+    mapping: {}
+  };
+}
+function createTagDefinitionListMap() {
+  return {
+    scalar: [],
+    sequence: [],
+    mapping: []
+  };
+}
+function compileTags(tags) {
+  const result = [];
+  for (const tag of tags) {
+    let index = result.length;
+    for (let previousIndex = 0; previousIndex < result.length; previousIndex++) {
+      const previous = result[previousIndex];
+      if (previous.nodeKind === tag.nodeKind && previous.tagName === tag.tagName && previous.matchByTagPrefix === tag.matchByTagPrefix) {
+        index = previousIndex;
+        break;
+      }
+    }
+    result[index] = tag;
+  }
+  return result;
+}
+var Schema = class Schema2 {
+  constructor(tags) {
+    __publicField(this, "tags");
+    __publicField(this, "implicitScalarTags");
+    __publicField(this, "implicitScalarByFirstChar");
+    __publicField(this, "implicitScalarAnyFirstChar");
+    __publicField(this, "defaultScalarTag");
+    __publicField(this, "defaultSequenceTag");
+    __publicField(this, "defaultMappingTag");
+    __publicField(this, "exact");
+    __publicField(this, "prefix");
+    const compiledTags = compileTags(tags);
+    const implicitScalarTags = [];
+    const exact = createTagDefinitionMap();
+    const prefix = createTagDefinitionListMap();
+    for (const tag of compiledTags) {
+      if (tag.nodeKind === "scalar" && tag.implicit) {
+        if (tag.matchByTagPrefix) throw new Error("Implicit scalar tags cannot match by tag prefix");
+        implicitScalarTags.push(tag);
+      }
+      switch (tag.nodeKind) {
+        case "scalar":
+          if (tag.matchByTagPrefix) prefix.scalar.push(tag);
+          else exact.scalar[tag.tagName] = tag;
+          break;
+        case "sequence":
+          if (tag.matchByTagPrefix) prefix.sequence.push(tag);
+          else exact.sequence[tag.tagName] = tag;
+          break;
+        case "mapping":
+          if (tag.matchByTagPrefix) prefix.mapping.push(tag);
+          else exact.mapping[tag.tagName] = tag;
+          break;
+      }
+    }
+    const implicitScalarAnyFirstChar = implicitScalarTags.filter((tag) => tag.implicitFirstChars === null);
+    const keys = /* @__PURE__ */ new Set();
+    for (const tag of implicitScalarTags) if (tag.implicitFirstChars !== null) for (const key of tag.implicitFirstChars) keys.add(key);
+    const implicitScalarByFirstChar = /* @__PURE__ */ new Map();
+    for (const key of keys) implicitScalarByFirstChar.set(key, implicitScalarTags.filter((tag) => tag.implicitFirstChars === null || tag.implicitFirstChars.indexOf(key) !== -1));
+    const defaultScalarTag = exact.scalar["tag:yaml.org,2002:str"];
+    if (!defaultScalarTag) throw new Error("schema does not define the default scalar tag (tag:yaml.org,2002:str)");
+    this.tags = compiledTags;
+    this.implicitScalarTags = implicitScalarTags;
+    this.implicitScalarByFirstChar = implicitScalarByFirstChar;
+    this.implicitScalarAnyFirstChar = implicitScalarAnyFirstChar;
+    this.defaultScalarTag = defaultScalarTag;
+    this.defaultSequenceTag = exact.sequence["tag:yaml.org,2002:seq"];
+    this.defaultMappingTag = exact.mapping["tag:yaml.org,2002:map"];
+    this.exact = exact;
+    this.prefix = prefix;
+  }
+  withTags(...tags) {
+    let flatTags = [];
+    for (const tag of tags) flatTags = flatTags.concat(tag);
+    return new Schema2([...this.tags, ...flatTags]);
+  }
+};
+var FAILSAFE_SCHEMA = new Schema([
+  strTag,
+  seqTag,
+  mapTag
+]);
+var JSON_SCHEMA = new Schema([
+  ...FAILSAFE_SCHEMA.tags,
+  nullJsonTag,
+  boolJsonTag,
+  intJsonTag,
+  floatJsonTag
+]);
+var CORE_SCHEMA = new Schema([
+  ...FAILSAFE_SCHEMA.tags,
+  nullCoreTag,
+  boolCoreTag,
+  intCoreTag,
+  floatCoreTag
+]);
+var YAML11_SCHEMA = new Schema([
+  ...FAILSAFE_SCHEMA.tags,
+  nullYaml11Tag,
+  boolYaml11Tag,
+  intYaml11Tag,
+  floatYaml11Tag,
+  timestampTag,
+  mergeTag,
+  binaryTag,
+  omapTag,
+  pairsTag,
+  setTag
+]);
+var realMapTag = defineMappingTag("tag:yaml.org,2002:map", {
+  create: () => /* @__PURE__ */ new Map(),
+  addPair: (container3, key, value) => {
+    container3.set(key, value);
+    return "";
+  },
+  has: (container3, key) => container3.has(key),
+  keys: (container3) => container3.keys(),
+  get: (container3, key) => container3.get(key),
+  identify: (data) => data instanceof Map || isPlainObject2(data),
+  represent: (data) => {
+    if (data instanceof Map) return data;
+    const map2 = /* @__PURE__ */ new Map();
+    const obj = data;
+    for (const key of Object.keys(obj)) map2.set(key, obj[key]);
+    return map2;
+  }
+});
+function normalizeKey(key) {
+  if (Array.isArray(key)) {
+    const array2 = Array.prototype.slice.call(key);
+    for (let index = 0; index < array2.length; index++) {
+      if (Array.isArray(array2[index])) return null;
+      if (typeof array2[index] === "object" && Object.prototype.toString.call(array2[index]) === "[object Object]") array2[index] = "[object Object]";
+    }
+    return String(array2);
+  }
+  if (typeof key === "object" && Object.prototype.toString.call(key) === "[object Object]") return "[object Object]";
+  return String(key);
+}
+var legacyMapTag = defineMappingTag("tag:yaml.org,2002:map", {
+  create: () => ({}),
+  identify: isPlainObject2,
+  represent: (o) => {
+    const map2 = /* @__PURE__ */ new Map();
+    for (const key of Object.keys(o)) map2.set(key, o[key]);
+    return map2;
+  },
+  addPair: (container3, key, value) => {
+    const normalizedKey = normalizeKey(key);
+    if (normalizedKey === null) return "nested arrays are not supported inside keys";
+    if (normalizedKey === "__proto__") Object.defineProperty(container3, normalizedKey, {
+      value,
+      enumerable: true,
+      configurable: true,
+      writable: true
+    });
+    else container3[normalizedKey] = value;
+    return "";
+  },
+  has: (container3, key) => {
+    const normalizedKey = normalizeKey(key);
+    return normalizedKey !== null && Object.prototype.hasOwnProperty.call(container3, normalizedKey);
+  },
+  keys: (container3) => Object.keys(container3),
+  get: (container3, key) => container3[String(key)]
+});
+function simpleEscapeSequence(c2) {
+  switch (c2) {
+    case 48:
+      return "\0";
+    case 97:
+      return "\x07";
+    case 98:
+      return "\b";
+    case 116:
+      return "	";
+    case 9:
+      return "	";
+    case 110:
+      return "\n";
+    case 118:
+      return "\v";
+    case 102:
+      return "\f";
+    case 114:
+      return "\r";
+    case 101:
+      return "\x1B";
+    case 32:
+      return " ";
+    case 34:
+      return '"';
+    case 47:
+      return "/";
+    case 92:
+      return "\\";
+    case 78:
+      return "\x85";
+    case 95:
+      return "\xA0";
+    case 76:
+      return "\u2028";
+    case 80:
+      return "\u2029";
+    default:
+      return "";
+  }
+}
+var simpleEscapeCheck = new Array(256);
+var simpleEscapeMap = new Array(256);
+for (let i = 0; i < 256; i++) {
+  simpleEscapeCheck[i] = simpleEscapeSequence(i) ? 1 : 0;
+  simpleEscapeMap[i] = simpleEscapeSequence(i);
+}
+var DEFAULT_CONSTRUCTOR_OPTIONS = {
+  filename: "",
+  schema: CORE_SCHEMA,
+  json: false,
+  maxTotalMergeKeys: 1e4,
+  maxAliases: -1
+};
+var NS_URI_CHAR = String.raw`(?:%[0-9A-Fa-f]{2}|[0-9A-Za-z\-#;/?:@&=+$,_.!~*'()\[\]])`;
+var NS_TAG_CHAR = String.raw`(?:%[0-9A-Fa-f]{2}|[0-9A-Za-z\-#;/?:@&=+$.~*'()_])`;
+var PATTERN_TAG_URI = new RegExp(`^(?:${NS_URI_CHAR})*$`);
+var PATTERN_TAG_SUFFIX = new RegExp(`^(?:${NS_TAG_CHAR})+$`);
+var PATTERN_TAG_PREFIX = new RegExp(`^(?:!(?:${NS_URI_CHAR})*|${NS_TAG_CHAR}(?:${NS_URI_CHAR})*)$`);
+var DEFAULT_PARSER_OPTIONS = {
+  filename: "",
+  maxDepth: 100
+};
+var DEFAULT_LOAD_OPTIONS = {
+  ...DEFAULT_PARSER_OPTIONS,
+  ...DEFAULT_CONSTRUCTOR_OPTIONS
+};
+var ESCAPE_SEQUENCES = {};
+ESCAPE_SEQUENCES[0] = "\\0";
+ESCAPE_SEQUENCES[7] = "\\a";
+ESCAPE_SEQUENCES[8] = "\\b";
+ESCAPE_SEQUENCES[9] = "\\t";
+ESCAPE_SEQUENCES[10] = "\\n";
+ESCAPE_SEQUENCES[11] = "\\v";
+ESCAPE_SEQUENCES[12] = "\\f";
+ESCAPE_SEQUENCES[13] = "\\r";
+ESCAPE_SEQUENCES[27] = "\\e";
+ESCAPE_SEQUENCES[34] = '\\"';
+ESCAPE_SEQUENCES[92] = "\\\\";
+ESCAPE_SEQUENCES[133] = "\\N";
+ESCAPE_SEQUENCES[160] = "\\_";
+ESCAPE_SEQUENCES[8232] = "\\L";
+ESCAPE_SEQUENCES[8233] = "\\P";
+var DEFAULT_PRESENTER_OPTIONS = {
+  indent: 2,
+  seqNoIndent: false,
+  seqInlineFirst: true,
+  sortKeys: false,
+  lineWidth: 80,
+  flowBracketPadding: false,
+  flowSkipCommaSpace: false,
+  flowSkipColonSpace: false,
+  quoteFlowKeys: false,
+  quoteStyle: "single",
+  forceQuotes: false,
+  tagBeforeAnchor: false
+};
+var DEFAULT_DUMP_SCHEMA = YAML11_SCHEMA.withTags({
+  ...intYaml11Tag,
+  resolve: (source, isExplicit, tagName) => {
+    const result = intYaml11Tag.resolve(source, isExplicit, tagName);
+    return result === NOT_RESOLVED ? intCoreTag.resolve(source, isExplicit, tagName) : result;
+  }
+}, {
+  ...floatYaml11Tag,
+  resolve: (source, isExplicit, tagName) => {
+    const result = floatYaml11Tag.resolve(source, isExplicit, tagName);
+    return result === NOT_RESOLVED ? floatCoreTag.resolve(source, isExplicit, tagName) : result;
+  }
+});
+var DEFAULT_DUMP_OPTIONS = {
+  ...DEFAULT_PRESENTER_OPTIONS,
+  schema: DEFAULT_DUMP_SCHEMA,
+  skipInvalid: false,
+  noRefs: false,
+  flowLevel: -1,
+  transform: () => {
+  }
+};
+
 // src/entry.tsx
-var import_jsx_runtime88 = __toESM(require_jsx_runtime(), 1);
-var DefaultContainer2 = ({ children, style: style2, className: className2 }) => /* @__PURE__ */ (0, import_jsx_runtime88.jsx)("div", { className: className2, style: { position: "absolute", inset: 0, ...style2 }, children });
+var import_jsx_runtime89 = __toESM(require_jsx_runtime(), 1);
+var DefaultContainer2 = ({ children, style: style2, className: className2 }) => /* @__PURE__ */ (0, import_jsx_runtime89.jsx)("div", { className: className2, style: { position: "absolute", inset: 0, ...style2 }, children });
 function RemotionEngine({ root: root2, compose, background = "#000" }) {
-  const parsed = React43.useMemo(() => {
+  const parsed = React44.useMemo(() => {
     if (!root2) {
       return {
         id: "root",
@@ -48066,28 +49023,31 @@ function RemotionEngine({ root: root2, compose, background = "#000" }) {
     }
     return root.parse(root2);
   }, [root2]);
-  React43.useMemo(() => getDurationInSeconds(parsed, true), [parsed]);
-  const value = React43.useMemo(
+  React44.useMemo(() => getDurationInSeconds(parsed, true), [parsed]);
+  const value = React44.useMemo(
     () => ({
       Container: compose?.Container ?? DefaultContainer2,
       onError: compose?.onError
     }),
     [compose]
   );
-  return /* @__PURE__ */ (0, import_jsx_runtime88.jsx)(ComposeContext.Provider, { value, children: /* @__PURE__ */ (0, import_jsx_runtime88.jsxs)(AbsoluteFill, { style: { background }, children: [
-    /* @__PURE__ */ (0, import_jsx_runtime88.jsx)(FolderLeaf, { stream: parsed }),
-    parsed.subtitle && /* @__PURE__ */ (0, import_jsx_runtime88.jsx)(SubtitleOverlay, { subtitle: parsed.subtitle })
+  return /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(ComposeContext.Provider, { value, children: /* @__PURE__ */ (0, import_jsx_runtime89.jsxs)(AbsoluteFill, { style: { background }, children: [
+    /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(FolderLeaf, { stream: parsed }),
+    parsed.subtitle && /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(SubtitleOverlay, { subtitle: parsed.subtitle })
   ] }) });
 }
 
 // src/player/browser.tsx
 function PlayerApp() {
-  const playerRef = (0, import_react127.useRef)(null);
-  const [ready, setReady] = import_react127.default.useState(false);
-  const [error49, setError] = import_react127.default.useState(null);
-  const [data, setData] = import_react127.default.useState(null);
-  const [refreshKey, setRefreshKey] = import_react127.default.useState(0);
-  const loadData = (0, import_react127.useCallback)(() => {
+  const playerRef = (0, import_react128.useRef)(null);
+  const [ready, setReady] = import_react128.default.useState(false);
+  const [error49, setError] = import_react128.default.useState(null);
+  const [data, setData] = import_react128.default.useState(null);
+  const [refreshKey, setRefreshKey] = import_react128.default.useState(0);
+  const urlParams = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
+  const autoPlay = urlParams.get("autoplay") === "true";
+  const startAt = parseFloat(urlParams.get("start") || "0") || 0;
+  const loadData = (0, import_react128.useCallback)(() => {
     setReady(false);
     fetch("/api/video-data").then((r) => r.json()).then((json2) => {
       const root2 = json2.root || json2;
@@ -48095,7 +49055,7 @@ function PlayerApp() {
       setReady(true);
     }).catch((e) => setError(e.message));
   }, []);
-  (0, import_react127.useEffect)(() => {
+  (0, import_react128.useEffect)(() => {
     loadData();
     const handler = () => {
       setRefreshKey((k) => k + 1);
@@ -48103,10 +49063,10 @@ function PlayerApp() {
     window.addEventListener("refresh-player", handler);
     return () => window.removeEventListener("refresh-player", handler);
   }, [loadData]);
-  (0, import_react127.useEffect)(() => {
+  (0, import_react128.useEffect)(() => {
     if (refreshKey > 0) loadData();
   }, [refreshKey, loadData]);
-  (0, import_react127.useEffect)(() => {
+  (0, import_react128.useEffect)(() => {
     if (!data) return;
     window.__remotionSeekTo = (timeInSeconds) => {
       const frame = Math.round(timeInSeconds * fps);
@@ -48114,12 +49074,12 @@ function PlayerApp() {
     };
   });
   if (error49) {
-    return import_react127.default.createElement("div", {
+    return import_react128.default.createElement("div", {
       style: { color: "red", padding: 40, fontFamily: "sans-serif" }
     }, "Error: " + error49);
   }
   if (!ready) {
-    return import_react127.default.createElement("div", {
+    return import_react128.default.createElement("div", {
       style: { color: "#888", padding: 40, fontFamily: "sans-serif" }
     }, "Loading...");
   }
@@ -48128,12 +49088,12 @@ function PlayerApp() {
   const height = data.height || 1920;
   const durationInSeconds = getDurationInSeconds(data, true) || 5;
   const durationInFrames = Math.max(1, Math.ceil(durationInSeconds * fps));
-  return import_react127.default.createElement(
+  return import_react128.default.createElement(
     "div",
     {
       style: { width: "100%", height: "100%", background: "#000" }
     },
-    import_react127.default.createElement(Player, {
+    import_react128.default.createElement(Player, {
       ref: playerRef,
       component: RemotionEngine,
       inputProps: {
@@ -48149,14 +49109,16 @@ function PlayerApp() {
       showPlaybackRateControl: true,
       allowFullscreen: true,
       clickToPlay: false,
-      doubleClickToFullscreen: true
+      doubleClickToFullscreen: true,
+      autoPlay,
+      initialFrame: Math.floor(startAt * fps)
     })
   );
 }
 var container2 = document.getElementById("root");
 if (container2) {
   const root2 = (0, import_client.createRoot)(container2);
-  root2.render(import_react127.default.createElement(PlayerApp));
+  root2.render(import_react128.default.createElement(PlayerApp));
 }
 /*! Bundled license information:
 
@@ -48214,4 +49176,7 @@ react/cjs/react-jsx-runtime.production.js:
    * This source code is licensed under the MIT license found in the
    * LICENSE file in the root directory of this source tree.
    *)
+
+js-yaml/dist/js-yaml.mjs:
+  (*! js-yaml 5.2.1 https://github.com/nodeca/js-yaml @license MIT *)
 */

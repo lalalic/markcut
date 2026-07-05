@@ -161,9 +161,14 @@ initScenes();
 
 // ─── Watch file for changes (--edit mode) ───────────────────────────────
 if (MODE_EDIT) {
-  watchFile(VIDEO_JSON, { interval: 500 }, async (curr, prev) => {
+  let lastContent = readFileSync(VIDEO_JSON, "utf-8");
+  watchFile(VIDEO_JSON, { interval: 1000 }, async (curr, prev) => {
     if (curr.mtimeMs === prev.mtimeMs) return;
-    if (pipelineRunning) return; // skip overlapping runs
+    if (pipelineRunning) return;
+    // Check if content actually changed (avoids false triggers from TTS or metadata updates)
+    const newContent = readFileSync(VIDEO_JSON, "utf-8");
+    if (newContent === lastContent) return;
+    lastContent = newContent;
     pipelineRunning = true;
     console.log(`  📁 ${VIDEO_JSON} changed, re-running pipeline...`);
 

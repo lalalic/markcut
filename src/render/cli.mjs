@@ -42,6 +42,7 @@ Commands:
   preview <file.json|.md>               Open player with live preview
     --edit                             Auto-reload on file change
     --label                           Open label input overlay
+    --no-browser                      Skip opening browser automatically
     --port <num>                        Port for the player server (default: 3001)
 
   verify <file.json|.md>                Parse and validate a descriptive file without rendering
@@ -50,7 +51,7 @@ Commands:
 }
 
 function parseArgs(argv) {
-  const args = { command: "", file: "", aspect: "16x9", output: "", forceNew: false, verbose: false, label: false, strict: false, chat: false, port: 3001 };
+  const args = { command: "", file: "", aspect: "16x9", output: "", forceNew: false, verbose: false, label: false, edit: false, noBrowser: false, strict: false, chat: false, port: 3001 };
   let i = 2;
   if (argv[i]) args.command = argv[i++];
   if (argv[i] && !argv[i].startsWith("--")) args.file = argv[i++];
@@ -63,6 +64,7 @@ function parseArgs(argv) {
     else if (flag === "--verbose") args.verbose = true;
     else if (flag === "--label") args.label = true;
     else if (flag === "--edit") args.edit = true;
+    else if (flag === "--no-browser") args.noBrowser = true;
     else if (flag === "--port" && argv[i]) args.port = parseInt(argv[i], 10);
     else if (flag.startsWith("--port=")) args.port = parseInt(flag.split("=")[1], 10);
   }
@@ -174,7 +176,7 @@ async function main() {
         console.error("Player server not found at", playerServer);
         process.exit(1);
       }
-      const modeFlags = "";
+      const modeFlags = args.noBrowser ? "--no-browser" : "";
       const editFlag = args.edit ? "--edit" : "";
       const portFlag = `--port=${args.port || 3001}`;
       const fileFlag = args.file || join(ROOT, "video.json");
@@ -182,12 +184,14 @@ async function main() {
       const serverArgs = [playerServer, resolve(fileFlag), modeFlags, editFlag, `--port=${port}`].filter(Boolean);
       console.log(`\n▶ Starting player${args.label ? " (label mode)" : ""}${args.edit ? " (edit mode)" : ""} at http://localhost:${port}\n`);
       const child = spawn("node", serverArgs, { cwd: ROOT, stdio: "inherit" });
-      // Auto-open browser after short delay
-      setTimeout(() => {
-        try {
-          execSync(`open http://localhost:${port}`, { stdio: "ignore" });
-        } catch {}
-      }, 1000);
+      // Auto-open browser after short delay (unless --no-browser)
+      if (!args.noBrowser) {
+        setTimeout(() => {
+          try {
+            execSync(`open http://localhost:${port}`, { stdio: "ignore" });
+          } catch {}
+        }, 1000);
+      }
       child.on("exit", (code) => process.exit(code ?? 0));
       // Keep running until killed
       process.on("SIGINT", () => { child.kill(); process.exit(0); });
