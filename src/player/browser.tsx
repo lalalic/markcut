@@ -91,7 +91,6 @@ function PlayerApp() {
       clickToPlay: false,
       doubleClickToFullscreen: true,
       autoPlay: autoPlay,
-      initialFrame: Math.floor(startAt * fps),
     })
   );
 }

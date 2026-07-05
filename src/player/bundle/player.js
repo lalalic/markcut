@@ -30609,10 +30609,13 @@ function Markdown({ children, style: style2, className: className2 }) {
   const { width, height } = useVideoConfig();
   const text = typeof children === "string" ? children : "";
   const html = import_react125.default.useMemo(() => mdToHtml(text), [text]);
+  const blockCount = import_react125.default.useMemo(() => text.split(/\n\n+/).filter(Boolean).length, [text]);
   return /* @__PURE__ */ (0, import_jsx_runtime80.jsx)(
     "div",
     {
       className: className2,
+      "data-blocks": blockCount,
+      "data-text-len": text.length,
       style: {
         width,
         height,
@@ -49161,8 +49164,7 @@ function PlayerApp() {
       allowFullscreen: true,
       clickToPlay: false,
       doubleClickToFullscreen: true,
-      autoPlay,
-      initialFrame: Math.floor(startAt * fps)
+      autoPlay
     })
   );
 }

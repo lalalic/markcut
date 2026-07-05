@@ -657,6 +657,7 @@ IMPORTANT: Read the full existing JSON file before editing. Only edit the JSON f
       const mime = MIME[ext] || "application/octet-stream";
       const stat = statSync(assetPath);
       const fileSize = stat.size;
+      const cacheControl = ext === ".js" || ext === ".html" ? "no-cache" : "public, max-age=3600";
       const range = req.headers.range;
       if (range) {
         const parts = range.replace(/bytes=/, "").split("-");
@@ -669,6 +670,7 @@ IMPORTANT: Read the full existing JSON file before editing. Only edit the JSON f
           "Accept-Ranges": "bytes",
           "Content-Length": chunkSize,
           "Content-Type": mime,
+          "Cache-Control": cacheControl,
         });
         stream.pipe(res);
       } else {
@@ -677,6 +679,7 @@ IMPORTANT: Read the full existing JSON file before editing. Only edit the JSON f
           "Content-Type": mime,
           "Accept-Ranges": "bytes",
           "Content-Length": fileSize,
+          "Cache-Control": cacheControl,
         });
         res.end(data);
       }
