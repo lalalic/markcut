@@ -30488,72 +30488,122 @@ var import_react125 = __toESM(require_react(), 1);
 var import_jsx_runtime80 = __toESM(require_jsx_runtime(), 1);
 function mdToHtml(src) {
   if (!src) return "";
-  let html = src;
-  html = html.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
-  html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
-  html = html.replace(/\*(.+?)\*/g, "<em>$1</em>");
-  html = html.replace(
-    /\[([^\]]+)\]\(([^)]+)\)/g,
-    '<a href="$2" style="color:inherit;text-decoration:underline">$1</a>'
-  );
-  html = html.replace(/^---+$/gm, "<hr />");
-  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_m, lang, code) => {
-    return `<pre><code${lang ? ` class="language-${lang}"` : ""}>${code.trim()}</code></pre>`;
-  });
-  html = html.replace(
-    /^(>+)\s?(.+)$/gm,
-    (_m, depth, text) => {
-      const tag = "blockquote".repeat(Math.min(depth.length, 3));
-      return `${tag}>${text}`;
+  const blocks = src.split(/\n\n+/);
+  const out = [];
+  for (let block of blocks) {
+    block = block.trim();
+    if (!block) continue;
+    const rawTrimmed = block;
+    if (/^```/.test(rawTrimmed)) {
+      const codeMatch = rawTrimmed.match(/^```(\w*)\n?([\s\S]*?)```$/);
+      if (codeMatch) {
+        const lang = codeMatch[1];
+        let code = codeMatch[2].trim();
+        code = code.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        out.push(`<pre><code${lang ? ` class="language-${lang}"` : ""}>${code}</code></pre>`);
+        continue;
+      }
     }
-  );
-  html = html.replace(/((?:<blockquote>[^<]*<\/blockquote>\s*)+)/g, (_m, block) => {
-    const content = block.replace(/<\/?blockquote>/g, "").trim();
-    return `<blockquote style="border-left:4px solid rgba(255,255,255,0.3);padding-left:1em;margin:0.5em 0">${content}</blockquote>`;
-  });
-  html = html.replace(
-    /^\|(.+)\|\s*$/gm,
-    (_m, row) => {
-      const cells = row.split("|").map((c2) => c2.trim());
-      if (cells.every((c2) => /^-+$/.test(c2))) return "";
-      return `<tr>${cells.map((c2) => `<td>${c2}</td>`).join("")}</tr>`;
+    if (/^---+$/.test(rawTrimmed)) {
+      out.push("<hr />");
+      continue;
     }
-  );
-  html = html.replace(/((?:<tr>.*?<\/tr>\s*)+)/g, (_m, rows) => {
-    const cleaned = rows.replace(/\n\s*/g, "");
-    return `<table style="width:100%;border-collapse:collapse;margin:0.5em 0">${cleaned}</table>`;
-  });
-  html = html.replace(/<td>/g, '<td style="border:1px solid rgba(255,255,255,0.2);padding:0.4em 0.6em">');
-  html = html.replace(/^(\s*)[-*+]\s+(.+)$/gm, (_m, indent, text) => {
-    const depth = Math.floor(indent.length / 2);
-    return `<li data-depth="${depth}">${text}</li>`;
-  });
-  html = html.replace(/((?:<li[^>]*>.*?<\/li>\s*)+)/g, (_m, items) => {
-    return `<ul style="list-style:none;padding:0;margin:0.5em 0">${items}</ul>`;
-  });
-  html = html.replace(
-    /<li data-depth="(\d)">/g,
-    (_m, d) => {
-      const bullet = d === "0" ? "\u25CF" : d === "1" ? "\u25CB" : "\u25AA";
-      return `<li style="margin:0.2em 0;padding-left:${1.5 + Number(d) * 1.2}em"><span style="display:inline-block;width:1.2em;text-align:center">${bullet}</span>`;
+    if (/^>/.test(rawTrimmed)) {
+      const content = rawTrimmed.replace(/^>\s?/gm, "").trim();
+      let html2 = content;
+      html2 = html2.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      html2 = html2.replace(/`([^`]+)`/g, "<code>$1</code>");
+      html2 = html2.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+      html2 = html2.replace(/\*(.+?)\*/g, "<em>$1</em>");
+      out.push(`<blockquote style="border-left:4px solid rgba(255,255,255,0.3);padding-left:1em;margin:0.5em 0">${html2}</blockquote>`);
+      continue;
     }
-  );
-  html = html.replace(/^\d+\.\s+(.+)$/gm, "<li class='ol'>$1</li>");
-  html = html.replace(
-    /((?:<li class='ol'>.*?<\/li>\s*)+)/g,
-    `<ol style="margin:0.5em 0;padding-left:1.5em">$1</ol>`
-  );
-  html = html.replace(/<li class='ol'>/g, "<li>");
-  html = html.replace(/^### (.+)$/gm, '<h3 style="font-size:1.3em;margin:0.6em 0 0.3em">$1</h3>');
-  html = html.replace(/^## (.+)$/gm, '<h2 style="font-size:1.6em;margin:0.6em 0 0.3em">$1</h2>');
-  html = html.replace(/^# (.+)$/gm, '<h1 style="font-size:2em;margin:0.4em 0 0.2em">$1</h1>');
-  html = html.replace(/\n\n+/g, "</p><p>");
-  html = html.replace(/\n/g, " ");
-  if (!/^<(h[123]|p|ul|ol|table|blockquote|pre|hr)/.test(html)) {
-    html = `<p>${html}</p>`;
+    const h1 = /^# (.+)$/.exec(rawTrimmed);
+    if (h1) {
+      let html2 = h1[1];
+      html2 = html2.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      html2 = html2.replace(/`([^`]+)`/g, "<code>$1</code>");
+      html2 = html2.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+      html2 = html2.replace(/\*(.+?)\*/g, "<em>$1</em>");
+      out.push(`<h1 style="font-size:2em;margin:0.4em 0 0.2em">${html2}</h1>`);
+      continue;
+    }
+    const h2 = /^## (.+)$/.exec(rawTrimmed);
+    if (h2) {
+      let html2 = h2[1];
+      html2 = html2.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      html2 = html2.replace(/`([^`]+)`/g, "<code>$1</code>");
+      html2 = html2.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+      html2 = html2.replace(/\*(.+?)\*/g, "<em>$1</em>");
+      out.push(`<h2 style="font-size:1.6em;margin:0.6em 0 0.3em">${html2}</h2>`);
+      continue;
+    }
+    const h3 = /^### (.+)$/.exec(rawTrimmed);
+    if (h3) {
+      let html2 = h3[1];
+      html2 = html2.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      html2 = html2.replace(/`([^`]+)`/g, "<code>$1</code>");
+      html2 = html2.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+      html2 = html2.replace(/\*(.+?)\*/g, "<em>$1</em>");
+      out.push(`<h3 style="font-size:1.3em;margin:0.6em 0 0.3em">${html2}</h3>`);
+      continue;
+    }
+    if (/^\|/.test(rawTrimmed)) {
+      const rows = rawTrimmed.split("\n").filter((l) => !/^\|[- :]+\|$/.test(l.trim()));
+      const cells = rows.map((r) => {
+        const cols = r.split("|").map((c2) => c2.trim()).filter(Boolean);
+        if (!cols.length) return "";
+        let rowHtml = cols.map((c2) => {
+          c2 = c2.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+          c2 = c2.replace(/`([^`]+)`/g, "<code>$1</code>");
+          c2 = c2.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+          c2 = c2.replace(/\*(.+?)\*/g, "<em>$1</em>");
+          return `<td style="border:1px solid rgba(255,255,255,0.2);padding:0.4em 0.6em">${c2}</td>`;
+        }).join("");
+        return `<tr>${rowHtml}</tr>`;
+      }).filter(Boolean).join("");
+      if (cells) out.push(`<table style="width:100%;border-collapse:collapse;margin:0.5em 0">${cells}</table>`);
+      continue;
+    }
+    if (/^(\s*)[-*+]\s/.test(rawTrimmed)) {
+      const items = rawTrimmed.split("\n").map((l) => {
+        const m = l.match(/^(\s*)[-*+]\s+(.*)$/);
+        if (!m) return "";
+        let text = m[2];
+        text = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        text = text.replace(/`([^`]+)`/g, "<code>$1</code>");
+        text = text.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+        text = text.replace(/\*(.+?)\*/g, "<em>$1</em>");
+        const depth = Math.floor(m[1].length / 2);
+        const bullet = depth === 0 ? "\u25CF" : depth === 1 ? "\u25CB" : "\u25AA";
+        return `<li style="margin:0.2em 0;padding-left:${1.5 + depth * 1.2}em"><span style="display:inline-block;width:1.2em;text-align:center">${bullet}</span>${text}</li>`;
+      }).filter(Boolean).join("");
+      out.push(`<ul style="list-style:none;padding:0;margin:0.5em 0">${items}</ul>`);
+      continue;
+    }
+    if (/^\d+\.\s/.test(rawTrimmed)) {
+      const items = rawTrimmed.split("\n").map((l) => {
+        const m = l.match(/^\d+\.\s+(.*)$/);
+        if (!m) return "";
+        let text = m[1];
+        text = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        text = text.replace(/`([^`]+)`/g, "<code>$1</code>");
+        text = text.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+        text = text.replace(/\*(.+?)\*/g, "<em>$1</em>");
+        return `<li>${text}</li>`;
+      }).filter(Boolean).join("");
+      out.push(`<ol style="margin:0.5em 0;padding-left:1.5em">${items}</ol>`);
+      continue;
+    }
+    let html = block;
+    html = html.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
+    html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+    html = html.replace(/\*(.+?)\*/g, "<em>$1</em>");
+    html = html.replace(/\n/g, " ");
+    out.push(`<p>${html}</p>`);
   }
-  return html;
+  return out.join("\n");
 }
 function Markdown({ children, style: style2, className: className2 }) {
   const { width, height } = useVideoConfig();
@@ -49032,6 +49082,7 @@ function RemotionEngine({ root: root2, compose, background = "#000" }) {
     [compose]
   );
   return /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(ComposeContext.Provider, { value, children: /* @__PURE__ */ (0, import_jsx_runtime89.jsxs)(AbsoluteFill, { style: { background }, children: [
+    parsed.stylesheet && /* @__PURE__ */ (0, import_jsx_runtime89.jsx)("style", { children: parsed.stylesheet }),
     /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(FolderLeaf, { stream: parsed }),
     parsed.subtitle && /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(SubtitleOverlay, { subtitle: parsed.subtitle })
   ] }) });

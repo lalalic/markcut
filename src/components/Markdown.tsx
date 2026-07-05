@@ -49,112 +49,144 @@ interface MarkdownProps {
 function mdToHtml(src: string): string {
   if (!src) return "";
 
-  let html = src;
+  // Step 1: Split into blocks by double newlines
+  const blocks = src.split(/\n\n+/);
+  const out: string[] = [];
 
-  // Escape HTML entities to prevent XSS (content is user-provided)
-  html = html
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+  for (let block of blocks) {
+    block = block.trim();
+    if (!block) continue;
 
-  // Inline code (must come before bold/italic to avoid clobbering `**`)
-  html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
+    // Step 2: Detect block type BEFORE inline processing (to preserve syntax markers)
+    const rawTrimmed = block;
 
-  // Bold
-  html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+    // Fenced code blocks
+    if (/^```/.test(rawTrimmed)) {
+      const codeMatch = rawTrimmed.match(/^```(\w*)\n?([\s\S]*?)```$/);
+      if (codeMatch) {
+        const lang = codeMatch[1]!;
+        let code = codeMatch[2]!.trim();
+        code = code.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        out.push(`<pre><code${lang ? ` class="language-${lang}"` : ""}>${code}</code></pre>`);
+        continue;
+      }
+    }
 
-  // Italic
-  html = html.replace(/\*(.+?)\*/g, "<em>$1</em>");
+    // Horizontal rules
+    if (/^---+$/.test(rawTrimmed)) {
+      out.push("<hr />");
+      continue;
+    }
 
-  // Links
-  html = html.replace(
-    /\[([^\]]+)\]\(([^)]+)\)/g,
-    '<a href="$2" style="color:inherit;text-decoration:underline">$1</a>',
-  );
+    // Blockquotes (detect before HTML escaping)
+    if (/^>/.test(rawTrimmed)) {
+      const content = rawTrimmed.replace(/^>\s?/gm, "").trim();
+      // Process inline elements within the quote
+      let html = content;
+      html = html.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
+      html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+      html = html.replace(/\*(.+?)\*/g, "<em>$1</em>");
+      out.push(`<blockquote style="border-left:4px solid rgba(255,255,255,0.3);padding-left:1em;margin:0.5em 0">${html}</blockquote>`);
+      continue;
+    }
 
-  // Horizontal rules
-  html = html.replace(/^---+$/gm, "<hr />");
+    // Headings (detect before HTML escaping)
+    const h1 = /^# (.+)$/.exec(rawTrimmed);
+    if (h1) {
+      let html = h1[1];
+      html = html.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
+      html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+      html = html.replace(/\*(.+?)\*/g, "<em>$1</em>");
+      out.push(`<h1 style="font-size:2em;margin:0.4em 0 0.2em">${html}</h1>`);
+      continue;
+    }
+    const h2 = /^## (.+)$/.exec(rawTrimmed);
+    if (h2) {
+      let html = h2[1];
+      html = html.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
+      html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+      html = html.replace(/\*(.+?)\*/g, "<em>$1</em>");
+      out.push(`<h2 style="font-size:1.6em;margin:0.6em 0 0.3em">${html}</h2>`);
+      continue;
+    }
+    const h3 = /^### (.+)$/.exec(rawTrimmed);
+    if (h3) {
+      let html = h3[1];
+      html = html.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
+      html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+      html = html.replace(/\*(.+?)\*/g, "<em>$1</em>");
+      out.push(`<h3 style="font-size:1.3em;margin:0.6em 0 0.3em">${html}</h3>`);
+      continue;
+    }
 
-  // Fenced code blocks (```...```)
-  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_m: string, lang: string, code: string) => {
-    return `<pre><code${lang ? ` class="language-${lang}"` : ""}>${code.trim()}</code></pre>`;
-  });
+    // Tables (detect before HTML escaping to preserve pipe chars)
+    if (/^\|/.test(rawTrimmed)) {
+      const rows = rawTrimmed.split("\n").filter((l: string) => !/^\|[- :]+\|$/.test(l.trim()));
+      const cells = rows.map((r: string) => {
+        const cols = r.split("|").map((c: string) => c.trim()).filter(Boolean);
+        if (!cols.length) return "";
+        let rowHtml = cols.map((c: string) => {
+          c = c.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+          c = c.replace(/`([^`]+)`/g, "<code>$1</code>");
+          c = c.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+          c = c.replace(/\*(.+?)\*/g, "<em>$1</em>");
+          return `<td style="border:1px solid rgba(255,255,255,0.2);padding:0.4em 0.6em">${c}</td>`;
+        }).join("");
+        return `<tr>${rowHtml}</tr>`;
+      }).filter(Boolean).join("");
+      if (cells) out.push(`<table style="width:100%;border-collapse:collapse;margin:0.5em 0">${cells}</table>`);
+      continue;
+    }
 
-  // Blockquotes
-  html = html.replace(
-    /^(>+)\s?(.+)$/gm,
-    (_m: string, depth: string, text: string) => {
-      const tag = "blockquote".repeat(Math.min(depth.length, 3));
-      return `${tag}>${text}`;
-    },
-  );
-  // Collapse blockquote markers (simple approach: wrap in <blockquote>)
-  html = html.replace(/((?:<blockquote>[^<]*<\/blockquote>\s*)+)/g, (_m: string, block: string) => {
-    const content = block.replace(/<\/?blockquote>/g, "").trim();
-    return `<blockquote style="border-left:4px solid rgba(255,255,255,0.3);padding-left:1em;margin:0.5em 0">${content}</blockquote>`;
-  });
+    // Unordered lists
+    if (/^(\s*)[-*+]\s/.test(rawTrimmed)) {
+      const items = rawTrimmed.split("\n").map((l: string) => {
+        const m = l.match(/^(\s*)[-*+]\s+(.*)$/);
+        if (!m) return "";
+        let text = m[2]!;
+        text = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        text = text.replace(/`([^`]+)`/g, "<code>$1</code>");
+        text = text.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+        text = text.replace(/\*(.+?)\*/g, "<em>$1</em>");
+        const depth = Math.floor(m[1]!.length / 2);
+        const bullet = depth === 0 ? "●" : depth === 1 ? "○" : "▪";
+        return `<li style="margin:0.2em 0;padding-left:${1.5 + depth * 1.2}em"><span style="display:inline-block;width:1.2em;text-align:center">${bullet}</span>${text}</li>`;
+      }).filter(Boolean).join("");
+      out.push(`<ul style="list-style:none;padding:0;margin:0.5em 0">${items}</ul>`);
+      continue;
+    }
 
-  // Tables
-  html = html.replace(
-    /^\|(.+)\|\s*$/gm,
-    (_m: string, row: string) => {
-      const cells = row.split("|").map((c: string) => c.trim());
-      // Check if it's a separator row (|---|)
-      if (cells.every((c: string) => /^-+$/.test(c))) return "";
-      return `<tr>${cells.map((c: string) => `<td>${c}</td>`).join("")}</tr>`;
-    },
-  );
-  // Wrap consecutive <tr> in <table>
-  html = html.replace(/((?:<tr>.*?<\/tr>\s*)+)/g, (_m: string, rows: string) => {
-    const cleaned = rows.replace(/\n\s*/g, "");
-    return `<table style="width:100%;border-collapse:collapse;margin:0.5em 0">${cleaned}</table>`;
-  });
-  html = html.replace(/<td>/g, '<td style="border:1px solid rgba(255,255,255,0.2);padding:0.4em 0.6em">');
+    // Ordered lists
+    if (/^\d+\.\s/.test(rawTrimmed)) {
+      const items = rawTrimmed.split("\n").map((l: string) => {
+        const m = l.match(/^\d+\.\s+(.*)$/);
+        if (!m) return "";
+        let text = m[1]!;
+        text = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        text = text.replace(/`([^`]+)`/g, "<code>$1</code>");
+        text = text.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+        text = text.replace(/\*(.+?)\*/g, "<em>$1</em>");
+        return `<li>${text}</li>`;
+      }).filter(Boolean).join("");
+      out.push(`<ol style="margin:0.5em 0;padding-left:1.5em">${items}</ol>`);
+      continue;
+    }
 
-  // Unordered lists
-  html = html.replace(/^(\s*)[-*+]\s+(.+)$/gm, (_m: string, indent: string, text: string) => {
-    const depth = Math.floor(indent.length / 2);
-    return `<li data-depth="${depth}">${text}</li>`;
-  });
-  // Wrap consecutive <li> in <ul>
-  html = html.replace(/((?:<li[^>]*>.*?<\/li>\s*)+)/g, (_m: string, items: string) => {
-    return `<ul style="list-style:none;padding:0;margin:0.5em 0">${items}</ul>`;
-  });
-  // Style list items with bullet markers via CSS
-  html = html.replace(
-    /<li data-depth="(\d)">/g,
-    (_m: string, d: string) => {
-      const bullet = d === "0" ? "●" : d === "1" ? "○" : "▪";
-      return `<li style="margin:0.2em 0;padding-left:${1.5 + Number(d) * 1.2}em">` +
-        `<span style="display:inline-block;width:1.2em;text-align:center">${bullet}</span>`;
-    },
-  );
-
-  // Ordered lists (1. item)
-  html = html.replace(/^\d+\.\s+(.+)$/gm, "<li class='ol'>$1</li>");
-  html = html.replace(
-    /((?:<li class='ol'>.*?<\/li>\s*)+)/g,
-    `<ol style="margin:0.5em 0;padding-left:1.5em">$1</ol>`,
-  );
-  html = html.replace(/<li class='ol'>/g, "<li>");
-
-  // Headings
-  html = html.replace(/^### (.+)$/gm, '<h3 style="font-size:1.3em;margin:0.6em 0 0.3em">$1</h3>');
-  html = html.replace(/^## (.+)$/gm, '<h2 style="font-size:1.6em;margin:0.6em 0 0.3em">$1</h2>');
-  html = html.replace(/^# (.+)$/gm, '<h1 style="font-size:2em;margin:0.4em 0 0.2em">$1</h1>');
-
-  // Line breaks (double newline → paragraph break)
-  html = html.replace(/\n\n+/g, "</p><p>");
-
-  // Single newlines → space (within a paragraph)
-  html = html.replace(/\n/g, " ");
-
-  // Wrap in paragraph if not already wrapped in block elements
-  if (!/^<(h[123]|p|ul|ol|table|blockquote|pre|hr)/.test(html)) {
-    html = `<p>${html}</p>`;
+    // Plain paragraph — apply inline processing
+    let html = block;
+    html = html.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
+    html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+    html = html.replace(/\*(.+?)\*/g, "<em>$1</em>");
+    html = html.replace(/\n/g, " ");
+    out.push(`<p>${html}</p>`);
   }
 
-  return html;
+  return out.join("\n");
 }
 
 export function Markdown({ children, style, className }: MarkdownProps) {
