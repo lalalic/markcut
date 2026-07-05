@@ -681,6 +681,9 @@ function applyRootAttrs(root: DescriptiveRoot, attrs: Record<string, unknown>): 
       case "metadata":
         root.metadata = String(v);
         break;
+      case "stylesheet":
+        root.stylesheet = String(v);
+        break;
       case "title":
       case "description":
         // Metadata fields — store as instruction for now
