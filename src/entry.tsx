@@ -65,6 +65,7 @@ export function RemotionEngine({ root, compose, background = "#000" }: RemotionE
   return (
     <ComposeContext.Provider value={value}>
       <AbsoluteFill style={{ background }}>
+        {parsed.stylesheet && <style>{parsed.stylesheet}</style>}
         <FolderLeaf stream={parsed as any} />
         {parsed.subtitle && <SubtitleOverlay subtitle={parsed.subtitle} />}
       </AbsoluteFill>

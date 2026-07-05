@@ -4,7 +4,16 @@ description: 讲解人工智能的初步课程
 width: 1920 
 height: 1080 
 fps: 30 
-tts: edge-tts --voice {voice=zh-CN-YunxiNeural} --rate "{rate=-5%}" --text "{text}" --write-media "{output}"
+tts: edge-tts --voice "zh-CN-YunxiNeural" --text "{text}" --write-media "{output}"
+stylesheet: |
+  .courseware-title h1 { font-size: 64px; color: #667eea; text-align: center; margin-bottom: 0.3em; }
+  .courseware-title p  { font-size: 32px; text-align: center; color: #a0a0a0; }
+  .courseware-body h2  { font-size: 44px; color: #e0e0e0; border-bottom: 2px solid rgba(255,255,255,0.1); padding-bottom: 0.2em; }
+  .courseware-body li  { font-size: 30px; margin: 0.4em 0; line-height: 1.5; }
+  .courseware-body table { font-size: 24px; }
+  .courseware-body td  { padding: 0.3em 0.6em; border: 1px solid rgba(255,255,255,0.15); }
+  .courseware-body blockquote { border-left: 4px solid #667eea; padding-left: 1em; margin: 0.5em 0; color: rgba(255,255,255,0.7); }
+  .courseware-body code { background: rgba(255,255,255,0.1); padding: 0.1em 0.3em; border-radius: 4px; font-size: 0.9em; }
 ---
 # video
 layout:series
@@ -22,7 +31,7 @@ layout:parallel
 script:"欢迎来到机器学习导论课程。今天我们将深入探讨机器学习的三大范式，并通过具体实例理解每种方法的核心思想。让我们开始吧。"
 - component isBackground:true
   ~~~jsx
-  <Markdown className="slide">
+  <Markdown className="courseware-title">
   # 机器学习导论
 
   Introduction to Machine Learning
@@ -36,7 +45,7 @@ layout:series
 - parallel
   - component isBackground:true
     ~~~jsx
-    <Markdown className="slide">
+    <Markdown className="courseware-body">
     ## 什么是机器学习？
 
     - 🤖 **从数据中学习规律** — **无需人工编写规则**
@@ -51,7 +60,7 @@ layout:series
 - parallel
   - component isBackground:true
     ~~~jsx
-    <Markdown className="slide">
+    <Markdown className="courseware-body">
     ## 什么是机器学习？
 
     - 🤖 **从数据中学习规律** — 无需人工编写规则
@@ -65,11 +74,10 @@ layout:series
   - script "机器学习的核心目标是让计算机能够从数据中提取有用的信息，并在面对新情况时做出合理的预测或决策。这种能力在各个领域都有广泛应用，从图像识别到自然语言处理，再到推荐系统和自动驾驶。"
 
 ### SupervisedLearning
-layout:parallel
+layout:parallel script:"监督学习是机器学习中最常用的范式。它的核心是使用已标注的数据进行训练——每个训练样本都配有正确答案。模型学习从输入特征到输出标签的映射函数。例如在垃圾邮件检测中，输入是邮件内容，输出是'垃圾邮件'或'正常邮件'。模型通过数万个已标注样本的训练，最终能够准确分类从未见过的新邮件。监督学习还广泛应用于图像识别、房价预测和医疗诊断等领域。"
 - component isBackground:true
-  script:"监督学习是机器学习中最常用的范式。它的核心是使用已标注的数据进行训练——每个训练样本都配有正确答案。模型学习从输入特征到输出标签的映射函数。例如在垃圾邮件检测中，输入是邮件内容，输出是'垃圾邮件'或'正常邮件'。模型通过数万个已标注样本的训练，最终能够准确分类从未见过的新邮件。监督学习还广泛应用于图像识别、房价预测和医疗诊断等领域。"
   ~~~jsx
-  <Markdown className="slide">
+  <Markdown className="courseware-body">
   ## 监督学习
 
   Supervised Learning
@@ -94,7 +102,7 @@ layout:parallel
 script:"无监督学习则完全不同——它处理的是没有标签的数据，模型自主探索数据中的结构和模式。一个经典案例是客户分群：电商平台分析用户的购买历史和浏览行为，自动将用户划分为'价格敏感型''品牌忠诚型'等群体，无需预先定义这些类别。无监督学习还广泛应用于异常检测，比如识别信用卡欺诈交易，以及推荐系统中的协同过滤算法。"
 - component isBackground:true
   ~~~jsx
-  <Markdown className="slide">
+  <Markdown className="courseware-body">
   ## 无监督学习
 
   Unsupervised Learning
@@ -118,7 +126,7 @@ script:"无监督学习则完全不同——它处理的是没有标签的数据
 layout:parallel script:"强化学习是一种通过试错来学习的方法。智能体在环境中探索，采取行动，环境反馈奖励或惩罚。通过不断尝试，智能体学会哪些行动能带来最大的累积奖励。AlphaGo击败围棋世界冠军李世石就是强化学习的里程碑。在训练中，AlphaGo与自己下了数百万盘棋，每一步都得到反馈，最终超越了人类顶尖水平。强化学习还被广泛应用于机器人控制、自动驾驶和游戏AI等领域。"
 - component isBackground:true
   ~~~jsx
-  <Markdown className="slide">
+  <Markdown className="courseware-body">
   ## 强化学习
 
   Reinforcement Learning
@@ -144,7 +152,7 @@ layout:parallel
 script:"让我们回顾一下今天的内容。监督学习适合有标注数据的预测任务，从垃圾邮件检测到医疗诊断都能胜任。无监督学习善于发现数据中的隐藏模式，在客户分群和异常检测中发挥重要作用。强化学习通过与环境交互来学习最优策略，是游戏AI和机器人控制的核心技术。三种范式各有特色，选择合适的方法取决于你的数据条件和问题类型。感谢观看本次课程！"
 - component isBackground:true
   ~~~jsx
-  <Markdown className="slide">
+  <Markdown className="courseware-body">
   ## 总结
 
   Summary
@@ -168,7 +176,7 @@ script:"让我们回顾一下今天的内容。监督学习适合有标注数据
 ## Thanks
 - component
   ~~~jsx
-  <Markdown className="slide">
+  <Markdown className="courseware-body">
   - Q&A
   - Thanks
 
