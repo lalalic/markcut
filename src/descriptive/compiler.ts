@@ -34,30 +34,38 @@ export interface DescriptiveBaseNode {
 }
 
 export interface TtsConfig {
-  /** CLI command template with {var} placeholders.
-   *  Built-in vars: {text}, {output}, {voice}, {rate}, {refAudio}
-   *  Extra vars can be passed via `options`.
-   *  Default: edge-tts --voice "{voice}" --text "{text}" --write-media "{output}"
-   *  Special value "copy" copies refAudio to output (no generation). */
+  /** CLI command template. Built-in vars: {text}, {output}.
+   *  Agent embeds all parameters (voice, rate, model) directly in the CLI string.
+   *  Default: edge-tts --voice "en-US-GuyNeural" --text "{text}" --write-media "{output}" */
   cli?: string;
-  /** Voice name or model path */
-  voice?: string;
-  /** Speech rate percentage string e.g. "+20%", "-10%" */
-  rate?: string;
-  /** Reference audio path for voice cloning */
-  refAudio?: string;
-  /** Extra variables for CLI template substitution */
-  options?: Record<string, string>;
 }
 
 export interface SttConfig {
-  model?: string;
-  language?: string;
+  /** CLI command template. Built-in vars: {input} (audio path), {outputDir}.
+   *  Agent embeds all parameters (model, language) directly in the CLI string.
+   *  Default: whisper "{input}" --output_format vtt --output_dir "{outputDir}" */
+  cli?: string;
+}
+
+export interface TtiConfig {
+  /** CLI command template. Built-in vars: {prompt}, {output}.
+   *  Agent embeds all parameters (model, size, style) directly in the CLI string.
+   *  Default: pi --model agnes-2.0-flash --print "generate image: {prompt}" --output "{output}" */
+  cli?: string;
+}
+
+export interface TtvConfig {
+  /** CLI command template. Built-in vars: {prompt}, {output}.
+   *  Agent embeds all parameters (model, size, style) directly in the CLI string.
+   *  Default: pi --model agnes-2.0-flash --print "generate video: {prompt}" --output "{output}" */
+  cli?: string;
 }
 
 export interface DescriptiveVideo extends DescriptiveBaseNode {
   type: "video";
-  src: string;
+  src?: string;
+  /** Text-to-video generation prompt. When set without src, triggers TTV pipeline. */
+  prompt?: string;
   volume?: number;
   playbackRate?: number;
   width?: number;
@@ -78,7 +86,9 @@ export interface DescriptiveAudio extends DescriptiveBaseNode {
 
 export interface DescriptiveImage extends DescriptiveBaseNode {
   type: "image";
-  src: string;
+  src?: string;
+  /** Text-to-image generation prompt. When set without src, triggers TTI pipeline. */
+  prompt?: string;
   fit?: "contain" | "cover" | "fill";
 }
 
@@ -187,6 +197,8 @@ export interface DescriptiveRoot {
   stylesheet?: string;
   tts?: TtsConfig;
   stt?: SttConfig;
+  tti?: TtiConfig;
+  ttv?: TtvConfig;
   layout?: "series" | "parallel" | "transitionSeries";
   transition?: "fade" | "slide" | "wipe" | "flip" | "clockWipe";
   transitionTime?: number;

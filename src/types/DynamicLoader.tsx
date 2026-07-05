@@ -14,11 +14,15 @@
 import * as React from "react";
 import * as Remotion from "remotion";
 import { delayRender, continueRender } from "remotion";
+import { Markdown } from "../components/Markdown";
 
 // ── Globals for remote component access ──────────────────────────────────
+const __BUILTINS: Record<string, any> = { Markdown };
+
 if (typeof window !== "undefined") {
   (window as any).__React = React;
   (window as any).__Remotion = Remotion;
+  (window as any).__Builtins = __BUILTINS;
   globalThis.React = React;
 }
 
@@ -367,6 +371,8 @@ function tween(from, to, easing) {
 function __clearCache(f, dur) { if (f !== __frame || dur !== __actionDurationFrames) { __frame = f; __actionDurationFrames = dur; __cache = {}; } }
 
 ${importDecls}
+// Built-in components available without registration
+const Markdown = window["__Builtins"]["Markdown"];
 
 function Wrapper(props) {
   var frame = useCurrentFrame();

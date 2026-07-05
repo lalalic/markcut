@@ -40,9 +40,13 @@
     "@remotion/transitions": "4.0.469",
     "@vis.gl/react-google-maps": "^1.8.3",
     "immer": "^10.1.1",
+    "js-yaml": "^5.2.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "remark-frontmatter": "^5.0.0",
+    "remark-parse": "^11.0.0",
     "remotion": "4.0.469",
+    "unified": "^11.0.5",
     "zod": "4.3.6"
   },
   "devDependencies": {

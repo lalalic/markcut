@@ -141,20 +141,8 @@ export async function resolveMediaDurations(
 export interface ResolveScriptOptions {
   /** Output directory for generated audio files */
   outputDir: string;
-  /** CLI template (default: edge-tts) */
+  /** CLI template override (default: edge-tts) */
   ttsCli?: string;
-  /** TTS voice (default: en-US-GuyNeural) */
-  voice?: string;
-  /** TTS rate (e.g. "+20%") */
-  rate?: string;
-  /** Reference audio path for voice cloning */
-  refAudio?: string;
-  /** Extra TTS options as key-value pairs */
-  ttsOptions?: Record<string, string>;
-  /** STT model (default: tiny) */
-  sttModel?: string;
-  /** STT language (default: en) */
-  sttLanguage?: string;
 }
 
 const DEFAULT_WHISPER = "/Users/lir/Library/Python/3.9/bin/whisper";
@@ -210,51 +198,38 @@ export async function resolveScripts(
   const cache = readCacheManifest(options.outputDir);
   let cacheDirty = false;
 
-  // First pass: collect all scenes that have script
-  const allScenes: Array<{ node: any; id: string }> = [];
+  // First pass: collect all nodes (scenes + containers) that have script
+  const allScriptNodes: Array<{ node: any; id: string }> = [];
   walkDown(clone as any, (node) => {
-    if (node.type !== "scene") return;
+    if (node.type !== "scene" && node.type !== "series" && node.type !== "parallel" && node.type !== "transitionSeries") return;
     if (!node.script || typeof node.script !== "string") return;
     const existing = (node.children ?? []) as DescriptiveNode[];
     if (existing.some((c) => c.type === "audio")) return;
-    const id = node.id ?? node.name ?? `scene-${allScenes.length}`;
-    allScenes.push({ node, id });
+    const id = node.id ?? node.name ?? `node-${allScriptNodes.length}`;
+    allScriptNodes.push({ node, id });
   });
 
-  // Second pass: filter out parent scenes where a descendant also has script
+  // Second pass: filter out parent nodes where a descendant also has script
   // (innermost wins — prevents overlapping narration)
   function hasDescendantWithScript(node: any): boolean {
     for (const child of node.children ?? []) {
-      if (child.type === "scene" && child.script) return true;
+      if ((child.type === "scene" || child.type === "series" || child.type === "parallel" || child.type === "transitionSeries") && child.script) return true;
       if (hasDescendantWithScript(child)) return true;
     }
     return false;
   }
 
-  const toProcess = allScenes.filter(({ node }) => !hasDescendantWithScript(node));
+  const toProcess = allScriptNodes.filter(({ node }) => !hasDescendantWithScript(node));
 
   for (const { node, id } of toProcess) {
     const safeId = id.replace(/[^a-zA-Z0-9_-]/g, "_");
     const audioPath = join(options.outputDir, `${safeId}.wav`);
 
     // Resolve TTS config: scene-level overrides root-level overrides CLI defaults
-    const sceneTts = node.tts ?? {};
-    const rootTts = clone.tts ?? {};
-    const ttsCli = sceneTts.cli ?? rootTts.cli ?? options.ttsCli;
-    const ttsVoice = sceneTts.voice ?? rootTts.voice ?? options.voice;
-    const ttsRate = sceneTts.rate ?? rootTts.rate ?? options.rate;
-    const ttsRefAudio = sceneTts.refAudio ?? rootTts.refAudio ?? options.refAudio;
-    const ttsOpts = { ...(rootTts.options ?? {}), ...(sceneTts.options ?? {}), ...(options.ttsOptions ?? {}) };
+    const ttsCli = node.tts?.cli ?? clone.tts?.cli ?? options.ttsCli;
 
-    // Cache key includes everything that affects TTS output
-    const cacheKey = computeCacheKey({
-      script: node.script,
-      cli: ttsCli,
-      voice: ttsVoice,
-      rate: ttsRate,
-      refAudio: ttsRefAudio,
-      options: ttsOpts,
-    });
+    // Cache key: script + CLI string
+    const cacheKey = computeCacheKey({ script: node.script, cli: ttsCli });
 
     // Check cache — skip TTS if script + config unchanged AND audio file exists
     const cached = checkCache(cache, `tts:${safeId}`, cacheKey);
@@ -262,13 +237,7 @@ export async function resolveScripts(
     if (cached) {
       generated = cached;
     } else {
-      generated = generateTTS(node.script, audioPath, {
-        cli: ttsCli,
-        voice: ttsVoice,
-        rate: ttsRate,
-        refAudio: ttsRefAudio,
-        options: Object.keys(ttsOpts).length > 0 ? ttsOpts : undefined,
-      });
+      generated = generateTTS(node.script, audioPath, ttsCli);
       if (generated) {
         updateCache(cache, `tts:${safeId}`, cacheKey, generated);
         cacheDirty = true;
@@ -294,16 +263,11 @@ export async function resolveScripts(
  */
 export async function resolveSubtitles(
   root: DescriptiveRoot,
-  options: { outputDir: string; whisperBin?: string; sttModel?: string; sttLanguage?: string },
+  options: { outputDir: string; sttCli?: string },
 ): Promise<DescriptiveRoot> {
   const clone: DescriptiveRoot = JSON.parse(JSON.stringify(root));
-  const whisperBin = options.whisperBin ?? DEFAULT_WHISPER;
-  if (!existsSync(whisperBin)) return clone;
-
-  // Resolve STT config: root-level stt overrides CLI defaults
-  const rootStt = clone.stt ?? {};
-  const sttModel = rootStt.model ?? options.sttModel;
-  const sttLanguage = rootStt.language ?? options.sttLanguage;
+  const sttCli = clone.stt?.cli ?? options.sttCli ?? `whisper "{input}" --output_format vtt --output_dir "{outputDir}"`;
+  if (!sttCli) return clone;
 
   mkdirSync(options.outputDir, { recursive: true });
   const cache = readCacheManifest(options.outputDir);
@@ -328,11 +292,11 @@ export async function resolveSubtitles(
   let cueIndex = 1;
 
   for (const { audioSrc, offset } of clips) {
-    // Cache key: audio file content hash + STT config
+    // Cache key: audio hash + STT CLI string
     const audioHash = existsSync(audioSrc)
       ? createHash("sha1").update(readFileSync(audioSrc)).digest("hex").slice(0, 12)
       : audioSrc;
-    const sttCacheKey = computeCacheKey({ audioHash, model: sttModel, language: sttLanguage });
+    const sttCacheKey = computeCacheKey({ audioHash, cli: sttCli });
     const sttKey = `stt:${audioSrc.split("/").pop()}`;
 
     let vttPath: string | null = null;
@@ -340,8 +304,19 @@ export async function resolveSubtitles(
     if (cachedVtt) {
       vttPath = cachedVtt;
     } else {
-      vttPath = transcribeToVTT(audioSrc, options.outputDir, whisperBin, sttModel, sttLanguage);
-      if (vttPath) {
+      // Run STT CLI with {input} and {outputDir} substitution
+      const cmd = sttCli
+        .replace(/\{input\}/g, audioSrc)
+        .replace(/\{outputDir\}/g, options.outputDir);
+      try {
+        execSync(cmd, { stdio: ["pipe", "pipe", "pipe"], timeout: 120_000 });
+      } catch { /* STT failed, skip */ }
+      // Find generated VTT file
+      const base = audioSrc.replace(/\.wav$/, "").replace(/\.mp3$/, "");
+      const name = base.split("/").pop()!;
+      const candidate = join(options.outputDir, `${name}.vtt`);
+      if (existsSync(candidate)) {
+        vttPath = candidate;
         updateCache(cache, sttKey, sttCacheKey, vttPath);
         cacheDirty = true;
       }
@@ -384,6 +359,105 @@ export async function resolveSubtitles(
   return clone;
 }
 
+// ── Image & Video Generation (TTI / TTV) ──────────────────────────────────
+
+export interface ResolveGeneratedMediaOptions {
+  /** Output directory for generated media files */
+  outputDir: string;
+  /** Default TTI CLI template (overrides root.tti.cli) */
+  ttiCli?: string;
+  /** Default TTV CLI template (overrides root.ttv.cli) */
+  ttvCli?: string;
+}
+
+const DEFAULT_TTI_CLI = 'pi --model agnes-2.0-flash --print "generate image: {prompt}" --output "{output}"';
+const DEFAULT_TTV_CLI = 'pi --model agnes-2.0-flash --print "generate video: {prompt}" --output "{output}"';
+
+/**
+ * Walk the descriptive tree, find image/video nodes with `prompt` but no `src`,
+ * run the configured TTI/TTV CLI to generate media, and set `src` to the output.
+ *
+ * Images: prompt → generate .png via TTI CLI
+ * Videos: prompt → generate .mp4 via TTV CLI
+ *
+ * Both support content-hash caching (same prompt + same config → reuse).
+ */
+export async function resolveGeneratedMedia(
+  root: DescriptiveRoot,
+  options: ResolveGeneratedMediaOptions,
+): Promise<DescriptiveRoot> {
+  const clone: DescriptiveRoot = JSON.parse(JSON.stringify(root));
+  mkdirSync(options.outputDir, { recursive: true });
+  const cache = readCacheManifest(options.outputDir);
+  let cacheDirty = false;
+
+  // Collect all image/video nodes that have prompt but no src
+  const genNodes: Array<{
+    node: any;
+    id: string;
+    type: "image" | "video";
+    prompt: string;
+  }> = [];
+
+  walkDown(clone as any, (node) => {
+    if ((node.type !== "image" && node.type !== "video")) return;
+    if (!node.prompt || typeof node.prompt !== "string") return;
+    // Skip if src is already set (prompt is just metadata)
+    if (node.src) return;
+    const id = node.id ?? `${node.type}-${genNodes.length}`;
+    genNodes.push({ node, id, type: node.type as "image" | "video", prompt: node.prompt });
+  });
+
+  for (const { node, id, type, prompt } of genNodes) {
+    const safeId = id.replace(/[^a-zA-Z0-9_-]/g, "_");
+    const ext = type === "image" ? "png" : "mp4";
+    const outputPath = join(options.outputDir, `${safeId}.${ext}`);
+
+    // Resolve TTI/TTV config: root-level config overrides CLI defaults
+    const rootTti = clone.tti ?? {};
+    const rootTtv = clone.ttv ?? {};
+    const cli = type === "image"
+      ? (rootTti.cli ?? options.ttiCli ?? DEFAULT_TTI_CLI)
+      : (rootTtv.cli ?? options.ttvCli ?? DEFAULT_TTV_CLI);
+
+    // Cache key: prompt + CLI template (encodes all model/style params)
+    const cacheKey = computeCacheKey({ prompt, cli, type });
+
+    const cached = checkCache(cache, `gen:${safeId}`, cacheKey);
+    if (cached) {
+      node.src = cached;
+      continue;
+    }
+
+    // Build the CLI command — substitute {prompt}, {output}
+    const cmd = cli
+      .replace(/\{prompt\}/g, prompt.replace(/"/g, '\\"'))
+      .replace(/\{output\}/g, outputPath);
+
+    try {
+      console.log(`  Generating ${type}: ${safeId}...`);
+      execSync(cmd, {
+        encoding: "utf-8",
+        stdio: ["pipe", "pipe", "pipe"],
+        timeout: 300_000, // 5 min
+      });
+      if (existsSync(outputPath)) {
+        node.src = outputPath;
+        updateCache(cache, `gen:${safeId}`, cacheKey, outputPath);
+        cacheDirty = true;
+      } else {
+        console.error(`  ⚠ ${type} generation produced no output: ${safeId}`);
+      }
+    } catch (err: any) {
+      console.error(`  ✗ ${type} generation failed for ${safeId}: ${err.message}`);
+      // Keep prompt but leave src empty — compilation will warn about it
+    }
+  }
+
+  if (cacheDirty) writeCacheManifest(options.outputDir, cache);
+  return clone;
+}
+
 // ── Combined Pipeline ──────────────────────────────────────────────────────
 
 export interface ResolveAllOptions extends ResolveMediaOptions {
@@ -405,19 +479,35 @@ export interface ResolveAllOptions extends ResolveMediaOptions {
   sttModel?: string;
   /** STT language override (default: en) */
   sttLanguage?: string;
+  /** If set, enables TTI/TTV media generation from prompts */
+  mediaOutputDir?: string;
+  /** TTI CLI template override */
+  ttiCli?: string;
+  /** TTV CLI template override */
+  ttvCli?: string;
 }
 
 /**
  * Run all pre-pass resolvers in the correct order:
- * 1. Media duration probing
- * 2. Script → TTS (audio only) — uses root.tts / scene.tts / CLI options
- * 3. Post-compile: STT → VTT (subtitle) — uses root.stt / CLI options
+ * 1. Generated media (TTI/TTV) — resolve image/video prompts to actual files
+ * 2. Media duration probing
+ * 3. Script → TTS (audio only) — uses root.tts / scene.tts / CLI options
+ * 4. Post-compile: STT → VTT (subtitle) — uses root.stt / CLI options
  */
 export async function resolveAll(
   root: DescriptiveRoot,
   options: ResolveAllOptions = {},
 ): Promise<DescriptiveRoot> {
   let result = root;
+
+  // Step 0: Generate images/videos from prompts before probing durations
+  if (options.mediaOutputDir) {
+    result = await resolveGeneratedMedia(result, {
+      outputDir: options.mediaOutputDir,
+      ttiCli: options.ttiCli,
+      ttvCli: options.ttvCli,
+    });
+  }
 
   result = await resolveMediaDurations(result, {
     baseDir: options.baseDir,

@@ -230,7 +230,33 @@ layout:parallel
     const parsed = parseMarkdownDescriptive("", );
     expect(parsed.children).toEqual([]);
   });
+  it("parses image with prompt instead of src", () => {
+    const doc = `# video
+width:640 height:480 layout:series
+## Scene
+layout:parallel
+- image prompt:"a beautiful sunset over mountains" duration:3`;
+    const parsed = parseMarkdownDescriptive(doc);
+    const img = parsed.children[0]!.children[0];
+    expect(img.type).toBe("image");
+    expect(img.prompt).toBe("a beautiful sunset over mountains");
+    expect(img.src).toBeUndefined();
+    expect(img.duration).toBe(3);
+  });
 
+  it("parses video with prompt instead of src", () => {
+    const doc = `# video
+width:640 height:480 layout:series
+## Scene
+layout:parallel
+- video prompt:"waves crashing on beach" duration:5`;
+    const parsed = parseMarkdownDescriptive(doc);
+    const vid = parsed.children[0]!.children[0];
+    expect(vid.type).toBe("video");
+    expect(vid.prompt).toBe("waves crashing on beach");
+    expect(vid.src).toBeUndefined();
+    expect(vid.duration).toBe(5);
+  });
   it("round-trips markdown → parse → compile", () => {
     const doc = `# video
 width:1080 height:1920 fps:30 layout:series

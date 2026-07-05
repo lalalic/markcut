@@ -13,6 +13,10 @@ import type {
   DescriptiveScene,
   DescriptiveVideo,
 } from "./compiler";
+import { unified } from "unified";
+import remarkParse from "remark-parse";
+import remarkFrontmatter from "remark-frontmatter";
+import * as yaml from "js-yaml";
 
 export interface MarkdownParseOptions {
   /** Deprecated — only strict mode is supported. */
@@ -33,6 +37,7 @@ const TYPE_TOKENS: Record<string, string> = {
   include: "include",
   effect: "effect",
   map: "map",
+  script: "script",
   series: "series",
   parallel: "parallel",
   transitionSeries: "transitionSeries",
@@ -136,12 +141,22 @@ function parseProps(raw: string): unknown {
 
 function parseKeyValueTokens(tokens: string[]): Record<string, unknown> {
   const out: Record<string, unknown> = {};
+  let i = 0;
 
-  for (const token of tokens) {
+  while (i < tokens.length) {
+    const token = tokens[i]!;
     const idx = token.indexOf(":");
     if (idx > 0) {
       const key = token.slice(0, idx);
-      const rawVal = token.slice(idx + 1);
+      let rawVal = token.slice(idx + 1);
+      // If value after colon is empty, peek at next quoted token
+      if (!rawVal && i + 1 < tokens.length) {
+        const next = tokens[i + 1]!;
+        if (isQuoted(next)) {
+          rawVal = next;
+          i++; // consume the next token
+        }
+      }
       let val: unknown = unquote(rawVal);
 
       if (key === "layout") {
@@ -162,10 +177,11 @@ function parseKeyValueTokens(tokens: string[]): Record<string, unknown> {
       if (key === "waypoints") val = parseWaypoints(String(val));
       else if (key === "props" || key === "imports" || key === "components") val = parseProps(String(val));
       else if (key === "spots" || key === "customKeyframes") val = parseProps(String(val));
-      else if (key !== "instruction" && key !== "script" && key !== "tts" && key !== "stt" && key !== "jsx") {
+      else if (key !== "instruction" && key !== "script" && key !== "tts" && key !== "stt" && key !== "jsx" && key !== "prompt") {
         val = parseNumberMaybe(String(val));
       }
       out[key] = val;
+      i++;
       continue;
     }
 
@@ -281,10 +297,12 @@ function parseNodeLine(content: string): DescriptiveNode {
   switch (type) {
     case "image": {
       const src = firstPositional ?? (attrs.src as string | undefined);
-      if (!src) throw new Error("image requires src");
+      const prompt = attrs.prompt as string | undefined;
+      // src or prompt may be set later via indented property collection
       const node: DescriptiveImage = {
         type: "image",
         src,
+        prompt,
         fit: attrs.fit as any,
         duration: attrs.duration as any,
         start: attrs.start as any,
@@ -298,10 +316,12 @@ function parseNodeLine(content: string): DescriptiveNode {
     }
     case "video": {
       const src = firstPositional ?? (attrs.src as string | undefined);
-      if (!src) throw new Error("video requires src");
+      const prompt = attrs.prompt as string | undefined;
+      // src or prompt may be set later via indented property collection
       const node: DescriptiveVideo = {
         type: "video",
         src,
+        prompt,
         duration: attrs.duration as any,
         start: attrs.start as any,
         startFrom: attrs.startFrom as any,
@@ -341,7 +361,7 @@ function parseNodeLine(content: string): DescriptiveNode {
     }
     case "component": {
       const jsx = attrs.jsx as string | undefined;
-      if (!jsx) throw new Error("component requires jsx usage expression (e.g. jsx:\"<ComA value={42} />\")");
+      // jsx may be set later via indented code fence property collection
       const node: DescriptiveComponent = {
         type: "component",
         jsx,
@@ -389,6 +409,11 @@ function parseNodeLine(content: string): DescriptiveNode {
       };
       return node;
     }
+    case "script": {
+      const text = firstPositional ?? (attrs.script ? String(attrs.script) : undefined);
+      if (!text) throw new Error("script requires text content");
+      return { type: "script", script: text } as any;
+    }
     case "map": {
       const node: DescriptiveMap = {
         type: "map",
@@ -416,100 +441,166 @@ function parseNodeLine(content: string): DescriptiveNode {
 }
 
 export function parseMarkdownDescriptive(markdown: string, _options: MarkdownParseOptions = {}): DescriptiveRoot {
-  const lines = markdown.replace(/\r\n/g, "\n").split("\n");
-
   const root: DescriptiveRoot = { children: [] };
+  const lines = markdown.split("\n");
 
-  // ── Frontmatter: `---\n...\n---\n` at the very top ──────────────────────
-  // Supports root attrs (width, height, fps, tts, stt, etc.).
-  // Imports go in ~~~js imports code blocks, not frontmatter.
-  let startIdx = 0;
-  while (startIdx < lines.length && lines[startIdx]!.trim() === "") startIdx++;
-  if (lines[startIdx]?.trim() === "---") {
-    const closeIdx = findFrontmatterClose(lines, startIdx + 1);
-    if (closeIdx > startIdx) {
-      const fm = parseFrontmatterBlock(lines.slice(startIdx + 1, closeIdx));
-      if (fm.rootAttrs) applyRootAttrs(root, fm.rootAttrs);
-      // Replace consumed lines with blanks so line indices stay stable
-      for (let i = startIdx; i <= closeIdx; i++) lines[i] = "";
+  // Use remark to parse the markdown into an MDAST tree for STRUCTURE only
+  const mdast = unified()
+    .use(remarkParse)
+    .use(remarkFrontmatter)
+    .parse(markdown);
+
+  let sceneStack: Array<{ level: number; scene: DescriptiveScene }> = [];
+  let inSceneMetadata = false;
+  let currentScene: DescriptiveScene | null = null;
+
+  for (const node of (mdast as any).children) {
+    switch (node.type) {
+      case "yaml": {
+        try {
+          const data = yaml.load(node.value) as Record<string, unknown>;
+          if (data) applyRootAttrs(root, data);
+        } catch {
+          // Ignore invalid YAML
+        }
+        break;
+      }
+      case "heading": {
+        if (node.depth === 1) {
+          sceneStack = [];
+          currentScene = null;
+          inSceneMetadata = false;
+        } else {
+          // Extract heading text from the raw source line (skip '##' prefix)
+          const lineText = rawTextAtNode(lines, node);
+          const headingContent = lineText.replace(/^#+\s*/, "");
+          const scene = parseHeaderScene(headingContent);
+
+          while (sceneStack.length && sceneStack[sceneStack.length - 1]!.level >= node.depth) {
+            sceneStack.pop();
+          }
+          const parentScene = sceneStack[sceneStack.length - 1]?.scene;
+          if (parentScene) {
+            parentScene.children.push(scene);
+          } else {
+            root.children.push(scene);
+          }
+          sceneStack.push({ level: node.depth, scene });
+          currentScene = scene;
+          inSceneMetadata = true;
+        }
+        break;
+      }
+      case "paragraph": {
+        const text = rawTextAtNode(lines, node);
+        if (!text.trim()) break;
+
+        const tokens = splitTokens(text);
+        const attrs = parseKeyValueTokens(tokens);
+
+        if (inSceneMetadata && currentScene) {
+          applySceneMetadata(currentScene, attrs);
+        } else {
+          applyRootAttrs(root, attrs);
+        }
+        break;
+      }
+      case "list": {
+        inSceneMetadata = false;
+        if (!node.ordered) {
+          const parent: ParentNode = currentScene ?? root;
+          for (const item of node.children) {
+            processMDASTListItem(item, parent, lines);
+          }
+        }
+        break;
+      }
+      case "code": {
+        const lang = (node.lang ?? "").toLowerCase();
+        const meta = (node.meta ?? "").trim();
+        if ((lang === "js" && meta === "imports") || lang === "imports") {
+          root.importsBlock = node.value;
+        }
+        break;
+      }
     }
   }
 
-  const sceneStack: Array<{ level: number; scene: DescriptiveScene }> = [];
-  let bulletStack: Array<{ indent: number; parent: ParentNode }> = [{ indent: -1, parent: root }];
+  return root;
+}
 
-  let i = 0;
-  while (i < lines.length) {
-    const raw = lines[i]!;
-    const line = raw.trimEnd();
-    if (!line.trim()) { i++; continue; }
+/** Extract raw text from an MDAST node using source line positions. */
+function rawTextAtNode(lines: string[], node: any): string {
+  const startLine = node.position.start.line - 1; // 0-based
+  const endLine = node.position.end.line - 1;
+  const startCol = node.position.start.column - 1; // 0-based
+  const endCol = node.position.end.column;
 
-    // Fenced code block detection: ~~~js imports ... ~~~  or  ```js imports ... ```
-    const fenceOpen = /^(~{3,}|`{3,})(\w*)\s*(.*)?$/.exec(line.trim());
-    if (fenceOpen) {
-      const fence = fenceOpen[1]!;
-      const lang = (fenceOpen[2] ?? "").toLowerCase();
-      const meta = (fenceOpen[3] ?? "").trim();
-      // Find closing fence
-      let j = i + 1;
-      const buf: string[] = [];
-      while (j < lines.length) {
-        const candidate = lines[j]!;
-        if (candidate.trim().startsWith(fence.charAt(0).repeat(fence.length))) break;
-        buf.push(candidate);
-        j++;
-      }
-      // Only ~~~js imports / ~~~imports blocks are recognized
-      if ((lang === "js" && meta === "imports") || lang === "imports") {
-        root.importsBlock = buf.join("\n");
-      }
-      // Skip past closing fence (or to end if none found)
-      i = j < lines.length ? j + 1 : j;
-      continue;
+  if (startLine === endLine) {
+    // Single line: extract substring
+    const line = lines[startLine] ?? "";
+    return line.slice(startCol, endCol).trim();
+  }
+
+  // Multi-line: join lines
+  const parts: string[] = [];
+  for (let l = startLine; l <= endLine; l++) {
+    const line = lines[l] ?? "";
+    if (l === startLine) {
+      parts.push(line.slice(startCol));
+    } else if (l === endLine) {
+      parts.push(line.slice(0, endCol));
+    } else {
+      parts.push(line);
     }
+  }
+  return parts.join("\n").trim();
+}
 
-    if (/^#\s+/.test(line)) {
-      // top-level doc heading only; metadata handled by key lines.
-      i++;
-      continue;
+/**
+ * Recursively process an MDAST listItem and add the resulting node to `parent`.
+ * Uses raw source lines for text content to preserve JSX/HTML.
+ */
+function processMDASTListItem(item: any, parent: ParentNode, lines: string[]): void {
+  const children = item.children ?? [];
+  if (!children.length) return;
+
+  // Find the first paragraph (the "node line")
+  const firstPara = children.find((c: any) => c.type === "paragraph");
+  if (!firstPara) return;
+
+  // Use raw source text to preserve JSX values with angle brackets
+  const text = rawTextAtNode(lines, firstPara);
+  if (!text.trim()) return;
+
+  const node = parseNodeLine(text);
+
+  // Handle script type: set parent.script instead of adding as child
+  if (node.type === "script") {
+    if ((node as any).script) {
+      (parent as any).script = (node as any).script;
     }
+    return;
+  }
 
-    const heading = /^(#{2,6})\s+(.*)$/.exec(line.trim());
-    if (heading) {
-      const level = heading[1]!.length;
-      const scene = parseHeaderScene(heading[0]!);
+  pushChild(parent, node);
 
-      while (sceneStack.length && sceneStack[sceneStack.length - 1]!.level >= level) {
-        sceneStack.pop();
+  // Process remaining children (code blocks as properties, extra paragraphs as properties, nested lists as sub-children)
+  for (const child of children) {
+    if (child === firstPara) continue;
+
+    if (child.type === "code") {
+      const propName = (child.meta ?? "").trim() || (child.lang ?? "").toLowerCase() || "jsx";
+      (node as any)[propName] = child.value;
+    } else if (child.type === "paragraph") {
+      const extraText = rawTextAtNode(lines, child);
+      if (extraText.trim()) {
+        const tokens = splitTokens(extraText);
+        const attrs = parseKeyValueTokens(tokens);
+        Object.assign(node, attrs);
       }
-
-      const parentScene = sceneStack[sceneStack.length - 1]?.scene;
-      if (parentScene) {
-        parentScene.children.push(scene);
-      } else {
-        root.children.push(scene);
-      }
-      sceneStack.push({ level, scene });
-
-      bulletStack = [{ indent: -1, parent: scene }];
-      i++;
-      continue;
-    }
-
-    const bullet = /^(\s*)-\s+(.*)$/.exec(raw);
-    if (bullet) {
-      const indent = bullet[1]!.length;
-      const content = bullet[2]!;
-
-      while (bulletStack.length && bulletStack[bulletStack.length - 1]!.indent >= indent) {
-        bulletStack.pop();
-      }
-      const parent = bulletStack[bulletStack.length - 1]?.parent ?? sceneStack[sceneStack.length - 1]?.scene ?? root;
-      const node = parseNodeLine(content);
-      pushChild(parent, node);
-
+    } else if (child.type === "list") {
       if (
-        node.type === "scene" ||
         node.type === "series" ||
         node.type === "parallel" ||
         node.type === "transitionSeries" ||
@@ -517,123 +608,44 @@ export function parseMarkdownDescriptive(markdown: string, _options: MarkdownPar
         node.type === "include" ||
         node.type === "rhythm"
       ) {
-        bulletStack.push({ indent, parent: node as ParentNode });
-      }
-      i++;
-      continue;
-    }
-
-    const tokens = splitTokens(line.trim());
-    const attrs = parseKeyValueTokens(tokens);
-
-    // If we're inside a scene and haven't hit bullets yet, treat as scene metadata
-    const currentScene = sceneStack[sceneStack.length - 1]?.scene;
-    const inSceneContext = currentScene && bulletStack.length === 1 && bulletStack[0]!.indent === -1;
-    if (inSceneContext && currentScene) {
-      for (const [k, v] of Object.entries(attrs)) {
-        switch (k) {
-          case "layout":
-            currentScene.layout = v as any;
-            continue;
-          case "transition":
-            currentScene.transition = v as any;
-            continue;
-          case "transitionTime":
-            currentScene.transitionTime = Number(v);
-            continue;
-          case "name":
-            if (!currentScene.name) currentScene.name = String(v);
-            continue;
-          case "title":
-            currentScene.title = String(v);
-            continue;
-          case "instruction":
-            currentScene.instruction = String(v);
-            continue;
-          case "script":
-            currentScene.script = String(v);
-            continue;
-          case "tts":
-            currentScene.tts = v as any;
-            continue;
+        for (const subItem of child.children) {
+          processMDASTListItem(subItem, node as ParentNode, lines);
         }
       }
-
-      i++;
-      continue;
     }
-
-    applyRootAttrs(root, attrs);
-    i++;
   }
-
-  return root;
 }
 
-/** Find the closing `---` of a frontmatter block starting at `startIdx + 1`. */
-function findFrontmatterClose(lines: string[], startIdx: number): number {
-  for (let i = startIdx; i < lines.length; i++) {
-    if (lines[i]!.trim() === "---") return i;
-  }
-  return -1;
-}
-
-interface ParsedFrontmatter {
-  rootAttrs?: Record<string, unknown>;
-}
-
-/**
- * Minimal YAML-ish frontmatter parser.
- * Supports scalar `key: value` lines (value may be JSON object/array).
- * Imports go in ~~~js imports code blocks, not frontmatter.
- *
- * Not a full YAML parser — deliberately small and forgiving.
- */
-function parseFrontmatterBlock(body: string[]): ParsedFrontmatter {
-  const out: ParsedFrontmatter = { rootAttrs: {} };
-  let i = 0;
-  while (i < body.length) {
-    const raw = body[i]!;
-    const line = raw.trim();
-    if (!line) { i++; continue; }
-    if (line.startsWith("#")) { i++; continue; }
-
-    const m = /^([a-zA-Z_][a-zA-Z0-9_-]*)\s*:\s*(.*)$/.exec(line);
-    if (!m) { i++; continue; }
-    const key = m[1]!;
-    const value = m[2]!.trim();
-
-    if (!value) {
-      // Multi-line map: collect indented `name: value` lines
-      const map: Record<string, string> = {};
-      let j = i + 1;
-      while (j < body.length) {
-        const sub = body[j]!;
-        if (!sub.trim()) { j++; continue; }
-        if (!/^\s+\S/.test(sub)) break;
-        const trimmed = sub.trim();
-        const sm = /^([^\s:]+)\s*:\s*(.*)$/.exec(trimmed);
-        if (!sm) break;
-        map[sm[1]!] = sm[2]!.trim();
-        j++;
-      }
-      if (Object.keys(map).length) {
-        out.rootAttrs![key] = map;
-      }
-      i = j - 1; // outer loop will increment
-      i++;
-      continue;
+/** Apply key/value attrs to a scene node (subset of root attrs). */
+function applySceneMetadata(scene: DescriptiveScene, attrs: Record<string, unknown>): void {
+  for (const [k, v] of Object.entries(attrs)) {
+    switch (k) {
+      case "layout":
+        scene.layout = v as any;
+        break;
+      case "transition":
+        scene.transition = v as any;
+        break;
+      case "transitionTime":
+        scene.transitionTime = Number(v);
+        break;
+      case "name":
+        if (!scene.name) scene.name = String(v);
+        break;
+      case "title":
+        scene.title = String(v);
+        break;
+      case "instruction":
+        scene.instruction = String(v);
+        break;
+      case "script":
+        scene.script = String(v);
+        break;
+      case "tts":
+        scene.tts = v as any;
+        break;
     }
-
-    // Single-line value
-    let parsed: unknown = value;
-    if (value.startsWith("{") || value.startsWith("[")) {
-      try { parsed = JSON.parse(value); } catch { /* keep as string */ }
-    }
-    out.rootAttrs![key] = parsed;
-    i++;
   }
-  return out;
 }
 
 
@@ -669,11 +681,22 @@ function applyRootAttrs(root: DescriptiveRoot, attrs: Record<string, unknown>): 
       case "metadata":
         root.metadata = String(v);
         break;
+      case "title":
+      case "description":
+        // Metadata fields — store as instruction for now
+        root.instruction = root.instruction ?? String(v);
+        break;
       case "tts":
-        root.tts = v as any;
+        root.tts = typeof v === "string" ? { cli: v } : v as any;
         break;
       case "stt":
         root.stt = v as any;
+        break;
+      case "tti":
+        root.tti = v as any;
+        break;
+      case "ttv":
+        root.ttv = v as any;
         break;
       default:
         throw new Error(`unknown root key: ${k}`);

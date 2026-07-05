@@ -1,36 +1,42 @@
-# Markdown Strict Descriptive (Agent Contract)
+# Markdown Descriptive (Agent Contract)
 
-Complete reference for deterministic LLM video generation. No inference.
+Complete reference for LLM-driven video generation. The parser uses **remark** (`unified` + `remark-parse` + `remark-frontmatter`) for structural parsing (headings, lists, code fences) and extracts raw text from source positions, so JSX values with `<`/`>` are preserved correctly.
 
 ## Output Contract
 
 A markdown document compiled into a renderable scene tree.
 
 - Top heading `# video`
-- Optional YAML-style frontmatter block `---\n...\n---\n` at the very top
+- Optional YAML frontmatter block `---\n...\n---\n` at the very top
 - Root config line: `width:<n> height:<n> fps:<n> layout:<mode>` (key:value pairs on the line after `# video`)
 - Scenes via `##`/`###`/`####` headings
 - Leaf nodes via `- typeToken ...` bullets
-- Component registrations via `` ~~~js imports `` code fence
+- Component registrations via `` ~~~js imports `` code fence (or inline JSX definitions)
+- Built-in `<Markdown>` component available without registration
 
 ## Frontmatter
 
-An optional YAML-ish block at the top of the document, delimited by `---`. Use for **root configuration only** — widths croot attrs, and pipeline config (tts/stt). **Do not put imports here** — use a `` ~~~js imports `` code block instead (see below).
-
-Supported root keys: `width`, `height`, `fps`, `tts` (JSON), `stt` (JSON), `layout`.
+A YAML block at the top of the document, delimited by `---`. Supports root configuration, pipeline config (tts/stt/tti/ttv), and metadata.
 
 ```yaml
 ---
 width: 1080
 height: 1920
 fps: 30
-tts:
-  voice: zh-CN-XiaoxiaoNeural
-  rate: +10%
-stt:
-  model: whisper-1
+title: My Video
+description: A demo video
+tts: edge-tts --voice "{voice=zh-CN-YunxiNeural}" --text "{text}" --write-media "{output}"
+stt: whisper --model "base" --language "zh" --input "{input}" --output "{output}"
+tti: pi --model agnes-2.0-falsh --print "{prompt=make an image}" --output "{output}"
+ttv: pi --model agnes-2.0-falsh --print "{prompt=make a video}" --output "{output}"
+stylesheet: |
+  .slide h1 { color: #667eea; font-size: 64px; }
+  .slide li  { font-size: 32px; }
 ---
 ```
+
+Supported root keys: `width`, `height`, `fps`, `tts`, `stt`, `tti`, `ttv`, `title`, `description`, `stylesheet`.
+
 
 ### Imports block (recommended)
 
@@ -117,14 +123,15 @@ The `#module` suffix separates the package name from an internal module path. It
 | `routeMarker` | emoji string e.g. `"🚗"` | map |
 | `title` | display title | scene |
 | `instruction` | visual intent / style / any prompt; NOT rendered | any |
-| `script` | narration/dialogue text; TTS source; NOT rendered directly | scene |
+| `script` | narration/dialogue text; TTS source; NOT rendered directly | scene, series, parallel, transitionSeries |
 | `tts` | `{cli:"..", voice:"..", options:{..}}` JSON; per-scene TTS override | root, scene |
 | `metadata` | arbitrary metadata string | root |
-| `stylesheet` | global CSS string; selectors use `.type` and `.name` | root |
+| `stylesheet` | global CSS string; selectors use `.className` on elements | root |
 | `style` | inline CSS applied to the node's container div e.g. `"border-radius:12px"` | any |
 | `visible` | bool default true; `false` hides without removing | any |
 | `isBackground` | bool; loops to fill parent duration; does NOT count toward container duration — use for BGM or looping bg imagery | any |
 | `id` | unique string within parent scope | any |
+| `className` | CSS class name — used with `<Markdown className="...">` and root `stylesheet` | component |
 
 ## Type Catalog
 
@@ -142,7 +149,13 @@ layout:<x> [transition:<t> transitionTime:<n>] [script:".." tts:{voice:".."}] [i
 - <children>
 ```
 
-Scene metadata (layout, instruction, script, transition) goes on the line(s) immediately below the heading, before any child bullets. This keeps the heading clean. `name` comes from the heading text (must be a single token — no spaces). For multi-word titles, use key-value `title:"Long Title"` on the metadata line. `title` optionally follows ` - ` in the heading (e.g. `## Chapter1 - The Beginning` splits to name=`Chapter1`, title=`The Beginning`). Only `scene` nodes carry `script` (TTS narration) — leaf nodes ignore it. When scenes nest, the **innermost** scene's `script` wins; parent scenes with a nested `script` child are skipped to prevent overlapping narration.
+Scene metadata (layout, instruction, script, transition) goes on the line(s) immediately below the heading, before any child bullets. This keeps the heading clean. `name` comes from the heading text (must be a single token — no spaces). For multi-word titles, use key-value `title:"Long Title"` on the metadata line. `title` optionally follows ` - ` in the heading (e.g. `## Chapter1 - The Beginning` splits to name=`Chapter1`, title=`The Beginning`).
+
+Narration can be set in two ways:
+- **Scene metadata**: `script:"..."` on the scene's metadata line.
+- **Script type token**: `- script "..."` as a bullet item inside the scene (or inside a series/parallel container). Sets the parent node's script property for TTS generation.
+
+When scenes nest, the **innermost** scene's `script` wins; parent scenes with a nested `script` child are skipped to prevent overlapping narration. Container nodes (`series`/`parallel`/`transitionSeries`) with `script` also generate TTS audio.
 
 ### `image`
 
@@ -168,20 +181,74 @@ Subtitles are configured at the root level as a VTT overlay, not as tree nodes. 
 
 ### `component`
 
-When: JSX expression rendered at runtime with registered imports in scope. Required: `jsx`, plus `duration`.
-
-All external components must be registered via a `` ~~~js imports `` code block. Component nodes use `jsx:"<TagName ... />"` to reference them.
+When: JSX expression rendered at runtime with registered imports in scope. Required for non-background components: `duration` . The `jsx` value can come from an inline attribute or an indented code fence.
 
 Components must be registered via a `` ~~~js imports `` code block. Usage is via `jsx:"<TagName ... />"` on the component node.
 
 ```md
 ~~~js imports
 import { StatCounter } from "npm:stat-counter"
-import { Logo } from "github:myorg/design/src/Logo.tsx"
+import { Logo } from "github:myorg/design#Logo"
 ~~~
 
 # JSX usage (references registered components as tags)
 - component duration:1 jsx:"<StatCounter value={42} />"
+```
+
+### Code fence properties
+
+Properties that are too long for a single line (like `jsx` expressions or `prompt` text) can be provided via an indented code fence under the bullet item. The fence language (`~~~<lang> <propName>`) specifies which property to set:
+
+```md
+- component duration:4 isBackground:true
+  ~~~jsx jsx
+  <Markdown className="slide">
+  # Title
+
+  Content with **bold** and `code`
+  </Markdown>
+  ~~~
+
+- video start:5 volume:0
+  ~~~prompt prompt
+  animation of a robot learning to walk, cinematic lighting
+  ~~~
+```
+
+The fence syntax is `~~~<lang> <propName>`. If `propName` is omitted, it defaults to `lang`. Common patterns:
+
+| Fence | Sets property | Use case |
+|---|---|---|
+| `~~~jsx jsx` or `~~~jsx` | `jsx` | Component JSX expression |
+| `~~~prompt prompt` | `prompt` | TTI/TTV generation prompt |
+| `~~~script script` | `script` | Narration text |
+| `~~~md content` | `content` | Raw content for `<Markdown>` |
+
+### Built-in `<Markdown>` component
+
+`<Markdown>` is a built-in component available in every `jsx:` expression without registration. It renders markdown text to styled HTML at runtime. Supports headings, lists, bold, italic, tables, blockquotes, code blocks, and links.
+
+Use with `className` and `stylesheet` for global styling:
+
+```md
+- component isBackground:true
+  ~~~jsx jsx
+  <Markdown className="slide">
+  # Welcome
+
+  Introduction to the topic
+  </Markdown>
+  ~~~
+
+- component isBackground:true
+  ~~~jsx jsx
+  <Markdown className="slide">
+  ## Key Concepts
+
+  - Point one with **bold** emphasis
+  - Point two with `inline code`
+  </Markdown>
+  ~~~
 ```
 
 ### `rhythm`
@@ -229,11 +296,12 @@ When: external video JSON. Required: `src` + `duration`, or inline `children`.
 ## Generation Workflow
 
 1. Root: `# video` + `width:<n> height:<n> fps:<n> layout:<mode>` on the next line.
-2. Frontmatter (optional): `---` block for root attrs + tts/stt pipeline config.
-3. Component registrations: `` ~~~js imports `` block near the end (or anywhere).
+2. Frontmatter (optional): `---` block for root attrs + tts/stt pipeline config + `stylesheet`.
+3. Component registrations: `` ~~~js imports `` block for external components (built-in `<Markdown>` needs no registration).
 4. Scenes via `##` with `layout:` + `script:` metadata on the line below.
 5. Leaves as `- type key:value ...` bullets indented under scenes.
-6. Verify each leaf has resolvable `duration`.
+6. Long values (JSX, prompts, scripts) use indented `~~~<lang> <propName>` code fences.
+7. Verify each leaf has resolvable `duration`.
 
 ## Tween Animation
 
@@ -244,7 +312,7 @@ Animate numeric props over time by using `tween(from?, to, easing?)` expressions
 Call `tween(from, to)` directly as a function inside the usage expression — it's available in the compiled scope:
 
 ```md
-- component duration:4 jsx:"<BarChart data={[{name:'A',value:tween(0,80)},{name:'B',value:tween(0,60)}]} keys={['value']} indexBy='name' />"
+- component duration:4 jsx:"<BarChart data={[{name:'A',value:tween(0,80)},{name:'B',value:tween(0,60)}]}/>"
 ```
 
 You can also use `tween()` in inline SVG:
@@ -273,15 +341,24 @@ tween(#000, #FFF)             — color interpolation
 ## Self-Check
 
 - [ ] Root has `width`, `height`, `fps`, `layout`.
-- [ ] Every scene has ≥1 child.
+- [ ] Every scene has ≥1 child or `script`.
 - [ ] All values use explicit `key:value` syntax (no bare tokens).
 - [ ] `start` only used inside `parallel` containers.
 - [ ] No `src` on component nodes (use `jsx:` instead).
-- [ ] Component registrations use `` ~~~js imports `` block — the ONLY supported method.
-- [ ] Every component `jsx:` references a name registered in `` ~~~js imports ``.
+- [ ] Component registrations use `` ~~~js imports `` block — the ONLY supported method. Built-in `<Markdown>` needs no registration.
+- [ ] Every component `jsx:` references a name registered in `` ~~~js imports `` or is a built-in (`<Markdown>`).
 - [ ] Every `jsx:` on a component node is a usage expression (JSX tag), not a definition.
 - [ ] Inline component definitions go inside `` ~~~js imports `` as `export function Name(...) { ... }`.
 - [ ] Scene names are single tokens (no spaces) — use `title:"..."` for multi-word titles.
+- [ ] Code fence properties are indented under their parent bullet.
+
+## Validation with CLI
+
+Use `markcut verify` to parse and validate a descriptive markdown file without rendering:
+
+```bash
+markcut verify courseware.md
+```
 
 ## Example
 
@@ -293,6 +370,14 @@ fps: 30
 ---
 # video
 layout:series
+~~~js imports
+import { StatCounter } from "npm:stat-counter"
+import { Logo } from "github:myorg/design-system#Logo"
+
+export function Greeting({ name }) {
+  return <div style={{color: '#fff', fontSize: 28, textAlign: 'center'}}>Hello {name}!</div>
+}
+~~~
 
 ## Hook
 layout:parallel script:"Set location and emotional tone"
@@ -314,13 +399,4 @@ layout:parallel
 ## Route
 layout:parallel
 - map duration:3 travelMode:DRIVING waypoints:[37.7749,-122.4194,"SF";34.0522,-118.2437,"LA"]
-
-~~~js imports
-import { StatCounter } from "npm:stat-counter"
-import { Logo } from "github:myorg/design-system#Logo.tsx"
-
-export function Greeting({ name }) {
-  return <div style={{color: '#fff', fontSize: 28, textAlign: 'center'}}>Hello {name}!</div>
-}
-~~~
 ```
