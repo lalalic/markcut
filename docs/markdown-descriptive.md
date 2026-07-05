@@ -12,7 +12,7 @@ A markdown document compiled into a renderable scene tree.
 - Scenes via `##`/`###`/`####` headings
 - Leaf nodes via `- typeToken ...` bullets
 - Component registrations via `` ~~~js imports `` code fence (or inline JSX definitions)
-- Built-in `<Markdown>` component available without registration
+- Properties via indented code fences (`~~~<lang> <propName>`)
 
 ## Frontmatter
 
@@ -131,7 +131,6 @@ The `#module` suffix separates the package name from an internal module path. It
 | `visible` | bool default true; `false` hides without removing | any |
 | `isBackground` | bool; loops to fill parent duration; does NOT count toward container duration — use for BGM or looping bg imagery | any |
 | `id` | unique string within parent scope | any |
-| `className` | CSS class name — used with `<Markdown className="...">` and root `stylesheet` | component |
 
 ## Type Catalog
 
@@ -197,16 +196,12 @@ import { Logo } from "github:myorg/design#Logo"
 
 ### Code fence properties
 
-Properties that are too long for a single line (like `jsx` expressions or `prompt` text) can be provided via an indented code fence under the bullet item. The fence language (`~~~<lang> <propName>`) specifies which property to set:
+Properties that are too long for a single line can be provided via an indented code fence under the bullet item. The fence language (`~~~<lang> <propName>`) specifies which property to set:
 
 ```md
 - component duration:4 isBackground:true
   ~~~jsx jsx
-  <Markdown className="slide">
-  # Title
-
-  Content with **bold** and `code`
-  </Markdown>
+  <div style={{color:'#fff'}}>Hello</div>
   ~~~
 
 - video start:5 volume:0
@@ -222,34 +217,6 @@ The fence syntax is `~~~<lang> <propName>`. If `propName` is omitted, it default
 | `~~~jsx jsx` or `~~~jsx` | `jsx` | Component JSX expression |
 | `~~~prompt prompt` | `prompt` | TTI/TTV generation prompt |
 | `~~~script script` | `script` | Narration text |
-| `~~~md content` | `content` | Raw content for `<Markdown>` |
-
-### Built-in `<Markdown>` component
-
-`<Markdown>` is a built-in component available in every `jsx:` expression without registration. It renders markdown text to styled HTML at runtime. Supports headings, lists, bold, italic, tables, blockquotes, code blocks, and links.
-
-Use with `className` and `stylesheet` for global styling:
-
-```md
-- component isBackground:true
-  ~~~jsx jsx
-  <Markdown className="slide">
-  # Welcome
-
-  Introduction to the topic
-  </Markdown>
-  ~~~
-
-- component isBackground:true
-  ~~~jsx jsx
-  <Markdown className="slide">
-  ## Key Concepts
-
-  - Point one with **bold** emphasis
-  - Point two with `inline code`
-  </Markdown>
-  ~~~
-```
 
 ### `rhythm`
 
@@ -297,7 +264,7 @@ When: external video JSON. Required: `src` + `duration`, or inline `children`.
 
 1. Root: `# video` + `width:<n> height:<n> fps:<n> layout:<mode>` on the next line.
 2. Frontmatter (optional): `---` block for root attrs + tts/stt pipeline config + `stylesheet`.
-3. Component registrations: `` ~~~js imports `` block for external components (built-in `<Markdown>` needs no registration).
+3. Component registrations: `` ~~~js imports `` block for external components.
 4. Scenes via `##` with `layout:` + `script:` metadata on the line below.
 5. Leaves as `- type key:value ...` bullets indented under scenes.
 6. Long values (JSX, prompts, scripts) use indented `~~~<lang> <propName>` code fences.
@@ -345,8 +312,8 @@ tween(#000, #FFF)             — color interpolation
 - [ ] All values use explicit `key:value` syntax (no bare tokens).
 - [ ] `start` only used inside `parallel` containers.
 - [ ] No `src` on component nodes (use `jsx:` instead).
-- [ ] Component registrations use `` ~~~js imports `` block — the ONLY supported method. Built-in `<Markdown>` needs no registration.
-- [ ] Every component `jsx:` references a name registered in `` ~~~js imports `` or is a built-in (`<Markdown>`).
+- [ ] Component registrations use `` ~~~js imports `` block — the ONLY supported method.
+- [ ] Every component `jsx:` references a name registered in `` ~~~js imports ``.
 - [ ] Every `jsx:` on a component node is a usage expression (JSX tag), not a definition.
 - [ ] Inline component definitions go inside `` ~~~js imports `` as `export function Name(...) { ... }`.
 - [ ] Scene names are single tokens (no spaces) — use `title:"..."` for multi-word titles.

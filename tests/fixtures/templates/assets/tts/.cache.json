@@ -1,0 +1,30 @@
+{
+  "tts:TitleSlide": {
+    "hash": "9097135a77ad",
+    "output": "/Users/lir/Workspace/free2/remotion-engine/tests/fixtures/templates/assets/tts/TitleSlide.wav"
+  },
+  "tts:node-1": {
+    "hash": "0897bfeb1787",
+    "output": "/Users/lir/Workspace/free2/remotion-engine/tests/fixtures/templates/assets/tts/node-1.wav"
+  },
+  "tts:node-2": {
+    "hash": "088815407572",
+    "output": "/Users/lir/Workspace/free2/remotion-engine/tests/fixtures/templates/assets/tts/node-2.wav"
+  },
+  "tts:UnsupervisedLearning": {
+    "hash": "2b81a8f890e9",
+    "output": "/Users/lir/Workspace/free2/remotion-engine/tests/fixtures/templates/assets/tts/UnsupervisedLearning.wav"
+  },
+  "tts:ReinforcementLearning": {
+    "hash": "d85aef98eaba",
+    "output": "/Users/lir/Workspace/free2/remotion-engine/tests/fixtures/templates/assets/tts/ReinforcementLearning.wav"
+  },
+  "tts:Summary": {
+    "hash": "acf23a1e6e1c",
+    "output": "/Users/lir/Workspace/free2/remotion-engine/tests/fixtures/templates/assets/tts/Summary.wav"
+  },
+  "tts:SupervisedLearning": {
+    "hash": "9a22beec6374",
+    "output": "/Users/lir/Workspace/free2/remotion-engine/tests/fixtures/templates/assets/tts/SupervisedLearning.wav"
+  }
+}

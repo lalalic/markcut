@@ -95,6 +95,17 @@ some common issues (photo or video can't be displayed, audio missing), take belo
 
 | Topic | File |
 |-------|------|
-| Label system (browse, label, export labels.json) | [docs/label-mode.md](docs/label-mode.md) |
+| Markdown descriptive format (primary authoring format) | [docs/markdown-descriptive.md](docs/markdown-descriptive.md) |
+| JSON descriptive format (canonical IR) | [docs/json-descriptive.md](docs/json-descriptive.md) |
+| **Video Templates** — ready-to-use markdown for common scenarios | **[docs/templates/](docs/templates/)** |
+| ┣ Courseware / 课件 | [docs/templates/courseware.md](docs/templates/courseware.md) |
+| ┣ Product Ad / 产品广告 | [docs/templates/product-ad.md](docs/templates/product-ad.md) |
+| ┣ Movie Review / 影视讲解 | [docs/templates/movie-review.md](docs/templates/movie-review.md) |
+| ┣ Audiobook / 有声图书 | [docs/templates/audiobook.md](docs/templates/audiobook.md) |
+| ┣ Story Video / 故事视频 | [docs/templates/story-video.md](docs/templates/story-video.md) |
+| ┣ Travel Log / 旅行日志 | [docs/templates/travel-log.md](docs/templates/travel-log.md) |
 | Dynamic components (remote, custom, effects) | [docs/dynamic-components.md](docs/dynamic-components.md) |
+| Label system (browse, label, export labels.json) | [docs/label-mode.md](docs/label-mode.md) |
 | Player servers (label + edit mode) | [docs/edit-mode.md](docs/edit-mode.md) |
+| Template overview and TTI/TTV config | [docs/templates.md](docs/templates.md) |
+| Missing components & packages tracker | [docs/missing-components.md](docs/missing-components.md) |

@@ -1,101 +1,47 @@
 /**
- * Flexible TTS integration via CLI template + variable substitution.
+ * CLI-based TTS integration.
  *
- * Define a CLI command template with {var} placeholders:
+ * All configuration (voice, rate, model) is embedded directly in the CLI string
+ * by the agent. The pipeline only substitutes {text} and {output}.
  *
- *   default (edge-tts):
- *     edge-tts --voice "{voice}" --text "{text}" --write-media "{output}"
+ *   Default: edge-tts --voice "en-US-GuyNeural" --text "{text}" --write-media "{output}"
  *
- *   mlx-audio with voice cloning:
- *     mlx-audio tts --model "{voice}" --text "{text}" --ref-audio "{refAudio}" --output "{output}"
- *
- *   Any custom engine:
- *     {cli} --text "{text}" --output "{output}"
- *
- * Built-in variables:  {text} {output} {voice} {rate} {refAudio}
- * Extra variables come from TtsConfig.options.
- *
- * Special cli value "copy" copies refAudio to output (no generation).
+ *   Custom: pi --model agnes-2.0-flash --print "narrate: {text}" --output "{output}"
  */
 import { execSync } from "node:child_process";
-import { existsSync, mkdirSync, copyFileSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 
-export interface TTSOptions {
-  /** CLI command template with {var} placeholders */
-  cli?: string;
-  /** Voice name or model path */
-  voice?: string;
-  /** Speech rate percentage string e.g. "+20%", "-10%" */
-  rate?: string;
-  /** Reference audio path for voice cloning */
-  refAudio?: string;
-  /** Extra variables for CLI template substitution */
-  options?: Record<string, string>;
-}
-
-const DEFAULT_CLI = 'edge-tts --voice "{voice}" --text "{text}" --write-media "{output}"';
+const DEFAULT_CLI = 'edge-tts --voice "en-US-GuyNeural" --text "{text}" --write-media "{output}"';
 
 /**
- * Generate a WAV file from text using CLI template substitution.
+ * Generate a media file from text using CLI template substitution.
+ * Only {text} and {output} are built-in variables — all other parameters
+ * are embedded directly in the CLI command by the agent.
  * Returns the output file path, or empty string on failure.
  */
 export function generateTTS(
   text: string,
   outputPath: string,
-  options: TTSOptions = {},
+  cli?: string,
 ): string {
   mkdirSync(dirname(outputPath), { recursive: true });
 
-  const cli = options.cli ?? DEFAULT_CLI;
+  const cmd = (cli ?? DEFAULT_CLI)
+    .replace(/\{text\}/g, text.replace(/"/g, '\\"'))
+    .replace(/\{output\}/g, outputPath);
 
-  // Special: "copy" mode — just copy refAudio to output
-  if (cli === "copy") {
-    if (!options.refAudio) {
-      console.warn("copy TTS mode requires refAudio path. Skipping.");
-      return "";
-    }
-    if (!existsSync(options.refAudio)) {
-      console.warn(`refAudio not found: ${options.refAudio}. Skipping.`);
-      return "";
-    }
-    try {
-      copyFileSync(options.refAudio, outputPath);
-      return outputPath;
-    } catch (e: any) {
-      console.warn(`copy TTS failed: ${e.message}. Skipping.`);
-      return "";
-    }
-  }
-
-  // Build variable map
-  const vars: Record<string, string> = {
-    text,
-    output: outputPath,
-    voice: options.voice ?? "en-US-GuyNeural",
-    rate: options.rate ?? "",
-    refAudio: options.refAudio ?? "",
-    ...(options.options ?? {}),
-  };
-
-  // Substitute {var} placeholders
-  let cmd = cli;
-  for (const [key, val] of Object.entries(vars)) {
-    if (!val) continue;
-    cmd = cmd.replaceAll(`{${key}}`, val);
-  }
-
-  // Execute
   try {
     execSync(cmd, { stdio: "pipe" });
   } catch (e: any) {
-    console.warn(`TTS failed: ${e.message}.\nCommand: ${cmd}\nSkipping voiceover.`);
+    console.warn(`TTS failed: ${e.message}\nCommand: ${cmd}\nSkipping.`);
     return "";
   }
 
-  // If output isn't WAV, try converting with ffmpeg
   if (existsSync(outputPath)) return outputPath;
-  // Check if a non-wav file was generated (e.g., edge-tts creates .mp3)
+  if (existsSync(outputPath)) return outputPath;
+
+  // Check for non-wav output (edge-tts creates .mp3)
   const mp3Path = outputPath.replace(/\.wav$/, ".mp3");
   if (existsSync(mp3Path)) {
     try {
