@@ -101,6 +101,7 @@ export interface ImportEntry {
   /** Inline JSX component definition source (alternative to `from`).
    *  e.g. "export default ({text}) => <span>{text}</span>" */
   jsx?: string;
+
 }
 
 export interface DescriptiveRhythm extends DescriptiveBaseNode {
@@ -701,15 +702,15 @@ interface ResolvedImport {
 
 export function parseImportsBlock(source: string): ImportEntry[] {
   const entries: ImportEntry[] = [];
+  // Track names brought into scope by import statements, so bare `export { Name }` can resolve them
+  const importedNames = new Map<string, { from: string; exports: string }>();
   const lines = source.split("\n");
   let i = 0;
 
   while (i < lines.length) {
     const line = lines[i]!.trim();
 
-    // import { Name } from "spec"
-    // import { Name as Alias } from "spec"
-    // import { Name1, Name2 } from "spec"
+    // import { Name } from "spec"  — internal dep, tracks scope but doesn't register
     const namedImport = /^import\s+\{\s*([^}]+)\}\s+from\s+["'`](.+?)["'`]\s*;?\s*$/.exec(line);
     if (namedImport) {
       const namesStr = namedImport[1]!;
@@ -719,21 +720,23 @@ export function parseImportsBlock(source: string): ImportEntry[] {
         const asMatch = /^(.+?)\s+as\s+(.+)$/i.exec(trimmed);
         const exportName = asMatch ? asMatch[1]!.trim() : trimmed;
         const name = asMatch ? asMatch[2]!.trim() : trimmed;
-        entries.push({ name, from: fromSpec, exports: exportName });
+        importedNames.set(name, { from: fromSpec, exports: exportName });
       }
       i++;
       continue;
     }
 
-    // import DefaultName from "spec"
+    // import DefaultName from "spec"  — internal dep, tracks scope but doesn't register
     const defaultImport = /^import\s+(\w+)\s+from\s+["'`](.+?)["'`]\s*;?\s*$/.exec(line);
     if (defaultImport) {
-      entries.push({ name: defaultImport[1]!, from: defaultImport[2]!, exports: "default" });
+      importedNames.set(defaultImport[1]!, { from: defaultImport[2]!, exports: "default" });
       i++;
       continue;
     }
 
-    // export { Name } from "spec"  (re-export syntax, same as named import)
+    // export { Name } from "spec"  (re-export with explicit source, registers Name)
+    // export { Name as Alias } from "spec"
+    // export { Name1, Name2 } from "spec"
     const namedReExport = /^export\s+\{\s*([^}]+)\}\s+from\s+["'`](.+?)["'`]\s*;?\s*$/.exec(line);
     if (namedReExport) {
       const namesStr = namedReExport[1]!;
@@ -745,6 +748,35 @@ export function parseImportsBlock(source: string): ImportEntry[] {
         const name = asMatch ? asMatch[2]!.trim() : trimmed;
         entries.push({ name, from: fromSpec, exports: exportName });
       }
+      i++;
+      continue;
+    }
+
+    // export { Name }  (bare re-export — resolves from importedNames)
+    // export { Name as Alias }
+    // export { Name1, Name2 }
+    const bareReExport = /^export\s+\{\s*([^}]+)\}\s*;?\s*$/.exec(line);
+    if (bareReExport) {
+      const namesStr = bareReExport[1]!;
+      for (const part of namesStr.split(",")) {
+        const trimmed = part.trim();
+        const asMatch = /^(.+?)\s+as\s+(.+)$/i.exec(trimmed);
+        const exportName = asMatch ? asMatch[1]!.trim() : trimmed;
+        const name = asMatch ? asMatch[2]!.trim() : trimmed;
+        // Look up the source from imported names
+        const imported = importedNames.get(exportName);
+        if (imported) {
+          entries.push({ name, from: imported.from, exports: imported.exports });
+        }
+      }
+      i++;
+      continue;
+    }
+
+    // export default Name from "spec"  (default re-export, registers Name)
+    const defaultReExport = /^export\s+default\s+(\w+)\s+from\s+["'`](.+?)["'`]\s*;?\s*$/.exec(line);
+    if (defaultReExport) {
+      entries.push({ name: defaultReExport[1]!, from: defaultReExport[2]!, exports: "default" });
       i++;
       continue;
     }
@@ -771,6 +803,23 @@ export function parseImportsBlock(source: string): ImportEntry[] {
   }
 
   return entries;
+}
+
+/**
+ * Extract all dependency package specifiers from an imports block.
+ * This includes both `export { X } from "spec"` and `import { X } from "spec"`.
+ * Used by the bundler to populate package.json.
+ *
+ * Returns the raw `from` spec strings (e.g. "npm:recharts", "react").
+ */
+export function extractDependencySpecs(source: string): string[] {
+  const specs: string[] = [];
+  const re = /from\s+["'`](.+?)["'`]\s*;?\s*$/gm;
+  let m;
+  while ((m = re.exec(source)) !== null) {
+    specs.push(m[1]);
+  }
+  return specs;
 }
 export function resolveComponentImportSpec(spec: string): string {
   const s = spec.trim();

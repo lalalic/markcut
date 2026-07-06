@@ -8,7 +8,7 @@ fps: 30
 # video
 layout:series
 ~~~js imports
-import ReactMarkdown from 'npm:react-markdown';
+export { default as ReactMarkdown } from 'npm:react-markdown';
 ~~~
 
 ## Hook

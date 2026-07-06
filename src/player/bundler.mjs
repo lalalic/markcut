@@ -25,23 +25,34 @@ const BUNDLED = new Map();
 /**
  * Build a component registry bundle from parsed import entries.
  *
- * @param {Array<{name:string, from?:string, jsx?:string, exports?:string}>} entries
+ * @param {Array<{name:string, from?:string, jsx?:string, exports?:string}>} entries  — export entries (component registrations)
+ * @param {string[]} [extraSpecs]  — additional dependency specs from import statements (e.g. ["react", "npm:lodash"])
  * @returns {Promise<{url:string|null, exports:string[]}>}
  */
-export async function bundleFromEntries(entries) {
-  if (!entries || entries.length === 0) return { url: null, exports: [] };
+export async function bundleFromEntries(entries, extraSpecs = []) {
+  if ((!entries || entries.length === 0) && extraSpecs.length === 0) return { url: null, exports: [] };
 
   // Separate npm imports from inline function definitions
   const npmDeps = [];
   const inlineFuncs = [];
 
-  for (const entry of entries) {
+  for (const entry of entries || []) {
     if (entry.from) {
       const pkgName = entry.from.startsWith("npm:") ? entry.from.slice(4) : entry.from;
       const exportName = entry.exports || "default";
       npmDeps.push({ name: entry.name, pkgName, exportName });
     } else if (entry.jsx) {
       inlineFuncs.push({ name: entry.name, source: entry.jsx });
+    }
+  }
+
+  // Add extra dependency specs (from import statements) that don't overlap with existing npmDeps
+  const existingPkgs = new Set(npmDeps.map(d => d.pkgName));
+  for (const spec of extraSpecs) {
+    const pkgName = spec.startsWith("npm:") ? spec.slice(4) : spec;
+    if (!existingPkgs.has(pkgName)) {
+      existingPkgs.add(pkgName);
+      npmDeps.push({ name: pkgName, pkgName, exportName: null }); // no re-export needed
     }
   }
 
@@ -75,6 +86,10 @@ export async function bundleFromEntries(entries) {
     lines.push("export { " + inline.name + " } from \"./" + inline.name + '.jsx";');
   }
   for (const dep of npmDeps) {
+    if (dep.exportName === null) {
+      // Internal dep (from import statement) — no re-export needed, the inline function source has its own import
+      continue;
+    }
     if (dep.exportName === "default") {
       // Default export: use namespace import with fallback chain
       lines.push(

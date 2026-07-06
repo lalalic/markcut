@@ -2,11 +2,9 @@
 /**
  * CLI entry point for the Remotion engine.
  *
- * Usage:
- *   node render/cli.mjs render <stream.json> [--aspect 16x9|9x16|1x1|all] [--output out.mp4]
- *   node render/cli.mjs render --template <id> --data <data.json> [--aspect all]
- *   node render/cli.mjs templates  — list available templates
- *   node render/cli.mjs preview <stream.json> [--force-new]  — open Remotion Studio
+ * Pipeline:
+ *   .md ──[parse]──▶ descriptive ──[resolve]──▶ resolved ──[compile]──▶ stream tree ──[render]──▶ MP4
+ *                                        (TTS/STT/durations)
  */
 import { execSync, spawn } from "node:child_process";
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
@@ -29,12 +27,37 @@ const ASPECTS = {
  */
 const PROGRESS_INTERVAL = 50;
 
+/** Print an error message to stderr. */
+function emitError(msg) { console.error(`❌ ${msg}`); }
+
+/** Print a warning message to stderr. */
+function emitWarn(msg) { console.error(`⚠️  ${msg}`); }
+
+/** Print a success message to stderr. */
+function emitSuccess(msg) { console.error(`✅ ${msg}`); }
+
+/** Print an info message (stderr, always visible). */
+function emitInfo(msg) { console.error(msg); }
+
 function usage() {
   console.log(`
-markcut CLI
+markcut CLI — Markdown/JSON → video pipeline
 
 Commands:
-  render <file.json|.md>                Render a stream tree or markdown to MP4
+
+  compile <file.json|.md>               Parse + compile → stream tree JSON (sync, no I/O)
+    --output <path>                     Output path (default: stdout)
+
+  verify <file.json|.md>                Parse + validate descriptive file
+    --cli                             Check required CLI tools are installed
+
+  resolve <file.json|.md>               Run async pipeline: TTS, STT, media durations
+    --output <path>                     Output resolved descriptive JSON (default: stdout)
+    --script-output-dir <dir>           Directory for generated TTS/STT files
+    --media-output-dir <dir>            Directory for generated TTI/TTV media files
+    --compile                          Also compile to stream tree after resolving
+
+  render <file.json|.md>                Resolve + compile + render to MP4
     --aspect <16x9|9x16|1x1|all>       Aspect ratio (default: 16x9)
     --output <path>                     Output path (default: out/video-{aspect}.mp4)
     --verbose                           Show full per-frame progress (default: compact)
@@ -44,13 +67,11 @@ Commands:
     --label                           Open label input overlay
     --no-browser                      Skip opening browser automatically
     --port <num>                        Port for the player server (default: 3001)
-
-  verify <file.json|.md>                Parse and validate a descriptive file without rendering
 `);
 }
 
 function parseArgs(argv) {
-  const args = { command: "", file: "", aspect: "16x9", output: "", forceNew: false, verbose: false, label: false, edit: false, noBrowser: false, chat: false, port: 3001 };
+  const args = { command: "", file: "", aspect: "16x9", output: "", forceNew: false, verbose: false, label: false, edit: false, noBrowser: false, chat: false, port: 3001, compile: false, cli: false, scriptOutputDir: "", mediaOutputDir: "" };
   let i = 2;
   if (argv[i]) args.command = argv[i++];
   if (argv[i] && !argv[i].startsWith("--")) args.file = argv[i++];
@@ -58,6 +79,10 @@ function parseArgs(argv) {
     const flag = argv[i++];
     if (flag === "--aspect" && argv[i]) args.aspect = argv[i++];
     else if (flag === "--output" && argv[i]) args.output = argv[i++];
+    else if (flag === "--script-output-dir" && argv[i]) args.scriptOutputDir = argv[i++];
+    else if (flag === "--media-output-dir" && argv[i]) args.mediaOutputDir = argv[i++];
+    else if (flag === "--cli") args.cli = true;
+    else if (flag === "--compile") args.compile = true;
     else if (flag === "--force-new") args.forceNew = true;
     else if (flag === "--verbose") args.verbose = true;
     else if (flag === "--label") args.label = true;
@@ -213,10 +238,9 @@ async function main() {
       const raw = readFileSync(filePath, "utf-8");
 
       if (filePath.endsWith(".md")) {
-        // Markdown descriptive → parse + compile
-        const { compileDescriptiveRoot, parseMarkdownDescriptive } = await import("../player/pipeline.mjs");
-        const descriptive = parseMarkdownDescriptive(raw);
-        streamTree = compileDescriptiveRoot(descriptive);
+        // Markdown → resolve (TTS/STT) + compile → stream tree
+        const { resolveAndCompileMarkdown } = await import("../player/pipeline.mjs");
+        streamTree = await resolveAndCompileMarkdown(raw, { baseDir: dirname(filePath) });
       } else {
         const parsed = JSON.parse(raw);
         const root = parsed.root ?? parsed;
@@ -246,69 +270,277 @@ async function main() {
     process.exit(0);
   }
 
+/** Check if any node in the tree has a script field. */
+function hasScript(root) {
+  let found = false;
+  function walk(nodes) {
+    for (const n of nodes) {
+      if (n.script) { found = true; return; }
+      if (n.children) walk(n.children);
+    }
+  }
+  walk(root.children);
+  return found;
+}
+
   if (args.command === "verify") {
+    const errors = [];
+    const warnings = [];
+
     if (!args.file) {
-      console.error("Error: provide a descriptive file (.json or .md)");
+      emitError("No input file provided. Usage: markcut verify <file.json|.md>");
       process.exit(1);
     }
 
     const filePath = resolve(args.file);
     if (!existsSync(filePath)) {
-      console.error(`Error: file not found: ${filePath}`);
+      emitError(`File not found: ${filePath}`);
       process.exit(1);
     }
 
     const raw = readFileSync(filePath, "utf-8");
     const isMarkdown = filePath.endsWith(".md");
 
-    console.log(`\n📄 File: ${filePath}`);
-    console.log(`📋 Format: ${isMarkdown ? "Markdown" : "JSON"}\n`);
+    emitInfo(`File: ${filePath}`);
+    emitInfo(`Format: ${isMarkdown ? "Markdown" : "JSON"}`);
 
-    const { compileDescriptiveRoot, parseMarkdownDescriptive, isDescriptiveRoot, resolveAndCompile } = await import("../player/pipeline.mjs");
+    const { compileDescriptiveRoot, parseMarkdownDescriptive, parseImportsBlock } = await import("../player/pipeline.mjs");
 
-    let descriptive;
-    if (isMarkdown) {
-      descriptive = parseMarkdownDescriptive(raw);
-    } else {
-      const parsed = JSON.parse(raw);
-      const root = parsed.root ?? parsed;
+    try {
+      let descriptive, needsTti, needsTtv;
+      if (isMarkdown) {
+        descriptive = parseMarkdownDescriptive(raw);
+      } else {
+        const parsed = JSON.parse(raw);
+        const root = parsed.root ?? parsed;
 
-      // Accept any object that can compile as descriptive root
-      // If it fails, it might be a compiled stream tree
-      try {
-        // Quick sanity: compiled trees have `type: "root"` at top level
-        // while descriptive roots have `children` but no `type` or `type` is something else
         if (root.type === "root" && root.isSeries !== undefined && !root.layout) {
-          console.error("✗ This looks like a compiled stream tree (has type:'root' and isSeries).");
-          console.error("  Use 'markcut render' to render a compiled tree.");
+          emitError("This looks like a compiled stream tree, not a descriptive file. Use 'markcut render' to render a compiled tree.");
           process.exit(1);
         }
         descriptive = root;
-        // Try compiling to validate it's a valid descriptive root
-        compileDescriptiveRoot(descriptive);
-      } catch (compileErr) {
-        // If compile fails but it has standard stream tree fields, suggest render
-        if (root.type === "root" || root.type === "folder" || root.actions) {
-          console.error("✗ This looks like a compiled stream tree (use 'render' instead of 'verify').");
-        } else {
-          console.error(`✗ Parse error: ${compileErr.message}`);
+      }
+
+      // ── Check 1: JSX components referenced in imports ──────────────────
+      const importedNames = new Set(
+        (descriptive.imports ?? [])
+          .map((e) => e.name)
+          .concat(
+            descriptive.importsBlock
+              ? parseImportsBlock(descriptive.importsBlock).map((e) => e.name)
+              : [],
+          ),
+      );
+
+      function walk(nodes) {
+        for (const n of nodes) {
+          if (n.type === "component" && n.jsx) {
+            const tagRe = /<\s*([A-Z][a-zA-Z0-9_.]*)/g;
+            let m;
+            while ((m = tagRe.exec(n.jsx)) !== null) {
+              const tag = m[1];
+              if (!importedNames.has(tag)) {
+                errors.push(`Component "${tag}" used in jsx but not found in imports`);
+              }
+            }
+          }
+          if (n.children) walk(n.children);
         }
+      }
+      walk(descriptive.children);
+
+      // ── Check media prompt needs ────────────────────────────────────────
+      needsTti = false;
+      needsTtv = false;
+      function walkMedia(nodes) {
+        for (const n of nodes) {
+          if (n.type === "image" && n.prompt && !n.src) needsTti = true;
+          if (n.type === "video" && n.prompt && !n.src) needsTtv = true;
+          if (n.children) walkMedia(n.children);
+        }
+      }
+      walkMedia(descriptive.children);
+
+      // ── Check 2: CLI tool availability (--cli flag) ────────────────────
+      if (args.cli) {
+        function extractCmd(configStr) {
+          if (!configStr) return null;
+          return configStr.trim().split(/\s+/)[0] || null;
+        }
+
+        const pipelineConfigs = [
+          { type: "TTS", config: descriptive.tts, defaultCmd: "edge-tts", needsCheck: hasScript(descriptive) },
+          { type: "STT", config: descriptive.stt, defaultCmd: "whisper", needsCheck: hasScript(descriptive) },
+          { type: "TTI", config: descriptive.tti, defaultCmd: "pi", needsCheck: needsTti },
+          { type: "TTV", config: descriptive.ttv, defaultCmd: "pi", needsCheck: needsTtv },
+        ];
+
+        const checked = new Set();
+        for (const p of pipelineConfigs) {
+          if (!p.needsCheck) continue;
+          const cmd = extractCmd(p.config) || p.defaultCmd;
+          if (checked.has(cmd)) continue;
+          checked.add(cmd);
+          const { execSync } = await import("node:child_process");
+          try {
+            execSync(`which ${cmd}`, { stdio: "ignore" });
+          } catch {
+            const hints = {
+              "pi": " (pip install pi-sdk)",
+              "edge-tts": " (pip install edge-tts)",
+              "whisper": " (pip install openai-whisper)",
+            };
+            errors.push(`CLI tool "${cmd}" not found${hints[cmd] || ""}. Required by ${p.type}`);
+          }
+        }
+      }
+
+      // ── Warnings ────────────────────────────────────────────────────────
+      if (hasScript(descriptive) && !descriptive.tts) {
+        warnings.push("Script fields found but no TTS config. Will use default edge-tts at resolve time.");
+      }
+      if (needsTti && !descriptive.tti) {
+        warnings.push("Image prompts found but no TTI config. Will use default pi at resolve time.");
+      }
+
+      // ── Results ─────────────────────────────────────────────────────────
+      for (const w of warnings) emitWarn(w);
+      if (errors.length > 0) {
+        for (const e of errors) emitError(e);
         process.exit(1);
       }
+
+      // Compile to validate
+      const compiled = compileDescriptiveRoot(descriptive);
+      emitSuccess(`Valid. Duration: ${compiled.durationInSeconds ?? "?"}s, Children: ${compiled.children?.length ?? 0}`);
+      process.exit(0);
+
+    } catch (err) {
+      emitError(err.message);
+      process.exit(1);
+    }
+  }
+
+  if (args.command === "resolve") {
+    if (!args.file) {
+      emitError("No input file provided. Usage: markcut resolve <file.json|.md>");
+      process.exit(1);
     }
 
-    console.log("── Descriptive Root ──────────────────────────────");
-    console.log(JSON.stringify(descriptive, null, 2));
+    const filePath = resolve(args.file);
+    if (!existsSync(filePath)) {
+      emitError(`File not found: ${filePath}`);
+      process.exit(1);
+    }
+
+    const raw = readFileSync(filePath, "utf-8");
+    const isMarkdown = filePath.endsWith(".md");
+
+    emitInfo(`Resolving: ${filePath}`);
+
+    const { resolveAndCompile, resolveAndCompileMarkdown, compileDescriptiveRoot, parseMarkdownDescriptive } = await import("../player/pipeline.mjs");
+
+    const baseOpts = {
+      baseDir: dirname(filePath),
+      scriptOutputDir: args.scriptOutputDir || undefined,
+      mediaOutputDir: args.mediaOutputDir || undefined,
+    };
 
     try {
-      const compiled = compileDescriptiveRoot(descriptive);
-      console.log("\n── Compiled Stream Tree ──────────────────────────");
-      console.log(JSON.stringify(compiled, null, 2));
+      let result;
+      let isCompiled = false;
 
-      console.log(`\n✅ Valid. Duration: ${compiled.durationInSeconds ?? "?"}s, Children: ${compiled.children?.length ?? 0}`);
+      if (isMarkdown) {
+        if (args.compile) {
+          result = await resolveAndCompileMarkdown(raw, baseOpts);
+          isCompiled = true;
+        } else {
+          const descriptive = parseMarkdownDescriptive(raw);
+          const { resolveAll } = await import("../player/pipeline.mjs");
+          result = await resolveAll(descriptive, baseOpts);
+        }
+      } else {
+        const parsed = JSON.parse(raw);
+        const root = parsed.root ?? parsed;
+        const { isDescriptiveRoot } = await import("../player/pipeline.mjs");
+
+        if (root.type === "root" && root.isSeries !== undefined && !root.layout) {
+          result = root;
+          isCompiled = true;
+        } else if (isDescriptiveRoot(root)) {
+          if (args.compile) {
+            result = await resolveAndCompile(root, baseOpts);
+            isCompiled = true;
+          } else {
+            const { resolveAll } = await import("../player/pipeline.mjs");
+            result = await resolveAll(root, baseOpts);
+          }
+        } else {
+          result = root;
+        }
+      }
+
+      const output = args.output ? resolve(args.output) : null;
+      if (output) {
+        mkdirSync(dirname(output), { recursive: true });
+        writeFileSync(output, JSON.stringify(result, null, 2));
+        emitSuccess(`Resolved → ${output}`);
+      } else {
+        console.log(JSON.stringify(result, null, 2));
+      }
       process.exit(0);
     } catch (err) {
-      console.error(`\n❌ Compilation error: ${err.message}`);
+      emitError(`Resolve failed: ${err.message}`);
+      process.exit(1);
+    }
+  }
+
+  if (args.command === "compile") {
+    if (!args.file) {
+      emitError("No input file provided. Usage: markcut compile <file.json|.md>");
+      process.exit(1);
+    }
+
+    const filePath = resolve(args.file);
+    if (!existsSync(filePath)) {
+      emitError(`File not found: ${filePath}`);
+      process.exit(1);
+    }
+
+    const raw = readFileSync(filePath, "utf-8");
+    const isMarkdown = filePath.endsWith(".md");
+
+    emitInfo(`Compiling: ${filePath}`);
+
+    const { compileDescriptiveRoot, parseMarkdownDescriptive } = await import("../player/pipeline.mjs");
+
+    try {
+      let descriptive;
+      if (isMarkdown) {
+        descriptive = parseMarkdownDescriptive(raw);
+      } else {
+        const parsed = JSON.parse(raw);
+        const root = parsed.root ?? parsed;
+        if (root.type === "root" && root.isSeries !== undefined && !root.layout) {
+          // Already compiled — pass through
+          console.log(JSON.stringify(root, null, 2));
+          process.exit(0);
+        }
+        descriptive = root;
+      }
+
+      const compiled = compileDescriptiveRoot(descriptive);
+      const output = args.output ? resolve(args.output) : null;
+      if (output) {
+        mkdirSync(dirname(output), { recursive: true });
+        writeFileSync(output, JSON.stringify(compiled, null, 2));
+        emitSuccess(`Compiled → ${output}`);
+      } else {
+        console.log(JSON.stringify(compiled, null, 2));
+      }
+      process.exit(0);
+    } catch (err) {
+      emitError(`Compile failed: ${err.message}`);
       process.exit(1);
     }
   }

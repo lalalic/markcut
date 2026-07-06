@@ -115,29 +115,34 @@ export function Hello() {
     expect(parseImportsBlock("")).toEqual([]);
   });
 
-  it("parses import statements and export declarations", () => {
+  it("parses import statements (internal) and export declarations (registered)", () => {
     const entries = parseImportsBlock(`import { something } from "other"
 // comment
 export { PieChart } from "npm:recharts"
 `);
-    expect(entries).toHaveLength(2);
-    expect(entries[0]).toEqual({ name: "something", from: "other", exports: "something" });
-    expect(entries[1]).toEqual({ name: "PieChart", from: "npm:recharts", exports: "PieChart" });
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toEqual({ name: "PieChart", from: "npm:recharts", exports: "PieChart" });
   });
 
-  it("parses import { Name as Alias } from \"spec\"", () => {
-    const entries = parseImportsBlock(`import { PieChart as MyPie } from "npm:recharts"`);
+  it("tracks import scope for bare export { Name } re-exports", () => {
+    const entries = parseImportsBlock(`import { PieChart as MyPie } from "npm:recharts"
+export { MyPie }`);
     expect(entries).toHaveLength(1);
     expect(entries[0]).toEqual({ name: "MyPie", from: "npm:recharts", exports: "PieChart" });
   });
 
-  it("parses import DefaultName from \"spec\"", () => {
+  it("import statements are internal deps, not component registrations", () => {
     const entries = parseImportsBlock(`import Recharts from "npm:recharts"`);
+    expect(entries).toHaveLength(0);
+  });
+
+  it("parses export default Name from \"spec\"", () => {
+    const entries = parseImportsBlock(`export default Recharts from "npm:recharts"`);
     expect(entries).toHaveLength(1);
     expect(entries[0]).toEqual({ name: "Recharts", from: "npm:recharts", exports: "default" });
   });
 
-  it("parses real-world JS imports block", () => {
+  it("parses real-world JS imports block (exports only)", () => {
     const block = `import { PieChart } from "npm:recharts"
 import { BarChart, LineChart } from "npm:recharts"
 import { StatCounter as Counter } from "npm:stat-counter"
@@ -150,6 +155,7 @@ export function Hello({ name }) {
   return <div>Hello {name}</div>
 }`;
     const entries = parseImportsBlock(block);
+    // 4 re-exports (PieChart, BarChart, LineChart, Counter resolved from imports) + 1 inline function
     expect(entries).toHaveLength(5);
     expect(entries[0]).toEqual({ name: "PieChart", from: "npm:recharts", exports: "PieChart" });
     expect(entries[1]).toEqual({ name: "BarChart", from: "npm:recharts", exports: "BarChart" });

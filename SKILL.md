@@ -88,7 +88,10 @@ npx markcut <command> [options]
 | `preview <file>` | Open Remotion Studio |
 | `preview <file> --label` | Label clips in a simplified stream tree |
 | `preview <file> --edit` | Live editing loop (auto-reload on file change) |
-| `verify <file>` | Verify  video stream validity |
+| `verify <file>` | Validate descriptive file + check imports |
+| `verify <file> --cli` | Also check required CLI tools are installed |
+| `compile <file>` | Compile descriptive file to stream tree JSON (stdout) |
+| `resolve <file>` | Run async pipeline: TTS, STT, durations |
 
 ### Options
 
@@ -98,6 +101,10 @@ npx markcut <command> [options]
 | `--output` | path | `out/video-{aspect}.mp4` |
 | `--port` | number | `3001` |
 | `--verbose` | flag | `false` (compact progress) |
+| `--cli` | flag | `false` (verify only) |
+| `--compile` | flag | `false` (resolve only) |
+| `--script-output-dir` | dir | TTS/STT output directory |
+| `--media-output-dir` | dir | TTI/TTV media output directory |
 
 ### Edit Mode for Agents
 

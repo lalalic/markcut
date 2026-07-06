@@ -14,7 +14,7 @@ import { createServer } from "node:http";
 import { readFileSync, writeFileSync, watchFile, existsSync, statSync, createReadStream } from "node:fs";
 import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { isDescriptiveRoot, resolveAndCompile, resolveAndCompileMarkdown, parseImportsBlock } from "./pipeline.mjs";
+import { isDescriptiveRoot, resolveAndCompile, resolveAndCompileMarkdown, parseImportsBlock, extractDependencySpecs } from "./pipeline.mjs";
 import { bundleFromEntries } from "./bundler.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -138,12 +138,14 @@ async function loadCompiledRoot() {
   // Bundle component imports if any exist
   try {
     let importEntries = null;
+    let extraSpecs = [];
 
     if (IS_MARKDOWN) {
       // For markdown: extract the imports block from the raw source
       const importsBlockMatch = raw.match(/(?:```|~~~)(?:js|javascript)\s+imports\s*\n([\s\S]*?)(?:```|~~~)/i);
       if (importsBlockMatch) {
         importEntries = parseImportsBlock(importsBlockMatch[1]);
+        extraSpecs = extractDependencySpecs(importsBlockMatch[1]);
       }
     } else if (compiledRootIsDescriptive) {
       // For descriptive JSON: extract imports from the parsed root directly
@@ -153,11 +155,12 @@ async function loadCompiledRoot() {
         importEntries = parsedRoot.imports;
       } else if (parsedRoot.importsBlock) {
         importEntries = parseImportsBlock(parsedRoot.importsBlock);
+        extraSpecs = extractDependencySpecs(parsedRoot.importsBlock);
       }
     }
 
     if (importEntries && importEntries.length > 0) {
-      const bundle = await bundleFromEntries(importEntries);
+      const bundle = await bundleFromEntries(importEntries, extraSpecs);
       if (bundle.url) {
         compiled.imports = bundle.url;
         console.log(`  ✅ Component bundle: ${bundle.url} (${bundle.exports.join(", ")})`);

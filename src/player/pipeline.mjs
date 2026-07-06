@@ -52,6 +52,7 @@ var init_utils = __esm({
 var compiler_exports = {};
 __export(compiler_exports, {
   compileDescriptiveRoot: () => compileDescriptiveRoot,
+  extractDependencySpecs: () => extractDependencySpecs,
   parseImportsBlock: () => parseImportsBlock,
   resolveComponentImportSpec: () => resolveComponentImportSpec
 });
@@ -415,6 +416,7 @@ function compileContainer(node2, ctx, parentKind) {
 }
 function parseImportsBlock(source) {
   const entries = [];
+  const importedNames = /* @__PURE__ */ new Map();
   const lines = source.split("\n");
   let i = 0;
   while (i < lines.length) {
@@ -428,14 +430,14 @@ function parseImportsBlock(source) {
         const asMatch = /^(.+?)\s+as\s+(.+)$/i.exec(trimmed);
         const exportName = asMatch ? asMatch[1].trim() : trimmed;
         const name = asMatch ? asMatch[2].trim() : trimmed;
-        entries.push({ name, from: fromSpec, exports: exportName });
+        importedNames.set(name, { from: fromSpec, exports: exportName });
       }
       i++;
       continue;
     }
     const defaultImport = /^import\s+(\w+)\s+from\s+["'`](.+?)["'`]\s*;?\s*$/.exec(line);
     if (defaultImport) {
-      entries.push({ name: defaultImport[1], from: defaultImport[2], exports: "default" });
+      importedNames.set(defaultImport[1], { from: defaultImport[2], exports: "default" });
       i++;
       continue;
     }
@@ -450,6 +452,28 @@ function parseImportsBlock(source) {
         const name = asMatch ? asMatch[2].trim() : trimmed;
         entries.push({ name, from: fromSpec, exports: exportName });
       }
+      i++;
+      continue;
+    }
+    const bareReExport = /^export\s+\{\s*([^}]+)\}\s*;?\s*$/.exec(line);
+    if (bareReExport) {
+      const namesStr = bareReExport[1];
+      for (const part of namesStr.split(",")) {
+        const trimmed = part.trim();
+        const asMatch = /^(.+?)\s+as\s+(.+)$/i.exec(trimmed);
+        const exportName = asMatch ? asMatch[1].trim() : trimmed;
+        const name = asMatch ? asMatch[2].trim() : trimmed;
+        const imported = importedNames.get(exportName);
+        if (imported) {
+          entries.push({ name, from: imported.from, exports: imported.exports });
+        }
+      }
+      i++;
+      continue;
+    }
+    const defaultReExport = /^export\s+default\s+(\w+)\s+from\s+["'`](.+?)["'`]\s*;?\s*$/.exec(line);
+    if (defaultReExport) {
+      entries.push({ name: defaultReExport[1], from: defaultReExport[2], exports: "default" });
       i++;
       continue;
     }
@@ -472,6 +496,15 @@ function parseImportsBlock(source) {
     i++;
   }
   return entries;
+}
+function extractDependencySpecs(source) {
+  const specs = [];
+  const re = /from\s+["'`](.+?)["'`]\s*;?\s*$/gm;
+  let m;
+  while ((m = re.exec(source)) !== null) {
+    specs.push(m[1]);
+  }
+  return specs;
 }
 function resolveComponentImportSpec(spec) {
   const s = spec.trim();
@@ -12570,6 +12603,7 @@ async function resolveAndCompileMarkdown(markdown, options = {}) {
 }
 export {
   compileDescriptiveRoot,
+  extractDependencySpecs,
   isDescriptiveRoot,
   parseImportsBlock,
   parseMarkdownDescriptive,

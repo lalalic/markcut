@@ -40,13 +40,13 @@ Supported root keys: `width`, `height`, `fps`, `tts`, `stt`, `tti`, `ttv`, `titl
 
 ### Imports block (recommended)
 
-Use a `` ~~~js imports `` code fence at end of the document (or anywhere in the body). The block contains real JavaScript module code with `import` and `export` statements that register components. This is simpler for LLMs to generate and avoids YAML syntax issues.
+Use a `` ~~~js imports `` code fence at end of the document (or anywhere in the body). The block acts as a **component registry** — it re-exports components from external packages or defines them inline, making them available to JSX expressions throughout the video.
 
 ```
 ~~~js imports
-import { PieChart } from "npm:recharts"
-import { BarChart, LineChart } from "npm:recharts"
-import { StatCounter as Counter } from "npm:stat-counter"
+export { PieChart } from "npm:recharts"
+export { BarChart, LineChart } from "npm:recharts"
+export { StatCounter as Counter } from "npm:stat-counter"
 
 export function Hello({ name }) {
   return <div style={{color: '#fff'}}>Hello {name}</div>;
@@ -54,20 +54,22 @@ export function Hello({ name }) {
 ~~~
 ```
 
+Think of this block as the **index file** for the video's component scope. `export { Name } from "spec"` re-exports an external component (conceptually correct — the block is the public API of available components). `export function Name()` defines an inline component directly.
+
 The imports block is the **primary** way to register components. The legacy YAML `imports:` array in frontmatter is still supported as a fallback, but the code block is preferred.
 
 Supported patterns inside the block:
 
 | Pattern | Effect |
 |---|---|
-| `import { Name } from "spec"` | Registers `Name` from the resolved source |
-| `import { Name as Alias } from "spec"` | Registers under `Alias` instead |
-| `import { N1, N2 } from "spec"` | Registers multiple from the same source |
-| `import Default from "spec"` | Registers default import |
+| `export { Name } from "spec"` | Re-exports `Name` from the resolved source (recommended) |
+| `export { Name as Alias } from "spec"` | Re-exports under `Alias` instead |
+| `export { N1, N2 } from "spec"` | Re-exports multiple from the same source |
+| `export default Name from "spec"` | Re-exports default export |
 | `export function Name(...) { ... }` | Inline component definition |
 | `export default function Name(...) { ... }` | Inline component definition (default) |
 
-The `export { Name }` lines are optional — the `import` already registers the name. They're useful for readability.
+For compatibility, `import { Name } from "spec"` also works and produces the same result — both syntaxes register the name identically.
 
 `from:` spec forms:
 
@@ -338,8 +340,8 @@ fps: 30
 # video
 layout:series
 ~~~js imports
-import { StatCounter } from "npm:stat-counter"
-import { Logo } from "github:myorg/design-system#Logo"
+export { StatCounter } from "npm:stat-counter"
+export { Logo } from "github:myorg/design-system#Logo"
 
 export function Greeting({ name }) {
   return <div style={{color: '#fff', fontSize: 28, textAlign: 'center'}}>Hello {name}!</div>
