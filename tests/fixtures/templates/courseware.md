@@ -4,7 +4,6 @@ description: 讲解人工智能的初步课程
 width: 1920 
 height: 1080 
 fps: 30 
-tts: edge-tts --voice "zh-CN-YunxiNeural" --text "{input}" --write-media "{output}"
 ---
 # video
 layout:series
@@ -151,7 +150,6 @@ script:"让我们回顾一下今天的内容。监督学习适合有标注数据
   - 有标注数据？ → **监督学习**
   - 想发现模式？ → **无监督学习**
   - 需要自主决策？ → **强化学习**
-  </Markdown>
   ~~~
 
 ## Thanks
@@ -161,10 +159,4 @@ script:"让我们回顾一下今天的内容。监督学习适合有标注数据
 
   - Q&A
   - Thanks
-
-  ```mermaid
-  main
-      A[Thank You!] --> B[Questions?]
-      B --> C[Contact]:
-  ```
   ~~~

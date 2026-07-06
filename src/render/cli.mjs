@@ -46,12 +46,11 @@ Commands:
     --port <num>                        Port for the player server (default: 3001)
 
   verify <file.json|.md>                Parse and validate a descriptive file without rendering
-    --strict                           Use strict mode parsing (error on unknowns)
 `);
 }
 
 function parseArgs(argv) {
-  const args = { command: "", file: "", aspect: "16x9", output: "", forceNew: false, verbose: false, label: false, edit: false, noBrowser: false, strict: false, chat: false, port: 3001 };
+  const args = { command: "", file: "", aspect: "16x9", output: "", forceNew: false, verbose: false, label: false, edit: false, noBrowser: false, chat: false, port: 3001 };
   let i = 2;
   if (argv[i]) args.command = argv[i++];
   if (argv[i] && !argv[i].startsWith("--")) args.file = argv[i++];
@@ -59,7 +58,6 @@ function parseArgs(argv) {
     const flag = argv[i++];
     if (flag === "--aspect" && argv[i]) args.aspect = argv[i++];
     else if (flag === "--output" && argv[i]) args.output = argv[i++];
-    else if (flag === "--strict") args.strict = true;
     else if (flag === "--force-new") args.forceNew = true;
     else if (flag === "--verbose") args.verbose = true;
     else if (flag === "--label") args.label = true;
@@ -217,15 +215,15 @@ async function main() {
       if (filePath.endsWith(".md")) {
         // Markdown descriptive → parse + compile
         const { compileDescriptiveRoot, parseMarkdownDescriptive } = await import("../player/pipeline.mjs");
-        const descriptive = parseMarkdownDescriptive(raw, { mode: "compatible" });
-        streamTree = compileDescriptiveRoot(descriptive, { mode: "draft" });
+        const descriptive = parseMarkdownDescriptive(raw);
+        streamTree = compileDescriptiveRoot(descriptive);
       } else {
         const parsed = JSON.parse(raw);
         const root = parsed.root ?? parsed;
         // Check if descriptive JSON
         const { isDescriptiveRoot, resolveAndCompile } = await import("../player/pipeline.mjs");
         if (isDescriptiveRoot(root)) {
-          streamTree = await resolveAndCompile(root, { baseDir: dirname(filePath), mode: "draft" });
+          streamTree = await resolveAndCompile(root, { baseDir: dirname(filePath) });
         } else {
           streamTree = root;
         }
@@ -262,17 +260,15 @@ async function main() {
 
     const raw = readFileSync(filePath, "utf-8");
     const isMarkdown = filePath.endsWith(".md");
-    const mode = args.strict ? "strict" : "compatible";
 
     console.log(`\n📄 File: ${filePath}`);
-    console.log(`📋 Format: ${isMarkdown ? "Markdown" : "JSON"}`);
-    console.log(`⚙️  Mode: ${mode}\n`);
+    console.log(`📋 Format: ${isMarkdown ? "Markdown" : "JSON"}\n`);
 
     const { compileDescriptiveRoot, parseMarkdownDescriptive, isDescriptiveRoot, resolveAndCompile } = await import("../player/pipeline.mjs");
 
     let descriptive;
     if (isMarkdown) {
-      descriptive = parseMarkdownDescriptive(raw, { mode });
+      descriptive = parseMarkdownDescriptive(raw);
     } else {
       const parsed = JSON.parse(raw);
       const root = parsed.root ?? parsed;
@@ -289,7 +285,7 @@ async function main() {
         }
         descriptive = root;
         // Try compiling to validate it's a valid descriptive root
-        compileDescriptiveRoot(descriptive, { mode: "draft" });
+        compileDescriptiveRoot(descriptive);
       } catch (compileErr) {
         // If compile fails but it has standard stream tree fields, suggest render
         if (root.type === "root" || root.type === "folder" || root.actions) {
@@ -305,7 +301,7 @@ async function main() {
     console.log(JSON.stringify(descriptive, null, 2));
 
     try {
-      const compiled = compileDescriptiveRoot(descriptive, { mode: "draft" });
+      const compiled = compileDescriptiveRoot(descriptive);
       console.log("\n── Compiled Stream Tree ──────────────────────────");
       console.log(JSON.stringify(compiled, null, 2));
 

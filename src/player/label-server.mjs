@@ -98,7 +98,6 @@ async function loadSource() {
     console.log("  📝 Detected markdown — parsing + compiling...");
     return await resolveAndCompileMarkdown(raw, {
       baseDir: dirname(SOURCE),
-      mode: "draft",
     });
   }
 
@@ -109,7 +108,6 @@ async function loadSource() {
     console.log("  🔍 Detected descriptive JSON — running pipeline...");
     return await resolveAndCompile(root, {
       baseDir: dirname(SOURCE),
-      mode: "draft",
     });
   }
 

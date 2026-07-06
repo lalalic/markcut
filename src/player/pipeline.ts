@@ -29,8 +29,6 @@ export interface ResolveAndCompileOptions {
   ttsCli?: string;
   /** STT CLI template override (default: whisper). Overrides root.stt. */
   sttCli?: string;
-  /** Compile mode: "strict" (throws on missing duration) or "draft" (uses defaults) */
-  mode?: "strict" | "draft";
 }
 
 /**
@@ -82,9 +80,7 @@ export async function resolveAndCompile(
   });
 
   // 2. Sync compile: descriptive → stream tree
-  const compiled = compileDescriptiveRoot(resolved, {
-    mode: options.mode ?? "draft",
-  });
+  const compiled = compileDescriptiveRoot(resolved);
 
   return compiled;
 }
@@ -99,7 +95,7 @@ export async function resolveAndCompileMarkdown(
   markdown: string,
   options: ResolveAndCompileOptions = {},
 ): Promise<Root> {
-  const descriptive = parseMarkdownDescriptive(markdown, { mode: "compatible" });
+  const descriptive = parseMarkdownDescriptive(markdown);
   return resolveAndCompile(descriptive, options);
 }
 

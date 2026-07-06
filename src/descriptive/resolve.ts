@@ -487,7 +487,7 @@ export async function resolveAll(
 
     // Post-compile subtitle generation (uses root.stt, options.sttCli, or default whisper CLI)
     const { compileDescriptiveRoot } = await import("./compiler");
-    const compiled = compileDescriptiveRoot(result, { mode: "draft" });
+    const compiled = compileDescriptiveRoot(result);
     result = await resolveSubtitles(result, {
       outputDir: options.scriptOutputDir,
       sttCli: options.sttCli,

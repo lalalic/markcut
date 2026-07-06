@@ -73,14 +73,12 @@ function isMap(node2) {
 function isRhythm(node2) {
   return node2.type === "rhythm";
 }
-function ensureUniqueIds(children, scopeId, mode) {
+function ensureUniqueIds(children, scopeId) {
   const seen = /* @__PURE__ */ new Set();
   for (const child of children) {
     if (!child.id) continue;
     if (seen.has(child.id)) {
-      if (mode === "strict") {
-        throw new Error(`duplicate id "${child.id}" in container "${scopeId}"`);
-      }
+      console.warn(`duplicate id "${child.id}" in container "${scopeId}"`);
       continue;
     }
     seen.add(child.id);
@@ -96,15 +94,9 @@ function deriveLeafDuration(node2, ctx) {
     if (inferred > 0) return inferred;
   }
   const fallback = ctx.defaults[node2.type];
-  if (ctx.mode === "draft") return fallback;
-  throw new Error(`cannot resolve duration for node id="${node2.id ?? "(missing)"}" type="${node2.type}"`);
+  return fallback;
 }
 function compileLeaf(node2, ctx, parentKind) {
-  if (typeof node2.start === "number" && parentKind !== "parallel") {
-    if (ctx.mode === "strict") {
-      throw new Error(`start is only allowed in parallel containers: id="${node2.id ?? "(missing)"}"`);
-    }
-  }
   const id = node2.id ?? uid();
   const start = parentKind === "parallel" ? Math.max(0, node2.start ?? 0) : 0;
   const duration = deriveLeafDuration(node2, ctx);
@@ -258,11 +250,8 @@ function aggregateDuration(children, kind, transitionTime) {
   return total;
 }
 function compileScene(node2, ctx, parentKind) {
-  if (typeof node2.start === "number" && parentKind !== "parallel" && ctx.mode === "strict") {
-    throw new Error(`start is only allowed in parallel containers: id="${node2.id ?? "(missing)"}"`);
-  }
   const id = node2.id ?? uid();
-  ensureUniqueIds(node2.children, id, ctx.mode);
+  ensureUniqueIds(node2.children, id);
   const sceneKind = node2.layout ?? "parallel";
   const compiledChildren = compileChildren(node2.children, ctx, sceneKind);
   const sceneChildren = sceneKind === "parallel" ? compiledChildren.map((c) => c.stream) : [
@@ -296,22 +285,19 @@ function compileScene(node2, ctx, parentKind) {
   return { stream, duration: end };
 }
 function compileInclude(node2, ctx, parentKind) {
-  if (typeof node2.start === "number" && parentKind !== "parallel" && ctx.mode === "strict") {
-    throw new Error(`start is only allowed in parallel containers: id="${node2.id ?? "(missing)"}"`);
-  }
   const id = node2.id ?? uid();
   const start = parentKind === "parallel" ? Math.max(0, node2.start ?? 0) : 0;
   const compiledChildren = node2.children?.length ? compileChildren(node2.children, ctx, "parallel") : [];
   const childrenDuration = aggregateDuration(compiledChildren, "parallel");
   let duration = node2.duration ?? 0;
   if (!duration && node2.src) {
-    duration = ctx.mode === "draft" ? ctx.defaults.include : 0;
+    duration = ctx.defaults.include;
   }
   if (!duration) {
     duration = childrenDuration;
   }
-  if (!duration && ctx.mode === "strict") {
-    throw new Error(`cannot resolve duration for node id="${id}" type="include"`);
+  if (!duration) {
+    duration = ctx.defaults.include;
   }
   const end = start + duration;
   const stream = {
@@ -335,19 +321,13 @@ function compileInclude(node2, ctx, parentKind) {
   return { stream, duration: end };
 }
 function compileEffect(node2, ctx, parentKind) {
-  if (typeof node2.start === "number" && parentKind !== "parallel" && ctx.mode === "strict") {
-    throw new Error(`start is only allowed in parallel containers: id="${node2.id ?? "(missing)"}"`);
-  }
   const id = node2.id ?? uid();
-  ensureUniqueIds(node2.children, id, ctx.mode);
+  ensureUniqueIds(node2.children, id);
   const children = compileChildren(node2.children, ctx, "parallel");
   const childrenDuration = aggregateDuration(children, "parallel");
   let duration = node2.duration ?? 0;
   if (!duration) duration = childrenDuration;
-  if (!duration && ctx.mode === "draft") duration = ctx.defaults.effect;
-  if (!duration && ctx.mode === "strict") {
-    throw new Error(`cannot resolve duration for node id="${id}" type="effect"`);
-  }
+  if (!duration) duration = ctx.defaults.effect;
   const start = parentKind === "parallel" ? Math.max(0, node2.start ?? 0) : 0;
   const end = start + duration;
   const stream = {
@@ -373,18 +353,9 @@ function compileEffect(node2, ctx, parentKind) {
   return { stream, duration: end };
 }
 function compileRhythm(node2, ctx, parentKind) {
-  if (typeof node2.start === "number" && parentKind !== "parallel" && ctx.mode === "strict") {
-    throw new Error(`start is only allowed in parallel containers: id="${node2.id ?? "(missing)"}"`);
-  }
   const id = node2.id ?? uid();
   const spots = node2.spots ?? [];
   const children = node2.children ?? [];
-  if (!children.length && ctx.mode === "strict") {
-    throw new Error(`rhythm requires children: id="${node2.id ?? "(missing)"}"`);
-  }
-  if (!spots.length && ctx.mode === "strict") {
-    throw new Error(`rhythm requires spots: id="${node2.id ?? "(missing)"}"`);
-  }
   const avgGap = spots.length > 1 ? (spots[spots.length - 1] - spots[0]) / (spots.length - 1) : 0;
   const rhythmDuration = spots.length ? spots[spots.length - 1] + avgGap : 0;
   const compiledChildren = [];
@@ -424,18 +395,8 @@ function compileRhythm(node2, ctx, parentKind) {
   return { stream, duration: end };
 }
 function compileContainer(node2, ctx, parentKind) {
-  if (typeof node2.start === "number" && parentKind !== "parallel") {
-    if (ctx.mode === "strict") {
-      throw new Error(`start is only allowed in parallel containers: id="${node2.id ?? "(missing)"}"`);
-    }
-  }
-  if (typeof node2.start === "number") {
-    if (ctx.mode === "strict") {
-      throw new Error(`container start is unsupported in legacy compilation: id="${node2.id ?? "(missing)"}"`);
-    }
-  }
   const id = node2.id ?? uid();
-  ensureUniqueIds(node2.children, id, ctx.mode);
+  ensureUniqueIds(node2.children, id);
   const children = compileChildren(node2.children, ctx, node2.type);
   const duration = aggregateDuration(children, node2.type, node2.transitionTime);
   const stream = {
@@ -558,14 +519,13 @@ function resolveComponentSources(root) {
 }
 function compileDescriptiveRoot(input, options = {}) {
   const ctx = {
-    mode: options.mode ?? "strict",
     defaults: {
       ...DEFAULTS,
       ...options.defaults ?? {}
     }
   };
   resolveComponentSources(input);
-  ensureUniqueIds(input.children, "root", ctx.mode);
+  ensureUniqueIds(input.children, "root");
   const rootKind = input.layout ?? "series";
   const children = compileChildren(input.children, ctx, rootKind);
   const duration = aggregateDuration(children, rootKind, input.transitionTime);
@@ -807,10 +767,10 @@ import { join, resolve as resolvePath } from "node:path";
 import { execSync } from "node:child_process";
 import { existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
-var DEFAULT_CLI = 'edge-tts --voice "en-US-GuyNeural" --text "{text}" --write-media "{output}"';
+var DEFAULT_CLI = 'edge-tts --voice "en-US-GuyNeural" --text "{input}" --write-media "{output}"';
 function generateTTS(text3, outputPath, cli) {
   mkdirSync(dirname(outputPath), { recursive: true });
-  const cmd = (cli ?? DEFAULT_CLI).replace(/\{text\}/g, text3.replace(/"/g, '\\"')).replace(/\{output\}/g, outputPath);
+  const cmd = (cli ?? DEFAULT_CLI).replace(/\{input\}/g, text3.replace(/"/g, '\\"')).replace(/\{output\}/g, outputPath);
   try {
     execSync(cmd, { stdio: "pipe" });
   } catch (e) {
@@ -819,7 +779,6 @@ Command: ${cmd}
 Skipping.`);
     return "";
   }
-  if (existsSync(outputPath)) return outputPath;
   if (existsSync(outputPath)) return outputPath;
   const mp3Path = outputPath.replace(/\.wav$/, ".mp3");
   if (existsSync(mp3Path)) {
@@ -926,7 +885,7 @@ async function resolveScripts(root, options) {
   for (const { node: node2, id } of toProcess) {
     const safeId = id.replace(/[^a-zA-Z0-9_-]/g, "_");
     const audioPath = join(options.outputDir, `${safeId}.wav`);
-    const ttsCli = node2.tts?.cli ?? clone.tts?.cli ?? options.ttsCli;
+    const ttsCli = node2.tts ?? clone.tts ?? options.ttsCli ?? DEFAULT_TTS_CLI;
     const cacheKey = computeCacheKey({ script: node2.script, cli: ttsCli });
     const cached = checkCache(cache, `tts:${safeId}`, cacheKey);
     let generated;
@@ -948,7 +907,7 @@ async function resolveScripts(root, options) {
 }
 async function resolveSubtitles(root, options) {
   const clone = JSON.parse(JSON.stringify(root));
-  const sttCli = clone.stt?.cli ?? options.sttCli ?? `whisper "{input}" --output_format vtt --output_dir "{outputDir}"`;
+  const sttCli = clone.stt ?? options.sttCli ?? DEFAULT_STT_CLI;
   if (!sttCli) return clone;
   mkdirSync2(options.outputDir, { recursive: true });
   const cache = readCacheManifest(options.outputDir);
@@ -976,7 +935,7 @@ async function resolveSubtitles(root, options) {
     if (cachedVtt) {
       vttPath = cachedVtt;
     } else {
-      const cmd = sttCli.replace(/\{input\}/g, audioSrc).replace(/\{outputDir\}/g, options.outputDir);
+      const cmd = sttCli.replace(/\{input\}/g, audioSrc).replace(/\{output\}/g, options.outputDir);
       try {
         execSync2(cmd, { stdio: ["pipe", "pipe", "pipe"], timeout: 12e4 });
       } catch {
@@ -1024,8 +983,10 @@ async function resolveSubtitles(root, options) {
   if (cacheDirty) writeCacheManifest(options.outputDir, cache);
   return clone;
 }
-var DEFAULT_TTI_CLI = 'pi --model agnes-2.0-flash --print "generate image: {prompt}" --output "{output}"';
-var DEFAULT_TTV_CLI = 'pi --model agnes-2.0-flash --print "generate video: {prompt}" --output "{output}"';
+var DEFAULT_TTS_CLI = 'edge-tts --voice "en-US-GuyNeural" --text "{input}" --write-media "{output}"';
+var DEFAULT_STT_CLI = 'whisper "{input}" --output_format vtt --output_dir "{output}"';
+var DEFAULT_TTI_CLI = 'pi --model agnes-2.0-flash --print "generate image: {input}" --output "{output}"';
+var DEFAULT_TTV_CLI = 'pi --model agnes-2.0-flash --print "generate video: {input}" --output "{output}"';
 async function resolveGeneratedMedia(root, options) {
   const clone = JSON.parse(JSON.stringify(root));
   mkdirSync2(options.outputDir, { recursive: true });
@@ -1043,16 +1004,14 @@ async function resolveGeneratedMedia(root, options) {
     const safeId = id.replace(/[^a-zA-Z0-9_-]/g, "_");
     const ext = type === "image" ? "png" : "mp4";
     const outputPath = join(options.outputDir, `${safeId}.${ext}`);
-    const rootTti = clone.tti ?? {};
-    const rootTtv = clone.ttv ?? {};
-    const cli = type === "image" ? rootTti.cli ?? options.ttiCli ?? DEFAULT_TTI_CLI : rootTtv.cli ?? options.ttvCli ?? DEFAULT_TTV_CLI;
+    const cli = type === "image" ? clone.tti ?? options.ttiCli ?? DEFAULT_TTI_CLI : clone.ttv ?? options.ttvCli ?? DEFAULT_TTV_CLI;
     const cacheKey = computeCacheKey({ prompt, cli, type });
     const cached = checkCache(cache, `gen:${safeId}`, cacheKey);
     if (cached) {
       node2.src = cached;
       continue;
     }
-    const cmd = cli.replace(/\{prompt\}/g, prompt.replace(/"/g, '\\"')).replace(/\{output\}/g, outputPath);
+    const cmd = cli.replace(/\{input\}/g, prompt.replace(/"/g, '\\"')).replace(/\{output\}/g, outputPath);
     try {
       console.log(`  Generating ${type}: ${safeId}...`);
       execSync2(cmd, {
@@ -1091,26 +1050,18 @@ async function resolveAll(root, options = {}) {
   if (options.scriptOutputDir) {
     result = await resolveScripts(result, {
       outputDir: options.scriptOutputDir,
-      ttsCli: options.ttsCli,
-      voice: options.voice,
-      rate: options.rate,
-      refAudio: options.refAudio,
-      ttsOptions: options.ttsOptions
+      ttsCli: options.ttsCli
     });
     result = await resolveMediaDurations(result, {
       baseDir: options.baseDir,
       skip: options.skip
     });
-    if (options.whisperBin) {
-      const { compileDescriptiveRoot: compileDescriptiveRoot2 } = await Promise.resolve().then(() => (init_compiler(), compiler_exports));
-      const compiled = compileDescriptiveRoot2(result, { mode: "draft" });
-      result = await resolveSubtitles(result, {
-        outputDir: options.scriptOutputDir,
-        whisperBin: options.whisperBin,
-        sttModel: options.sttModel,
-        sttLanguage: options.sttLanguage
-      });
-    }
+    const { compileDescriptiveRoot: compileDescriptiveRoot2 } = await Promise.resolve().then(() => (init_compiler(), compiler_exports));
+    const compiled = compileDescriptiveRoot2(result);
+    result = await resolveSubtitles(result, {
+      outputDir: options.scriptOutputDir,
+      sttCli: options.sttCli
+    });
   }
   return result;
 }
@@ -12371,7 +12322,7 @@ function parseNodeLine(content3) {
       throw new Error(`unsupported node type: ${type}`);
   }
 }
-function parseMarkdownDescriptive(markdown, _options = {}) {
+function parseMarkdownDescriptive(markdown) {
   const root = { children: [] };
   const lines = markdown.split("\n");
   const mdast = unified().use(remarkParse).use(remarkFrontmatter).parse(markdown);
@@ -12572,16 +12523,16 @@ function applyRootAttrs(root, attrs) {
         root.instruction = root.instruction ?? String(v);
         break;
       case "tts":
-        root.tts = typeof v === "string" ? { cli: v } : v;
+        root.tts = typeof v === "object" && v !== null ? String(v.cli ?? "") : String(v);
         break;
       case "stt":
-        root.stt = v;
+        root.stt = typeof v === "object" && v !== null ? String(v.cli ?? "") : String(v);
         break;
       case "tti":
-        root.tti = v;
+        root.tti = typeof v === "object" && v !== null ? String(v.cli ?? "") : String(v);
         break;
       case "ttv":
-        root.ttv = v;
+        root.ttv = typeof v === "object" && v !== null ? String(v.cli ?? "") : String(v);
         break;
       default:
         throw new Error(`unknown root key: ${k}`);
@@ -12607,22 +12558,14 @@ async function resolveAndCompile(data, options = {}) {
   const resolved = await resolveAll(data, {
     baseDir: options.baseDir,
     scriptOutputDir: options.scriptOutputDir,
-    whisperBin: options.whisperBin,
     ttsCli: options.ttsCli,
-    voice: options.voice,
-    rate: options.rate,
-    refAudio: options.refAudio,
-    ttsOptions: options.ttsOptions,
-    sttModel: options.sttModel,
-    sttLanguage: options.sttLanguage
+    sttCli: options.sttCli
   });
-  const compiled = compileDescriptiveRoot(resolved, {
-    mode: options.mode ?? "draft"
-  });
+  const compiled = compileDescriptiveRoot(resolved);
   return compiled;
 }
 async function resolveAndCompileMarkdown(markdown, options = {}) {
-  const descriptive = parseMarkdownDescriptive(markdown, { mode: "compatible" });
+  const descriptive = parseMarkdownDescriptive(markdown);
   return resolveAndCompile(descriptive, options);
 }
 export {

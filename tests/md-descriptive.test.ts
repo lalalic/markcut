@@ -64,7 +64,7 @@ describe("markdown fixtures — parse & compile", () => {
       expect(parsed.children).toBeDefined();
 
       // Compile DescriptiveRoot → stream tree (Root)
-      const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
+      const compiled = compileDescriptiveRoot(parsed);
       expect(compiled).toBeDefined();
       expect(compiled.type).toBe("root");
       expect(compiled.id).toBe("root");
@@ -99,7 +99,7 @@ describe("basic fixture", () => {
 
   it("compiles root with correct dimensions", () => {
     const parsed = parseMarkdownDescriptive(fx.source);
-    const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
+    const compiled = compileDescriptiveRoot(parsed);
     expect(compiled.width).toBe(640);
     expect(compiled.height).toBe(480);
     expect(compiled.fps).toBe(30);
@@ -252,7 +252,7 @@ describe("scenes fixture", () => {
 
   it("compiles transitionSeries with overlap", () => {
     const parsed = parseMarkdownDescriptive(fx.source);
-    const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
+    const compiled = compileDescriptiveRoot(parsed);
     // Journey scene: 3 images of 2,2,3 with transition 0.5 → total = 2+2+3 - 2*0.5 = 6
     const journey = compiled.children[1] as any;
     expect(journey.type).toBe("scene" || "folder");
@@ -300,7 +300,7 @@ describe("frontmatter fixture", () => {
 
   it("compiles with resolved imports", () => {
     const parsed = parseMarkdownDescriptive(fx.source);
-    const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
+    const compiled = compileDescriptiveRoot(parsed);
     const scene = compiled.children[0] as any;
     const statComp = scene.children[0];
     // imports removed from component schema — now at root level
@@ -314,15 +314,15 @@ describe("imports-block fixture", () => {
   const fx = loadFixture("imports-block");
 
   it("parses ```js imports code fence", () => {
-    const parsed = parseMarkdownDescriptive(fx.source, { mode: "strict" });
+    const parsed = parseMarkdownDescriptive(fx.source);
     expect(parsed.importsBlock).toBeDefined();
     expect(parsed.importsBlock).toContain("import { PieChart } from");
     expect(parsed.importsBlock).toContain("export function Hello");
   });
 
   it("compiles with importsBlock resolution", () => {
-    const parsed = parseMarkdownDescriptive(fx.source, { mode: "strict" });
-    const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
+    const parsed = parseMarkdownDescriptive(fx.source);
+    const compiled = compileDescriptiveRoot(parsed);
     const scene = compiled.children[0] as any;
     const pieChart = scene.children[0];
     // imports removed from component schema
@@ -337,7 +337,7 @@ describe("jsx-code-fence fixture", () => {
   const fx = loadFixture("jsx-code-fence");
 
   it("parses inline component definitions from ```js imports block", () => {
-    const parsed = parseMarkdownDescriptive(fx.source, { mode: "strict" });
+    const parsed = parseMarkdownDescriptive(fx.source);
     expect(parsed.imports).toBeUndefined();
     expect(parsed.importsBlock).toBeDefined();
     expect(parsed.importsBlock).toContain("function Greeting");
@@ -345,8 +345,8 @@ describe("jsx-code-fence fixture", () => {
   });
 
   it("compiles with inline component definitions from imports block", () => {
-    const parsed = parseMarkdownDescriptive(fx.source, { mode: "strict" });
-    const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
+    const parsed = parseMarkdownDescriptive(fx.source);
+    const compiled = compileDescriptiveRoot(parsed);
     const scene = compiled.children[0] as any;
     const greeting = scene.children[0];
     const counter = scene.children[1];
@@ -485,7 +485,7 @@ describe("rhythm fixture", () => {
 
   it("compiles rhythm with derived durations", () => {
     const parsed = parseMarkdownDescriptive(fx.source);
-    const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
+    const compiled = compileDescriptiveRoot(parsed);
     // The rhythm node should compile to a rhythm stream
     const rootChildren = compiled.children;
     expect(rootChildren.length).toBeGreaterThan(0);
@@ -513,11 +513,11 @@ describe("tween fixture", () => {
   });
 });
 
-describe("strict-mode fixture", () => {
+describe("strict fixture", () => {
   const fx = loadFixture("strict-mode");
 
-  it("parses strict mode with full key:value syntax", () => {
-    const parsed = parseMarkdownDescriptive(fx.source, { mode: "strict" });
+  it("parses with full key:value syntax", () => {
+    const parsed = parseMarkdownDescriptive(fx.source);
     expect(parsed.width).toBe(1920);
     expect(parsed.height).toBe(1080);
     expect(parsed.fps).toBe(24);
@@ -526,15 +526,15 @@ describe("strict-mode fixture", () => {
     expect(parsed.metadata).toBe("strict-test");
   });
 
-  it("parses imports from ```js imports block in strict mode", () => {
-    const parsed = parseMarkdownDescriptive(fx.source, { mode: "strict" });
+  it("parses imports from ```js imports block", () => {
+    const parsed = parseMarkdownDescriptive(fx.source);
     expect(parsed.imports).toBeUndefined();
     expect(parsed.importsBlock).toBeDefined();
     expect(parsed.importsBlock).toContain("StatCounter");
   });
 
-  it("parses all node types in strict mode", () => {
-    const parsed = parseMarkdownDescriptive(fx.source, { mode: "strict" });
+  it("parses all node types", () => {
+    const parsed = parseMarkdownDescriptive(fx.source);
     // 3 scenes
     expect(parsed.children).toHaveLength(3);
     const scene3 = parsed.children[2] as any;
@@ -546,9 +546,9 @@ describe("strict-mode fixture", () => {
     expect(scene3.children[2].type).toBe("rhythm");
   });
 
-  it("compiles strict mode successfully", () => {
-    const parsed = parseMarkdownDescriptive(fx.source, { mode: "strict" });
-    const compiled = compileDescriptiveRoot(parsed, { mode: "strict" });
+  it("compiles successfully", () => {
+    const parsed = parseMarkdownDescriptive(fx.source);
+    const compiled = compileDescriptiveRoot(parsed);
     expect(compiled.type).toBe("root");
     expect(compiled.width).toBe(1920);
     expect(compiled.height).toBe(1080);
@@ -616,7 +616,6 @@ describe("edge-cases fixture", () => {
     // Compile should succeed (start is only valid in parallel)
     const compiled = compileDescriptiveRoot(
       parseMarkdownDescriptive(fx.source),
-      { mode: "draft" },
     );
     expect(compiled.type).toBe("root");
   });
@@ -662,7 +661,7 @@ describe("full-feature fixture", () => {
 
   it("compiles full feature without errors", () => {
     const parsed = parseMarkdownDescriptive(fx.source);
-    const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
+    const compiled = compileDescriptiveRoot(parsed);
     expect(compiled.type).toBe("root");
     expect(compiled.children.length).toBeGreaterThan(0);
 
@@ -674,7 +673,7 @@ describe("full-feature fixture", () => {
 
   it("resolves inline component definitions from imports block in full feature", () => {
     const parsed = parseMarkdownDescriptive(fx.source);
-    const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
+    const compiled = compileDescriptiveRoot(parsed);
     // The last scene has a Logo component defined inline in the ```js imports block
     const closingScene = compiled.children[compiled.children.length - 1] as any;
     // Find the component in the closing scene
@@ -702,7 +701,7 @@ describe("component-imports fixture", () => {
 
   it("compiles with resolved imports registry", () => {
     const parsed = parseMarkdownDescriptive(fx.source);
-    const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
+    const compiled = compileDescriptiveRoot(parsed);
     // Root has 1 scene child (series layout)
     expect(compiled.children).toHaveLength(1);
     const scene = compiled.children[0];

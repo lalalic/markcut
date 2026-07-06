@@ -88,6 +88,7 @@ npx markcut <command> [options]
 | `preview <file>` | Open Remotion Studio |
 | `preview <file> --label` | Label clips in a simplified stream tree |
 | `preview <file> --edit` | Live editing loop (auto-reload on file change) |
+| `verify <file>` | Verify  video stream validity |
 
 ### Options
 

@@ -15,10 +15,7 @@ import type {
 } from "../schema/index";
 import { uid } from "../utils/index";
 
-export type DurationMode = "strict" | "draft";
-
 export interface CompileOptions {
-  mode?: DurationMode;
   defaults?: Partial<Record<"image" | "video" | "audio" | "component" | "rhythm" | "include" | "map" | "effect", number>>;
 }
 
@@ -204,7 +201,6 @@ export interface DescriptiveRoot {
 }
 
 interface CompileContext {
-  mode: DurationMode;
   defaults: Record<"image" | "video" | "audio" | "component" | "rhythm" | "include" | "map" | "effect", number>;
 }
 
@@ -248,14 +244,12 @@ const DEFAULTS: CompileContext["defaults"] = {
   effect: 2,
 };
 
-function ensureUniqueIds(children: DescriptiveNode[], scopeId: string, mode: DurationMode): void {
+function ensureUniqueIds(children: DescriptiveNode[], scopeId: string): void {
   const seen = new Set<string>();
   for (const child of children) {
     if (!child.id) continue;
     if (seen.has(child.id)) {
-      if (mode === "strict") {
-        throw new Error(`duplicate id \"${child.id}\" in container \"${scopeId}\"`);
-      }
+      console.warn(`duplicate id "${child.id}" in container "${scopeId}"`);
       continue;
     }
     seen.add(child.id);
@@ -274,18 +268,10 @@ function deriveLeafDuration(node: DescriptiveNode, ctx: CompileContext): number 
   }
 
   const fallback = ctx.defaults[node.type as keyof CompileContext["defaults"]];
-  if (ctx.mode === "draft") return fallback;
-
-  throw new Error(`cannot resolve duration for node id=\"${node.id ?? "(missing)"}\" type=\"${node.type}\"`);
+  return fallback;
 }
 
 function compileLeaf(node: Exclude<DescriptiveNode, DescriptiveContainer | DescriptiveScene | DescriptiveInclude | DescriptiveEffect>, ctx: CompileContext, parentKind: "series" | "parallel" | "transitionSeries"): CompileResult {
-  if (typeof node.start === "number" && parentKind !== "parallel") {
-    if (ctx.mode === "strict") {
-      throw new Error(`start is only allowed in parallel containers: id=\"${node.id ?? "(missing)"}\"`);
-    }
-  }
-
   const id = node.id ?? uid();
   const start = parentKind === "parallel" ? Math.max(0, node.start ?? 0) : 0;
   const duration = deriveLeafDuration(node, ctx);
@@ -457,12 +443,8 @@ function compileScene(
   ctx: CompileContext,
   parentKind: "series" | "parallel" | "transitionSeries",
 ): CompileResult {
-  if (typeof node.start === "number" && parentKind !== "parallel" && ctx.mode === "strict") {
-    throw new Error(`start is only allowed in parallel containers: id=\"${node.id ?? "(missing)"}\"`);
-  }
-
   const id = node.id ?? uid();
-  ensureUniqueIds(node.children, id, ctx.mode);
+  ensureUniqueIds(node.children, id);
 
   const sceneKind = node.layout ?? "parallel";
   const compiledChildren = compileChildren(node.children, ctx, sceneKind);
@@ -509,11 +491,7 @@ function compileInclude(
   ctx: CompileContext,
   parentKind: "series" | "parallel" | "transitionSeries",
 ): CompileResult {
-  if (typeof node.start === "number" && parentKind !== "parallel" && ctx.mode === "strict") {
-    throw new Error(`start is only allowed in parallel containers: id=\"${node.id ?? "(missing)"}\"`);
-  }
-
-  const id = node.id ?? uid();
+    const id = node.id ?? uid();
   const start = parentKind === "parallel" ? Math.max(0, node.start ?? 0) : 0;
 
   const compiledChildren = node.children?.length ? compileChildren(node.children, ctx, "parallel") : [];
@@ -521,13 +499,13 @@ function compileInclude(
 
   let duration = node.duration ?? 0;
   if (!duration && node.src) {
-    duration = ctx.mode === "draft" ? ctx.defaults.include : 0;
+    duration = ctx.defaults.include;
   }
   if (!duration) {
     duration = childrenDuration;
   }
-  if (!duration && ctx.mode === "strict") {
-    throw new Error(`cannot resolve duration for node id=\"${id}\" type=\"include\"`);
+  if (!duration) {
+    duration = ctx.defaults.include;
   }
 
   const end = start + duration;
@@ -559,21 +537,14 @@ function compileEffect(
   ctx: CompileContext,
   parentKind: "series" | "parallel" | "transitionSeries",
 ): CompileResult {
-  if (typeof node.start === "number" && parentKind !== "parallel" && ctx.mode === "strict") {
-    throw new Error(`start is only allowed in parallel containers: id=\"${node.id ?? "(missing)"}\"`);
-  }
-
   const id = node.id ?? uid();
-  ensureUniqueIds(node.children, id, ctx.mode);
+  ensureUniqueIds(node.children, id);
   const children = compileChildren(node.children, ctx, "parallel");
   const childrenDuration = aggregateDuration(children, "parallel");
 
   let duration = node.duration ?? 0;
   if (!duration) duration = childrenDuration;
-  if (!duration && ctx.mode === "draft") duration = ctx.defaults.effect;
-  if (!duration && ctx.mode === "strict") {
-    throw new Error(`cannot resolve duration for node id=\"${id}\" type=\"effect\"`);
-  }
+  if (!duration) duration = ctx.defaults.effect;
 
   const start = parentKind === "parallel" ? Math.max(0, node.start ?? 0) : 0;
   const end = start + duration;
@@ -607,20 +578,9 @@ function compileRhythm(
   ctx: CompileContext,
   parentKind: "series" | "parallel" | "transitionSeries",
 ): CompileResult {
-  if (typeof node.start === "number" && parentKind !== "parallel" && ctx.mode === "strict") {
-    throw new Error(`start is only allowed in parallel containers: id="${node.id ?? "(missing)"}"`);
-  }
-
   const id = node.id ?? uid();
   const spots = node.spots ?? [];
   const children = node.children ?? [];
-
-  if (!children.length && ctx.mode === "strict") {
-    throw new Error(`rhythm requires children: id="${node.id ?? "(missing)"}"`);
-  }
-  if (!spots.length && ctx.mode === "strict") {
-    throw new Error(`rhythm requires spots: id="${node.id ?? "(missing)"}"`);
-  }
 
   // Duration is derived from spots: last beat + average gap covers last child
   const avgGap = spots.length > 1
@@ -686,20 +646,8 @@ function compileRhythm(
 }
 
 function compileContainer(node: DescriptiveContainer, ctx: CompileContext, parentKind: "series" | "parallel" | "transitionSeries"): CompileResult {
-  if (typeof node.start === "number" && parentKind !== "parallel") {
-    if (ctx.mode === "strict") {
-      throw new Error(`start is only allowed in parallel containers: id=\"${node.id ?? "(missing)"}\"`);
-    }
-  }
-
-  if (typeof node.start === "number") {
-    if (ctx.mode === "strict") {
-      throw new Error(`container start is unsupported in legacy compilation: id=\"${node.id ?? "(missing)"}\"`);
-    }
-  }
-
   const id = node.id ?? uid();
-  ensureUniqueIds(node.children, id, ctx.mode);
+  ensureUniqueIds(node.children, id);
 
   const children = compileChildren(node.children, ctx, node.type);
   const duration = aggregateDuration(children, node.type, node.transitionTime);
@@ -880,7 +828,6 @@ function resolveComponentSources(root: DescriptiveRoot): Map<string, ResolvedImp
 
 export function compileDescriptiveRoot(input: DescriptiveRoot, options: CompileOptions = {}): Root {
   const ctx: CompileContext = {
-    mode: options.mode ?? "strict",
     defaults: {
       ...DEFAULTS,
       ...(options.defaults ?? {}),
@@ -890,7 +837,7 @@ export function compileDescriptiveRoot(input: DescriptiveRoot, options: CompileO
   // Resolve frontmatter imports / inline component defs onto each component node.
   resolveComponentSources(input);
 
-  ensureUniqueIds(input.children, "root", ctx.mode);
+  ensureUniqueIds(input.children, "root");
 
   const rootKind = input.layout ?? "series";
   const children = compileChildren(input.children, ctx, rootKind);

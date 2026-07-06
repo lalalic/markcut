@@ -18,11 +18,6 @@ import remarkParse from "remark-parse";
 import remarkFrontmatter from "remark-frontmatter";
 import * as yaml from "js-yaml";
 
-export interface MarkdownParseOptions {
-  /** Deprecated — only strict mode is supported. */
-  mode?: "strict";
-}
-
 type ParentNode = DescriptiveRoot | DescriptiveScene | DescriptiveContainer | DescriptiveEffect | DescriptiveInclude;
 
 const LAYOUT_VALUES = new Set(["series", "parallel", "transitionSeries", "transition"] as const);
@@ -440,7 +435,7 @@ function parseNodeLine(content: string): DescriptiveNode {
   }
 }
 
-export function parseMarkdownDescriptive(markdown: string, _options: MarkdownParseOptions = {}): DescriptiveRoot {
+export function parseMarkdownDescriptive(markdown: string): DescriptiveRoot {
   const root: DescriptiveRoot = { children: [] };
   const lines = markdown.split("\n");
 

@@ -115,7 +115,6 @@ async function loadCompiledRoot() {
       baseDir: dirname(VIDEO_JSON),
       scriptOutputDir: TTS_OUTPUT_DIR,
       whisperBin: existsSync(WHISPER_BIN) ? WHISPER_BIN : undefined,
-      mode: "draft",
     });
     compiledRootIsDescriptive = true;
   } else {
@@ -129,7 +128,6 @@ async function loadCompiledRoot() {
         baseDir: dirname(VIDEO_JSON),
         scriptOutputDir: TTS_OUTPUT_DIR,
         whisperBin: existsSync(WHISPER_BIN) ? WHISPER_BIN : undefined,
-        mode: "draft",
       });
     } else {
       compiledRootIsDescriptive = false;

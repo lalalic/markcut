@@ -102,12 +102,12 @@ instruction:"A cool travel video" metadata:"summer 2026"
     expect(parsed.metadata).toBe("summer 2026");
   });
 
-  it("parses strict mode correctly with key:value syntax", () => {
+  it("parses key:value syntax correctly", () => {
     const doc = `# video
 width:1920 height:1080 fps:30 layout:series
 ## Scene
 - image src:a.jpg duration:2`;
-    const parsed = parseMarkdownDescriptive(doc, { mode: "strict" });
+    const parsed = parseMarkdownDescriptive(doc);
 
     expect(parsed.width).toBe(1920);
     expect(parsed.height).toBe(1080);
@@ -120,11 +120,11 @@ width:1920 height:1080 fps:30 layout:series
     expect(scene.children[0]!!.duration).toBe(2);
   });
 
-  it("strict mode throws on unrecognized token", () => {
+  it("throws on unrecognized token", () => {
     const doc = `# video
 ## Scene
 - image src:a.jpg duration:2 zoom`;
-    expect(() => parseMarkdownDescriptive(doc, { mode: "strict" })).toThrow();
+    expect(() => parseMarkdownDescriptive(doc)).toThrow();
   });
 
   it("parses component nodes with props", () => {
@@ -269,7 +269,7 @@ script:"Wrap up" layout:parallel
 - image src:final.jpg duration:2`;
 
     const parsed = parseMarkdownDescriptive(doc);
-    const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
+    const compiled = compileDescriptiveRoot(parsed);
 
     expect(compiled.type).toBe("root");
     expect(compiled.width).toBe(1080);
@@ -297,7 +297,7 @@ fps: 30
 # video
 ## Scene
 - image src:a.jpg duration:1`;
-      const parsed = parseMarkdownDescriptive(doc, { mode: "strict" });
+      const parsed = parseMarkdownDescriptive(doc);
       expect(parsed.width).toBe(1080);
       expect(parsed.height).toBe(1920);
       expect(parsed.fps).toBe(30);
@@ -317,12 +317,12 @@ import { ComA } from "npm:stat-counter"
 import { ComB } from "github:foo/bar/src/Logo.tsx"
 import { ComC } from "https://cdn.example.com/banner.js"
 ~~~`;
-      const parsed = parseMarkdownDescriptive(doc, { mode: "strict" });
+      const parsed = parseMarkdownDescriptive(doc);
       // imports removed from component schema — now at root level
       // imports removed from component schema — now at root level
 
       // Compiler resolves from: specs onto component nodes
-      const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
+      const compiled = compileDescriptiveRoot(parsed);
       const scene = compiled.children[0]! as any;
       const c = scene.children[0]!!;
       // imports removed from component schema — now at root level
@@ -338,7 +338,7 @@ import { ComC } from "https://cdn.example.com/banner.js"
 import { ComA } from "npm:pkg"
 import { ComB } from "npm:other"
 ~~~`;
-      const parsed = parseMarkdownDescriptive(doc, { mode: "strict" });
+      const parsed = parseMarkdownDescriptive(doc);
       // imports removed from component schema — now at root level
       // imports removed from component schema — now at root level
       // imports removed from component schema — now at root level
@@ -356,7 +356,7 @@ export function Badge({ text }) {
 
 import { Card } from "npm:card"
 ~~~`;
-      const parsed = parseMarkdownDescriptive(doc, { mode: "strict" });
+      const parsed = parseMarkdownDescriptive(doc);
       // imports removed from component schema — now at root level
       // imports removed from component schema — now at root level
       // imports removed from component schema — now at root level
@@ -375,7 +375,7 @@ npm install foo
 export default function Unnamed() { return null; }
 \`\`\`
 `;
-      const parsed = parseMarkdownDescriptive(doc, { mode: "strict" });
+      const parsed = parseMarkdownDescriptive(doc);
       // bash block ignored; jsx block without name also ignored
       // imports removed from component schema — now at root level
     });
@@ -384,7 +384,7 @@ export default function Unnamed() { return null; }
       const doc = `# video
 ## Scene
 - component duration:1 jsx:"<Foo />"`;
-      const parsed = parseMarkdownDescriptive(doc, { mode: "strict" });
+      const parsed = parseMarkdownDescriptive(doc);
       const scene = parsed.children[0]! as any;
       const c = scene.children[0]!!;
       expect(c.jsx).toBe("<Foo />");
@@ -405,7 +405,7 @@ import { Greeting } from "npm:greeting"
       expect(c.jsx).toBe("<Greeting name='World' />");
       expect(c.jsx).toContain("Greeting");
 
-      const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
+      const compiled = compileDescriptiveRoot(parsed);
       const compiledScene = compiled.children[0]! as any;
       const cc = compiledScene.children[0]!;
       expect(cc.jsx).toBe("<Greeting name='World' />");
@@ -421,10 +421,10 @@ import { Greeting } from "npm:greeting"
 ~~~js imports
 import { Logo } from "npm:logo-pkg"
 ~~~`;
-      const parsed = parseMarkdownDescriptive(doc, { mode: "strict" });
+      const parsed = parseMarkdownDescriptive(doc);
       // imports removed from component schema — now at root level
 
-      const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
+      const compiled = compileDescriptiveRoot(parsed);
       const scene = compiled.children[0]! as any;
       // imports removed from component schema — now at root level
     });
@@ -441,7 +441,7 @@ import { CompA } from "npm:some-pkg"
 ~~~`;
       const parsed = parseMarkdownDescriptive(doc);
       // imports removed from component schema — now at root level
-      const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
+      const compiled = compileDescriptiveRoot(parsed);
       // imports removed from component schema — now at root level
     });
 
@@ -456,7 +456,7 @@ import { Chart } from "npm:chart-js@4.5.0"
 ~~~`;
       const parsed = parseMarkdownDescriptive(doc);
       // imports removed from component schema — now at root level
-      const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
+      const compiled = compileDescriptiveRoot(parsed);
       const [byName, byJsx] = (compiled.children[0]! as any).children;
       // imports removed from component schema — now at root level
       // imports removed from component schema — now at root level
@@ -471,7 +471,7 @@ import { Chart } from "npm:chart-js@4.5.0"
 import { Badge } from "git:myorg/badge-component@master/src/Badge.tsx"
 ~~~`;
       const parsed = parseMarkdownDescriptive(doc);
-      const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
+      const compiled = compileDescriptiveRoot(parsed);
       // imports removed from component schema — now at root level
     });
 
@@ -484,7 +484,7 @@ import { Badge } from "git:myorg/badge-component@master/src/Badge.tsx"
 import { Logo } from "github:team/logo-assets"
 ~~~`;
       const parsed = parseMarkdownDescriptive(doc);
-      const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
+      const compiled = compileDescriptiveRoot(parsed);
       // imports removed from component schema — now at root level
     });
 
@@ -497,7 +497,7 @@ import { Logo } from "github:team/logo-assets"
 import { Widget } from "https://cdn.example.com/widget.mjs"
 ~~~`;
       const parsed = parseMarkdownDescriptive(doc);
-      const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
+      const compiled = compileDescriptiveRoot(parsed);
       // imports removed from component schema — now at root level
     });
 
@@ -510,7 +510,7 @@ import { Widget } from "https://cdn.example.com/widget.mjs"
 import { DevUI } from "http://localhost:5173/src/components/DevPanel.tsx"
 ~~~`;
       const parsed = parseMarkdownDescriptive(doc);
-      const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
+      const compiled = compileDescriptiveRoot(parsed);
       // imports removed from component schema — now at root level
     });
 
@@ -523,7 +523,7 @@ import { DevUI } from "http://localhost:5173/src/components/DevPanel.tsx"
 import { LocalComp } from "./components/MyWidget.tsx"
 ~~~`;
       const parsed = parseMarkdownDescriptive(doc);
-      const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
+      const compiled = compileDescriptiveRoot(parsed);
       // imports removed from component schema — now at root level
     });
 
@@ -536,7 +536,7 @@ import { LocalComp } from "./components/MyWidget.tsx"
 import { Helper } from "/Users/me/lib/helper.tsx"
 ~~~`;
       const parsed = parseMarkdownDescriptive(doc);
-      const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
+      const compiled = compileDescriptiveRoot(parsed);
       // imports removed from component schema — now at root level
     });
 
@@ -582,7 +582,7 @@ export function Greeting({ name }) {
 import { StatBox } from "npm:stat-box"
 ~~~`;
       const parsed = parseMarkdownDescriptive(doc);
-      const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
+      const compiled = compileDescriptiveRoot(parsed);
       const c = (compiled.children[0]! as any).children[0]!;
       // imports removed from component schema — now at root level
     });
@@ -591,7 +591,7 @@ import { StatBox } from "npm:stat-box"
       const doc = `# video
 ## Scene
 - component duration:2 jsx:"<Greeting name='World' />"`;
-      const parsed = parseMarkdownDescriptive(doc, { mode: "strict" });
+      const parsed = parseMarkdownDescriptive(doc);
       const c = (parsed.children[0]! as any).children[0]!;
       expect(c.jsx).toBe("<Greeting name='World' />");
     });
@@ -606,7 +606,7 @@ import { Header } from "npm:header-lib"
 import { Footer } from "git:org/footer@main"
 ~~~`;
       const parsed = parseMarkdownDescriptive(doc);
-      const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
+      const compiled = compileDescriptiveRoot(parsed);
       const c = (compiled.children[0]! as any).children[0]!;
       expect(c.jsx).toBe("<Header title='Page' /><Footer />");
       // imports removed from component schema — now at root level
@@ -617,7 +617,7 @@ import { Footer } from "git:org/footer@main"
       const doc = `# video
 ## Scene
 - component duration:2 jsx:"<Widget mode='dark' />"`;
-      const parsed = parseMarkdownDescriptive(doc, { mode: "strict" });
+      const parsed = parseMarkdownDescriptive(doc);
       const c = (parsed.children[0]! as any).children[0]!;
       expect(c.jsx).toBe("<Widget mode='dark' />");
       // props merged into jsx expression
@@ -648,7 +648,7 @@ export function Badge({ label }) {
       // imports removed from component schema — now at root level
       // imports removed from component schema — now at root level
 
-      const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
+      const compiled = compileDescriptiveRoot(parsed);
       const children = (compiled.children[0]! as any).children;
       // imports removed from component schema — now at root level
       // imports removed from component schema — now at root level
@@ -660,9 +660,9 @@ export function Badge({ label }) {
       const doc = `# video
 ## Scene
 - component duration:2 jsx:"<AnimatedHeadline text='Hello' />"`;
-      const parsed = parseMarkdownDescriptive(doc, { mode: "strict" });
+      const parsed = parseMarkdownDescriptive(doc);
       // No imports → jsx will reference host-registered components at runtime
-      const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
+      const compiled = compileDescriptiveRoot(parsed);
       const c = (compiled.children[0]! as any).children[0]!;
       expect(c.jsx).toBe("<AnimatedHeadline text='Hello' />");
       // imports removed from component schema — now at root level
@@ -673,7 +673,7 @@ export function Badge({ label }) {
       const doc = `# video
 ## Scene
 - component duration:2 jsx:"<Counter value={42} suffix='%' />"`;
-      const parsed = parseMarkdownDescriptive(doc, { mode: "strict" });
+      const parsed = parseMarkdownDescriptive(doc);
       const c = (parsed.children[0]! as any).children[0]!;
       expect(c.jsx).toBe("<Counter value={42} suffix='%' />");
     });
@@ -684,7 +684,7 @@ export function Badge({ label }) {
 # video
 ## Scene
 - image src:a.jpg duration:1`;
-      const parsed = parseMarkdownDescriptive(doc, { mode: "strict" });
+      const parsed = parseMarkdownDescriptive(doc);
       // imports removed from component schema — now at root level
     });
   });

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { compileDescriptiveRoot, resolveComponentImportSpec, parseImportsBlock } from "./compiler";
 
 describe("resolveComponentImportSpec", () => {
@@ -228,24 +228,16 @@ describe("compileDescriptiveRoot", () => {
     expect(first.actions[0].end).toBe(3);
   });
 
-  it("throws when start is used in series", () => {
-    expect(() =>
-      compileDescriptiveRoot({
-        layout: "series",
-        children: [{ id: "a", type: "image", src: "a.jpg", duration: 2, start: 1 }],
-      }),
-    ).toThrow(/start is only allowed in parallel containers/i);
-  });
-
-  it("throws on duplicate ids in strict mode", () => {
-    expect(() =>
-      compileDescriptiveRoot({
-        children: [
-          { id: "dup", type: "image", src: "a.jpg", duration: 2 },
-          { id: "dup", type: "image", src: "b.jpg", duration: 2 },
-        ],
-      }),
-    ).toThrow(/duplicate id/i);
+  it("warns on duplicate ids", () => {
+    const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    compileDescriptiveRoot({
+      children: [
+        { id: "dup", type: "image", src: "a.jpg", duration: 2 },
+        { id: "dup", type: "image", src: "b.jpg", duration: 2 },
+      ],
+    });
+    expect(spy).toHaveBeenCalledWith(expect.stringMatching(/duplicate id/));
+    spy.mockRestore();
   });
 
   it("compiles nested containers with correct aggregated duration", () => {
@@ -308,13 +300,10 @@ describe("compileDescriptiveRoot", () => {
   });
 
   it("compiles include with src and include fallback children", () => {
-    const withSrc = compileDescriptiveRoot(
-      {
-        layout: "series",
-        children: [{ id: "inc-src", type: "include", src: "./child.json", duration: 4 }],
-      },
-      { mode: "strict" },
-    );
+    const withSrc = compileDescriptiveRoot({
+      layout: "series",
+      children: [{ id: "inc-src", type: "include", src: "./child.json", duration: 4 }],
+    });
 
     const includeWithSrc = withSrc.children[0] as any;
     expect(includeWithSrc.type).toBe("include");
@@ -601,7 +590,7 @@ describe("compileDescriptiveRoot", () => {
       children: [
         { id: "beat", type: "rhythm", src: "beat.mp3", spots: [0.5, 2.5] },
       ],
-    }, { mode: "draft" });
+    });
 
     const r = compiled.children[0] as any;
     expect(r.type).toBe("rhythm");
@@ -648,14 +637,14 @@ describe("compileDescriptiveRoot", () => {
     expect(fx.children[0].type).toBe("image");
   });
 
-  it("uses draft mode defaults when duration is missing", () => {
+  it("uses defaults when duration is missing", () => {
     const compiled = compileDescriptiveRoot({
       layout: "series",
       children: [
         { id: "no-dr", type: "image", src: "x.jpg" },
         { id: "no-dr-vid", type: "video", src: "x.mp4" },
       ],
-    }, { mode: "draft" });
+    });
 
     const img = compiled.children[0] as any;
     expect(img.actions[0].end).toBe(3); // image default is 3s
@@ -664,15 +653,15 @@ describe("compileDescriptiveRoot", () => {
     expect(vid.actions[0].end).toBe(3); // video default is 3s
   });
 
-  it("throws in strict mode when duration is missing", () => {
-    expect(() =>
-      compileDescriptiveRoot({
-        layout: "series",
-        children: [
-          { id: "no-dr", type: "image", src: "x.jpg" },
-        ],
-      }, { mode: "strict" }),
-    ).toThrow(/cannot resolve duration/i);
+  it("uses default duration when duration is missing", () => {
+    const compiled = compileDescriptiveRoot({
+      layout: "series",
+      children: [
+        { id: "no-dr", type: "image", src: "x.jpg" },
+      ],
+    });
+    const img = compiled.children[0] as any;
+    expect(img.actions[0].end).toBe(3); // image default is 3s
   });
 
   it("preserves root-level instruction and stylesheet", () => {
