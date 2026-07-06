@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { compileDescriptiveRoot, resolveComponentImportSpec, parseImportsBlock } from "./compiler";
+import { compileDescriptiveRoot, resolveComponentImportSpec, parseImportsBlock, extractDependencySpecs } from "./compiler";
 
 describe("resolveComponentImportSpec", () => {
   it("rewrites npm: specs to esm.sh", () => {
@@ -743,5 +743,184 @@ describe("compileDescriptiveRoot", () => {
     expect(a.id).toBeTruthy();
     expect(b.id).toBeTruthy();
     expect(a.id).not.toBe(b.id);
+  });
+});
+
+describe("extractDependencySpecs", () => {
+  it("extracts from export { Name } from \"spec\"", () => {
+    expect(extractDependencySpecs(`export { PieChart } from "npm:recharts"`)).toEqual(["npm:recharts"]);
+  });
+
+  it("extracts from import statements", () => {
+    expect(extractDependencySpecs(`import { useState } from "react"`)).toEqual(["react"]);
+  });
+
+  it("extracts multiple specs from mixed block", () => {
+    const block = `import { useState } from "react"
+import ReactMarkdown from 'npm:react-markdown'
+export { PieChart } from "npm:recharts"`;
+    expect(extractDependencySpecs(block)).toEqual(["react", "npm:react-markdown", "npm:recharts"]);
+  });
+
+  it("extracts from export default Name from \"spec\"", () => {
+    expect(extractDependencySpecs(`export default Recharts from "npm:recharts"`)).toEqual(["npm:recharts"]);
+  });
+
+  it("returns empty array for block with no from clauses", () => {
+    expect(extractDependencySpecs(`export function Hello() { return null; }`)).toEqual([]);
+  });
+
+  it("extracts bare package names without npm: prefix", () => {
+    expect(extractDependencySpecs(`import { something } from "lodash"`)).toEqual(["lodash"]);
+  });
+
+  it("handles semicolons after from spec", () => {
+    expect(extractDependencySpecs(`import { x } from "react";`)).toEqual(["react"]);
+    expect(extractDependencySpecs(`export { X } from "npm:recharts";`)).toEqual(["npm:recharts"]);
+  });
+
+  it("handles single and double quotes", () => {
+    expect(extractDependencySpecs(`import { x } from 'react'`)).toEqual(["react"]);
+    expect(extractDependencySpecs(`import { x } from \`react\``)).toEqual(["react"]);
+  });
+
+  it("handles spec with hash subpath", () => {
+    expect(extractDependencySpecs(`export { Comp } from "npm:recharts#es/BarChart"`)).toEqual(["npm:recharts#es/BarChart"]);
+  });
+});
+
+describe("parseImportsBlock edge cases", () => {
+  it("parses export { default } from \"spec\"", () => {
+    const entries = parseImportsBlock(`export { default } from "npm:recharts"`);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toEqual({ name: "default", from: "npm:recharts", exports: "default" });
+  });
+
+  it("parses export { default as Name } from \"spec\"", () => {
+    const entries = parseImportsBlock(`export { default as PieChart } from "npm:recharts"`);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toEqual({ name: "PieChart", from: "npm:recharts", exports: "default" });
+  });
+
+  it("import-only block produces no entries (internal deps only)", () => {
+    const entries = parseImportsBlock(`import { useState } from "react"
+import ReactMarkdown from 'npm:react-markdown'`);
+    expect(entries).toHaveLength(0);
+  });
+
+  it("bare export without matching import produces no entry", () => {
+    const entries = parseImportsBlock(`export { Unknown }`);
+    expect(entries).toHaveLength(0);
+  });
+
+  it("comment lines are skipped", () => {
+    const entries = parseImportsBlock(`// comment
+export { PieChart } from "npm:recharts"
+/* block comment */
+export function Hello() { return null; }`);
+    expect(entries).toHaveLength(2);
+    expect(entries[0].name).toBe("PieChart");
+    expect(entries[1].name).toBe("Hello");
+  });
+
+  it("handles multiline inline function with nested braces", () => {
+    const entries = parseImportsBlock(`export function Card({ title, children }) {
+  return <div style={{ padding: 10, margin: 5 }}>
+    <h2>{title}</h2>
+    {children}
+  </div>;
+}`);
+    expect(entries).toHaveLength(1);
+    expect(entries[0].name).toBe("Card");
+    expect(entries[0].jsx).toContain("export function Card");
+    expect(entries[0].jsx).toContain("padding: 10");
+    expect(entries[0].jsx).toContain("margin: 5");
+    expect(entries[0].jsx).toContain("{children}");
+  });
+
+  it("handles default import with as alias followed by bare re-export", () => {
+    const entries = parseImportsBlock(`import ReactMarkdown from 'npm:react-markdown'
+export { ReactMarkdown }`);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toEqual({ name: "ReactMarkdown", from: "npm:react-markdown", exports: "default" });
+  });
+});
+
+describe("compileDescriptiveRoot with importsBlock", () => {
+  it("compiles component with re-exported import", () => {
+    const compiled = compileDescriptiveRoot({
+      layout: "series",
+      importsBlock: `export { PieChart } from "npm:recharts"`,
+      children: [
+        { type: "component", jsx: "<PieChart />", duration: 2 },
+      ],
+    });
+    expect(compiled.children).toHaveLength(1);
+    const c = compiled.children[0] as any;
+    expect(c.type).toBe("component");
+    expect(c.jsx).toBe("<PieChart />");
+  });
+
+  it("compiles component with inline function definition from importsBlock", () => {
+    const compiled = compileDescriptiveRoot({
+      layout: "series",
+      importsBlock: `export function Greeting({ name }) {
+  return <div>Hello {name}</div>;
+}`,
+      children: [
+        { type: "component", jsx: "<Greeting name='World' />", duration: 3 },
+      ],
+    });
+    expect(compiled.children).toHaveLength(1);
+    const c = compiled.children[0] as any;
+    expect(c.type).toBe("component");
+    expect(c.jsx).toBe("<Greeting name='World' />");
+  });
+
+  it("compiles component with mixed import + inline from importsBlock", () => {
+    const compiled = compileDescriptiveRoot({
+      layout: "series",
+      importsBlock: `import { useState } from "react"
+export { PieChart } from "npm:recharts"
+export function Counter() {
+  const [count, setCount] = useState(0)
+  return <div>{count}</div>
+}`,
+      children: [
+        { type: "component", jsx: "<PieChart />", duration: 2 },
+        { type: "component", jsx: "<Counter />", duration: 3 },
+      ],
+    });
+    expect(compiled.children).toHaveLength(2);
+    expect(compiled.children[0]).toMatchObject({ type: "component", jsx: "<PieChart />" });
+    expect(compiled.children[1]).toMatchObject({ type: "component", jsx: "<Counter />" });
+  });
+
+  it("importsBlock overrides frontmatter imports", () => {
+    const compiled = compileDescriptiveRoot({
+      layout: "series",
+      imports: [{ name: "OldComp", from: "npm:old" }],
+      importsBlock: `export { PieChart } from "npm:recharts"`,
+      children: [
+        { type: "component", jsx: "<PieChart />", duration: 1 },
+      ],
+    });
+    expect(compiled.children).toHaveLength(1);
+    const c = compiled.children[0] as any;
+    expect(c.type).toBe("component");
+  });
+
+  it("import statements in importsBlock do not interfere with component nodes", () => {
+    // import statements should not cause errors even if the imported name
+    // doesn't match any component JSX — they're internal deps
+    const compiled = compileDescriptiveRoot({
+      layout: "series",
+      importsBlock: `import { something } from "react"
+export { PieChart } from "npm:recharts"`,
+      children: [
+        { type: "component", jsx: "<PieChart />", duration: 2 },
+      ],
+    });
+    expect(compiled.children).toHaveLength(1);
   });
 });

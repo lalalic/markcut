@@ -5,6 +5,7 @@
  * Supports:
  *   - npm re-exports: "export { X } from "npm:pkg"  → installs pkg, re-exports X
  *   - inline functions: "export function X() {...}"  → writes to file, re-exports
+ *   - @remotion/* packages auto-pinned to the host markcut version
  *
  * Cached by content hash — re-bundling only when dependencies change.
  */
@@ -21,6 +22,25 @@ const CACHE_DIR = join(ROOT, "public", ".component-cache");
 
 /** Cached bundles: hash → { url, exports } */
 const BUNDLED = new Map();
+
+/** Cache for host package.json dependency map. */
+let _hostDeps = null;
+function getHostDeps() {
+  if (_hostDeps) return _hostDeps;
+  const pkg = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf-8"));
+  _hostDeps = { ...pkg.dependencies, ...pkg.devDependencies };
+  return _hostDeps;
+}
+
+/**
+ * Resolve the best version for a package name.
+ * If the host (markcut) already depends on it, use that exact version
+ * (e.g. @remotion/player → "4.0.469"). Otherwise use "latest".
+ */
+function resolveVersion(pkgName) {
+  const hostDeps = getHostDeps();
+  return hostDeps[pkgName] || "latest";
+}
 
 /**
  * Build a component registry bundle from parsed import entries.
@@ -75,7 +95,7 @@ export async function bundleFromEntries(entries, extraSpecs = []) {
   // Build package.json with all dependencies
   const pkgJson = { type: "module", private: true, dependencies: {} };
   for (const dep of npmDeps) {
-    pkgJson.dependencies[dep.pkgName] = "latest";
+    pkgJson.dependencies[dep.pkgName] = resolveVersion(dep.pkgName);
   }
   writeFileSync(join(dir, "package.json"), JSON.stringify(pkgJson, null, 2));
 
