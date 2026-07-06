@@ -1,0 +1,131 @@
+/**
+ * Component bundler — creates a temp npm project from template imports,
+ * installs dependencies, and bundles into a single ESM file.
+ *
+ * Supports:
+ *   - npm re-exports: "export { X } from "npm:pkg"  → installs pkg, re-exports X
+ *   - inline functions: "export function X() {...}"  → writes to file, re-exports
+ *
+ * Cached by content hash — re-bundling only when dependencies change.
+ */
+
+import { createHash } from "node:crypto";
+import { mkdirSync, writeFileSync, readFileSync, existsSync } from "node:fs";
+import { execSync } from "node:child_process";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const ROOT = join(__dirname, "..", "..");
+const CACHE_DIR = join(ROOT, "public", ".component-cache");
+
+/** Cached bundles: hash → { url, exports } */
+const BUNDLED = new Map();
+
+/**
+ * Build a component registry bundle from parsed import entries.
+ *
+ * @param {Array<{name:string, from?:string, jsx?:string, exports?:string}>} entries
+ * @returns {Promise<{url:string|null, exports:string[]}>}
+ */
+export async function bundleFromEntries(entries) {
+  if (!entries || entries.length === 0) return { url: null, exports: [] };
+
+  // Separate npm imports from inline function definitions
+  const npmDeps = [];
+  const inlineFuncs = [];
+
+  for (const entry of entries) {
+    if (entry.from) {
+      const pkgName = entry.from.startsWith("npm:") ? entry.from.slice(4) : entry.from;
+      const exportName = entry.exports || "default";
+      npmDeps.push({ name: entry.name, pkgName, exportName });
+    } else if (entry.jsx) {
+      inlineFuncs.push({ name: entry.name, source: entry.jsx });
+    }
+  }
+
+  if (npmDeps.length === 0 && inlineFuncs.length === 0) return { url: null, exports: [] };
+
+  // Create a stable hash from sorted entries
+  const all = [...npmDeps, ...inlineFuncs].sort((a, b) => a.name.localeCompare(b.name));
+  const hashInput = all.map(e => {
+    const kind = e.source ? "inline:" : "npm:";
+    const detail = e.source || e.pkgName + "+" + e.exportName;
+    return e.name + "=" + kind + detail;
+  }).join(",");
+  const hash = createHash("md5").update(hashInput).digest("hex").slice(0, 8);
+
+  if (BUNDLED.has(hash)) return BUNDLED.get(hash);
+
+  const dir = join(CACHE_DIR, hash);
+  mkdirSync(dir, { recursive: true });
+
+  // Build package.json with all dependencies
+  const pkgJson = { type: "module", private: true, dependencies: {} };
+  for (const dep of npmDeps) {
+    pkgJson.dependencies[dep.pkgName] = "latest";
+  }
+  writeFileSync(join(dir, "package.json"), JSON.stringify(pkgJson, null, 2));
+
+  // Build index.js — one file per inline function + re-exports for npm
+  const lines = [];
+  for (const inline of inlineFuncs) {
+    writeFileSync(join(dir, inline.name + ".jsx"), inline.source + "\n");
+    lines.push("export { " + inline.name + " } from \"./" + inline.name + '.jsx";');
+  }
+  for (const dep of npmDeps) {
+    if (dep.exportName === "default") {
+      // Default export: use namespace import with fallback chain
+      lines.push(
+        'import * as __' + dep.name + ' from "' + dep.pkgName + '";' +
+        '\nconst ' + dep.name + ' = __' + dep.name + '.default ?? __' + dep.name + '.' + dep.name +
+        ' ?? Object.values(__' + dep.name + ').find(v => typeof v === "function" || v?.$$typeof);' +
+        '\nexport { ' + dep.name + ' };'
+      );
+    } else {
+      lines.push('export { ' + dep.exportName + ' as ' + dep.name + ' } from "' + dep.pkgName + '";');
+    }
+  }
+  writeFileSync(join(dir, "index.js"), lines.join("\n\n") + "\n");
+
+  // npm install (skip if node_modules already exists)
+  if (!existsSync(join(dir, "node_modules"))) {
+    const depNames = npmDeps.map(d => d.pkgName);
+    console.log("  \ud83d\udce6 Installing components: " + depNames.join(", "));
+    try {
+      execSync("npm install --no-audit --no-fund --prefer-offline --loglevel=error", {
+        cwd: dir,
+        stdio: "pipe",
+        timeout: 60000,
+      });
+    } catch (e) {
+      console.error("  \u26a0\ufe0f  npm install failed:", e.stderr?.toString().slice(0, 300));
+      throw new Error("Failed to install dependencies: " + (e.stderr?.toString().slice(0, 200) || e.message));
+    }
+  }
+
+  // Bundle with esbuild
+  const outFile = join(CACHE_DIR, hash + ".js");
+  if (!existsSync(outFile)) {
+    console.log("  \ud83d\udd27 Bundling components \u2192 " + hash + ".js");
+    try {
+      execSync(
+        'npx esbuild index.js --bundle --format=esm --outfile="' + outFile + '" ' +
+        "--external:react --external:react/jsx-runtime --external:react-dom " +
+        "--platform=browser --target=es2020",
+        { cwd: dir, stdio: "pipe", timeout: 30000 }
+      );
+    } catch (e) {
+      console.error("  \u26a0\ufe0f  esbuild failed:", e.stderr?.toString().slice(0, 300));
+      throw new Error("Failed to bundle components: " + (e.stderr?.toString().slice(0, 200) || e.message));
+    }
+  }
+
+  const result = {
+    url: "/.component-cache/" + hash + ".js",
+    exports: all.map(e => e.name),
+  };
+  BUNDLED.set(hash, result);
+  return result;
+}

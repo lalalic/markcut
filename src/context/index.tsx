@@ -13,6 +13,8 @@ export interface ComposeContextValue {
   }>>;
   /** Optional callback for non-fatal render errors. */
   onError?: (err: unknown, ctx: { id: string; type: string }) => void;
+  /** Component registry for react-jsx-parser. Populated from root.imports. */
+  components?: Record<string, React.ComponentType<any>>;
 }
 
 const DefaultContainer: ComposeContextValue["Container"] = ({ children, style }) => (

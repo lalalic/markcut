@@ -1,6 +1,6 @@
 {
   "name": "markcut",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "description": "Markdown-to-video engine. Describe scenes in markdown, get a rendered video with TTS narration.",
   "bin": {
@@ -33,6 +33,7 @@
     "test:watch": "vitest --config tests/vitest.config.ts"
   },
   "dependencies": {
+    "@babel/standalone": "^8.0.3",
     "@remotion/cli": "4.0.469",
     "@remotion/media-parser": "4.0.469",
     "@remotion/media-utils": "4.0.469",
@@ -43,10 +44,12 @@
     "js-yaml": "^5.2.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-jsx-parser": "^2.4.1",
     "react-markdown": "^10.1.0",
     "remark-frontmatter": "^5.0.0",
     "remark-parse": "^11.0.0",
     "remotion": "4.0.469",
+    "systemjs": "^6.15.1",
     "unified": "^11.0.5",
     "zod": "4.3.6"
   },

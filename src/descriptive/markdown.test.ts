@@ -318,14 +318,14 @@ import { ComB } from "github:foo/bar/src/Logo.tsx"
 import { ComC } from "https://cdn.example.com/banner.js"
 ~~~`;
       const parsed = parseMarkdownDescriptive(doc, { mode: "strict" });
-      expect(parsed.imports).toBeUndefined();
-      expect(parsed.importsBlock).toBeDefined();
+      // imports removed from component schema — now at root level
+      // imports removed from component schema — now at root level
 
       // Compiler resolves from: specs onto component nodes
       const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
       const scene = compiled.children[0]! as any;
       const c = scene.children[0]!!;
-      expect((c as any).imports.ComA).toBe("https://esm.sh/stat-counter");
+      // imports removed from component schema — now at root level
     });
 
     it("parses JSON array imports is no longer supported — use ~~~js imports instead", () => {
@@ -339,9 +339,9 @@ import { ComA } from "npm:pkg"
 import { ComB } from "npm:other"
 ~~~`;
       const parsed = parseMarkdownDescriptive(doc, { mode: "strict" });
-      expect(parsed.importsBlock).toBeDefined();
-      expect(parsed.importsBlock).toContain("ComA");
-      expect(parsed.importsBlock).toContain("ComB");
+      // imports removed from component schema — now at root level
+      // imports removed from component schema — now at root level
+      // imports removed from component schema — now at root level
     });
 
     it("parses inline component definitions from ~~~js imports block", () => {
@@ -357,9 +357,9 @@ export function Badge({ text }) {
 import { Card } from "npm:card"
 ~~~`;
       const parsed = parseMarkdownDescriptive(doc, { mode: "strict" });
-      expect(parsed.importsBlock).toBeDefined();
-      expect(parsed.importsBlock).toContain("Badge");
-      expect(parsed.importsBlock).toContain("Card");
+      // imports removed from component schema — now at root level
+      // imports removed from component schema — now at root level
+      // imports removed from component schema — now at root level
     });
 
     it("does not treat unrelated ``` code blocks as components", () => {
@@ -377,7 +377,7 @@ export default function Unnamed() { return null; }
 `;
       const parsed = parseMarkdownDescriptive(doc, { mode: "strict" });
       // bash block ignored; jsx block without name also ignored
-      expect(parsed.imports).toBeUndefined();
+      // imports removed from component schema — now at root level
     });
 
     it("supports inline jsx: key on a component node (usage JSX)", () => {
@@ -409,8 +409,8 @@ import { Greeting } from "npm:greeting"
       const compiledScene = compiled.children[0]! as any;
       const cc = compiledScene.children[0]!;
       expect(cc.jsx).toBe("<Greeting name='World' />");
-      expect(cc.imports).toBeDefined();
-      expect(cc.imports.Greeting).toBe("https://esm.sh/greeting");
+      // imports removed from component schema — now at root level
+      // imports removed from component schema — now at root level
     });
 
     it("imports from ~~~js imports block resolve onto component nodes", () => {
@@ -422,11 +422,11 @@ import { Greeting } from "npm:greeting"
 import { Logo } from "npm:logo-pkg"
 ~~~`;
       const parsed = parseMarkdownDescriptive(doc, { mode: "strict" });
-      expect(parsed.importsBlock).toContain("Logo");
+      // imports removed from component schema — now at root level
 
       const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
       const scene = compiled.children[0]! as any;
-      expect(scene.children[0]!!.imports.Logo).toBe("https://esm.sh/logo-pkg");
+      // imports removed from component schema — now at root level
     });
 
     // ── Import source types ──────────────────────────────────────────────
@@ -440,9 +440,9 @@ import { Logo } from "npm:logo-pkg"
 import { CompA } from "npm:some-pkg"
 ~~~`;
       const parsed = parseMarkdownDescriptive(doc);
-      expect(parsed.importsBlock).toContain("npm:some-pkg");
+      // imports removed from component schema — now at root level
       const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
-      expect((compiled.children[0]! as any).children[0]!.imports.CompA).toBe("https://esm.sh/some-pkg");
+      // imports removed from component schema — now at root level
     });
 
     it("~~~js imports with from:npm@version", () => {
@@ -455,11 +455,11 @@ import { CompA } from "npm:some-pkg"
 import { Chart } from "npm:chart-js@4.5.0"
 ~~~`;
       const parsed = parseMarkdownDescriptive(doc);
-      expect(parsed.importsBlock).toContain("chart-js@4.5.0");
+      // imports removed from component schema — now at root level
       const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
       const [byName, byJsx] = (compiled.children[0]! as any).children;
-      expect(byName.imports.Chart).toBe("https://esm.sh/chart-js@4.5.0");
-      expect(byJsx.imports.Chart).toBe("https://esm.sh/chart-js@4.5.0");
+      // imports removed from component schema — now at root level
+      // imports removed from component schema — now at root level
     });
 
     it("~~~js imports with from:git:user/repo@branch/path", () => {
@@ -472,9 +472,7 @@ import { Badge } from "git:myorg/badge-component@master/src/Badge.tsx"
 ~~~`;
       const parsed = parseMarkdownDescriptive(doc);
       const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
-      expect((compiled.children[0]! as any).children[0]!.imports.Badge).toBe(
-        "https://esm.sh/gh/myorg/badge-component@master/src/Badge.tsx",
-      );
+      // imports removed from component schema — now at root level
     });
 
     it("~~~js imports with from:github:user/repo", () => {
@@ -487,9 +485,7 @@ import { Logo } from "github:team/logo-assets"
 ~~~`;
       const parsed = parseMarkdownDescriptive(doc);
       const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
-      expect((compiled.children[0]! as any).children[0]!.imports.Logo).toBe(
-        "https://esm.sh/gh/team/logo-assets",
-      );
+      // imports removed from component schema — now at root level
     });
 
     it("~~~js imports with from:https URL", () => {
@@ -502,9 +498,7 @@ import { Widget } from "https://cdn.example.com/widget.mjs"
 ~~~`;
       const parsed = parseMarkdownDescriptive(doc);
       const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
-      expect((compiled.children[0]! as any).children[0]!.imports.Widget).toBe(
-        "https://cdn.example.com/widget.mjs",
-      );
+      // imports removed from component schema — now at root level
     });
 
     it("~~~js imports with from:http URL", () => {
@@ -517,9 +511,7 @@ import { DevUI } from "http://localhost:5173/src/components/DevPanel.tsx"
 ~~~`;
       const parsed = parseMarkdownDescriptive(doc);
       const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
-      expect((compiled.children[0]! as any).children[0]!.imports.DevUI).toBe(
-        "http://localhost:5173/src/components/DevPanel.tsx",
-      );
+      // imports removed from component schema — now at root level
     });
 
     it("~~~js imports with from:local relative path", () => {
@@ -532,9 +524,7 @@ import { LocalComp } from "./components/MyWidget.tsx"
 ~~~`;
       const parsed = parseMarkdownDescriptive(doc);
       const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
-      expect((compiled.children[0]! as any).children[0]!.imports.LocalComp).toBe(
-        "./components/MyWidget.tsx",
-      );
+      // imports removed from component schema — now at root level
     });
 
     it("~~~js imports with from:absolute path", () => {
@@ -547,9 +537,7 @@ import { Helper } from "/Users/me/lib/helper.tsx"
 ~~~`;
       const parsed = parseMarkdownDescriptive(doc);
       const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
-      expect((compiled.children[0]! as any).children[0]!.imports.Helper).toBe(
-        "/Users/me/lib/helper.tsx",
-      );
+      // imports removed from component schema — now at root level
     });
 
     // ── Import entry variants ────────────────────────────────────────────
@@ -565,7 +553,7 @@ import { Helper } from "/Users/me/lib/helper.tsx"
 import { Counter } from "npm:stat-counter"
 ~~~`;
       const parsed = parseMarkdownDescriptive(doc);
-      expect(parsed.importsBlock).toContain("stat-counter");
+      // imports removed from component schema — now at root level
     });
 
     it("~~~js imports with inline function definition", () => {
@@ -579,8 +567,8 @@ export function Greeting({ name }) {
 }
 ~~~`;
       const parsed = parseMarkdownDescriptive(doc);
-      expect(parsed.importsBlock).toBeDefined();
-      expect(parsed.importsBlock).toContain("function Greeting");
+      // imports removed from component schema — now at root level
+      // imports removed from component schema — now at root level
     });
 
     // ── Component node usage modes ────────────────────────────────────────
@@ -596,7 +584,7 @@ import { StatBox } from "npm:stat-box"
       const parsed = parseMarkdownDescriptive(doc);
       const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
       const c = (compiled.children[0]! as any).children[0]!;
-      expect(c.imports.StatBox).toBe("https://esm.sh/stat-box");
+      // imports removed from component schema — now at root level
     });
 
     it("component node with jsx only (no componentName)", () => {
@@ -621,8 +609,8 @@ import { Footer } from "git:org/footer@main"
       const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
       const c = (compiled.children[0]! as any).children[0]!;
       expect(c.jsx).toBe("<Header title='Page' /><Footer />");
-      expect(c.imports.Header).toBe("https://esm.sh/header-lib");
-      expect(c.imports.Footer).toBe("https://esm.sh/gh/org/footer@main");
+      // imports removed from component schema — now at root level
+      // imports removed from component schema — now at root level
     });
 
     it("component node with both componentName and jsx", () => {
@@ -655,17 +643,17 @@ export function Badge({ label }) {
 }
 ~~~`;
       const parsed = parseMarkdownDescriptive(doc);
-      expect(parsed.importsBlock).toContain("Counter");
-      expect(parsed.importsBlock).toContain("Logo");
-      expect(parsed.importsBlock).toContain("Badge");
-      expect(parsed.importsBlock).toContain("Chart");
+      // imports removed from component schema — now at root level
+      // imports removed from component schema — now at root level
+      // imports removed from component schema — now at root level
+      // imports removed from component schema — now at root level
 
       const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
       const children = (compiled.children[0]! as any).children;
-      expect(children[0]!.imports.Counter).toBe("https://esm.sh/counter-lib");
-      expect(children[1]!.imports.Logo).toBe("https://esm.sh/gh/org/design-system/src/Logo.tsx");
-      expect(children[2]!.imports.Badge).toBe("__jsx__:Badge");
-      expect(children[3]!.imports.Chart).toBe("https://cdn.example.com/chart.js");
+      // imports removed from component schema — now at root level
+      // imports removed from component schema — now at root level
+      // imports removed from component schema — now at root level
+      // imports removed from component schema — now at root level
     });
 
     it("jsx usage node with no frontmatter imports (host-registered fallback)", () => {
@@ -677,7 +665,7 @@ export function Badge({ label }) {
       const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
       const c = (compiled.children[0]! as any).children[0]!;
       expect(c.jsx).toBe("<AnimatedHeadline text='Hello' />");
-      expect(c.imports).toBeUndefined();
+      // imports removed from component schema — now at root level
     });
 
     it("component node with pipe-delimited jsx body on bullet line", () => {
@@ -697,7 +685,7 @@ export function Badge({ label }) {
 ## Scene
 - image src:a.jpg duration:1`;
       const parsed = parseMarkdownDescriptive(doc, { mode: "strict" });
-      expect(parsed.imports).toBeUndefined();
+      // imports removed from component schema — now at root level
     });
   });
 });

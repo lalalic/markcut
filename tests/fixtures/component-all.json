@@ -1,0 +1,38 @@
+{
+  "id": "root",
+  "type": "root",
+  "width": 640,
+  "height": 480,
+  "fps": 30,
+  "isSeries": true,
+  "children": [
+    {
+      "id": "scene-html",
+      "type": "scene",
+      "name": "HTML JSX",
+      "layout": "parallel",
+      "children": [
+        {
+          "id": "c-hello",
+          "type": "component",
+          "jsx": "<div style={{color:'#fff',fontSize:28,textAlign:'center'}}>Hello World</div>",
+          "actions": [{ "start": 0, "end": 2 }]
+        }
+      ]
+    },
+    {
+      "id": "scene-tween",
+      "type": "scene",
+      "name": "Tween Animation",
+      "layout": "parallel",
+      "children": [
+        {
+          "id": "c-tween",
+          "type": "component",
+          "jsx": "<svg width=\"200\" height=\"200\" viewBox=\"0 0 200 200\"><rect x=\"0\" y={tween(0,150)} width=\"50\" height={tween(50,200)} fill=\"#667eea\" /><rect x=\"70\" y={tween(50,100)} width=\"50\" height={tween(100,50)} fill=\"#764ba2\" /><rect x=\"140\" y={tween(100,0)} width=\"50\" height={tween(50,200)} fill=\"#f093fb\" /></svg>",
+          "actions": [{ "start": 0, "end": 3 }]
+        }
+      ]
+    }
+  ]
+}

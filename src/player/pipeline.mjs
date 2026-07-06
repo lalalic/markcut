@@ -161,19 +161,31 @@ function compileLeaf(node2, ctx, parentKind) {
       return { stream, duration: end };
     }
     case "component": {
-      const registry = node2._resolvedRegistry;
-      const importsMap = {};
-      if (registry) {
-        for (const [name, def] of registry) {
-          if (def.src) importsMap[name] = def.src;
-          else if (def.definitionJsx) importsMap[name] = `__jsx__:${name}`;
+      const KNOWN_COMPONENT_KEYS = /* @__PURE__ */ new Set([
+        "type",
+        "jsx",
+        "id",
+        "instruction",
+        "script",
+        "style",
+        "visible",
+        "isBackground",
+        "duration",
+        "start",
+        "_resolvedRegistry"
+      ]);
+      const bindings = {};
+      for (const key of Object.keys(node2)) {
+        if (!KNOWN_COMPONENT_KEYS.has(key)) {
+          const val = node2[key];
+          if (typeof val === "string") bindings[key] = val;
         }
       }
       const stream = {
         ...base,
         type: "component",
         jsx: node2.jsx,
-        imports: Object.keys(importsMap).length ? importsMap : void 0,
+        bindings: Object.keys(bindings).length ? bindings : void 0,
         actions: [action]
       };
       return { stream, duration: end };
@@ -453,15 +465,16 @@ function parseImportsBlock(source) {
       for (const part of namesStr.split(",")) {
         const trimmed = part.trim();
         const asMatch = /^(.+?)\s+as\s+(.+)$/i.exec(trimmed);
+        const exportName = asMatch ? asMatch[1].trim() : trimmed;
         const name = asMatch ? asMatch[2].trim() : trimmed;
-        entries.push({ name, from: fromSpec });
+        entries.push({ name, from: fromSpec, exports: exportName });
       }
       i++;
       continue;
     }
     const defaultImport = /^import\s+(\w+)\s+from\s+["'`](.+?)["'`]\s*;?\s*$/.exec(line);
     if (defaultImport) {
-      entries.push({ name: defaultImport[1], from: defaultImport[2] });
+      entries.push({ name: defaultImport[1], from: defaultImport[2], exports: "default" });
       i++;
       continue;
     }
@@ -472,8 +485,9 @@ function parseImportsBlock(source) {
       for (const part of namesStr.split(",")) {
         const trimmed = part.trim();
         const asMatch = /^(.+?)\s+as\s+(.+)$/i.exec(trimmed);
+        const exportName = asMatch ? asMatch[1].trim() : trimmed;
         const name = asMatch ? asMatch[2].trim() : trimmed;
-        entries.push({ name, from: fromSpec });
+        entries.push({ name, from: fromSpec, exports: exportName });
       }
       i++;
       continue;
@@ -507,7 +521,8 @@ function resolveComponentImportSpec(spec) {
   if (pkg.startsWith("npm:")) base = `https://esm.sh/${pkg.slice(4)}`;
   else if (pkg.startsWith("git:")) base = `https://esm.sh/gh/${pkg.slice(4)}`;
   else if (pkg.startsWith("github:")) base = `https://esm.sh/gh/${pkg.slice(7)}`;
-  else base = pkg;
+  else if (/^\.\.?\/|^\/|^https?:\/\//.test(pkg)) base = pkg;
+  else base = `https://esm.sh/${pkg}`;
   return subpath ? `${base}/${subpath}` : base;
 }
 function resolveComponentSources(root) {
@@ -12549,6 +12564,9 @@ function applyRootAttrs(root, attrs) {
       case "metadata":
         root.metadata = String(v);
         break;
+      case "stylesheet":
+        root.stylesheet = String(v);
+        break;
       case "title":
       case "description":
         root.instruction = root.instruction ?? String(v);
@@ -12610,6 +12628,7 @@ async function resolveAndCompileMarkdown(markdown, options = {}) {
 export {
   compileDescriptiveRoot,
   isDescriptiveRoot,
+  parseImportsBlock,
   parseMarkdownDescriptive,
   resolveAll,
   resolveAndCompile,

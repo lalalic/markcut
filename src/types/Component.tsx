@@ -10,7 +10,16 @@ import type { Component } from "../schema/index";
  */
 export function ComponentLeaf({ stream }: { stream: Component }) {
   const { fps } = useVideoConfig();
-  const Comp = useJsxWithImports(stream.jsx, stream.imports ?? undefined);
+  const [error, setError] = React.useState<string | null>(null);
+  const Comp = useJsxWithImports(stream.jsx, stream.imports ?? undefined, stream.data ?? undefined, (err, ctx) => {
+    setError(`Component error: ${err instanceof Error ? err.message : String(err)}`);
+  });
+
+  if (error) {
+    return React.createElement("div", {
+      style: { color: "red", padding: 20, fontFamily: "sans-serif", fontSize: 14, background: "rgba(0,0,0,0.8)" },
+    }, error);
+  }
 
   if (!Comp) return null;
 

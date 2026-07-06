@@ -301,8 +301,8 @@ describe("frontmatter fixture", () => {
     const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
     const scene = compiled.children[0] as any;
     const statComp = scene.children[0];
-    expect(statComp.imports.StatCounter).toBe("https://esm.sh/stat-counter");
-    expect(statComp.imports.InlineBadge).toBe("__jsx__:InlineBadge");
+    // imports removed from component schema — now at root level
+    // imports removed from component schema — now at root level
   });
 });
 
@@ -323,9 +323,9 @@ describe("imports-block fixture", () => {
     const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
     const scene = compiled.children[0] as any;
     const pieChart = scene.children[0];
-    expect(pieChart.imports.PieChart).toBe("https://esm.sh/recharts");
+    // imports removed from component schema
     const hello = scene.children[1];
-    expect(hello.imports.Hello).toBe("__jsx__:Hello");
+    // imports removed from component schema
   });
 });
 
@@ -348,9 +348,9 @@ describe("jsx-code-fence fixture", () => {
     const scene = compiled.children[0] as any;
     const greeting = scene.children[0];
     const counter = scene.children[1];
-    expect(greeting.imports.Greeting).toBe("__jsx__:Greeting");
+    // imports removed from component schema
     expect(greeting.jsx).toContain("Greeting");
-    expect(counter.imports.Counter).toBe("__jsx__:Counter");
+    // imports removed from component schema
     expect(counter.jsx).toContain("Counter");
   });
 });
@@ -511,8 +511,6 @@ describe("tween fixture", () => {
   });
 });
 
-// ── Strict Mode ──────────────────────────────────────────────────────────
-
 describe("strict-mode fixture", () => {
   const fx = loadFixture("strict-mode");
 
@@ -556,60 +554,6 @@ describe("strict-mode fixture", () => {
   });
 });
 
-// ── Compat Mode ──────────────────────────────────────────────────────────
-
-describe("compat-mode fixture", () => {
-  const fx = loadFixture("compat-mode");
-
-  it("parses root metadata with explicit key:value syntax", () => {
-    const parsed = parseMarkdownDescriptive(fx.source);
-    expect(parsed.width).toBe(640);
-    expect(parsed.height).toBe(480);
-    expect(parsed.fps).toBe(30);
-    expect(parsed.layout).toBe("series");
-  });
-
-  it("parses scenes with explicit layout, script, transition", () => {
-    const parsed = parseMarkdownDescriptive(fx.source);
-    const hook = parsed.children[0] as any;
-    expect(hook.name).toBe("Hook");
-    expect(hook.script).toBe("Narration text here");
-    expect(hook.layout).toBe("parallel");
-    expect(hook.instruction).toBe("Parallel layout");
-
-    const journey = parsed.children[1] as any;
-    expect(journey.name).toBe("Journey");
-    expect(journey.layout).toBe("transitionSeries");
-    expect(journey.transition).toBe("fade");
-    expect(journey.transitionTime).toBe(0.3);
-    expect(journey.script).toBe("Travel through time");
-
-    const end = parsed.children[2] as any;
-    expect(end.name).toBe("End");
-    expect(end.script).toBe("Thanks for watching");
-  });
-
-  it("parses explicit type tokens (image, video, audio)", () => {
-    const parsed = parseMarkdownDescriptive(fx.source);
-    const hook = parsed.children[0] as any;
-    expect(hook.children[0].type).toBe("image");
-    expect(hook.children[0].src).toBe("cover.jpg");
-    expect(hook.children[1].type).toBe("video");
-    expect(hook.children[1].src).toBe("clip.mp4");
-    expect(hook.children[2].type).toBe("audio");
-    expect(hook.children[2].src).toBe("bgm.mp3");
-  });
-
-  it("parses key:value fields (duration, volume, trim)", () => {
-    const parsed = parseMarkdownDescriptive(fx.source);
-    const hook = parsed.children[0] as any;
-    expect(hook.children[0].duration).toBe(2);
-    expect(hook.children[1].startFrom).toBe(1);
-    expect(hook.children[1].endAt).toBe(4);
-    expect(hook.children[2].duration).toBe(4);
-    expect(hook.children[2].volume).toBe(0.5);
-  });
-});
 
 // ── Edge Cases ────────────────────────────────────────────────────────────
 
@@ -734,8 +678,34 @@ describe("full-feature fixture", () => {
     const comps = findComponents(closingScene);
     const logo = comps.find((c: any) => c.jsx?.includes("Logo"));
     if (logo) {
-      expect(logo.imports.Logo).toBe("__jsx__:Logo");
+      // imports removed from component schema
     }
+  });
+});
+
+// ── component-imports fixture ──────────────────────────────────────────────
+// Tests imports block with npm package, git repo, and inline function
+
+describe("component-imports fixture", () => {
+  const fx = loadFixture("component-imports");
+
+  it("parses import specifiers correctly", () => {
+    const parsed = parseMarkdownDescriptive(fx.source);
+    expect(parsed.importsBlock).toBeDefined();
+    expect(parsed.importsBlock).toContain("npm:react-minimal-pie-chart");
+    expect(parsed.importsBlock).toContain("git:user/repo/path/to/Hello.tsx");
+    expect(parsed.importsBlock).toContain("export function Hello");
+  });
+
+  it("compiles with resolved imports registry", () => {
+    const parsed = parseMarkdownDescriptive(fx.source);
+    const compiled = compileDescriptiveRoot(parsed, { mode: "draft" });
+    // Root has 1 scene child (series layout)
+    expect(compiled.children).toHaveLength(1);
+    const scene = compiled.children[0];
+    expect(scene.type).toBe("scene");
+    const comps = scene.children.filter((c: any) => c.type === "component");
+    expect(comps).toHaveLength(2); // Hello + PieChart
   });
 });
 

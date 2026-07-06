@@ -89,14 +89,9 @@ function Badge(props) {
 module.exports = { default: Badge };
 ```
 
-Supports both ES module (blob URL + dynamic `import()`) and CJS fallback (`new Function` eval).
-
 ### Preloading
 
-```tsx
-import { preloadComponents } from "./types/DynamicLoader";
-await preloadComponents(["https://cdn.example.com/components/badge.js"]);
-```
+No need to preload — components are bundled into a single ESM module by the player server at compile time. The engine loads the bundle automatically when the composition mounts. All imported components arrive in one `import()` call from `root.imports`.
 
 ## 3. Custom Components
 

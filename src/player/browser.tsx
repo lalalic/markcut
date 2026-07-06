@@ -8,6 +8,57 @@ import { createRoot } from "react-dom/client";
 import { Player } from "@remotion/player";
 import { RemotionEngine, getDurationInSeconds } from "../entry";
 
+// Expose React globally + import map shim for component bundles.
+// Component modules import from "react" (they're built with --external:react),
+// so we redirect those imports to the same React instance the player uses.
+// Must run before any component bundle is loaded (which happens in entry.tsx).
+if (typeof window !== "undefined") {
+  (globalThis as any).React = React;
+  
+  // Create import map shim if not already present
+  if (!document.querySelector('#rmtr-react-shim')) {
+    try {
+      const R = globalThis.React;
+      const blobReact = new Blob([`
+        const R = globalThis.React;
+        export const { useState, useEffect, useRef, useMemo, useCallback, useContext, useReducer, useLayoutEffect, useImperativeHandle, useDebugValue, useId, useSyncExternalStore, useTransition, useDeferredValue, createElement, Fragment, Suspense, forwardRef, Children, isValidElement, cloneElement, createContext, PureComponent, Component, lazy, memo } = R;
+        export default R;
+      `], { type: "application/javascript" });
+      const urlReact = URL.createObjectURL(blobReact);
+      
+      // react/jsx-runtime shim — some bundler outputs use the automatic JSX runtime
+      const blobJsx = new Blob([`
+        const R = globalThis.React;
+        const { createElement, Fragment } = R;
+        export { Fragment };
+        export function jsx(type, props, key) {
+          return createElement(type, key != null ? { ...props, key } : props);
+        }
+        export function jsxs(type, props, key) {
+          return createElement(type, key != null ? { ...props, key } : props);
+        }
+        export function jsxDEV(type, props, key, isStaticChildren, source, self) {
+          return createElement(type, key != null ? { ...props, key } : props);
+        }
+      `], { type: "application/javascript" });
+      const urlJsx = URL.createObjectURL(blobJsx);
+
+      const script = document.createElement("script");
+      script.type = "importmap";
+      script.id = "rmtr-react-shim";
+      script.textContent = JSON.stringify({
+        imports: {
+          react: urlReact,
+          "react/jsx-runtime": urlJsx,
+        }
+      });
+      document.head.appendChild(script);
+    } catch (e) {
+      console.warn("Failed to create React import map:", e);
+    }
+  }
+}
+
 function PlayerApp() {
   const playerRef = useRef<any>(null);
   const [ready, setReady] = React.useState(false);

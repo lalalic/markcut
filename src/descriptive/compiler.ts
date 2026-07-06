@@ -356,14 +356,16 @@ function compileLeaf(node: Exclude<DescriptiveNode, DescriptiveContainer | Descr
       return { stream, duration: end };
     }
     case "component": {
-      const registry = (node as any)._resolvedRegistry as Map<string, ResolvedImport> | undefined;
-
-      // Build the imports map for runtime (name → resolved URL)
-      const importsMap: Record<string, string> = {};
-      if (registry) {
-        for (const [name, def] of registry) {
-          if (def.src) importsMap[name] = def.src;
-          else if (def.definitionJsx) importsMap[name] = `__jsx__:${name}`;
+      // Collect extra properties from descriptive node (e.g. `source` from ~~~md source fences)
+      const KNOWN_COMPONENT_KEYS = new Set([
+        "type", "jsx", "id", "instruction", "script", "style", "visible",
+        "isBackground", "duration", "start", "_resolvedRegistry",
+      ]);
+      const bindings: Record<string, string> = {};
+      for (const key of Object.keys(node)) {
+        if (!KNOWN_COMPONENT_KEYS.has(key)) {
+          const val = (node as any)[key];
+          if (typeof val === "string") bindings[key] = val;
         }
       }
 
@@ -371,7 +373,7 @@ function compileLeaf(node: Exclude<DescriptiveNode, DescriptiveContainer | Descr
         ...base,
         type: "component",
         jsx: node.jsx,
-        imports: Object.keys(importsMap).length ? importsMap : undefined,
+        bindings: Object.keys(bindings).length ? bindings : undefined,
         actions: [action],
       };
       return { stream, duration: end };
@@ -775,8 +777,9 @@ export function parseImportsBlock(source: string): ImportEntry[] {
       for (const part of namesStr.split(",")) {
         const trimmed = part.trim();
         const asMatch = /^(.+?)\s+as\s+(.+)$/i.exec(trimmed);
+        const exportName = asMatch ? asMatch[1]!.trim() : trimmed;
         const name = asMatch ? asMatch[2]!.trim() : trimmed;
-        entries.push({ name, from: fromSpec });
+        entries.push({ name, from: fromSpec, exports: exportName });
       }
       i++;
       continue;
@@ -785,7 +788,7 @@ export function parseImportsBlock(source: string): ImportEntry[] {
     // import DefaultName from "spec"
     const defaultImport = /^import\s+(\w+)\s+from\s+["'`](.+?)["'`]\s*;?\s*$/.exec(line);
     if (defaultImport) {
-      entries.push({ name: defaultImport[1]!, from: defaultImport[2]! });
+      entries.push({ name: defaultImport[1]!, from: defaultImport[2]!, exports: "default" });
       i++;
       continue;
     }
@@ -798,8 +801,9 @@ export function parseImportsBlock(source: string): ImportEntry[] {
       for (const part of namesStr.split(",")) {
         const trimmed = part.trim();
         const asMatch = /^(.+?)\s+as\s+(.+)$/i.exec(trimmed);
+        const exportName = asMatch ? asMatch[1]!.trim() : trimmed;
         const name = asMatch ? asMatch[2]!.trim() : trimmed;
-        entries.push({ name, from: fromSpec });
+        entries.push({ name, from: fromSpec, exports: exportName });
       }
       i++;
       continue;
@@ -840,7 +844,8 @@ export function resolveComponentImportSpec(spec: string): string {
   if (pkg.startsWith("npm:")) base = `https://esm.sh/${pkg.slice(4)}`;
   else if (pkg.startsWith("git:")) base = `https://esm.sh/gh/${pkg.slice(4)}`;
   else if (pkg.startsWith("github:")) base = `https://esm.sh/gh/${pkg.slice(7)}`;
-  else base = pkg;
+  else if (/^\.\.?\/|^\/|^https?:\/\//.test(pkg)) base = pkg;
+  else base = `https://esm.sh/${pkg}`;
 
   return subpath ? `${base}/${subpath}` : base;
 }

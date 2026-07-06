@@ -15,8 +15,12 @@
           "id": "demo-tween",
           "type": "component",
           "jsx": "<div style={{width:'100%',height:'100%',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',background:'#1a1a2e',overflow:'hidden'}}><div style={{padding:'40px 60px',borderRadius:'20px',background:'linear-gradient(135deg,#667eea,#764ba2)',boxShadow:'0 8px 32px rgba(102,126,234,0.4)',opacity:tween(0,1),transform:'scale('+tween(0.3,1.2)+') rotate('+tween(-10,5)+'deg)'}}><span style={{color:'white',fontSize:tween(24,72)+'px',fontWeight:'bold',fontFamily:'sans-serif'}}>Hello Tween!</span></div><div style={{marginTop:'30px',opacity:tween(0,1),color:'rgba(255,255,255,0.6)',fontSize:'16px',fontFamily:'monospace'}}>frame: {useCurrentFrame()} / {useVideoConfig().durationInFrames}</div></div>",
-          "imports": {},
-          "actions": [{ "start": 0, "end": 4 }]
+          "actions": [
+            {
+              "start": 0,
+              "end": 4
+            }
+          ]
         }
       ]
     }

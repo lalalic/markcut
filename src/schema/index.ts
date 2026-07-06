@@ -110,6 +110,7 @@ export const component = base.extend({
   type: z.literal("component").default("component"),
   jsx: z.string().describe("usage JSX expression compiled at runtime; tag names resolved from imports"),
   imports: z.record(z.string(), z.string()).optional().describe("resolved frontmatter imports: name → URL. Values prefixed `__jsx__:` are inline definitions."),
+  data: z.record(z.string(), z.string()).optional().describe("extra variables (e.g. from ~~~md source code fences) available in JSX scope"),
   actions: z.array(action).min(1).default(() => [action.parse({})]),
 });
 export type Component = z.infer<typeof component>;

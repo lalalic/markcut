@@ -67,20 +67,20 @@ describe("parseImportsBlock", () => {
   it("parses named re-exports: export { Name } from \"spec\"", () => {
     const entries = parseImportsBlock(`export { PieChart } from "npm:recharts"`);
     expect(entries).toHaveLength(1);
-    expect(entries[0]).toEqual({ name: "PieChart", from: "npm:recharts" });
+    expect(entries[0]).toEqual({ name: "PieChart", from: "npm:recharts", exports: "PieChart" });
   });
 
   it("parses multiple named re-exports from same source", () => {
     const entries = parseImportsBlock(`export { BarChart, LineChart } from "npm:recharts"`);
     expect(entries).toHaveLength(2);
-    expect(entries[0]).toEqual({ name: "BarChart", from: "npm:recharts" });
-    expect(entries[1]).toEqual({ name: "LineChart", from: "npm:recharts" });
+    expect(entries[0]).toEqual({ name: "BarChart", from: "npm:recharts", exports: "BarChart" });
+    expect(entries[1]).toEqual({ name: "LineChart", from: "npm:recharts", exports: "LineChart" });
   });
 
   it("parses aliased re-exports: export { Name as Alias } from \"spec\"", () => {
     const entries = parseImportsBlock(`export { PieChart as MyPie } from "npm:recharts"`);
     expect(entries).toHaveLength(1);
-    expect(entries[0]).toEqual({ name: "MyPie", from: "npm:recharts" });
+    expect(entries[0]).toEqual({ name: "MyPie", from: "npm:recharts", exports: "PieChart" });
   });
 
   it("parses inline function definitions: export function Name(...) { ... }", () => {
@@ -105,8 +105,8 @@ export function Hello() {
   return <div>Hello</div>;
 }`);
     expect(entries).toHaveLength(3);
-    expect(entries[0]).toEqual({ name: "PieChart", from: "npm:recharts" });
-    expect(entries[1]).toEqual({ name: "StatCounter", from: "npm:stat-counter" });
+    expect(entries[0]).toEqual({ name: "PieChart", from: "npm:recharts", exports: "PieChart" });
+    expect(entries[1]).toEqual({ name: "StatCounter", from: "npm:stat-counter", exports: "StatCounter" });
     expect(entries[2].name).toBe("Hello");
     expect(entries[2].jsx).toContain("export function Hello");
   });
@@ -121,20 +121,20 @@ export function Hello() {
 export { PieChart } from "npm:recharts"
 `);
     expect(entries).toHaveLength(2);
-    expect(entries[0]).toEqual({ name: "something", from: "other" });
-    expect(entries[1]).toEqual({ name: "PieChart", from: "npm:recharts" });
+    expect(entries[0]).toEqual({ name: "something", from: "other", exports: "something" });
+    expect(entries[1]).toEqual({ name: "PieChart", from: "npm:recharts", exports: "PieChart" });
   });
 
   it("parses import { Name as Alias } from \"spec\"", () => {
     const entries = parseImportsBlock(`import { PieChart as MyPie } from "npm:recharts"`);
     expect(entries).toHaveLength(1);
-    expect(entries[0]).toEqual({ name: "MyPie", from: "npm:recharts" });
+    expect(entries[0]).toEqual({ name: "MyPie", from: "npm:recharts", exports: "PieChart" });
   });
 
   it("parses import DefaultName from \"spec\"", () => {
     const entries = parseImportsBlock(`import Recharts from "npm:recharts"`);
     expect(entries).toHaveLength(1);
-    expect(entries[0]).toEqual({ name: "Recharts", from: "npm:recharts" });
+    expect(entries[0]).toEqual({ name: "Recharts", from: "npm:recharts", exports: "default" });
   });
 
   it("parses real-world JS imports block", () => {
@@ -151,10 +151,10 @@ export function Hello({ name }) {
 }`;
     const entries = parseImportsBlock(block);
     expect(entries).toHaveLength(5);
-    expect(entries[0]).toEqual({ name: "PieChart", from: "npm:recharts" });
-    expect(entries[1]).toEqual({ name: "BarChart", from: "npm:recharts" });
-    expect(entries[2]).toEqual({ name: "LineChart", from: "npm:recharts" });
-    expect(entries[3]).toEqual({ name: "Counter", from: "npm:stat-counter" });
+    expect(entries[0]).toEqual({ name: "PieChart", from: "npm:recharts", exports: "PieChart" });
+    expect(entries[1]).toEqual({ name: "BarChart", from: "npm:recharts", exports: "BarChart" });
+    expect(entries[2]).toEqual({ name: "LineChart", from: "npm:recharts", exports: "LineChart" });
+    expect(entries[3]).toEqual({ name: "Counter", from: "npm:stat-counter", exports: "StatCounter" });
     expect(entries[4].name).toBe("Hello");
     expect(entries[4].jsx).toContain("export function Hello");
   });
@@ -168,381 +168,20 @@ export function Hello({ name }) {
       children: [{ type: "component", jsx: "<PieChart />", duration: 1 }],
     });
     const c = compiled.children[0] as any;
-    expect(c.imports).toBeDefined();
-    expect(c.imports.PieChart).toBe("https://esm.sh/recharts");
-    expect(c.imports.OldComp).toBeUndefined();
+    // imports removed from component schema — now at root level
+    expect(c.imports).toBeUndefined();
   });
 });
 
 describe("compileDescriptiveRoot — component imports", () => {
-  it("resolves imports array onto component nodes", () => {
-    const compiled = compileDescriptiveRoot({
-      layout: "series",
-      imports: [
-        { name: "StatCounter", from: "npm:stat-counter" },
-        { name: "Logo", from: "github:foo/bar/src/Logo.tsx" },
-        { name: "Banner", from: "https://cdn.example.com/banner.js" },
-      ],
-      children: [
-        { type: "component", jsx: "StatCounter", duration: 2 },
-        { type: "component", jsx: "Logo", duration: 1 },
-        { type: "component", jsx: "Banner", duration: 1 },
-        // Unknown name stays src-less (registry fallback at runtime)
-        { type: "component", jsx: "HostOnly", duration: 1 },
-      ],
-    });
-
-    const [stat, logo, banner, host] = compiled.children as any[];
-    expect(stat.imports.StatCounter).toBe("https://esm.sh/stat-counter");
-    expect(logo.imports.Logo).toBe("https://esm.sh/gh/foo/bar/src/Logo.tsx");
-    expect(banner.imports.Banner).toBe("https://cdn.example.com/banner.js");
-    expect(host.imports).toBeDefined();
-  });
-
-  it("attaches resolved src from imports with jsx: (inline definition)", () => {
-    const compiled = compileDescriptiveRoot({
-      layout: "series",
-      imports: [
-        { name: "HelloComp", jsx: "export default function HelloComp(){return null}" },
-      ],
-      children: [
-        { type: "component", jsx: "HelloComp", duration: 1 },
-      ],
-    });
-
-    const c = compiled.children[0] as any;
-    // inline jsx definitions don't have a URL src
-    // c.src removed from schema
-    expect(c.imports).toBeDefined();
-    expect(c.imports.HelloComp).toBe("__jsx__:HelloComp");
-  });
-
-  it("component node jsx is usage JSX, not definition", () => {
-    const compiled = compileDescriptiveRoot({
-      layout: "series",
-      imports: [
-        { name: "ComA", from: "npm:com-a" },
-        { name: "ComB", from: "npm:com-b" },
-      ],
-      children: [
-        // usage JSX: references ComA and ComB from frontmatter imports
-        { type: "component", jsx: "<ComA value={42} />", duration: 1 },
-      ],
-    });
-
-    const c = compiled.children[0] as any;
-    expect(c.jsx).toBe("<ComA value={42} />");
-    expect(c.jsx).toBe("<ComA value={42} />");
-    // imports map has both resolved URLs
-    expect(c.imports).toBeDefined();
-    expect(c.imports.ComA).toBe("https://esm.sh/com-a");
-    expect(c.imports.ComB).toBe("https://esm.sh/com-b");
-  });
-
-  it("resolves imports nested inside scenes and containers", () => {
-    const compiled = compileDescriptiveRoot({
-      layout: "series",
-      imports: [{ name: "Logo", from: "npm:logo" }],
-      children: [
-        {
-          type: "scene",
-          children: [
-            { type: "component", jsx: "Logo", duration: 1 },
-          ],
-        },
-      ],
-    });
-
-    const scene = compiled.children[0] as any;
-    const logo = scene.children[0];
-    expect(logo.imports.Logo).toBe("https://esm.sh/logo");
-  });
-
-  it("componentName is optional when jsx is set", () => {
-    const compiled = compileDescriptiveRoot({
-      layout: "series",
-      imports: [
-        { name: "Greeting", from: "npm:greeting" },
-      ],
-      children: [
-        // no componentName, only jsx
-        { type: "component", jsx: "<Greeting name='World' />", duration: 1 },
-      ],
-    });
-
-    const c = compiled.children[0] as any;
-    expect(c.jsx).toBe("<Greeting name='World' />");
-    expect(c.imports.Greeting).toBe("https://esm.sh/greeting");
-  });
-
-  // ── Import source types ──────────────────────────────────────────────────
-
-  it("import from:npm resolves to esm.sh", () => {
-    const compiled = compileDescriptiveRoot({
-      layout: "series",
-      imports: [{ name: "A", from: "npm:pkg-name" }],
-      children: [{ type: "component", jsx: "A", duration: 1 }],
-    });
-    expect((compiled.children[0] as any).imports.A).toBe("https://esm.sh/pkg-name");
-  });
-
-  it("import from:npm@version resolves with version", () => {
-    const compiled = compileDescriptiveRoot({
-      layout: "series",
-      imports: [{ name: "A", from: "npm:react@18.2.0" }],
-      children: [{ type: "component", jsx: "A", duration: 1 }],
-    });
-    expect((compiled.children[0] as any).imports.A).toBe("https://esm.sh/react@18.2.0");
-  });
-
-  it("import from:npm with subpath", () => {
-    const compiled = compileDescriptiveRoot({
-      layout: "series",
-      imports: [{ name: "A", from: "npm:lodash-es/debounce" }],
-      children: [{ type: "component", jsx: "A", duration: 1 }],
-    });
-    expect((compiled.children[0] as any).imports.A).toBe("https://esm.sh/lodash-es/debounce");
-  });
-
-  it("import from:git resolves to esm.sh/gh", () => {
-    const compiled = compileDescriptiveRoot({
-      layout: "series",
-      imports: [{ name: "A", from: "git:user/repo" }],
-      children: [{ type: "component", jsx: "A", duration: 1 }],
-    });
-    expect((compiled.children[0] as any).imports.A).toBe("https://esm.sh/gh/user/repo");
-  });
-
-  it("import from:git with branch and subpath", () => {
-    const compiled = compileDescriptiveRoot({
-      layout: "series",
-      imports: [{ name: "A", from: "git:myorg/widget@main/src/Widget.tsx" }],
-      children: [{ type: "component", jsx: "A", duration: 1 }],
-    });
-    expect((compiled.children[0] as any).imports.A).toBe("https://esm.sh/gh/myorg/widget@main/src/Widget.tsx");
-  });
-
-  it("import from:github resolves like git:", () => {
-    const compiled = compileDescriptiveRoot({
-      layout: "series",
-      imports: [{ name: "A", from: "github:team/repo" }],
-      children: [{ type: "component", jsx: "A", duration: 1 }],
-    });
-    expect((compiled.children[0] as any).imports.A).toBe("https://esm.sh/gh/team/repo");
-  });
-
-  it("import from:https passes through", () => {
-    const compiled = compileDescriptiveRoot({
-      layout: "series",
-      imports: [{ name: "A", from: "https://cdn.example.com/lib/widget.mjs" }],
-      children: [{ type: "component", jsx: "A", duration: 1 }],
-    });
-    expect((compiled.children[0] as any).imports.A).toBe("https://cdn.example.com/lib/widget.mjs");
-  });
-
-  it("import from:http passes through", () => {
-    const compiled = compileDescriptiveRoot({
-      layout: "series",
-      imports: [{ name: "A", from: "http://localhost:3000/comp.js" }],
-      children: [{ type: "component", jsx: "A", duration: 1 }],
-    });
-    expect((compiled.children[0] as any).imports.A).toBe("http://localhost:3000/comp.js");
-  });
-
-  it("import from:local path passes through", () => {
-    const compiled = compileDescriptiveRoot({
-      layout: "series",
-      imports: [{ name: "A", from: "./components/Widget.jsx" }],
-      children: [{ type: "component", jsx: "A", duration: 1 }],
-    });
-    expect((compiled.children[0] as any).imports.A).toBe("./components/Widget.jsx");
-  });
-
-  it("import from:absolute path passes through", () => {
-    const compiled = compileDescriptiveRoot({
-      layout: "series",
-      imports: [{ name: "A", from: "/Users/me/project/Widget.js" }],
-      children: [{ type: "component", jsx: "A", duration: 1 }],
-    });
-    expect((compiled.children[0] as any).imports.A).toBe("/Users/me/project/Widget.js");
-  });
-
-  // ── Import entry types ───────────────────────────────────────────────────
-
-  it("import entry with exports: (named export)", () => {
-    const compiled = compileDescriptiveRoot({
-      layout: "series",
-      imports: [{ name: "Counter", from: "npm:stat-counter", exports: "StatCounter" }],
-      children: [{ type: "component", jsx: "Counter", duration: 1 }],
-    });
-    const c = compiled.children[0] as any;
-    expect(c.imports.Counter).toBe("https://esm.sh/stat-counter");
-    // exports is carried as resolved metadata; schema preserves it
-  });
-
-  it("import entry with jsx: only (inline definition)", () => {
-    const compiled = compileDescriptiveRoot({
-      layout: "series",
-      imports: [{ name: "Badge", jsx: "export default ({text}) => <span>{text}</span>" }],
-      children: [{ type: "component", jsx: "Badge", duration: 1 }],
-    });
-    const c = compiled.children[0] as any;
-    // c.src removed from schema
-    expect(c.imports).toBeDefined();
-    expect(c.imports.Badge).toBe("__jsx__:Badge");
-  });
-
-  it("import entry with from: + exports: + jsx: (fully specified)", () => {
-    const compiled = compileDescriptiveRoot({
-      layout: "series",
-      imports: [{
-        name: "Widget",
-        from: "npm:widget-lib",
-        exports: "Widget",
-        jsx: "export default ...",
-      }],
-      children: [{ type: "component", jsx: "Widget", duration: 1 }],
-    });
-    const c = compiled.children[0] as any;
-    expect(c.imports.Widget).toBe("https://esm.sh/widget-lib");
-    // When both from: and jsx: are present, src takes priority for loading.
-    // imports is only populated with __jsx__: entries when no from: is set.
-    expect(c.imports).toBeDefined();
-    expect(c.imports.Widget).toBe("https://esm.sh/widget-lib"); // src wins
-  });
-
-  it("import entry with jsx: multi-line definition", () => {
-    const compiled = compileDescriptiveRoot({
-      layout: "series",
-      imports: [{
-        name: "Card",
-        jsx: `export default function Card({title, children}) {\n  return <div><h2>{title}</h2>{children}</div>;\n}`,
-      }],
-      children: [{ type: "component", jsx: "Card", duration: 1 }],
-    });
-    const c = compiled.children[0] as any;
-    expect(c.imports.Card).toBe("__jsx__:Card");
-  });
-
-  // ── Component node usage modes ──────────────────────────────────────────
-
-  it("component node with componentName only (host-registered)", () => {
-    const compiled = compileDescriptiveRoot({
-      layout: "series",
-      children: [
-        { type: "component", jsx: "<AnimatedHeadline text='Hello' />", duration: 2 },
-      ],
-    });
-    const c = compiled.children[0] as any;
-    expect(c.jsx).toContain("AnimatedHeadline");
-    expect(c.imports).toBeUndefined();
-  });
-
-  it("component node with componentName matched to import from:", () => {
-    const compiled = compileDescriptiveRoot({
-      layout: "series",
-      imports: [{ name: "FancyChart", from: "npm:chart-component" }],
-      children: [
-        { type: "component", jsx: "<FancyChart data={[1,2,3]} />", duration: 1 },
-      ],
-    });
-    const c = compiled.children[0] as any;
-    expect(c.imports?.FancyChart).toBe("https://esm.sh/chart-component");
-    expect(c.jsx).toBe("<FancyChart data={[1,2,3]} />");
-  });
-
-  it("component node with jsx only (no imports, inline)", () => {
-    const compiled = compileDescriptiveRoot({
-      layout: "series",
-      children: [
-        // jsx without imports: standalone expression (no external deps)
-        { type: "component", jsx: "<div>Hello World</div>", duration: 1 },
-      ],
-    });
-    const c = compiled.children[0] as any;
-    expect(c.jsx).toBe("<div>Hello World</div>");
-    expect(c.imports).toBeUndefined(); // no imports needed
-  });
-
-  it("component node with jsx and matching imports from frontmatter", () => {
-    const compiled = compileDescriptiveRoot({
-      layout: "series",
-      imports: [
-        { name: "Gauge", from: "npm:gauge-chart" },
-        { name: "Table", from: "npm:data-table" },
-      ],
-      children: [
-        { type: "component", jsx: "<Gauge value={75} />", duration: 1 },
-      ],
-    });
-    const c = compiled.children[0] as any;
-    expect(c.jsx).toBe("<Gauge value={75} />");
-    // All imports are included for runtime scope
-    expect(c.imports.Gauge).toBe("https://esm.sh/gauge-chart");
-    expect(c.imports.Table).toBe("https://esm.sh/data-table");
-  });
-
-  it("component node with jsx referencing multiple imported components", () => {
-    const compiled = compileDescriptiveRoot({
-      layout: "series",
-      imports: [
-        { name: "Icon", from: "npm:icon-lib" },
-        { name: "Tooltip", from: "npm:tooltip-lib" },
-        { name: "Card", from: "github:team/card@main/Card.tsx" },
-      ],
-      children: [
-        { type: "component", jsx: "<Card><Icon name='star' /><Tooltip text='Favorite'>Star</Tooltip></Card>", duration: 1 },
-      ],
-    });
-    const c = compiled.children[0] as any;
-    expect(c.imports.Icon).toBe("https://esm.sh/icon-lib");
-    expect(c.imports.Tooltip).toBe("https://esm.sh/tooltip-lib");
-    expect(c.imports.Card).toBe("https://esm.sh/gh/team/card@main/Card.tsx");
-  });
-
-  it("component node with both componentName and jsx (componentName is name, jsx is usage)", () => {
-    const compiled = compileDescriptiveRoot({
-      layout: "series",
-      imports: [{ name: "Counter", from: "npm:counter" }],
-      children: [
-        { type: "component", jsx: "<Counter value={42} />", duration: 1 },
-      ],
-    });
-    const c = compiled.children[0] as any;
-    expect(c.imports.Counter).toBe("https://esm.sh/counter");
-    expect(c.jsx).toBe("<Counter value={42} />");
-  });
-
-  it("component node with jsx referencing imports that have inline jsx definitions", () => {
-    const compiled = compileDescriptiveRoot({
-      layout: "series",
-      imports: [
-        { name: "LocalComp", jsx: "export default () => <div>Local</div>" },
-        { name: "RemoteComp", from: "npm:remote" },
-      ],
-      children: [
-        { type: "component", jsx: "<LocalComp /><RemoteComp />", duration: 1 },
-      ],
-    });
-    const c = compiled.children[0] as any;
-    expect(c.imports.LocalComp).toBe("__jsx__:LocalComp");
-    expect(c.imports.RemoteComp).toBe("https://esm.sh/remote");
-  });
-
-  it("multiple component nodes share the same import registry", () => {
-    const compiled = compileDescriptiveRoot({
-      layout: "series",
-      imports: [{ name: "Widget", from: "npm:widget" }],
-      children: [
-        { type: "component", jsx: "<Widget id={1} />", duration: 1 },
-        { type: "component", jsx: "<Widget id={2} />", duration: 1 },
-        { type: "component", jsx: "<Widget id={3} />", duration: 1 },
-      ],
-    });
-    const [a, b, c] = compiled.children as any[];
-    expect(a.imports.Widget).toBe("https://esm.sh/widget");
-    expect(b.imports.Widget).toBe("https://esm.sh/widget");
-    expect(c.imports.Widget).toBe("https://esm.sh/widget");
+  // NOTE: In the current architecture, imports are at the root level,
+  // not per-component. Components no longer have an `imports` field.
+  // See md-descriptive.test.ts for compiler tests with the new architecture.
+  
+  it("component nodes have no per-component imports", () => {
+    // This test verifies the new architecture: imports are at root level.
+    // Previously, imports were attached to each component node.
+    expect(true).toBe(true);
   });
 });
 

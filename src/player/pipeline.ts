@@ -14,7 +14,7 @@
  * Build:
  *   bash scripts/build-pipeline.sh
  */
-import { compileDescriptiveRoot } from "../descriptive/compiler";
+import { compileDescriptiveRoot, parseImportsBlock } from "../descriptive/compiler";
 import { resolveAll } from "../descriptive/resolve";
 import { parseMarkdownDescriptive } from "../descriptive/markdown";
 import type { DescriptiveRoot } from "../descriptive/compiler";
@@ -121,5 +121,5 @@ export async function resolveAndCompileMarkdown(
   return resolveAndCompile(descriptive, options);
 }
 
-export { compileDescriptiveRoot, resolveAll, parseMarkdownDescriptive };
+export { compileDescriptiveRoot, resolveAll, parseMarkdownDescriptive, parseImportsBlock };
 export type { DescriptiveRoot, Root };

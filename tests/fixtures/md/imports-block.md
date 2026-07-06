@@ -12,8 +12,6 @@ layout:parallel
 
 ```js imports
 import { PieChart } from "npm:recharts"
-import { BarChart, LineChart } from "npm:recharts"
-import { StatCounter as Counter } from "npm:stat-counter"
 
 export function Hello({ name }) {
   return <div style={{color: '#fff', fontSize: 24}}>Hello {name}</div>

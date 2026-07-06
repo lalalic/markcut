@@ -2,8 +2,8 @@
  * Remote component loader for the Remotion engine.
  *
  * Loads React components from URLs at render time. Handles:
- *   - `src` URL bundles (ESM via import map shim)
- *   - `jsx` usage expressions (compiled via @babel/standalone)
+ *   - `src` URL bundles (ESM via native dynamic import)
+ *   - `jsx` usage expressions (compiled via @babel/standalone loaded via <script>)
  *   - Named exports via `exports` field
  *
  * Uses an import-map shim to prevent React double-bundling: any ESM
@@ -48,6 +48,14 @@ function ensureReactShim(): void {
           useMemo,
           useCallback,
           useContext,
+          useReducer,
+          useLayoutEffect,
+          useImperativeHandle,
+          useDebugValue,
+          useId,
+          useSyncExternalStore,
+          useTransition,
+          useDeferredValue,
           createElement,
           Fragment,
           Suspense,
@@ -59,6 +67,7 @@ function ensureReactShim(): void {
           PureComponent,
           Component,
           lazy,
+          memo,
         } = R;
         export default R;
       `,
@@ -67,12 +76,37 @@ function ensureReactShim(): void {
     );
     const urlReact = URL.createObjectURL(blobReact);
 
+    // Also shim react/jsx-runtime — some esm.sh bundles use the automatic JSX runtime.
+    // Uses globalThis.React directly instead of importing from "react" to avoid
+    // circular dependency with the import map.
+    const blobJsxRuntime = new Blob(
+      [
+        `
+        const R = globalThis.React;
+        const { createElement, Fragment } = R;
+        export { Fragment };
+        export function jsx(type, props, key) {
+          return createElement(type, key != null ? { ...props, key } : props);
+        }
+        export function jsxs(type, props, key) {
+          return createElement(type, key != null ? { ...props, key } : props);
+        }
+        export function jsxDEV(type, props, key, isStaticChildren, source, self) {
+          return createElement(type, key != null ? { ...props, key } : props);
+        }
+      `,
+      ],
+      { type: "application/javascript" },
+    );
+    const urlJsxRuntime = URL.createObjectURL(blobJsxRuntime);
+
     const script = document.createElement("script");
     script.type = "importmap";
     script.id = "rmtr-react-shim";
     script.textContent = JSON.stringify({
       imports: {
         react: urlReact,
+        "react/jsx-runtime": urlJsxRuntime,
       },
     });
     document.head.appendChild(script);
@@ -105,7 +139,9 @@ function externalizeReact(url: string): string {
 }
 
 // ── Dynamic import ────────────────────────────────────────────────────────
-// Use `/* webpackIgnore: true */` so webpack leaves the import as-is.
+// Native dynamic import() handles esm.sh URLs correctly (sub-imports resolve).
+// Blob URLs with relative imports are NOT supported (but we don't need them —
+// the Babel-compiled Wrapper has no sub-imports after compilation).
 const dynamicImport = typeof window !== "undefined"
   ? (url: string) => import(/* webpackIgnore: true */ url)
   : null;
@@ -123,53 +159,22 @@ async function loadComponent(url: string, exportName?: string): Promise<React.Co
       ensureReactShim();
       const loadUrl = externalizeReact(url);
 
-      // Import directly from CDN (not via blob URL) so sub-imports resolve.
-      // `/* webpackIgnore: true */` prevents webpack from trying to bundle it.
       if (!dynamicImport) {
         throw new Error("Dynamic import not available in this environment");
       }
 
-      try {
-        const mod = await dynamicImport(loadUrl);
-        let Comp: any;
-        if (exportName) {
-          Comp = mod[exportName];
-        } else {
-          Comp = mod.default ?? mod;
-        }
-        if (typeof Comp === "function") {
-          cache.set(cacheKey, Comp);
-          return Comp;
-        }
-      } catch {
-        // Direct import failed — try fallback via fetch + blob URL
+      const mod = await dynamicImport(loadUrl);
+      let Comp: any;
+      if (exportName) {
+        Comp = mod[exportName];
+      } else {
+        Comp = mod.default ?? mod;
       }
-
-      // Fallback: fetch source, eval via blob URL
-      const response = await fetch(loadUrl);
-      if (!response.ok) {
-        throw new Error(`Failed to load component from ${url}: HTTP ${response.status}`);
+      if (typeof Comp !== "function") {
+        throw new Error(`Component at ${url} did not export a function${exportName ? ` named "${exportName}"` : ""}. Got: ${typeof Comp}`);
       }
-      const source = await response.text();
-      const blob = new Blob([source], { type: "text/javascript" });
-      const blobUrl = URL.createObjectURL(blob);
-      try {
-        const mod = await dynamicImport(blobUrl);
-        let Comp: any;
-        if (exportName) {
-          Comp = mod[exportName];
-        } else {
-          Comp = mod.default ?? mod;
-        }
-        if (typeof Comp === "function") {
-          cache.set(cacheKey, Comp);
-          return Comp;
-        }
-      } finally {
-        URL.revokeObjectURL(blobUrl);
-      }
-
-      throw new Error(`Component at ${url} did not export a function`);
+      cache.set(cacheKey, Comp);
+      return Comp;
     })();
 
     inflight.set(cacheKey, promise);
@@ -240,13 +245,21 @@ interface BabelLike {
 }
 
 async function loadBabel(): Promise<BabelLike | null> {
-  if (typeof window === "undefined" || !dynamicImport) return null;
+  if (typeof window === "undefined") return null;
   if (!babelPromise) {
-    const babelUrl = externalizeReact("https://esm.sh/@babel/standalone@7.26.10");
-    ensureReactShim();
-    babelPromise = dynamicImport(babelUrl)
-      .then((m: any) => (m?.default ?? m) as BabelLike)
-      .catch(() => null);
+    babelPromise = new Promise((resolve) => {
+      // Babel standalone is loaded via <script> tag as window.Babel
+      // Poll until it's available (script may load after player.js)
+      const check = () => {
+        const Babel = (window as any).Babel;
+        if (Babel && typeof Babel.transform === "function") {
+          resolve(Babel as BabelLike);
+        } else {
+          setTimeout(check, 100);
+        }
+      };
+      check();
+    });
   }
   return babelPromise;
 }
@@ -254,13 +267,15 @@ async function loadBabel(): Promise<BabelLike | null> {
 export function useJsxWithImports(
   jsx: string | undefined,
   imports: Record<string, string> | undefined,
+  data?: Record<string, string>,
   onError?: (err: unknown, ctx: { source: string }) => void,
 ): React.ComponentType<any> | null {
   const cacheKey = React.useMemo(() => {
     if (!jsx) return null;
     const importKeys = imports ? Object.keys(imports).sort().join(",") : "";
-    return `${importKeys}\n${jsx}`;
-  }, [jsx, imports]);
+    const dataKeys = data ? Object.keys(data).sort().join(",") : "";
+    return `${importKeys}|${dataKeys}\n${jsx}`;
+  }, [jsx, imports, data]);
 
   const cached = cacheKey ? jsxCache.get(cacheKey) ?? null : null;
   const needsLoad = !!cacheKey && !cached;
@@ -276,7 +291,7 @@ export function useJsxWithImports(
     if (!cacheKey || cached) return;
     let active = true;
 
-    compileJsxWithImports(jsx!, imports ?? {})
+    compileJsxWithImports(jsx!, imports ?? {}, data ?? {})
       .then((C) => {
         if (active) setComp(() => C);
       })
@@ -285,7 +300,7 @@ export function useJsxWithImports(
       });
 
     return () => { active = false; };
-  }, [cacheKey, onError]);
+  }, [cacheKey, data, onError]);
 
   // Continue render when component loads
   React.useEffect(() => {
@@ -301,30 +316,70 @@ export function useJsxWithImports(
 async function compileJsxWithImports(
   usageJsx: string,
   imports: Record<string, string>,
+  data?: Record<string, string>,
 ): Promise<React.ComponentType<any>> {
   ensureReactShim();
 
-  const names = Object.keys(imports);
+  const names = Object.keys(imports).filter((n) => !imports[n]!.startsWith("__jsx__:"));
   const loaded = new Map<string, React.ComponentType<any>>();
+  const loadErrors: string[] = [];
 
-  await Promise.all(
-    names.map(async (name) => {
-      const url = imports[name]!;
-      if (url.startsWith("__jsx__:")) return;
-      try {
-        const mod = await dynamicImport(externalizeReact(url));
-        // Try default export, then named function exports, then first function
-        const Comp = mod.default ?? 
-          Object.values(mod).find((v: any) => typeof v === "function") ?? 
-          mod;
-        if (typeof Comp === "function") loaded.set(name, Comp);
-      } catch { /* skip */ }
-    }),
-  );
+  // ── Try the pre-bundled component module first ──────────────────────
+  const bundleUrl = (window as any).__componentsBundleUrl;
+  if (bundleUrl && names.length > 0 && dynamicImport) {
+    try {
+      const bundle = await dynamicImport(bundleUrl);
+      for (const name of names) {
+        if (typeof bundle[name] === "function") {
+          loaded.set(name, bundle[name]);
+        }
+      }
+    } catch (e) {
+      loadErrors.push(`bundle: ${(e as Error)?.message || e}`);
+    }
+  }
+
+  // ── Fallback: load remaining components individually from CDN ──────
+  const remaining = names.filter((n) => !loaded.has(n));
+  if (remaining.length > 0 && dynamicImport) {
+    await Promise.all(
+      remaining.map(async (name) => {
+        const url = imports[name]!;
+        const loadUrl = externalizeReact(url);
+        try {
+          const mod = await dynamicImport(loadUrl);
+          let Comp = mod.default ?? mod;
+          // If not a function, scan all exports for the first function
+          if (typeof Comp !== "function") {
+            const funcs = Object.values(mod).filter((v: any) => typeof v === "function");
+            if (funcs.length === 1) Comp = funcs[0];
+          }
+          if (typeof Comp === "function") {
+            loaded.set(name, Comp);
+          } else {
+            loadErrors.push(`${name}: loaded but not a function (type=${typeof Comp})`);
+          }
+        } catch (e) {
+          loadErrors.push(`${name}: ${(e as Error)?.message || e}`);
+        }
+      }),
+    );
+  }
 
   const Babel = await loadBabel();
-  if (!Babel || !dynamicImport) {
+  if (!Babel) {
     throw new Error("@babel/standalone failed to load; cannot compile JSX");
+  }
+
+  // Check for any failed imports and throw detailed error if critical ones failed
+  if (loadErrors.length > 0) {
+    const failed = names.filter((n) => !loaded.has(n));
+    if (failed.length > 0) {
+      console.error("Failed to load imports:", loadErrors);
+      throw new Error(
+        `Failed to load imports: ${failed.join(", ")}.\nDetails:\n${loadErrors.join("\n")}`
+      );
+    }
   }
 
   const importId = `__ri_${Math.random().toString(36).slice(2, 8)}`;
@@ -368,6 +423,8 @@ function __clearCache(f, dur) { if (f !== __frame || dur !== __actionDurationFra
 
 ${importDecls}
 
+${data ? Object.entries(data).map(([k, v]) => `var ${k} = ${JSON.stringify(v)};`).join("\n") : ""}
+
 function Wrapper(props) {
   var frame = useCurrentFrame();
   var fps = useVideoConfig().fps;
@@ -392,15 +449,8 @@ export default Wrapper;
     const blob = new Blob([code], { type: "text/javascript" });
     const blobUrl = URL.createObjectURL(blob);
     try {
-      // Try direct import first (allows sub-imports to resolve)
-      let Comp: any;
-      try {
-        const mod = await dynamicImport(blobUrl);
-        Comp = mod.default ?? mod;
-      } catch {
-        // Blob URL failed — this is expected for modules with sub-imports
-        throw new Error("Compiled JSX did not export a function");
-      }
+      const mod = await dynamicImport!(blobUrl);
+      const Comp = mod.default ?? mod;
       if (typeof Comp !== "function") {
         throw new Error("Compiled JSX did not export a function");
       }

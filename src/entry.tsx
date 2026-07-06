@@ -1,5 +1,5 @@
 import * as React from "react";
-import { AbsoluteFill } from "remotion";
+import { AbsoluteFill, continueRender, delayRender } from "remotion";
 import { ComposeContext, type ComposeContextValue } from "./context/index";
 
 import { FolderLeaf } from "./types/Folder";
@@ -32,6 +32,53 @@ const DefaultContainer: ComposeContextValue["Container"] = ({ children, style, c
   </div>
 );
 
+/**
+ * Load the component registry from root.imports.
+ * - If string: import it as an ESM module (pre-bundled by server)
+ * - If object: use it directly (programmatic API)
+ */
+function useComponentRegistry(imports: unknown): Record<string, React.ComponentType<any>> | null {
+  const [registry, setRegistry] = React.useState<Record<string, React.ComponentType<any>> | null>(null);
+  const handleRef = React.useRef<string | null>(null);
+
+  React.useEffect(() => {
+    if (!imports) {
+      setRegistry({});
+      return;
+    }
+    if (typeof imports === "object" && imports !== null) {
+      setRegistry(imports as Record<string, React.ComponentType<any>>);
+      return;
+    }
+    if (typeof imports === "string") {
+      if (!handleRef.current) {
+        handleRef.current = delayRender("Loading component registry: " + imports);
+      }
+      import(/* webpackIgnore: true */ imports)
+        .then((mod: any) => {
+          // The bundle exports all components as named exports
+          setRegistry(mod.default ?? mod);
+          if (handleRef.current) {
+            continueRender(handleRef.current);
+            handleRef.current = null;
+          }
+        })
+        .catch((err: Error) => {
+          console.error("Failed to load component registry:", err);
+          setRegistry({});
+          if (handleRef.current) {
+            continueRender(handleRef.current);
+            handleRef.current = null;
+          }
+        });
+      return;
+    }
+    setRegistry({});
+  }, [imports]);
+
+  return registry;
+}
+
 export function RemotionEngine({ root, compose, background = "#000" }: RemotionEngineProps) {
   const parsed = React.useMemo<Root>(() => {
     if (!root) {
@@ -51,6 +98,9 @@ export function RemotionEngine({ root, compose, background = "#000" }: RemotionE
     return rootSchema.parse(root) as unknown as Root;
   }, [root]);
 
+  // Load component registry (bundle URL or inline map)
+  const registry = useComponentRegistry(parsed.imports);
+
   // engine pre-pass: stamp durationInSeconds onto every node
   React.useMemo(() => getDurationInSeconds(parsed as any, true), [parsed]);
 
@@ -58,8 +108,9 @@ export function RemotionEngine({ root, compose, background = "#000" }: RemotionE
     () => ({
       Container: compose?.Container ?? DefaultContainer,
       onError: compose?.onError,
+      components: registry ?? compose?.components,
     }),
-    [compose],
+    [compose, registry],
   );
 
   return (
@@ -99,7 +150,8 @@ export * from "./context/index";
 export * from "./descriptive/compiler";
 export * from "./descriptive/markdown";
 export { getDurationInSeconds } from "./utils/index";
-export { preloadComponents, useJsxWithImports } from "./types/DynamicLoader";
+// DynamicLoader removed — component rendering now uses react-jsx-parser
+// via ComposeContext.components registry loaded from root.imports.
 export { builtinAnimations } from "./types/keyframes";
 // Resolve functions (TTS, STT, media probe) are available via
 // import from "markcut/descriptive-resolve" for CLI use.

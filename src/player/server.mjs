@@ -14,7 +14,8 @@ import { createServer } from "node:http";
 import { readFileSync, writeFileSync, watchFile, existsSync, statSync, createReadStream } from "node:fs";
 import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { isDescriptiveRoot, resolveAndCompile, resolveAndCompileMarkdown } from "./pipeline.mjs";
+import { isDescriptiveRoot, resolveAndCompile, resolveAndCompileMarkdown, parseImportsBlock } from "./pipeline.mjs";
+import { bundleFromEntries } from "./bundler.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, "..", "..");
@@ -99,46 +100,78 @@ let pipelineRunning = false;
 
 /**
  * Read the input file (.json or .md), detect format, run pipeline,
- * extract scenes. Caches the result until the file changes.
+ * bundle any component imports, extract scenes. Caches the result.
  */
 async function loadCompiledRoot() {
   if (compiledRootCache) return compiledRootCache;
 
   const raw = readFileSync(VIDEO_JSON, "utf-8");
+  let compiled;
 
   if (IS_MARKDOWN) {
     // Markdown → descriptive root → compiled stream tree
     console.log("  📝 Detected markdown input — parsing + running pipeline...");
-    const compiled = await resolveAndCompileMarkdown(raw, {
+    compiled = await resolveAndCompileMarkdown(raw, {
       baseDir: dirname(VIDEO_JSON),
       scriptOutputDir: TTS_OUTPUT_DIR,
       whisperBin: existsSync(WHISPER_BIN) ? WHISPER_BIN : undefined,
       mode: "draft",
     });
     compiledRootIsDescriptive = true;
-    compiledRootCache = compiled;
-    return compiled;
-  }
-
-  const parsed = JSON.parse(raw);
-  const root = parsed.root || parsed;
-
-  if (isDescriptiveRoot(root)) {
-    compiledRootIsDescriptive = true;
-    console.log("  🔍 Detected descriptive JSON — running resolve + compile pipeline...");
-    const compiled = await resolveAndCompile(root, {
-      baseDir: dirname(VIDEO_JSON),
-      scriptOutputDir: TTS_OUTPUT_DIR,
-      whisperBin: existsSync(WHISPER_BIN) ? WHISPER_BIN : undefined,
-      mode: "draft",
-    });
-    compiledRootCache = compiled;
   } else {
-    compiledRootIsDescriptive = false;
-    compiledRootCache = root;
+    const parsed = JSON.parse(raw);
+    const root = parsed.root || parsed;
+
+    if (isDescriptiveRoot(root)) {
+      compiledRootIsDescriptive = true;
+      console.log("  🔍 Detected descriptive JSON — running resolve + compile pipeline...");
+      compiled = await resolveAndCompile(root, {
+        baseDir: dirname(VIDEO_JSON),
+        scriptOutputDir: TTS_OUTPUT_DIR,
+        whisperBin: existsSync(WHISPER_BIN) ? WHISPER_BIN : undefined,
+        mode: "draft",
+      });
+    } else {
+      compiledRootIsDescriptive = false;
+      compiled = root;
+    }
   }
 
-  return compiledRootCache;
+  // Bundle component imports if any exist
+  try {
+    let importEntries = null;
+
+    if (IS_MARKDOWN) {
+      // For markdown: extract the imports block from the raw source
+      const importsBlockMatch = raw.match(/(?:```|~~~)(?:js|javascript)\s+imports\s*\n([\s\S]*?)(?:```|~~~)/i);
+      if (importsBlockMatch) {
+        importEntries = parseImportsBlock(importsBlockMatch[1]);
+      }
+    } else if (compiledRootIsDescriptive) {
+      // For descriptive JSON: extract imports from the parsed root directly
+      // (before compilation, the root has an `imports` array and optional `importsBlock`)
+      const parsedRoot = JSON.parse(raw).root || JSON.parse(raw);
+      if (parsedRoot.imports) {
+        importEntries = parsedRoot.imports;
+      } else if (parsedRoot.importsBlock) {
+        importEntries = parseImportsBlock(parsedRoot.importsBlock);
+      }
+    }
+
+    if (importEntries && importEntries.length > 0) {
+      const bundle = await bundleFromEntries(importEntries);
+      if (bundle.url) {
+        compiled.imports = bundle.url;
+        console.log(`  ✅ Component bundle: ${bundle.url} (${bundle.exports.join(", ")})`);
+      }
+    }
+  } catch (e) {
+    console.error("  ⚠️  Component bundling failed:", e.message);
+    // Continue without bundled components — JSX will fail gracefully
+  }
+
+  compiledRootCache = compiled;
+  return compiled;
 }
 
 // ─── Initial scene info ──────────────────────────────────────────────────
