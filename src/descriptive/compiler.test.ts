@@ -2,67 +2,23 @@ import { describe, expect, it, vi } from "vitest";
 import { compileDescriptiveRoot, resolveComponentImportSpec, parseImportsBlock, extractDependencySpecs } from "./compiler";
 
 describe("resolveComponentImportSpec", () => {
-  it("rewrites npm: specs to esm.sh", () => {
-    expect(resolveComponentImportSpec("npm:react-stat-counter")).toBe("https://esm.sh/react-stat-counter");
-    expect(resolveComponentImportSpec("npm:pkg@1.2.3/Comp.js")).toBe("https://esm.sh/pkg@1.2.3/Comp.js");
-  });
-
-  it("rewrites npm: with scoped package", () => {
-    expect(resolveComponentImportSpec("npm:@org/pkg")).toBe("https://esm.sh/@org/pkg");
-    expect(resolveComponentImportSpec("npm:@org/pkg@1.0.0/lib")).toBe("https://esm.sh/@org/pkg@1.0.0/lib");
-  });
-
-  it("rewrites npm: with version and subpath", () => {
-    expect(resolveComponentImportSpec("npm:react@18.2.0")).toBe("https://esm.sh/react@18.2.0");
-    expect(resolveComponentImportSpec("npm:lodash-es@4.17.21/debounce")).toBe("https://esm.sh/lodash-es@4.17.21/debounce");
-  });
-
-  it("rewrites git: specs to esm.sh /gh/", () => {
-    expect(resolveComponentImportSpec("git:foo/bar")).toBe("https://esm.sh/gh/foo/bar");
-    expect(resolveComponentImportSpec("github:user/repo@main/src/Logo.tsx")).toBe(
-      "https://esm.sh/gh/user/repo@main/src/Logo.tsx",
-    );
-  });
-
-  it("rewrites git: with branch and subpath", () => {
-    expect(resolveComponentImportSpec("git:myorg/widget@develop/src/Widget.tsx")).toBe(
-      "https://esm.sh/gh/myorg/widget@develop/src/Widget.tsx",
-    );
-  });
-
-  it("rewrites git: with just owner/repo", () => {
-    expect(resolveComponentImportSpec("git:org/repo")).toBe("https://esm.sh/gh/org/repo");
-  });
-
-  it("passes through URLs and paths unchanged", () => {
+  it("returns the trimmed spec unchanged", () => {
+    expect(resolveComponentImportSpec("npm:react-stat-counter")).toBe("npm:react-stat-counter");
+    expect(resolveComponentImportSpec("npm:@org/pkg")).toBe("npm:@org/pkg");
+    expect(resolveComponentImportSpec("npm:react@18.2.0")).toBe("npm:react@18.2.0");
+    expect(resolveComponentImportSpec("git:foo/bar")).toBe("git:foo/bar");
+    expect(resolveComponentImportSpec("github:user/repo@main/src/Logo.tsx")).toBe("github:user/repo@main/src/Logo.tsx");
     expect(resolveComponentImportSpec("https://cdn.example.com/c.js")).toBe("https://cdn.example.com/c.js");
     expect(resolveComponentImportSpec("./local/Comp.js")).toBe("./local/Comp.js");
-    expect(resolveComponentImportSpec("/absolute/path/Comp.tsx")).toBe("/absolute/path/Comp.tsx");
-    expect(resolveComponentImportSpec("http://localhost:3000/comp.mjs")).toBe("http://localhost:3000/comp.mjs");
-    expect(resolveComponentImportSpec("../relative/up/Comp.js")).toBe("../relative/up/Comp.js");
-  });
-
-  it("resolves npm:pkg#module to esm.sh with subpath", () => {
-    expect(resolveComponentImportSpec("npm:recharts#es/BarChart")).toBe("https://esm.sh/recharts/es/BarChart");
-    expect(resolveComponentImportSpec("npm:@lalalic/recharts#a/b/c")).toBe("https://esm.sh/@lalalic/recharts/a/b/c");
-  });
-
-  it("resolves git:user/repo#path to esm.sh/gh with subpath", () => {
-    expect(resolveComponentImportSpec("git:user/repo#src/Comp.tsx")).toBe("https://esm.sh/gh/user/repo/src/Comp.tsx");
-  });
-
-  it("resolves github:user/repo#path like git:", () => {
-    expect(resolveComponentImportSpec("github:team/lib#src/index.ts")).toBe("https://esm.sh/gh/team/lib/src/index.ts");
+    expect(resolveComponentImportSpec("npm:recharts#es/BarChart")).toBe("npm:recharts#es/BarChart");
   });
 
   it("trims whitespace from spec", () => {
-    expect(resolveComponentImportSpec("  npm:pkg  ")).toBe("https://esm.sh/pkg");
-    expect(resolveComponentImportSpec("  github:user/repo  ")).toBe("https://esm.sh/gh/user/repo");
+    expect(resolveComponentImportSpec("  npm:pkg  ")).toBe("npm:pkg");
+    expect(resolveComponentImportSpec("  github:user/repo  ")).toBe("github:user/repo");
     expect(resolveComponentImportSpec("  https://cdn.example.com/c.js  ")).toBe("https://cdn.example.com/c.js");
-
-
-});
   });
+});
 describe("parseImportsBlock", () => {
   it("parses named re-exports: export { Name } from \"spec\"", () => {
     const entries = parseImportsBlock(`export { PieChart } from "npm:recharts"`);

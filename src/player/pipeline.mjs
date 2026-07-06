@@ -507,17 +507,7 @@ function extractDependencySpecs(source) {
   return specs;
 }
 function resolveComponentImportSpec(spec) {
-  const s = spec.trim();
-  const hashIdx = s.indexOf("#");
-  const pkg = hashIdx >= 0 ? s.slice(0, hashIdx) : s;
-  const subpath = hashIdx >= 0 ? s.slice(hashIdx + 1) : "";
-  let base;
-  if (pkg.startsWith("npm:")) base = `https://esm.sh/${pkg.slice(4)}`;
-  else if (pkg.startsWith("git:")) base = `https://esm.sh/gh/${pkg.slice(4)}`;
-  else if (pkg.startsWith("github:")) base = `https://esm.sh/gh/${pkg.slice(7)}`;
-  else if (/^\.\.?\/|^\/|^https?:\/\//.test(pkg)) base = pkg;
-  else base = `https://esm.sh/${pkg}`;
-  return subpath ? `${base}/${subpath}` : base;
+  return spec.trim();
 }
 function resolveComponentSources(root) {
   const registry = /* @__PURE__ */ new Map();
