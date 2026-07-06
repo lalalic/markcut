@@ -33,33 +33,25 @@ export interface DescriptiveBaseNode {
   start?: number;
 }
 
-export interface TtsConfig {
-  /** CLI command template. Built-in vars: {text}, {output}.
-   *  Agent embeds all parameters (voice, rate, model) directly in the CLI string.
-   *  Default: edge-tts --voice "en-US-GuyNeural" --text "{text}" --write-media "{output}" */
-  cli?: string;
-}
+/** CLI command template for text-to-speech.
+ *  Built-in vars: {input}, {output}.
+ *  Default: edge-tts --voice "en-US-GuyNeural" --text "{input}" --write-media "{output}" */
+export type TtsConfig = string;
 
-export interface SttConfig {
-  /** CLI command template. Built-in vars: {input} (audio path), {outputDir}.
-   *  Agent embeds all parameters (model, language) directly in the CLI string.
-   *  Default: whisper "{input}" --output_format vtt --output_dir "{outputDir}" */
-  cli?: string;
-}
+/** CLI command template for speech-to-text.
+ *  Built-in vars: {input}, {output}.
+ *  Default: whisper "{input}" --output_format vtt --output_dir "{output}" */
+export type SttConfig = string;
 
-export interface TtiConfig {
-  /** CLI command template. Built-in vars: {prompt}, {output}.
-   *  Agent embeds all parameters (model, size, style) directly in the CLI string.
-   *  Default: pi --model agnes-2.0-flash --print "generate image: {prompt}" --output "{output}" */
-  cli?: string;
-}
+/** CLI command template for text-to-image.
+ *  Built-in vars: {input}, {output}.
+ *  Default: pi --model agnes-2.0-flash --print "generate image: {input}" --output "{output}" */
+export type TtiConfig = string;
 
-export interface TtvConfig {
-  /** CLI command template. Built-in vars: {prompt}, {output}.
-   *  Agent embeds all parameters (model, size, style) directly in the CLI string.
-   *  Default: pi --model agnes-2.0-flash --print "generate video: {prompt}" --output "{output}" */
-  cli?: string;
-}
+/** CLI command template for text-to-video.
+ *  Built-in vars: {input}, {output}.
+ *  Default: pi --model agnes-2.0-flash --print "generate video: {input}" --output "{output}" */
+export type TtvConfig = string;
 
 export interface DescriptiveVideo extends DescriptiveBaseNode {
   type: "video";
@@ -133,7 +125,7 @@ export interface DescriptiveScene extends DescriptiveBaseNode {
   type: "scene";
   name?: string;
   title?: string;
-  tts?: TtsConfig;
+  tts?: string;
   layout?: "series" | "parallel" | "transitionSeries";
   transition?: "fade" | "slide" | "wipe" | "flip" | "clockWipe";
   transitionTime?: number;
@@ -195,10 +187,10 @@ export interface DescriptiveRoot {
   instruction?: string;
   metadata?: string;
   stylesheet?: string;
-  tts?: TtsConfig;
-  stt?: SttConfig;
-  tti?: TtiConfig;
-  ttv?: TtvConfig;
+  tts?: string;
+  stt?: string;
+  tti?: string;
+  ttv?: string;
   layout?: "series" | "parallel" | "transitionSeries";
   transition?: "fade" | "slide" | "wipe" | "flip" | "clockWipe";
   transitionTime?: number;

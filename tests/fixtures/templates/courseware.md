@@ -4,7 +4,7 @@ description: 讲解人工智能的初步课程
 width: 1920 
 height: 1080 
 fps: 30 
-tts: edge-tts --voice "zh-CN-YunxiNeural" --text "{text}" --write-media "{output}"
+tts: edge-tts --voice "zh-CN-YunxiNeural" --text "{input}" --write-media "{output}"
 ---
 # video
 layout:series

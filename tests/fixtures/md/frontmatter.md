@@ -2,13 +2,8 @@
 width: 640
 height: 480
 fps: 30
-tts:
-  cli: edge-tts --voice "{voice}" --text "{text}" --write-media "{output}"
-  voice: zh-CN-XiaoxiaoNeural
-  rate: +10%
-stt:
-  model: whisper-1
-  language: zh
+tts: edge-tts --voice "en-US-GuyNeural" --text "{input}" --write-media "{output}"
+stt: whisper "{input}" --output_format vtt --output_dir "{output}" --model whisper-1 --language zh
 ---
 # video
 layout:series

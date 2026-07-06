@@ -17,7 +17,7 @@ import type { DescriptiveNode, DescriptiveRoot } from "./compiler";
 
 // ── Content-hash cache for expensive operations (TTS, STT) ────────────────
 // Skips regeneration when input hasn't changed. Cache key is a hash of all
-// inputs that affect the output (script text + voice + rate + refAudio + cli).
+// inputs that affect the output (script + cli template).
 
 interface CacheEntry {
   hash: string;
@@ -145,35 +145,6 @@ export interface ResolveScriptOptions {
   ttsCli?: string;
 }
 
-const DEFAULT_WHISPER = "/Users/lir/Library/Python/3.9/bin/whisper";
-
-/**
- * Transcribe a WAV file to VTT using whisper CLI.
- * Returns the VTT file path, or null on failure.
- */
-function transcribeToVTT(
-  audioPath: string,
-  outputDir: string,
-  whisperBin: string,
-  model?: string,
-  language?: string,
-): string | null {
-  try {
-    const modelFlag = model ? `--model ${model}` : "--model tiny";
-    const langFlag = language ? `--language ${language}` : "--language en";
-    execSync(
-      `"${whisperBin}" "${audioPath}" --output_format vtt --output_dir "${outputDir}" ${modelFlag} ${langFlag}`,
-      { stdio: ["pipe", "pipe", "pipe"], timeout: 120_000 },
-    );
-    const base = audioPath.replace(/\.wav$/, "").replace(/\.mp3$/, "");
-    const name = base.split("/").pop()!;
-    const vttPath = join(outputDir, `${name}.vtt`);
-    return existsSync(vttPath) ? vttPath : null;
-  } catch {
-    return null;
-  }
-}
-
 /**
  * Walk the descriptive tree and for each scene node with a `script` field:
  * 1. Generate TTS audio from script text → attach as audio child
@@ -226,7 +197,7 @@ export async function resolveScripts(
     const audioPath = join(options.outputDir, `${safeId}.wav`);
 
     // Resolve TTS config: scene-level overrides root-level overrides CLI defaults
-    const ttsCli = node.tts?.cli ?? clone.tts?.cli ?? options.ttsCli;
+    const ttsCli = node.tts ?? clone.tts ?? options.ttsCli ?? DEFAULT_TTS_CLI;
 
     // Cache key: script + CLI string
     const cacheKey = computeCacheKey({ script: node.script, cli: ttsCli });
@@ -266,7 +237,7 @@ export async function resolveSubtitles(
   options: { outputDir: string; sttCli?: string },
 ): Promise<DescriptiveRoot> {
   const clone: DescriptiveRoot = JSON.parse(JSON.stringify(root));
-  const sttCli = clone.stt?.cli ?? options.sttCli ?? `whisper "{input}" --output_format vtt --output_dir "{outputDir}"`;
+  const sttCli = clone.stt ?? options.sttCli ?? DEFAULT_STT_CLI;
   if (!sttCli) return clone;
 
   mkdirSync(options.outputDir, { recursive: true });
@@ -304,10 +275,10 @@ export async function resolveSubtitles(
     if (cachedVtt) {
       vttPath = cachedVtt;
     } else {
-      // Run STT CLI with {input} and {outputDir} substitution
+      // Run STT CLI with {input} and {output} substitution
       const cmd = sttCli
         .replace(/\{input\}/g, audioSrc)
-        .replace(/\{outputDir\}/g, options.outputDir);
+        .replace(/\{output\}/g, options.outputDir);
       try {
         execSync(cmd, { stdio: ["pipe", "pipe", "pipe"], timeout: 120_000 });
       } catch { /* STT failed, skip */ }
@@ -364,14 +335,16 @@ export async function resolveSubtitles(
 export interface ResolveGeneratedMediaOptions {
   /** Output directory for generated media files */
   outputDir: string;
-  /** Default TTI CLI template (overrides root.tti.cli) */
+  /** Default TTI CLI template (overrides root.tti) */
   ttiCli?: string;
-  /** Default TTV CLI template (overrides root.ttv.cli) */
+  /** Default TTV CLI template (overrides root.ttv) */
   ttvCli?: string;
 }
 
-const DEFAULT_TTI_CLI = 'pi --model agnes-2.0-flash --print "generate image: {prompt}" --output "{output}"';
-const DEFAULT_TTV_CLI = 'pi --model agnes-2.0-flash --print "generate video: {prompt}" --output "{output}"';
+const DEFAULT_TTS_CLI = 'edge-tts --voice "en-US-GuyNeural" --text "{input}" --write-media "{output}"';
+const DEFAULT_STT_CLI = 'whisper "{input}" --output_format vtt --output_dir "{output}"';
+const DEFAULT_TTI_CLI = 'pi --model agnes-2.0-flash --print "generate image: {input}" --output "{output}"';
+const DEFAULT_TTV_CLI = 'pi --model agnes-2.0-flash --print "generate video: {input}" --output "{output}"';
 
 /**
  * Walk the descriptive tree, find image/video nodes with `prompt` but no `src`,
@@ -414,11 +387,9 @@ export async function resolveGeneratedMedia(
     const outputPath = join(options.outputDir, `${safeId}.${ext}`);
 
     // Resolve TTI/TTV config: root-level config overrides CLI defaults
-    const rootTti = clone.tti ?? {};
-    const rootTtv = clone.ttv ?? {};
     const cli = type === "image"
-      ? (rootTti.cli ?? options.ttiCli ?? DEFAULT_TTI_CLI)
-      : (rootTtv.cli ?? options.ttvCli ?? DEFAULT_TTV_CLI);
+      ? (clone.tti ?? options.ttiCli ?? DEFAULT_TTI_CLI)
+      : (clone.ttv ?? options.ttvCli ?? DEFAULT_TTV_CLI);
 
     // Cache key: prompt + CLI template (encodes all model/style params)
     const cacheKey = computeCacheKey({ prompt, cli, type });
@@ -429,9 +400,9 @@ export async function resolveGeneratedMedia(
       continue;
     }
 
-    // Build the CLI command — substitute {prompt}, {output}
-    const cmd = cli
-      .replace(/\{prompt\}/g, prompt.replace(/"/g, '\\"'))
+// Build the CLI command — substitute {input}, {output}
+      const cmd = cli
+        .replace(/\{input\}/g, prompt.replace(/"/g, '\\"'))
       .replace(/\{output\}/g, outputPath);
 
     try {
@@ -463,27 +434,15 @@ export async function resolveGeneratedMedia(
 export interface ResolveAllOptions extends ResolveMediaOptions {
   /** If set, enables script → TTS resolution */
   scriptOutputDir?: string;
-  /** Whisper binary path; enables post-compile STT subtitle generation */
-  whisperBin?: string;
-  /** CLI template (default: edge-tts) */
+  /** TTS CLI template override (default: edge-tts). Overrides root.tts. */
   ttsCli?: string;
-  /** TTS voice override (default: en-US-GuyNeural) */
-  voice?: string;
-  /** TTS rate override (e.g. "+20%") */
-  rate?: string;
-  /** Reference audio path for voice cloning */
-  refAudio?: string;
-  /** Extra TTS options as key-value pairs */
-  ttsOptions?: Record<string, string>;
-  /** STT model override (default: tiny) */
-  sttModel?: string;
-  /** STT language override (default: en) */
-  sttLanguage?: string;
+  /** STT CLI template override (default: whisper). Overrides root.stt. */
+  sttCli?: string;
   /** If set, enables TTI/TTV media generation from prompts */
   mediaOutputDir?: string;
-  /** TTI CLI template override */
+  /** TTI CLI template override (default: pi agent). Overrides root.tti. */
   ttiCli?: string;
-  /** TTV CLI template override */
+  /** TTV CLI template override (default: pi agent). Overrides root.ttv. */
   ttvCli?: string;
 }
 
@@ -518,10 +477,6 @@ export async function resolveAll(
     result = await resolveScripts(result, {
       outputDir: options.scriptOutputDir,
       ttsCli: options.ttsCli,
-      voice: options.voice,
-      rate: options.rate,
-      refAudio: options.refAudio,
-      ttsOptions: options.ttsOptions,
     });
 
     // Re-probe for newly generated TTS audio durations
@@ -530,18 +485,13 @@ export async function resolveAll(
       skip: options.skip,
     });
 
-    // Post-compile subtitle generation
-    if (options.whisperBin) {
-      // compile first to get absolute timings, then resolveSubtitles
-      const { compileDescriptiveRoot } = await import("./compiler");
-      const compiled = compileDescriptiveRoot(result, { mode: "draft" });
-      result = await resolveSubtitles(result, {
-        outputDir: options.scriptOutputDir,
-        whisperBin: options.whisperBin,
-        sttModel: options.sttModel,
-        sttLanguage: options.sttLanguage,
-      });
-    }
+    // Post-compile subtitle generation (uses root.stt, options.sttCli, or default whisper CLI)
+    const { compileDescriptiveRoot } = await import("./compiler");
+    const compiled = compileDescriptiveRoot(result, { mode: "draft" });
+    result = await resolveSubtitles(result, {
+      outputDir: options.scriptOutputDir,
+      sttCli: options.sttCli,
+    });
   }
 
   return result;

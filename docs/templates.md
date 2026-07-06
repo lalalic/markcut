@@ -34,10 +34,10 @@ npx markcut render my-video.md --aspect 16x9
 
 | Field | Purpose | Example |
 |---|---|---|
-| `tts.cli` | TTS CLI command with `{text}` `{output}` | `edge-tts --voice "zh-CN-XiaoxiaoNeural" --text "{text}" --write-media "{output}"` |
-| `stt.cli` | STT CLI command with `{input}` `{outputDir}` | `whisper "{input}" --model tiny --language zh --output_format vtt --output_dir "{outputDir}"` |
-| `tti.cli` | TTI CLI command with `{prompt}` `{output}` | `pi --model agnes-2.0-flash --print "generate image: {prompt}" --output "{output}"` |
-| `ttv.cli` | TTV CLI command with `{prompt}` `{output}` | `pi --model agnes-2.0-flash --print "generate video: {prompt}" --output "{output}"` |
+| `tts` | TTS CLI command with `{input}` `{output}` | `edge-tts --voice "zh-CN-XiaoxiaoNeural" --text "{input}" --write-media "{output}"` |
+| `stt` | STT CLI command with `{input}` `{output}` | `whisper "{input}" --model tiny --language zh --output_format vtt --output_dir "{output}"` |
+| `tti` | TTI CLI command with `{input}` `{output}` | `pi --model agnes-2.0-flash --print "generate image: {input}" --output "{output}"` |
+| `ttv` | TTV CLI command with `{input}` `{output}` | `pi --model agnes-2.0-flash --print "generate video: {input}" --output "{output}"` |
 
 ## src:auto — AI-Generated Media
 

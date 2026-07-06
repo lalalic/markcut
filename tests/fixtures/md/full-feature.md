@@ -2,9 +2,7 @@
 width: 1080
 height: 1920
 fps: 30
-tts:
-  voice: zh-CN-XiaoxiaoNeural
-  rate: +15%
+tts: edge-tts --voice "zh-CN-XiaoxiaoNeural" --text "{input}" --write-media "{output}"
 ---
 # video
 layout:series instruction:"Full feature demo video" metadata:"v2.0-feature-test"

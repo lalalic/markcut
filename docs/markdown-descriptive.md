@@ -25,10 +25,10 @@ height: 1920
 fps: 30
 title: My Video
 description: A demo video
-tts: edge-tts --voice "{voice=zh-CN-YunxiNeural}" --text "{text}" --write-media "{output}"
-stt: whisper --model "base" --language "zh" --input "{input}" --output "{output}"
-tti: pi --model agnes-2.0-falsh --print "{prompt=make an image}" --output "{output}"
-ttv: pi --model agnes-2.0-falsh --print "{prompt=make a video}" --output "{output}"
+tts: edge-tts --voice "zh-CN-YunxiNeural" --text "{input}" --write-media "{output}"
+stt: whisper --model "base" --language "zh" "{input}" --output_format vtt --output_dir "{output}"
+tti: pi --model agnes-2.0-flash --print \"generate image: {input}\" --output \"{output}\"
+ttv: pi --model agnes-2.0-flash --print "generate video: {input}" --output "{output}"
 stylesheet: |
   .slide h1 { color: #667eea; font-size: 64px; }
   .slide li  { font-size: 32px; }
@@ -92,8 +92,8 @@ The `#module` suffix separates the package name from an internal module path. It
 | `height` | canvas height | root |
 | `fps` | frame rate | root |
 | `theme` | *removed — use `style` on root* | root |
-| `tts` | `{cli:"..", voice:"..", options:{..}}` JSON TTS config | root |
-| `stt` | `{model:"..", language:".."}` JSON STT config | root |
+| `tts` | CLI template string (e.g. `edge-tts --voice "en-US-GuyNeural" --text "{input}" --write-media "{output}"`) | root |
+| `stt` | CLI template string (e.g. `whisper "{input}" --output_format vtt --output_dir "{output}"`) | root |
 | `layout` | `series\|parallel\|transitionSeries` | root, scene | 
 | `transition` | `fade\|slide\|wipe\|flip\|clockWipe` | transitionSeries |
 | `transitionTime` | seconds | transitionSeries |
@@ -124,7 +124,7 @@ The `#module` suffix separates the package name from an internal module path. It
 | `title` | display title | scene |
 | `instruction` | visual intent / style / any prompt; NOT rendered | any |
 | `script` | narration/dialogue text; TTS source; NOT rendered directly | scene, series, parallel, transitionSeries |
-| `tts` | `{cli:"..", voice:"..", options:{..}}` JSON; per-scene TTS override | root, scene |
+| `tts` | CLI template string; per-scene TTS override (overrides root `tts`) | root, scene |
 | `metadata` | arbitrary metadata string | root |
 | `stylesheet` | global CSS string; selectors use `.className` on elements | root |
 | `style` | inline CSS applied to the node's container div e.g. `"border-radius:12px"` | any |
@@ -144,7 +144,7 @@ Syntax:
 
 ```md
 ## <title>
-layout:<x> [transition:<t> transitionTime:<n>] [script:".." tts:{voice:".."}] [instruction:..]
+layout:<x> [transition:<t> transitionTime:<n>] [script:".." tts:"edge-tts --voice \"en-US-GuyNeural\" --text \"{text}\" --write-media \"{output}\""] [instruction:..]
 - <children>
 ```
 

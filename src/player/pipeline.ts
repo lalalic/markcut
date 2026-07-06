@@ -25,22 +25,10 @@ export interface ResolveAndCompileOptions {
   baseDir?: string;
   /** Output directory for generated TTS audio / STT VTT files */
   scriptOutputDir?: string;
-  /** Whisper binary path; enables STT subtitle generation */
-  whisperBin?: string;
-  /** TTS CLI template (default: edge-tts) */
+  /** TTS CLI template override (default: edge-tts). Overrides root.tts. */
   ttsCli?: string;
-  /** TTS voice */
-  voice?: string;
-  /** TTS rate (e.g. "+20%") */
-  rate?: string;
-  /** Reference audio path for voice cloning */
-  refAudio?: string;
-  /** Extra TTS template variables */
-  ttsOptions?: Record<string, string>;
-  /** STT model (default: tiny) */
-  sttModel?: string;
-  /** STT language (default: en) */
-  sttLanguage?: string;
+  /** STT CLI template override (default: whisper). Overrides root.stt. */
+  sttCli?: string;
   /** Compile mode: "strict" (throws on missing duration) or "draft" (uses defaults) */
   mode?: "strict" | "draft";
 }
@@ -89,14 +77,8 @@ export async function resolveAndCompile(
   const resolved = await resolveAll(data, {
     baseDir: options.baseDir,
     scriptOutputDir: options.scriptOutputDir,
-    whisperBin: options.whisperBin,
     ttsCli: options.ttsCli,
-    voice: options.voice,
-    rate: options.rate,
-    refAudio: options.refAudio,
-    ttsOptions: options.ttsOptions,
-    sttModel: options.sttModel,
-    sttLanguage: options.sttLanguage,
+    sttCli: options.sttCli,
   });
 
   // 2. Sync compile: descriptive → stream tree

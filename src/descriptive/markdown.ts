@@ -690,16 +690,16 @@ function applyRootAttrs(root: DescriptiveRoot, attrs: Record<string, unknown>): 
         root.instruction = root.instruction ?? String(v);
         break;
       case "tts":
-        root.tts = typeof v === "string" ? { cli: v } : v as any;
+        root.tts = typeof v === "object" && v !== null ? String((v as any).cli ?? "") : String(v);
         break;
       case "stt":
-        root.stt = v as any;
+        root.stt = typeof v === "object" && v !== null ? String((v as any).cli ?? "") : String(v);
         break;
       case "tti":
-        root.tti = v as any;
+        root.tti = typeof v === "object" && v !== null ? String((v as any).cli ?? "") : String(v);
         break;
       case "ttv":
-        root.ttv = v as any;
+        root.ttv = typeof v === "object" && v !== null ? String((v as any).cli ?? "") : String(v);
         break;
       default:
         throw new Error(`unknown root key: ${k}`);

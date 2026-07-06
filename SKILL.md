@@ -45,6 +45,35 @@ npx markcut render <stream tree file> --aspect all  # MP4 output
 
 ---
 
+## AI Media Generation (TTS / STT / TTI / TTV)
+
+All four pipelines are configured via a **single CLI string** in frontmatter. The user/LLM embeds every tool-specific parameter directly in the string — only `{input}` and `{output}` are substituted by the engine.
+
+| Pipeline | Field | Default CLI | Prerequisite |
+|----------|-------|-------------|--------------|
+| **Text-to-Speech** | `tts` | `edge-tts --voice "en-US-GuyNeural" --text "{input}" --write-media "{output}"` | [`edge-tts`](https://github.com/rany2/edge-tts) (`pip install edge-tts`) |
+| **Speech-to-Text** | `stt` | `whisper "{input}" --output_format vtt --output_dir "{output}"` | [`openai-whisper`](https://github.com/openai/whisper) (`pip install openai-whisper`) |
+| **Text-to-Image** | `tti` | `pi --model agnes-2.0-flash --print "generate image: {input}" --output "{output}"` | [`pi` CLI](https://pi.dev) (`pip install pi-sdk`) |
+| **Text-to-Video** | `ttv` | `pi --model agnes-2.0-flash --print "generate video: {input}" --output "{output}"` | [`pi` CLI](https://pi.dev) (`pip install pi-sdk`) |
+
+Set any field in YAML frontmatter to override the default. Example:
+
+```yaml
+tts: edge-tts --voice "zh-CN-XiaoxiaoNeural" --text "{input}" --write-media "{output}"
+stt: whisper "{input}" --model tiny --language zh --output_format vtt --output_dir "{output}"
+```
+
+> **Important**: Only the three built-in variables listed above are substituted. All other parameters (voice, model, rate, size, style, etc.) must be written verbatim into the CLI string by the LLM at generation time.
+
+### Built-in Variables
+
+| Variable | Applies To | Description |
+|----------|-----------|-------------|
+| `{input}` | TTS, TTI, TTV | Input content: narration text (TTS), generation prompt (TTI, TTV), audio file path (STT) |
+| `{output}` | All | Output location: file path for TTS/TTI/TTV, directory for STT VTT files |
+
+---
+
 ## 3. CLI
 
 ```bash

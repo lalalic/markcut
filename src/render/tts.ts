@@ -2,21 +2,21 @@
  * CLI-based TTS integration.
  *
  * All configuration (voice, rate, model) is embedded directly in the CLI string
- * by the agent. The pipeline only substitutes {text} and {output}.
+ * by the agent. The pipeline only substitutes {input} and {output}.
  *
- *   Default: edge-tts --voice "en-US-GuyNeural" --text "{text}" --write-media "{output}"
+ *   Default: edge-tts --voice "en-US-GuyNeural" --text "{input}" --write-media "{output}"
  *
- *   Custom: pi --model agnes-2.0-flash --print "narrate: {text}" --output "{output}"
+ *   Custom: pi --model agnes-2.0-flash --print "narrate: {input}" --output "{output}"
  */
 import { execSync } from "node:child_process";
 import { existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 
-const DEFAULT_CLI = 'edge-tts --voice "en-US-GuyNeural" --text "{text}" --write-media "{output}"';
+const DEFAULT_CLI = 'edge-tts --voice "en-US-GuyNeural" --text "{input}" --write-media "{output}"';
 
 /**
  * Generate a media file from text using CLI template substitution.
- * Only {text} and {output} are built-in variables — all other parameters
+ * Only {input} and {output} are built-in variables — all other parameters
  * are embedded directly in the CLI command by the agent.
  * Returns the output file path, or empty string on failure.
  */
@@ -28,7 +28,7 @@ export function generateTTS(
   mkdirSync(dirname(outputPath), { recursive: true });
 
   const cmd = (cli ?? DEFAULT_CLI)
-    .replace(/\{text\}/g, text.replace(/"/g, '\\"'))
+    .replace(/\{input\}/g, text.replace(/"/g, '\\"'))
     .replace(/\{output\}/g, outputPath);
 
   try {
@@ -38,7 +38,6 @@ export function generateTTS(
     return "";
   }
 
-  if (existsSync(outputPath)) return outputPath;
   if (existsSync(outputPath)) return outputPath;
 
   // Check for non-wav output (edge-tts creates .mp3)

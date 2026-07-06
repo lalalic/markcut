@@ -284,16 +284,18 @@ describe("frontmatter fixture", () => {
   it("parses frontmatter tts config", () => {
     const parsed = parseMarkdownDescriptive(fx.source);
     expect(parsed.tts).toBeDefined();
-    expect(parsed.tts!.voice).toBe("zh-CN-XiaoxiaoNeural");
-    expect(parsed.tts!.rate).toBe("+10%");
-    expect(parsed.tts!.cli).toContain("edge-tts");
+    expect(parsed.tts).toContain("edge-tts");
+    expect(parsed.tts).toContain("{input}");
+    expect(parsed.tts).toContain("{output}");
   });
 
   it("parses frontmatter stt config", () => {
     const parsed = parseMarkdownDescriptive(fx.source);
     expect(parsed.stt).toBeDefined();
-    expect(parsed.stt!.model).toBe("whisper-1");
-    expect(parsed.stt!.language).toBe("zh");
+    expect(parsed.stt).toContain("whisper");
+    expect(parsed.stt).toContain("{input}");
+    expect(parsed.stt).toContain("{output}");
+    expect(parsed.stt).toContain("--language zh");
   });
 
   it("compiles with resolved imports", () => {
@@ -642,7 +644,8 @@ describe("full-feature fixture", () => {
 
     // TTS
     expect(parsed.tts).toBeDefined();
-    expect(parsed.tts!.voice).toBe("zh-CN-XiaoxiaoNeural");
+    expect(parsed.tts).toContain("edge-tts");
+    expect(parsed.tts).toContain("{input}");
 
     // 9 scenes (including nested ones)
     const topLevel = parsed.children.filter((s: any) => s.type === "scene");

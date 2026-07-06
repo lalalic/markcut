@@ -266,77 +266,50 @@ Each node accepts a `style` string for inline CSS on its container div. Availabl
 
 | Field | Type | Purpose |
 
-TTS (text-to-speech) and STT (speech-to-text) can be configured globally at root level, and TTS can be overridden per scene.
+TTS, STT, TTI, and TTV are each configured via a **single CLI template string**. The LLM embeds every tool-specific parameter (voice, model, rate, size, style, etc.) directly in the string — only the built-in variables below are substituted by the engine.
 
 **Root level** — sets defaults for all scenes:
 ```json
 {
-  "tts": {
-    "cli": "edge-tts --voice \"{voice}\" --text \"{text}\" --rate \"{rate}\" --write-media \"{output}\"",
-    "voice": "en-US-JennyNeural",
-    "rate": "+10%"
-  },
-  "stt": { "model": "tiny", "language": "en" }
+  "tts": "edge-tts --voice \"en-US-GuyNeural\" --text \"{input}\" --write-media \"{output}\"",
+  "stt": "whisper \"{input}\" --output_format vtt --output_dir \"{outputDir}\""
 }
 ```
 
-**Per scene** — overrides root TTS settings:
+**Per scene** — overrides root TTS:
 ```json
 {
   "type": "scene",
   "script": "Hello world",
-  "tts": { "voice": "en-US-GuyNeural" }
+  "tts": "edge-tts --voice \"zh-CN-XiaoxiaoNeural\" --text \"{input}\" --write-media \"{output}\""
 }
 ```
 
-**Precedence:** scene-level `tts` → root-level `tts` → CLI flags → hardcoded defaults.
+**Precedence:** scene-level `tts` → root-level `tts` → pipeline option → hardcoded default.
 
-### CLI template variables
+### Built-in Variables
 
-| Variable | Source | Example |
+| Variable | Applies To | Description |
 |---|---|---|
-| `{text}` | `scene.script` (required) | `"Hello world"` |
-| `{output}` | output path (required) | `/tmp/tts/scene-1.wav` |
-| `{voice}` | `tts.voice` | `en-US-GuyNeural` |
-| `{rate}` | `tts.rate` | `+20%` |
-| `{refAudio}` | `tts.refAudio` | `./voice-sample.wav` |
-| any custom | `tts.options` | `{ "model": "speecht5" }` |
+| `{input}` | TTS, TTI, TTV | Input content: narration text (TTS), generation prompt (TTI, TTV), audio file path (STT) |
+| `{output}` | All | Output location: file path for TTS/TTI/TTV, directory for STT VTT files |
 
-### Examples
+### Defaults & Prerequisites
 
-**edge-tts** (default):
-```json
-{ "tts": { "cli": "edge-tts --voice \"{voice}\" --text \"{text}\" --write-media \"{output}\"" } }
-```
+| Pipeline | Field | Default CLI | Prerequisite |
+|---|---|---|---|
+| **Text-to-Speech** | `tts` | `edge-tts --voice "en-US-GuyNeural" --text "{input}" --write-media "{output}"` | `edge-tts` (`pip install edge-tts`) |
+| **Speech-to-Text** | `stt` | `whisper "{input}" --output_format vtt --output_dir "{output}"` | `openai-whisper` (`pip install openai-whisper`) |
+| **Text-to-Image** | `tti` | `pi --model agnes-2.0-flash --print "generate image: {input}" --output "{output}"` | `pi` CLI (`pip install pi-sdk`) |
+| **Text-to-Video** | `ttv` | `pi --model agnes-2.0-flash --print "generate video: {input}" --output "{output}"` | `pi` CLI (`pip install pi-sdk`) |
 
-**mlx-audio with voice cloning:**
-```json
-{ "tts": {
-  "cli": "mlx-audio tts --model \"{voice}\" --text \"{text}\" --ref-audio \"{refAudio}\" --output \"{output}\"",
-  "voice": "speecht5",
-  "refAudio": "./my-voice.wav"
-} }
-```
+### Notes
 
-**Pre-recorded audio** (copy only, no generation):
-```json
-{ "tts": { "cli": "copy", "refAudio": "./voice.wav" } }
-```
-
-### STT
-
-Whisper models: `tiny` (fastest, default), `base`, `small`, `medium`, `large`.
-
-### CLI flags
-
-```
---tts-cli "edge-tts --voice {voice} --text {text} --write-media {output}"
---voice en-US-GuyNeural
---rate +20%
---ref-audio ./voice-sample.wav
---tts-options '{"model":"speecht5"}'
---stt-model tiny
---stt-language en
+- Only the 2 variables listed above (`{input}` and `{output}`) are substituted. All other parameters (voice, model, rate, size, style, language, etc.) must be written verbatim into the CLI string.
+- To use a different TTS engine (e.g. mlx-audio, piper), simply pass its full command as `tts`:
+  ```json
+  { "tts": "mlx-audio tts --model speecht5 --text "{input}" --ref-audio ./voice.wav --output "{output}"" }
+  ```
 
 ## Tween Animation
 
