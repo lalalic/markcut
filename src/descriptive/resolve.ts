@@ -244,7 +244,12 @@ export async function resolveScripts(
  */
 export async function resolveSubtitles(
   root: DescriptiveRoot,
-  options: { outputDir: string; sttCli?: string },
+  options: {
+    outputDir: string;
+    sttCli?: string;
+    /** Compiled stream tree with action start times, used for correct offset calculation. */
+    compiled?: { children?: any[] };
+  },
 ): Promise<DescriptiveRoot> {
   const clone: DescriptiveRoot = JSON.parse(JSON.stringify(root));
   const sttCli = clone.stt ?? options.sttCli ?? DEFAULT_STT_CLI;
@@ -256,17 +261,82 @@ export async function resolveSubtitles(
 
   // Collect { audioSrc, absoluteOffset } from the compiled tree
   const clips: Array<{ audioSrc: string; offset: number }> = [];
-  function walkCompiled(node: any, parentOffset: number): void {
-    const start = node.actions?.[0]?.start ?? 0;
-    const offset = parentOffset + start;
-    if (node.type === "audio" && node.src) {
-      clips.push({ audioSrc: node.src, offset });
-    }
-    for (const child of node.children ?? []) {
-      walkCompiled(child, offset);
+
+  /**
+   * Walk an array of sibling nodes, tracking cumulative offset for series layouts.
+   *
+   * In the compiled stream tree, container nodes (Folder/Scene) don't carry `actions`
+   * — their position on the timeline is implicit in the `<Series>`/`<TransitionSeries>`
+   * renderer which plays each child sequentially based on `durationInSeconds`.
+   * This function replicates that logic to compute absolute audio offsets.
+   */
+  function walkSiblings(
+    nodes: any[],
+    parentOffset: number,
+    parentIsSeries: boolean,
+    parentTransition?: string,
+    parentTransitionTime?: number,
+  ): void {
+    let seriesOffset = parentOffset;
+    for (const node of nodes) {
+      // In a series, each child starts after all previous siblings' durations.
+      // In parallel, all children share the parent offset.
+      const nodeStart = parentIsSeries ? seriesOffset : parentOffset;
+      // Leaf nodes (video/audio/image/component) carry an action start offset
+      // relative to the container start (e.g., parallel layout with staggered start).
+      const actionStart = node.actions?.[0]?.start ?? 0;
+      const effectiveOffset = nodeStart + actionStart;
+
+      if (node.type === "audio" && node.src) {
+        clips.push({ audioSrc: node.src, offset: effectiveOffset });
+      }
+
+      // Recurse into children — determine their layout from the node type
+      if (node.children && node.children.length > 0) {
+        let childIsSeries = false;
+        let childTransition = undefined as string | undefined;
+        let childTransitionTime = 0.5;
+
+        if (node.type === "folder") {
+          childIsSeries = node.isSeries ?? false;
+          childTransition = node.transition;
+          childTransitionTime = node.transitionTime ?? 0.5;
+        } else if (node.type === "scene") {
+          // A parallel scene has direct leaf children.
+          // A series/transitionSeries scene wraps its children in a single Folder child.
+          if (
+            node.children.length === 1 &&
+            node.children[0].type === "folder" &&
+            node.children[0].isSeries
+          ) {
+            childIsSeries = true;
+            childTransition = node.children[0].transition;
+            childTransitionTime = node.children[0].transitionTime ?? 0.5;
+          }
+        }
+
+        walkSiblings(node.children, effectiveOffset, childIsSeries, childTransition, childTransitionTime);
+      }
+
+      // In a series, advance the offset by this node's duration
+      // so the next sibling starts after this one finishes.
+      if (parentIsSeries && node.durationInSeconds) {
+        const overlap = parentTransition ? (parentTransitionTime ?? 0.5) : 0;
+        seriesOffset += node.durationInSeconds - overlap;
+      }
     }
   }
-  for (const child of (clone as any).children ?? []) walkCompiled(child, 0);
+
+  // Walk the compiled tree (with actions) for correct absolute offsets;
+  // fall back to the descriptive tree if no compiled tree provided.
+  const treeToWalk = options.compiled ?? (clone as any);
+  walkSiblings(
+    (treeToWalk as any).children ?? [],
+    0,
+    (treeToWalk as any).isSeries ?? false,
+    (treeToWalk as any).transition,
+    (treeToWalk as any).transitionTime,
+  );
 
   // Run STT and collect VTT cues with absolute timestamps
   const mergedLines: string[] = ["WEBVTT", ""];
@@ -533,6 +603,7 @@ export async function resolveAll(
     result = await resolveSubtitles(result, {
       outputDir: options.scriptOutputDir,
       sttCli: options.sttCli,
+      compiled,
     });
   }
 

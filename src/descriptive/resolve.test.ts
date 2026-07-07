@@ -13,13 +13,14 @@ vi.mock("../render/tts", () => ({
 
 import { generateTTS } from "../render/tts";
 
-// ── Mock child_process for functions that call execSync directly ──────────
+// ── Mock child_process for functions that call exec/execSync ───────────────
 
 vi.mock("node:child_process", () => ({
   execSync: vi.fn(),
+  exec: vi.fn(),
 }));
 
-import { execSync } from "node:child_process";
+import { execSync, exec } from "node:child_process";
 
 let tmpDir: string;
 
@@ -108,10 +109,11 @@ describe("resolveSubtitles", () => {
     const audioPath = join(tmpDir, "narration.wav");
     writeFileSync(audioPath, "fake-audio");
 
-    // execSync writes a VTT file
-    (execSync as any).mockImplementation(() => {
+    // exec writes a VTT file (callback-style)
+    (exec as any).mockImplementation((_cmd: string, _opts: any, cb: Function) => {
       writeFileSync(join(tmpDir, "narration.vtt"),
         "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\nHello world\n");
+      cb(null, "", "");
     });
 
     const root: DescriptiveRoot = {
@@ -137,9 +139,7 @@ describe("resolveSubtitles", () => {
 
   it("returns clone unchanged when no sttCli and no root.stt", async () => {
     const root: DescriptiveRoot = { children: [] };
-    // Passing empty sttCli — should use default (whisper) and still run
     const result = await resolveSubtitles(root, { outputDir: tmpDir });
-    // Default is whisper, so it will attempt execSync; our mock returns nothing
     expect(result.subtitle).toBeUndefined();
   });
 });
@@ -480,8 +480,9 @@ describe("resolveSubtitles — additional", () => {
   it("respects root.stt override", async () => {
     const audioPath = join(tmpDir, "n.wav");
     writeFileSync(audioPath, "fake");
-    (execSync as any).mockImplementation(() => {
+    (exec as any).mockImplementation((_cmd: string, _opts: any, cb: Function) => {
       writeFileSync(join(tmpDir, "n.vtt"), "WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nhi\n");
+      cb(null, "", "");
     });
 
     const root: DescriptiveRoot = {
@@ -494,19 +495,21 @@ describe("resolveSubtitles — additional", () => {
     };
 
     await resolveSubtitles(root, { outputDir: tmpDir });
-    expect(execSync).toHaveBeenCalledWith(
+    expect(exec).toHaveBeenCalledWith(
       'custom-stt ' + audioPath + ' --out ' + tmpDir,
-      expect.anything(),
+      expect.objectContaining({ timeout: 120000 }),
+      expect.any(Function),
     );
   });
 
-  it("caches STT output and skips second execSync", async () => {
+  it("caches STT output and skips second exec", async () => {
     const audioPath = join(tmpDir, "cached.wav");
     writeFileSync(audioPath, "fake");
     let callCount = 0;
-    (execSync as any).mockImplementation(() => {
+    (exec as any).mockImplementation((_cmd: string, _opts: any, cb: Function) => {
       callCount++;
       writeFileSync(join(tmpDir, "cached.vtt"), "WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nok\n");
+      cb(null, "", "");
     });
 
     const root: DescriptiveRoot = {
@@ -524,10 +527,12 @@ describe("resolveSubtitles — additional", () => {
     expect(callCount).toBe(1); // cached
   });
 
-  it("skips gracefully when execSync throws", async () => {
+  it("skips gracefully when exec callback receives error", async () => {
     const audioPath = join(tmpDir, "fail.wav");
     writeFileSync(audioPath, "fake");
-    (execSync as any).mockImplementation(() => { throw new Error("whisper not found"); });
+    (exec as any).mockImplementation((_cmd: string, _opts: any, cb: Function) => {
+      cb(new Error("whisper not found"));
+    });
 
     const root: DescriptiveRoot = {
       children: [{
@@ -539,7 +544,7 @@ describe("resolveSubtitles — additional", () => {
 
     const result = await resolveSubtitles(root, { outputDir: tmpDir });
     expect(result.subtitle).toBeUndefined();
-    expect(execSync).toHaveBeenCalledTimes(1);
+    expect(exec).toHaveBeenCalledTimes(1);
   });
 
   it("merges VTT from multiple audio clips with correct offsets", async () => {
@@ -547,12 +552,14 @@ describe("resolveSubtitles — additional", () => {
     const a2 = join(tmpDir, "clip2.wav");
     writeFileSync(a1, "fake");
     writeFileSync(a2, "fake");
-    (execSync as any)
-      .mockImplementationOnce(() => {
+    (exec as any)
+      .mockImplementationOnce((_cmd: string, _opts: any, cb: Function) => {
         writeFileSync(join(tmpDir, "clip1.vtt"), "WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nfirst\n");
+        cb(null, "", "");
       })
-      .mockImplementationOnce(() => {
+      .mockImplementationOnce((_cmd: string, _opts: any, cb: Function) => {
         writeFileSync(join(tmpDir, "clip2.vtt"), "WEBVTT\n\n00:00:00.500 --> 00:00:01.500\nsecond\n");
+        cb(null, "", "");
       });
 
     const root: any = {
@@ -580,8 +587,9 @@ describe("resolveSubtitles — additional", () => {
   it("handles empty VTT from STT CLI (no cues)", async () => {
     const audioPath = join(tmpDir, "empty.wav");
     writeFileSync(audioPath, "fake");
-    (execSync as any).mockImplementation(() => {
+    (exec as any).mockImplementation((_cmd: string, _opts: any, cb: Function) => {
       writeFileSync(join(tmpDir, "empty.vtt"), "WEBVTT\n\n");
+      cb(null, "", "");
     });
 
     const root: any = {

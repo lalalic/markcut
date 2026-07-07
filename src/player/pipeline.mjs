@@ -959,17 +959,46 @@ async function resolveSubtitles(root, options) {
   const cache = readCacheManifest(options.outputDir);
   let cacheDirty = false;
   const clips = [];
-  function walkCompiled(node2, parentOffset) {
-    const start = node2.actions?.[0]?.start ?? 0;
-    const offset = parentOffset + start;
-    if (node2.type === "audio" && node2.src) {
-      clips.push({ audioSrc: node2.src, offset });
-    }
-    for (const child of node2.children ?? []) {
-      walkCompiled(child, offset);
+  function walkSiblings(nodes, parentOffset, parentIsSeries, parentTransition, parentTransitionTime) {
+    let seriesOffset = parentOffset;
+    for (const node2 of nodes) {
+      const nodeStart = parentIsSeries ? seriesOffset : parentOffset;
+      const actionStart = node2.actions?.[0]?.start ?? 0;
+      const effectiveOffset = nodeStart + actionStart;
+      if (node2.type === "audio" && node2.src) {
+        clips.push({ audioSrc: node2.src, offset: effectiveOffset });
+      }
+      if (node2.children && node2.children.length > 0) {
+        let childIsSeries = false;
+        let childTransition = void 0;
+        let childTransitionTime = 0.5;
+        if (node2.type === "folder") {
+          childIsSeries = node2.isSeries ?? false;
+          childTransition = node2.transition;
+          childTransitionTime = node2.transitionTime ?? 0.5;
+        } else if (node2.type === "scene") {
+          if (node2.children.length === 1 && node2.children[0].type === "folder" && node2.children[0].isSeries) {
+            childIsSeries = true;
+            childTransition = node2.children[0].transition;
+            childTransitionTime = node2.children[0].transitionTime ?? 0.5;
+          }
+        }
+        walkSiblings(node2.children, effectiveOffset, childIsSeries, childTransition, childTransitionTime);
+      }
+      if (parentIsSeries && node2.durationInSeconds) {
+        const overlap = parentTransition ? parentTransitionTime ?? 0.5 : 0;
+        seriesOffset += node2.durationInSeconds - overlap;
+      }
     }
   }
-  for (const child of clone.children ?? []) walkCompiled(child, 0);
+  const treeToWalk = options.compiled ?? clone;
+  walkSiblings(
+    treeToWalk.children ?? [],
+    0,
+    treeToWalk.isSeries ?? false,
+    treeToWalk.transition,
+    treeToWalk.transitionTime
+  );
   const mergedLines = ["WEBVTT", ""];
   let cueIndex = 1;
   let sttCachedCount = 0;
@@ -1131,7 +1160,8 @@ async function resolveAll(root, options = {}) {
     const compiled = compileDescriptiveRoot2(result);
     result = await resolveSubtitles(result, {
       outputDir: options.scriptOutputDir,
-      sttCli: options.sttCli
+      sttCli: options.sttCli,
+      compiled
     });
   }
   return result;
