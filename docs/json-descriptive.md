@@ -84,7 +84,7 @@ When to use: captions, on-screen text, karaoke. Set as `root.subtitle` — not a
 | Field | Required | Type | Notes |
 |---|---|---|---|
 | `src` | yes | string | VTT file path/URL, inline VTT body, or plain text |
-| `type` | opt | string | caption animation component: `bounce`, `fade`, `typewriter`, `colorful`, `glowing`, `neon`, etc. Default: plain `Caption` |
+| `type` | opt | string | caption animation component: `Bounce`, `Fade`, `Typewriter`, `Colorful`, `Glowing`, `Neon`, etc. Default: plain `Caption` |
 | `style` | opt | string | inline CSS for the overlay container |
 | `fontSize` | opt | number\|string | default 56 |
 | `fontFamily` | opt | string | font family for subtitle text |
@@ -95,7 +95,7 @@ When to use: captions, on-screen text, karaoke. Set as `root.subtitle` — not a
 > 00:00:01.000 --> 00:00:03.000
 > The <span style="color:#ff6b6b;font-weight:bold">quick</span> brown <span style="font-style:italic">fox</span>
 > ```
-> Tags like `<span>`, `<b>`, `<i>`, `<br>`, and inline `style` attributes all work. The `typewriter` caption type respects HTML tag boundaries during character reveal.
+> Tags like `<span>`, `<b>`, `<i>`, `<br>`, and inline `style` attributes all work. The `Typewriter` caption type respects HTML tag boundaries during character reveal.
 
 If `src` is plain text (no `-->`), renders as a single static caption for the entire video duration. The `type` field selects an animated caption component from `remotion-subtitle` — omit for a plain static caption.
 
