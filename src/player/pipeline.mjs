@@ -490,12 +490,23 @@ function parseImportsBlock(source) {
         braceDepth -= (bl.match(/}/g) || []).length;
         i++;
       }
-      entries.push({ name, jsx: bodyLines.join("\n") });
+      const usedImports = importedNames.size > 0 ? extractImportLines(source, name) : "";
+      entries.push({ name, jsx: usedImports + bodyLines.join("\n") });
       continue;
     }
     i++;
   }
   return entries;
+}
+function extractImportLines(source, functionName) {
+  const lines = [];
+  for (const line of source.split("\n")) {
+    const trimmed = line.trim();
+    if (/^import\s/.test(trimmed)) {
+      lines.push(trimmed.replace(/from\s+["'`]npm:([^"'`]+)["'`]/g, 'from "$1"'));
+    }
+  }
+  return lines.length > 0 ? lines.join("\n") + "\n" : "";
 }
 function extractDependencySpecs(source) {
   const specs = [];
@@ -12450,6 +12461,8 @@ function parseMarkdownDescriptive(markdown) {
         const meta = (node2.meta ?? "").trim();
         if (lang === "js" && meta === "imports" || lang === "imports") {
           root.importsBlock = node2.value;
+        } else if (meta === "stylesheet") {
+          root.stylesheet = node2.value;
         }
         break;
       }

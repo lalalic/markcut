@@ -515,6 +515,8 @@ export function parseMarkdownDescriptive(markdown: string): DescriptiveRoot {
         const meta = (node.meta ?? "").trim();
         if ((lang === "js" && meta === "imports") || lang === "imports") {
           root.importsBlock = node.value;
+        } else if (meta === "stylesheet") {
+          root.stylesheet = node.value;
         }
         break;
       }

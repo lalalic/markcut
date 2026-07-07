@@ -159,7 +159,7 @@ export async function bundleFromEntries(entries, extraSpecs = []) {
 
   const result = {
     url: "/.component-cache/" + hash + ".js",
-    exports: all.map(e => e.name),
+    exports: all.filter(e => e.exportName !== null).map(e => e.name),
   };
   BUNDLED.set(hash, result);
   return result;

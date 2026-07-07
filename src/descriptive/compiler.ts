@@ -795,7 +795,12 @@ export function parseImportsBlock(source: string): ImportEntry[] {
         braceDepth -= (bl.match(/}/g) || []).length;
         i++;
       }
-      entries.push({ name, jsx: bodyLines.join("\n") });
+      // Prepend relevant import statements above the function so the bundled
+      // module has access to imported names (e.g. ReactMarkdown from react-markdown)
+      const usedImports = importedNames.size > 0
+        ? extractImportLines(source, name)
+        : "";
+      entries.push({ name, jsx: usedImports + bodyLines.join("\n") });
       continue;
     }
 
@@ -803,6 +808,23 @@ export function parseImportsBlock(source: string): ImportEntry[] {
   }
 
   return entries;
+}
+
+/**
+ * Extract import lines from the source that are likely used by the given export function.
+ * Finds `import` statements and returns them as a string to prepend to the function body.
+ * Strips `npm:` prefix from package specifiers for esbuild compatibility.
+ */
+function extractImportLines(source: string, functionName: string): string {
+  const lines: string[] = [];
+  for (const line of source.split("\n")) {
+    const trimmed = line.trim();
+    if (/^import\s/.test(trimmed)) {
+      // Strip npm: prefix from package specifiers (e.g. 'npm:react-markdown' → 'react-markdown')
+      lines.push(trimmed.replace(/from\s+["'`]npm:([^"'`]+)["'`]/g, 'from "$1"'));
+    }
+  }
+  return lines.length > 0 ? lines.join("\n") + "\n" : "";
 }
 
 /**
