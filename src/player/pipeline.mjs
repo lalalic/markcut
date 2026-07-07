@@ -797,12 +797,15 @@ function generateTTS(text3, outputPath, cli) {
   try {
     execSync(cmd, { stdio: "pipe" });
   } catch (e) {
-    console.warn(`TTS failed: ${e.message}
-Command: ${cmd}
-Skipping.`);
+    const hint = cli?.includes("edge-tts") ? "The voice may not support this language. Try setting root.tts to a different voice (e.g. 'zh-CN-XiaoxiaoNeural' for Chinese)." : "Check that the TTS CLI is installed and the template is correct. Set root.tts to configure.";
+    console.warn(`  \u26A0 TTS failed: ${e.message}. ${hint}`);
     return "";
   }
-  if (existsSync(outputPath)) return outputPath;
+  if (existsSync(outputPath)) {
+    const label = outputPath.split("/").pop()?.replace(/\.\w+$/, "") ?? "";
+    console.log(`  \u2713 TTS: ${label}`);
+    return outputPath;
+  }
   const mp3Path = outputPath.replace(/\.wav$/, ".mp3");
   if (existsSync(mp3Path)) {
     try {
@@ -905,6 +908,9 @@ async function resolveScripts(root, options) {
     return false;
   }
   const toProcess = allScriptNodes.filter(({ node: node2 }) => !hasDescendantWithScript(node2));
+  if (toProcess.length > 0) {
+    console.log(`  \u{1F50A} TTS: generating ${toProcess.length} script${toProcess.length > 1 ? "s" : ""}...`);
+  }
   for (const { node: node2, id } of toProcess) {
     const safeId = id.replace(/[^a-zA-Z0-9_-]/g, "_");
     const audioPath = join(options.outputDir, `${safeId}.wav`);
@@ -914,11 +920,14 @@ async function resolveScripts(root, options) {
     let generated;
     if (cached) {
       generated = cached;
+      console.log(`  \u2713 TTS: ${safeId} (cached)`);
     } else {
       generated = generateTTS(node2.script, audioPath, ttsCli);
       if (generated) {
         updateCache(cache, `tts:${safeId}`, cacheKey, generated);
         cacheDirty = true;
+      } else {
+        console.warn(`  \u26A0 TTS produced no audio for ${safeId}. Scene will have no narration. Check root.tts config.`);
       }
     }
     if (!generated) continue;
@@ -926,6 +935,9 @@ async function resolveScripts(root, options) {
     node2.children.push({ type: "audio", src: generated, volume: 1 });
   }
   if (cacheDirty) writeCacheManifest(options.outputDir, cache);
+  if (toProcess.length > 0) {
+    console.log(`  \u2705 TTS: ${toProcess.length} script${toProcess.length > 1 ? "s" : ""} ready`);
+  }
   return clone;
 }
 async function resolveSubtitles(root, options) {
@@ -949,6 +961,9 @@ async function resolveSubtitles(root, options) {
   for (const child of clone.children ?? []) walkCompiled(child, 0);
   const mergedLines = ["WEBVTT", ""];
   let cueIndex = 1;
+  if (clips.length > 0) {
+    console.log(`  \u{1F4DD} STT: transcribing ${clips.length} clip${clips.length > 1 ? "s" : ""}...`);
+  }
   for (const { audioSrc, offset } of clips) {
     const audioHash = existsSync2(audioSrc) ? createHash("sha1").update(readFileSync(audioSrc)).digest("hex").slice(0, 12) : audioSrc;
     const sttCacheKey = computeCacheKey({ audioHash, cli: sttCli });
@@ -962,6 +977,7 @@ async function resolveSubtitles(root, options) {
       try {
         execSync2(cmd, { stdio: ["pipe", "pipe", "pipe"], timeout: 12e4 });
       } catch {
+        console.warn(`  \u26A0 STT failed for ${audioSrc.split("/").pop()}. Install whisper (pip install openai-whisper) or set root.stt.`);
       }
       const base = audioSrc.replace(/\.wav$/, "").replace(/\.mp3$/, "");
       const name = base.split("/").pop();
@@ -1002,14 +1018,15 @@ async function resolveSubtitles(root, options) {
     const mergedPath = join(options.outputDir, "subtitles.vtt");
     writeFileSync(mergedPath, mergedLines.join("\n"), "utf-8");
     clone.subtitle = { src: mergedPath };
+    console.log(`  \u2705 STT: subtitles ready (${cueIndex - 1} cues)`);
   }
   if (cacheDirty) writeCacheManifest(options.outputDir, cache);
   return clone;
 }
-var DEFAULT_TTS_CLI = 'edge-tts --voice "en-US-GuyNeural" --text "{input}" --write-media "{output}"';
-var DEFAULT_STT_CLI = 'whisper "{input}" --output_format vtt --output_dir "{output}"';
-var DEFAULT_TTI_CLI = 'pi --model agnes-2.0-flash --print "generate image: {input}" --output "{output}"';
-var DEFAULT_TTV_CLI = 'pi --model agnes-2.0-flash --print "generate video: {input}" --output "{output}"';
+var DEFAULT_TTS_CLI = 'uvx edge-tts --voice "en-US-GuyNeural" --text "{input}" --write-media "{output}"';
+var DEFAULT_STT_CLI = 'uvx --from openai-whisper whisper "{input}" --output_format vtt --output_dir "{output}"';
+var DEFAULT_TTI_CLI = 'uvx --from mflux mflux-generate-flux2 --model flux2-klein-4b --steps 5 --prompt "{input}" --output "{output}"';
+var DEFAULT_TTV_CLI = 'ffmpeg -y -f lavfi -i "color=c=#1a1a2e:s=1080x1920:d=1.5" -f lavfi -i "color=c=#2d2d5e:s=1080x1920:d=1.5" -f lavfi -i "color=c=#1a3a2e:s=1080x1920:d=2" -filter_complex "[0:v][1:v][2:v]concat=n=3:v=1:a=0[v]" -map "[v]" -c:v libx264 -pix_fmt yuv420p "{output}"';
 async function resolveGeneratedMedia(root, options) {
   const clone = JSON.parse(JSON.stringify(root));
   mkdirSync2(options.outputDir, { recursive: true });
@@ -1030,28 +1047,35 @@ async function resolveGeneratedMedia(root, options) {
     const cli = type === "image" ? clone.tti ?? options.ttiCli ?? DEFAULT_TTI_CLI : clone.ttv ?? options.ttvCli ?? DEFAULT_TTV_CLI;
     const cacheKey = computeCacheKey({ prompt, cli, type });
     const cached = checkCache(cache, `gen:${safeId}`, cacheKey);
+    const label = type === "image" ? "TTI" : "TTV";
     if (cached) {
       node2.src = cached;
+      console.log(`  \u2713 ${label}: ${safeId} (cached)`);
       continue;
     }
     const cmd = cli.replace(/\{input\}/g, prompt.replace(/"/g, '\\"')).replace(/\{output\}/g, outputPath);
     try {
-      console.log(`  Generating ${type}: ${safeId}...`);
+      console.log(`  \u{1F50A} ${label}: ${safeId}...`);
+      const ttiCmd = clone.tti ?? options.ttiCli ?? DEFAULT_TTI_CLI;
       execSync2(cmd, {
         encoding: "utf-8",
         stdio: ["pipe", "pipe", "pipe"],
-        timeout: 3e5
+        timeout: 3e5,
         // 5 min
+        env: { ...process.env, TTI_CMD: ttiCmd }
       });
       if (existsSync2(outputPath)) {
         node2.src = outputPath;
         updateCache(cache, `gen:${safeId}`, cacheKey, outputPath);
         cacheDirty = true;
+        console.log(`  \u2713 ${label}: ${safeId}`);
       } else {
-        console.error(`  \u26A0 ${type} generation produced no output: ${safeId}`);
+        const hint = cli.includes("echo") ? `No ${label} tool installed. The default CLI just echoes a message \u2014 set root.${type === "image" ? "tti" : "ttv"} to a real generation command.` : `The command ran but produced no output file. Check the CLI template or run the script manually to debug.`;
+        console.error(`  \u26A0 ${label}: ${safeId} produced no output. ${hint}`);
       }
     } catch (err) {
-      console.error(`  \u2717 ${type} generation failed for ${safeId}: ${err.message}`);
+      const hint = err?.stderr?.toString()?.includes("not found") ? `${label} tool not found. Install the required CLI or configure root.${type === "image" ? "tti" : "ttv"}.` : `Command failed. Try running the CLI template directly to debug: ${cli}`;
+      console.error(`  \u2717 ${label}: ${safeId} failed \u2014 ${err.message}. ${hint}`);
     }
   }
   if (cacheDirty) writeCacheManifest(options.outputDir, cache);
@@ -12581,6 +12605,7 @@ async function resolveAndCompile(data, options = {}) {
   const resolved = await resolveAll(data, {
     baseDir: options.baseDir,
     scriptOutputDir: options.scriptOutputDir,
+    mediaOutputDir: options.mediaOutputDir,
     ttsCli: options.ttsCli,
     sttCli: options.sttCli
   });

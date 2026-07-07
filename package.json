@@ -23,12 +23,14 @@
     "templates": "node src/render/cli.mjs templates",
     "preview": "node src/render/cli.mjs preview",
     "verify": "node src/render/cli.mjs verify",
+    "resolve": "node src/render/cli.mjs resolve",
     "render:pixelle": "remotion render examples/pixelle/index.tsx Root out/pixelle-asset-default.mp4 --props=./examples/pixelle/asset-default.json",
     "render:gallery": "remotion render examples/pixelle/index.tsx Root out/pixelle-gallery.mp4 --props=./examples/pixelle/gallery.json",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --config tests/vitest.config.ts",
     "test:integration": "vitest run --config tests/vitest.config.ts tests/render.test.ts",
-    "test:watch": "vitest --config tests/vitest.config.ts"
+    "test:watch": "vitest --config tests/vitest.config.ts",
+    "build": "scripts/build-pipeline.sh"
   },
   "dependencies": {
     "@babel/standalone": "^8.0.3",

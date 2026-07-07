@@ -45,14 +45,12 @@ markcut CLI — Markdown/JSON → video pipeline
 
 Commands:
 
-  compile <file.json|.md>               Parse + compile → stream tree JSON (sync, no I/O)
-    --output <path>                     Output path (default: stdout)
+  compile <file> --output <path>        Parse + compile → stream tree JSON (sync, no I/O)
 
-  verify <file.json|.md>                Parse + validate descriptive file
+  verify <file>                         Parse + validate descriptive file
     --cli                             Check required CLI tools are installed
 
-  resolve <file.json|.md>               Run async pipeline: TTS, STT, media durations
-    --output <path>                     Output resolved descriptive JSON (default: stdout)
+  resolve <file> --output <path>        Run async pipeline: TTS, STT, media durations
     --script-output-dir <dir>           Directory for generated TTS/STT files
     --media-output-dir <dir>            Directory for generated TTI/TTV media files
     --compile                          Also compile to stream tree after resolving
@@ -190,7 +188,12 @@ async function main() {
   }
 
   if (args.command === "preview") {
-    // Custom player modes
+    // Auto-detect: markdown files must use the player server (not Remotion Studio)
+    const isMarkdown = args.file?.endsWith(".md");
+    if (isMarkdown && !args.edit && !args.label) {
+      args.edit = true;
+    }
+
     if (args.label || args.edit) {
       const playerServer = args.label
         ? join(__dirname, "..", "player", "label-server.mjs")
@@ -205,7 +208,7 @@ async function main() {
       const fileFlag = args.file || join(ROOT, "video.json");
       const port = args.port || 3001;
       const serverArgs = [playerServer, resolve(fileFlag), modeFlags, editFlag, `--port=${port}`].filter(Boolean);
-      console.log(`\n▶ Starting player${args.label ? " (label mode)" : ""}${args.edit ? " (edit mode)" : ""} at http://localhost:${port}\n`);
+      console.log(`\n▶ Starting player${args.label ? " (label mode)" : " (edit mode)"} at http://localhost:${port}\n`);
       const child = spawn("node", serverArgs, { cwd: ROOT, stdio: "inherit" });
       // Auto-open browser after short delay (unless --no-browser)
       if (!args.noBrowser) {
@@ -222,7 +225,7 @@ async function main() {
       return;
     }
 
-    // Default: open Remotion Studio
+    // Default: open Remotion Studio (JSON files only)
     const propsFlag = args.file ? `--props="${resolve(args.file)}"` : "";
     const forceNewFlag = args.forceNew ? "--force-new" : "";
     const cmd = `npx remotion studio --config=remotion.config.ts ${propsFlag} ${forceNewFlag}`;
@@ -395,14 +398,6 @@ function hasScript(root) {
         }
       }
 
-      // ── Warnings ────────────────────────────────────────────────────────
-      if (hasScript(descriptive) && !descriptive.tts) {
-        warnings.push("Script fields found but no TTS config. Will use default edge-tts at resolve time.");
-      }
-      if (needsTti && !descriptive.tti) {
-        warnings.push("Image prompts found but no TTI config. Will use default pi at resolve time.");
-      }
-
       // ── Results ─────────────────────────────────────────────────────────
       for (const w of warnings) emitWarn(w);
       if (errors.length > 0) {
@@ -412,7 +407,7 @@ function hasScript(root) {
 
       // Compile to validate
       const compiled = compileDescriptiveRoot(descriptive);
-      emitSuccess(`Valid. Duration: ${compiled.durationInSeconds ?? "?"}s, Children: ${compiled.children?.length ?? 0}`);
+      emitSuccess(`Valid. Duration: ~${compiled.durationInSeconds ?? "?"}s, Scenes: ${compiled.children?.length ?? 0}`);
       process.exit(0);
 
     } catch (err) {
@@ -423,7 +418,11 @@ function hasScript(root) {
 
   if (args.command === "resolve") {
     if (!args.file) {
-      emitError("No input file provided. Usage: markcut resolve <file.json|.md>");
+      emitError("No input file provided. Usage: markcut resolve <file.json|.md> --output <path>");
+      process.exit(1);
+    }
+    if (!args.output) {
+      emitError("--output path is required. Usage: markcut resolve <file> --output <path>");
       process.exit(1);
     }
 
@@ -440,10 +439,11 @@ function hasScript(root) {
 
     const { resolveAndCompile, resolveAndCompileMarkdown, compileDescriptiveRoot, parseMarkdownDescriptive } = await import("../player/pipeline.mjs");
 
+    const baseDir = dirname(filePath);
     const baseOpts = {
-      baseDir: dirname(filePath),
-      scriptOutputDir: args.scriptOutputDir || undefined,
-      mediaOutputDir: args.mediaOutputDir || undefined,
+      baseDir,
+      scriptOutputDir: args.scriptOutputDir || join(baseDir, "assets", "tts"),
+      mediaOutputDir: args.mediaOutputDir || join(baseDir, "assets", "media"),
     };
 
     try {
@@ -480,14 +480,10 @@ function hasScript(root) {
         }
       }
 
-      const output = args.output ? resolve(args.output) : null;
-      if (output) {
-        mkdirSync(dirname(output), { recursive: true });
-        writeFileSync(output, JSON.stringify(result, null, 2));
-        emitSuccess(`Resolved → ${output}`);
-      } else {
-        console.log(JSON.stringify(result, null, 2));
-      }
+      const output = resolve(args.output);
+      mkdirSync(dirname(output), { recursive: true });
+      writeFileSync(output, JSON.stringify(result, null, 2));
+      emitSuccess(`Resolved → ${output}`);
       process.exit(0);
     } catch (err) {
       emitError(`Resolve failed: ${err.message}`);
@@ -497,7 +493,11 @@ function hasScript(root) {
 
   if (args.command === "compile") {
     if (!args.file) {
-      emitError("No input file provided. Usage: markcut compile <file.json|.md>");
+      emitError("No input file provided. Usage: markcut compile <file.json|.md> --output <path>");
+      process.exit(1);
+    }
+    if (!args.output) {
+      emitError("--output path is required. Usage: markcut compile <file> --output <path>");
       process.exit(1);
     }
 
@@ -522,22 +522,17 @@ function hasScript(root) {
         const parsed = JSON.parse(raw);
         const root = parsed.root ?? parsed;
         if (root.type === "root" && root.isSeries !== undefined && !root.layout) {
-          // Already compiled — pass through
-          console.log(JSON.stringify(root, null, 2));
-          process.exit(0);
+          emitError("Input is already a compiled stream tree. Use --output to save, or pass a descriptive file.");
+          process.exit(1);
         }
         descriptive = root;
       }
 
       const compiled = compileDescriptiveRoot(descriptive);
-      const output = args.output ? resolve(args.output) : null;
-      if (output) {
-        mkdirSync(dirname(output), { recursive: true });
-        writeFileSync(output, JSON.stringify(compiled, null, 2));
-        emitSuccess(`Compiled → ${output}`);
-      } else {
-        console.log(JSON.stringify(compiled, null, 2));
-      }
+      const output = resolve(args.output);
+      mkdirSync(dirname(output), { recursive: true });
+      writeFileSync(output, JSON.stringify(compiled, null, 2));
+      emitSuccess(`Compiled → ${output}`);
       process.exit(0);
     } catch (err) {
       emitError(`Compile failed: ${err.message}`);

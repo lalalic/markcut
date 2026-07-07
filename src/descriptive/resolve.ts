@@ -192,6 +192,10 @@ export async function resolveScripts(
 
   const toProcess = allScriptNodes.filter(({ node }) => !hasDescendantWithScript(node));
 
+  if (toProcess.length > 0) {
+    console.log(`  🔊 TTS: generating ${toProcess.length} script${toProcess.length > 1 ? "s" : ""}...`);
+  }
+
   for (const { node, id } of toProcess) {
     const safeId = id.replace(/[^a-zA-Z0-9_-]/g, "_");
     const audioPath = join(options.outputDir, `${safeId}.wav`);
@@ -207,11 +211,14 @@ export async function resolveScripts(
     let generated: string;
     if (cached) {
       generated = cached;
+      console.log(`  ✓ TTS: ${safeId} (cached)`);
     } else {
       generated = generateTTS(node.script, audioPath, ttsCli);
       if (generated) {
         updateCache(cache, `tts:${safeId}`, cacheKey, generated);
         cacheDirty = true;
+      } else {
+        console.warn(`  ⚠ TTS produced no audio for ${safeId}. Scene will have no narration. Check root.tts config.`);
       }
     }
     if (!generated) continue;
@@ -221,6 +228,9 @@ export async function resolveScripts(
   }
 
   if (cacheDirty) writeCacheManifest(options.outputDir, cache);
+  if (toProcess.length > 0) {
+    console.log(`  ✅ TTS: ${toProcess.length} script${toProcess.length > 1 ? "s" : ""} ready`);
+  }
   return clone;
 }
 
@@ -262,6 +272,10 @@ export async function resolveSubtitles(
   const mergedLines: string[] = ["WEBVTT", ""];
   let cueIndex = 1;
 
+  if (clips.length > 0) {
+    console.log(`  📝 STT: transcribing ${clips.length} clip${clips.length > 1 ? "s" : ""}...`);
+  }
+
   for (const { audioSrc, offset } of clips) {
     // Cache key: audio hash + STT CLI string
     const audioHash = existsSync(audioSrc)
@@ -281,7 +295,9 @@ export async function resolveSubtitles(
         .replace(/\{output\}/g, options.outputDir);
       try {
         execSync(cmd, { stdio: ["pipe", "pipe", "pipe"], timeout: 120_000 });
-      } catch { /* STT failed, skip */ }
+      } catch {
+        console.warn(`  ⚠ STT failed for ${audioSrc.split("/").pop()}. Install whisper (pip install openai-whisper) or set root.stt.`);
+      }
       // Find generated VTT file
       const base = audioSrc.replace(/\.wav$/, "").replace(/\.mp3$/, "");
       const name = base.split("/").pop()!;
@@ -324,6 +340,7 @@ export async function resolveSubtitles(
     const mergedPath = join(options.outputDir, "subtitles.vtt");
     writeFileSync(mergedPath, mergedLines.join("\n"), "utf-8");
     clone.subtitle = { src: mergedPath };
+    console.log(`  ✅ STT: subtitles ready (${cueIndex - 1} cues)`);
   }
 
   if (cacheDirty) writeCacheManifest(options.outputDir, cache);
@@ -341,10 +358,10 @@ export interface ResolveGeneratedMediaOptions {
   ttvCli?: string;
 }
 
-const DEFAULT_TTS_CLI = 'edge-tts --voice "en-US-GuyNeural" --text "{input}" --write-media "{output}"';
-const DEFAULT_STT_CLI = 'whisper "{input}" --output_format vtt --output_dir "{output}"';
-const DEFAULT_TTI_CLI = 'pi --model agnes-2.0-flash --print "generate image: {input}" --output "{output}"';
-const DEFAULT_TTV_CLI = 'pi --model agnes-2.0-flash --print "generate video: {input}" --output "{output}"';
+const DEFAULT_TTS_CLI = 'uvx edge-tts --voice "en-US-GuyNeural" --text "{input}" --write-media "{output}"';
+const DEFAULT_STT_CLI = 'uvx --from openai-whisper whisper "{input}" --output_format vtt --output_dir "{output}"';
+const DEFAULT_TTI_CLI = 'uvx --from mflux mflux-generate-flux2 --model flux2-klein-4b --steps 5 --prompt "{input}" --output "{output}"';
+const DEFAULT_TTV_CLI = 'ffmpeg -y -f lavfi -i "color=c=#1a1a2e:s=1080x1920:d=1.5" -f lavfi -i "color=c=#2d2d5e:s=1080x1920:d=1.5" -f lavfi -i "color=c=#1a3a2e:s=1080x1920:d=2" -filter_complex "[0:v][1:v][2:v]concat=n=3:v=1:a=0[v]" -map "[v]" -c:v libx264 -pix_fmt yuv420p "{output}"';
 
 /**
  * Walk the descriptive tree, find image/video nodes with `prompt` but no `src`,
@@ -395,8 +412,11 @@ export async function resolveGeneratedMedia(
     const cacheKey = computeCacheKey({ prompt, cli, type });
 
     const cached = checkCache(cache, `gen:${safeId}`, cacheKey);
+    const label = type === "image" ? "TTI" : "TTV";
+
     if (cached) {
       node.src = cached;
+      console.log(`  ✓ ${label}: ${safeId} (cached)`);
       continue;
     }
 
@@ -406,22 +426,30 @@ export async function resolveGeneratedMedia(
       .replace(/\{output\}/g, outputPath);
 
     try {
-      console.log(`  Generating ${type}: ${safeId}...`);
+      console.log(`  🔊 ${label}: ${safeId}...`);
+      const ttiCmd = clone.tti ?? options.ttiCli ?? DEFAULT_TTI_CLI;
       execSync(cmd, {
         encoding: "utf-8",
         stdio: ["pipe", "pipe", "pipe"],
         timeout: 300_000, // 5 min
+        env: { ...process.env, TTI_CMD: ttiCmd },
       });
       if (existsSync(outputPath)) {
         node.src = outputPath;
         updateCache(cache, `gen:${safeId}`, cacheKey, outputPath);
         cacheDirty = true;
+        console.log(`  ✓ ${label}: ${safeId}`);
       } else {
-        console.error(`  ⚠ ${type} generation produced no output: ${safeId}`);
+        const hint = cli.includes("echo")
+          ? `No ${label} tool installed. The default CLI just echoes a message — set root.${type === "image" ? "tti" : "ttv"} to a real generation command.`
+          : `The command ran but produced no output file. Check the CLI template or run the script manually to debug.`;
+        console.error(`  ⚠ ${label}: ${safeId} produced no output. ${hint}`);
       }
     } catch (err: any) {
-      console.error(`  ✗ ${type} generation failed for ${safeId}: ${err.message}`);
-      // Keep prompt but leave src empty — compilation will warn about it
+      const hint = (err as any)?.stderr?.toString()?.includes("not found")
+        ? `${label} tool not found. Install the required CLI or configure root.${type === "image" ? "tti" : "ttv"}.`
+        : `Command failed. Try running the CLI template directly to debug: ${cli}`;
+      console.error(`  ✗ ${label}: ${safeId} failed — ${err.message}. ${hint}`);
     }
   }
 

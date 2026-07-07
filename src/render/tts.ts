@@ -34,11 +34,18 @@ export function generateTTS(
   try {
     execSync(cmd, { stdio: "pipe" });
   } catch (e: any) {
-    console.warn(`TTS failed: ${e.message}\nCommand: ${cmd}\nSkipping.`);
+    const hint = cli?.includes("edge-tts")
+      ? "The voice may not support this language. Try setting root.tts to a different voice (e.g. 'zh-CN-XiaoxiaoNeural' for Chinese)."
+      : "Check that the TTS CLI is installed and the template is correct. Set root.tts to configure.";
+    console.warn(`  ⚠ TTS failed: ${e.message}. ${hint}`);
     return "";
   }
 
-  if (existsSync(outputPath)) return outputPath;
+  if (existsSync(outputPath)) {
+    const label = outputPath.split("/").pop()?.replace(/\.\w+$/, "") ?? "";
+    console.log(`  ✓ TTS: ${label}`);
+    return outputPath;
+  }
 
   // Check for non-wav output (edge-tts creates .mp3)
   const mp3Path = outputPath.replace(/\.wav$/, ".mp3");

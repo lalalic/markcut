@@ -25,6 +25,8 @@ export interface ResolveAndCompileOptions {
   baseDir?: string;
   /** Output directory for generated TTS audio / STT VTT files */
   scriptOutputDir?: string;
+  /** Output directory for generated TTI/TTV media files */
+  mediaOutputDir?: string;
   /** TTS CLI template override (default: edge-tts). Overrides root.tts. */
   ttsCli?: string;
   /** STT CLI template override (default: whisper). Overrides root.stt. */
@@ -75,6 +77,7 @@ export async function resolveAndCompile(
   const resolved = await resolveAll(data, {
     baseDir: options.baseDir,
     scriptOutputDir: options.scriptOutputDir,
+    mediaOutputDir: options.mediaOutputDir,
     ttsCli: options.ttsCli,
     sttCli: options.sttCli,
   });

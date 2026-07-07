@@ -40,6 +40,7 @@ let editHistory = [];
 
 // ─── TTS/STT output directory (relative to video.json) ────────────────────
 const TTS_OUTPUT_DIR = join(dirname(VIDEO_JSON), "assets", "tts");
+const MEDIA_OUTPUT_DIR = join(dirname(VIDEO_JSON), "assets", "media");
 const WHISPER_BIN = process.env.WHISPER_BIN || "/Users/lir/Library/Python/3.9/bin/whisper";
 
 // ─── Extract scene info from compiled root ───────────────────────────────
@@ -109,11 +110,11 @@ async function loadCompiledRoot() {
   let compiled;
 
   if (IS_MARKDOWN) {
-    // Markdown → descriptive root → compiled stream tree
-    console.log("  📝 Detected markdown input — parsing + running pipeline...");
+    console.log("  📝 Markdown → pipeline...");
     compiled = await resolveAndCompileMarkdown(raw, {
       baseDir: dirname(VIDEO_JSON),
       scriptOutputDir: TTS_OUTPUT_DIR,
+      mediaOutputDir: MEDIA_OUTPUT_DIR,
       whisperBin: existsSync(WHISPER_BIN) ? WHISPER_BIN : undefined,
     });
     compiledRootIsDescriptive = true;
@@ -122,11 +123,11 @@ async function loadCompiledRoot() {
     const root = parsed.root || parsed;
 
     if (isDescriptiveRoot(root)) {
-      compiledRootIsDescriptive = true;
-      console.log("  🔍 Detected descriptive JSON — running resolve + compile pipeline...");
+      console.log("  🔍 Descriptive JSON → pipeline...");
       compiled = await resolveAndCompile(root, {
         baseDir: dirname(VIDEO_JSON),
         scriptOutputDir: TTS_OUTPUT_DIR,
+        mediaOutputDir: MEDIA_OUTPUT_DIR,
         whisperBin: existsSync(WHISPER_BIN) ? WHISPER_BIN : undefined,
       });
     } else {
@@ -163,7 +164,7 @@ async function loadCompiledRoot() {
       const bundle = await bundleFromEntries(importEntries, extraSpecs);
       if (bundle.url) {
         compiled.imports = bundle.url;
-        console.log(`  ✅ Component bundle: ${bundle.url} (${bundle.exports.join(", ")})`);
+        console.log(`  ✅ Components: ${bundle.exports.join(", ")}`);
       }
     }
   } catch (e) {
@@ -734,9 +735,7 @@ IMPORTANT: Read the full existing JSON file before editing. Only edit the JSON f
 
 server.listen(PORT, () => {
   const mode = MODE_LABEL ? " --label" : MODE_EDIT ? " --edit" : "";
-  console.log(`\n🎬 Remotion Player${mode} at http://localhost:${PORT}`);
-  console.log(`   JSON: ${VIDEO_JSON}`);
-  if (MODE_LABEL) console.log(`   Labels: ${dirname(VIDEO_JSON)}/labels.json`);
-  if (MODE_EDIT) console.log(`   Watching ${VIDEO_JSON} for changes — edit the file and player auto-reloads`);
+  console.log(`\n🎬 Player ready at http://localhost:${PORT}${mode}`);
+  if (MODE_EDIT) console.log(`   Watching: ${VIDEO_JSON.split("/").pop()}`);
   console.log("");
 });
