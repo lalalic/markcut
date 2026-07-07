@@ -135,7 +135,6 @@ export function FolderLeaf({ stream }: { stream: FolderStream }) {
 
   return (
     <AudioContext.Provider value={audioCtx as any}>
-      {(stream as any).stylesheet ? <style>{(stream as any).stylesheet}</style> : null}
       <Container
         id={stream.id}
         type={stream.type}
