@@ -119,11 +119,13 @@ let scenes = [];
 let totalDuration = 0;
 let videoData = null;
 const LABELS_PATH = join(dirname(SOURCE), "labels.json");
+/** Promise that resolves when the initial pipeline (TTS, STT, media) completes */
+let bootstrap = Promise.resolve();
 
 if (existsSync(SOURCE)) {
   try {
     // async bootstrap — we inline the promise since the server starts synchronously
-    const bootstrap = loadSource().then((compiled) => {
+    bootstrap = loadSource().then((compiled) => {
       videoData = compiled;
       const extracted = extractScenes(compiled);
       scenes = extracted.scenes;
@@ -598,8 +600,14 @@ const server = createServer((req, res) => {
   }
 });
 
-server.listen(PORT, () => {
-  console.log(`\\n🏷️  Label Preview at http://localhost:${PORT}`);
+server.listen(PORT, async () => {
+  // Wait for initial pipeline to fully resolve before announcing ready
+  try {
+    await bootstrap;
+  } catch {
+    // Pipeline failed — still announce ready
+  }
+  console.log(`\n🏷️  Label Preview at http://localhost:${PORT}`);
   console.log(`   Source: 📄 ${SOURCE}`);
   console.log(`   Scenes: ${scenes.length}`);
   console.log(`   Labels: ${LABELS_PATH}`);

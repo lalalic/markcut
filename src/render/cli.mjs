@@ -208,15 +208,24 @@ async function main() {
       const fileFlag = args.file || join(ROOT, "video.json");
       const port = args.port || 3001;
       const serverArgs = [playerServer, resolve(fileFlag), modeFlags, editFlag, `--port=${port}`].filter(Boolean);
-      console.log(`\n▶ Starting player${args.label ? " (label mode)" : " (edit mode)"} at http://localhost:${port}\n`);
-      const child = spawn("node", serverArgs, { cwd: ROOT, stdio: "inherit" });
-      // Auto-open browser after short delay (unless --no-browser)
-      if (!args.noBrowser) {
-        setTimeout(() => {
-          try {
-            execSync(`open http://localhost:${port}`, { stdio: "ignore" });
-          } catch {}
-        }, 1000);
+      const child = spawn("node", serverArgs, { cwd: ROOT, stdio: ["ignore", "pipe", "inherit"] });
+      let serverReady = false;
+      let stdoutBuffer = "";
+      // Forward stdout and open browser once server is ready
+      if (child.stdout) {
+        child.stdout.on("data", (chunk) => {
+          process.stdout.write(chunk);
+          if (!serverReady && !args.noBrowser) {
+            stdoutBuffer += chunk.toString();
+            if (stdoutBuffer.includes("Player ready") || stdoutBuffer.includes("Label Preview")) {
+              serverReady = true;
+              console.log(`\n▶ Starting player${args.label ? " (label mode)" : " (edit mode)"} at http://localhost:${port}\n`);
+              try {
+                execSync(`open http://localhost:${port}`, { stdio: "ignore" });
+              } catch {}
+            }
+          }
+        });
       }
       child.on("exit", (code) => process.exit(code ?? 0));
       // Keep running until killed

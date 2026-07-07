@@ -7,7 +7,7 @@
  * These run BEFORE compileDescriptiveRoot() so the synchronous compiler
  * has complete duration and renderable children.
  */
-import { execSync } from "node:child_process";
+import { execSync, exec } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync, statSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { join, dirname, resolve as resolvePath } from "node:path";
@@ -272,9 +272,8 @@ export async function resolveSubtitles(
   const mergedLines: string[] = ["WEBVTT", ""];
   let cueIndex = 1;
 
-  if (clips.length > 0) {
-    console.log(`  📝 STT: transcribing ${clips.length} clip${clips.length > 1 ? "s" : ""}...`);
-  }
+  let sttCachedCount = 0;
+  let sttFailedCount = 0;
 
   for (const { audioSrc, offset } of clips) {
     // Cache key: audio hash + STT CLI string
@@ -283,20 +282,28 @@ export async function resolveSubtitles(
       : audioSrc;
     const sttCacheKey = computeCacheKey({ audioHash, cli: sttCli });
     const sttKey = `stt:${audioSrc.split("/").pop()}`;
+    const clipName = audioSrc.split("/").pop()!;
 
     let vttPath: string | null = null;
     const cachedVtt = checkCache(cache, sttKey, sttCacheKey);
     if (cachedVtt) {
       vttPath = cachedVtt;
+      sttCachedCount++;
     } else {
-      // Run STT CLI with {input} and {output} substitution
+      // Run STT CLI with {input} and {output} substitution (async, non-blocking)
       const cmd = sttCli
         .replace(/\{input\}/g, audioSrc)
         .replace(/\{output\}/g, options.outputDir);
       try {
-        execSync(cmd, { stdio: ["pipe", "pipe", "pipe"], timeout: 120_000 });
+        await new Promise<void>((resolvePromise, reject) => {
+          exec(cmd, { timeout: 120_000 }, (err) => {
+            if (err) reject(err);
+            else resolvePromise();
+          });
+        });
       } catch {
-        console.warn(`  ⚠ STT failed for ${audioSrc.split("/").pop()}. Install whisper (pip install openai-whisper) or set root.stt.`);
+        console.warn(`  ⚠ STT failed for ${clipName}. Install whisper (pip install openai-whisper) or set root.stt.`);
+        sttFailedCount++;
       }
       // Find generated VTT file
       const base = audioSrc.replace(/\.wav$/, "").replace(/\.mp3$/, "");
@@ -333,6 +340,13 @@ export async function resolveSubtitles(
       mergedLines.push(String(cueIndex++));
       mergedLines.push(`${formatSec(toSec(a) + offset)} --> ${formatSec(toSec(z) + offset)}`);
       mergedLines.push(text, "");
+    }
+  }
+
+  if (clips.length > 0) {
+    const transcribed = clips.length - sttCachedCount - sttFailedCount;
+    if (transcribed > 0 || sttFailedCount > 0) {
+      console.log(`  📝 STT: ${transcribed} transcribed, ${sttCachedCount} cached${sttFailedCount > 0 ? `, ${sttFailedCount} failed` : ""}`);
     }
   }
 

@@ -191,8 +191,8 @@ async function initScenes() {
   }
 }
 
-// Fire and forget — scenes get populated asynchronously
-initScenes();
+// Will be awaited before announcing "Player ready"
+const initScenesPromise = initScenes();
 
 // ─── Watch file for changes (--edit mode) ───────────────────────────────
 if (MODE_EDIT) {
@@ -733,7 +733,13 @@ IMPORTANT: Read the full existing JSON file before editing. Only edit the JSON f
   }
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
+  // Wait for initial pipeline (TTS, STT, media) to fully resolve before announcing ready
+  try {
+    await initScenesPromise;
+  } catch {
+    // Pipeline failed — still announce ready so the player can show an error state
+  }
   const mode = MODE_LABEL ? " --label" : MODE_EDIT ? " --edit" : "";
   console.log(`\n🎬 Player ready at http://localhost:${PORT}${mode}`);
   if (MODE_EDIT) console.log(`   Watching: ${VIDEO_JSON.split("/").pop()}`);

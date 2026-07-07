@@ -781,7 +781,7 @@ var require_format = __commonJS({
 init_compiler();
 
 // src/descriptive/resolve.ts
-import { execSync as execSync2 } from "node:child_process";
+import { execSync as execSync2, exec } from "node:child_process";
 import { existsSync as existsSync2, mkdirSync as mkdirSync2, readFileSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { join, resolve as resolvePath } from "node:path";
@@ -961,23 +961,30 @@ async function resolveSubtitles(root, options) {
   for (const child of clone.children ?? []) walkCompiled(child, 0);
   const mergedLines = ["WEBVTT", ""];
   let cueIndex = 1;
-  if (clips.length > 0) {
-    console.log(`  \u{1F4DD} STT: transcribing ${clips.length} clip${clips.length > 1 ? "s" : ""}...`);
-  }
+  let sttCachedCount = 0;
+  let sttFailedCount = 0;
   for (const { audioSrc, offset } of clips) {
     const audioHash = existsSync2(audioSrc) ? createHash("sha1").update(readFileSync(audioSrc)).digest("hex").slice(0, 12) : audioSrc;
     const sttCacheKey = computeCacheKey({ audioHash, cli: sttCli });
     const sttKey = `stt:${audioSrc.split("/").pop()}`;
+    const clipName = audioSrc.split("/").pop();
     let vttPath = null;
     const cachedVtt = checkCache(cache, sttKey, sttCacheKey);
     if (cachedVtt) {
       vttPath = cachedVtt;
+      sttCachedCount++;
     } else {
       const cmd = sttCli.replace(/\{input\}/g, audioSrc).replace(/\{output\}/g, options.outputDir);
       try {
-        execSync2(cmd, { stdio: ["pipe", "pipe", "pipe"], timeout: 12e4 });
+        await new Promise((resolvePromise, reject) => {
+          exec(cmd, { timeout: 12e4 }, (err) => {
+            if (err) reject(err);
+            else resolvePromise();
+          });
+        });
       } catch {
-        console.warn(`  \u26A0 STT failed for ${audioSrc.split("/").pop()}. Install whisper (pip install openai-whisper) or set root.stt.`);
+        console.warn(`  \u26A0 STT failed for ${clipName}. Install whisper (pip install openai-whisper) or set root.stt.`);
+        sttFailedCount++;
       }
       const base = audioSrc.replace(/\.wav$/, "").replace(/\.mp3$/, "");
       const name = base.split("/").pop();
@@ -1012,6 +1019,12 @@ async function resolveSubtitles(root, options) {
       mergedLines.push(String(cueIndex++));
       mergedLines.push(`${formatSec(toSec(a) + offset)} --> ${formatSec(toSec(z) + offset)}`);
       mergedLines.push(text3, "");
+    }
+  }
+  if (clips.length > 0) {
+    const transcribed = clips.length - sttCachedCount - sttFailedCount;
+    if (transcribed > 0 || sttFailedCount > 0) {
+      console.log(`  \u{1F4DD} STT: ${transcribed} transcribed, ${sttCachedCount} cached${sttFailedCount > 0 ? `, ${sttFailedCount} failed` : ""}`);
     }
   }
   if (cueIndex > 1) {
