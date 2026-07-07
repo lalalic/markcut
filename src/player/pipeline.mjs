@@ -1070,7 +1070,7 @@ async function resolveSubtitles(root, options) {
   if (cueIndex > 1) {
     const mergedPath = join(options.outputDir, "subtitles.vtt");
     writeFileSync(mergedPath, mergedLines.join("\n"), "utf-8");
-    clone.subtitle = { src: mergedPath };
+    clone.subtitle = { ...clone.subtitle ?? {}, src: mergedPath };
     console.log(`  \u2705 STT: subtitles ready (${cueIndex - 1} cues)`);
   }
   if (cacheDirty) writeCacheManifest(options.outputDir, cache);
@@ -12637,6 +12637,21 @@ function applyRootAttrs(root, attrs) {
       case "ttv":
         root.ttv = typeof v === "object" && v !== null ? String(v.cli ?? "") : String(v);
         break;
+      case "subtitle": {
+        if (typeof v === "string") {
+          root.subtitle = { src: v };
+        } else if (v && typeof v === "object") {
+          const obj = v;
+          root.subtitle = {};
+          if (typeof obj.src === "string") root.subtitle.src = obj.src;
+          if (typeof obj.type === "string") root.subtitle.type = obj.type;
+          if (typeof obj.style === "string") root.subtitle.style = obj.style;
+          if (obj.fontSize != null) root.subtitle.fontSize = obj.fontSize;
+          if (typeof obj.fontFamily === "string") root.subtitle.fontFamily = obj.fontFamily;
+          if (typeof obj.fontStyle === "string") root.subtitle.fontStyle = obj.fontStyle;
+        }
+        break;
+      }
       default:
         throw new Error(`unknown root key: ${k}`);
     }

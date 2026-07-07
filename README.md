@@ -39,7 +39,7 @@ storyboard.md  ──[parse]──▶  DescriptiveRoot  ──[compile]──▶
 | **Tween animation** | `tween(from, to)` function calls in JSX for frame-accurate numeric animation |
 | **Compiled input** | Pre-compiled stream tree for direct Remotion rendering |
 | **TTS narration** | `script` field → edge-tts CLI → WAV audio. Configurable engine (mlx-audio, custom) |
-| **STT subtitles** | TTS audio → whisper → VTT → root subtitle overlay |
+| **STT subtitles** | TTS audio → whisper → VTT → root subtitle overlay with animated caption types (typewriter, fade, bounce, etc.) |
 | **Tween animation** | `tween(from, to)` function calls in JSX for frame-accurate numeric animation |
 | **Styling** | Inline `style` strings on any node for CSS. JSX components use inline React styles |
 | **Live edit** | `--edit` watches the input file, re-runs pipeline, auto-reloads player |

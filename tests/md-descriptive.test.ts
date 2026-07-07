@@ -308,6 +308,62 @@ describe("frontmatter fixture", () => {
   });
 });
 
+describe("subtitle frontmatter fixture", () => {
+  const src = `---
+width: 640
+height: 480
+fps: 30
+subtitle:
+  src: captions.vtt
+  type: typewriter
+  fontSize: 48
+  fontFamily: "Helvetica Neue"
+  fontStyle: bold
+---
+# video
+layout:series
+## Scene
+- image src:bg.jpg duration:3
+`;
+
+  it("parses subtitle from frontmatter as object", () => {
+    const parsed = parseMarkdownDescriptive(src);
+    expect(parsed.subtitle).toBeDefined();
+    expect(parsed.subtitle!.src).toBe("captions.vtt");
+    expect(parsed.subtitle!.type).toBe("typewriter");
+    expect(parsed.subtitle!.fontSize).toBe(48);
+    expect(parsed.subtitle!.fontFamily).toBe("Helvetica Neue");
+    expect(parsed.subtitle!.fontStyle).toBe("bold");
+  });
+
+  it("compiles subtitle into root stream tree", () => {
+    const parsed = parseMarkdownDescriptive(src);
+    const compiled = compileDescriptiveRoot(parsed);
+    expect(compiled.subtitle).toBeDefined();
+    expect(compiled.subtitle!.src).toBe("captions.vtt");
+    expect(compiled.subtitle!.type).toBe("typewriter");
+    expect(compiled.subtitle!.fontSize).toBe(48);
+  });
+
+  it("parses subtitle as plain string (src only)", () => {
+    const simpleSrc = `---
+width: 640
+height: 480
+fps: 30
+subtitle: subtitles.vtt
+---
+# video
+layout:series
+## Scene
+- image src:bg.jpg duration:3
+`;
+    const parsed = parseMarkdownDescriptive(simpleSrc);
+    expect(parsed.subtitle).toBeDefined();
+    expect(parsed.subtitle!.src).toBe("subtitles.vtt");
+    expect(parsed.subtitle!.type).toBeUndefined();
+  });
+});
+
 // ── Imports Block ─────────────────────────────────────────────────────────
 
 describe("imports-block fixture", () => {

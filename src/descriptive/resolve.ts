@@ -423,7 +423,7 @@ export async function resolveSubtitles(
   if (cueIndex > 1) {
     const mergedPath = join(options.outputDir, "subtitles.vtt");
     writeFileSync(mergedPath, mergedLines.join("\n"), "utf-8");
-    clone.subtitle = { src: mergedPath };
+    clone.subtitle = { ...(clone.subtitle ?? {}), src: mergedPath };
     console.log(`  ✅ STT: subtitles ready (${cueIndex - 1} cues)`);
   }
 

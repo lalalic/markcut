@@ -28,7 +28,7 @@ See [docs/markdown-strict-descriptive.md](docs/markdown-strict-descriptive.md) f
 - **Script → TTS → STT** — `script` field generates edge-tts audio, whisper transcribes to VTT subtitles
 - **Theme** — preset colors/fonts/effects: `cinematic`, `neon`, `minimal`, `corporate`
 - **TTL config** — root-level `tts.cli`, `tts.voice`, `tts.rate` with per-scene `tts` overrides
-- **Subtitle** — root-level VTT overlay from merged per-clip STT. Not a tree node.
+- **Subtitle** — root-level VTT overlay from merged per-clip STT. Not a tree node. Supports animated caption types (`typewriter`, `fade`, `bounce`, `glowing`, etc.) via `remotion-subtitle`, HTML in cue text, and per-cue `<Sequence>` rendering for zero CPU when inactive.
 
 ## Stream types
 

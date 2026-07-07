@@ -698,6 +698,21 @@ function applyRootAttrs(root: DescriptiveRoot, attrs: Record<string, unknown>): 
       case "ttv":
         root.ttv = typeof v === "object" && v !== null ? String((v as any).cli ?? "") : String(v);
         break;
+      case "subtitle": {
+        if (typeof v === "string") {
+          root.subtitle = { src: v };
+        } else if (v && typeof v === "object") {
+          const obj = v as Record<string, unknown>;
+          root.subtitle = {} as any;
+          if (typeof obj.src === "string") root.subtitle.src = obj.src;
+          if (typeof obj.type === "string") root.subtitle.type = obj.type;
+          if (typeof obj.style === "string") root.subtitle.style = obj.style;
+          if (obj.fontSize != null) root.subtitle.fontSize = obj.fontSize;
+          if (typeof obj.fontFamily === "string") root.subtitle.fontFamily = obj.fontFamily;
+          if (typeof obj.fontStyle === "string") root.subtitle.fontStyle = obj.fontStyle;
+        }
+        break;
+      }
       default:
         throw new Error(`unknown root key: ${k}`);
     }

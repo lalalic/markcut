@@ -52,6 +52,9 @@ export const subtitleOverlay = z.object({
   src: z.string().describe("path or URL to VTT file covering the full video duration"),
   style: z.string().optional().describe("inline css for the overlay container"),
   fontSize: z.union([z.number(), z.string()]).optional(),
+  type: z.string().optional().describe("caption animation type: bounce, fade, typewriter, colorful, glowing, neon, etc."),
+  fontFamily: z.string().optional().describe("font family for subtitle text"),
+  fontStyle: z.string().optional().describe("font style: normal, italic, bold, bold italic, etc."),
 });
 export type SubtitleOverlay = z.infer<typeof subtitleOverlay>;
 

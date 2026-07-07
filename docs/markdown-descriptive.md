@@ -35,7 +35,39 @@ stylesheet: |
 ---
 ```
 
-Supported root keys: `width`, `height`, `fps`, `tts`, `stt`, `tti`, `ttv`, `title`, `description`, `stylesheet`.
+Supported root keys: `width`, `height`, `fps`, `tts`, `stt`, `tti`, `ttv`, `title`, `description`, `stylesheet`, `subtitle`.
+
+### Subtitle
+
+Configure a global VTT caption overlay via the `subtitle` frontmatter key. Supports an object with `src`, `type`, `fontSize`, `fontFamily`, `fontStyle`, and `style`:
+
+```yaml
+subtitle:
+  src: captions.vtt
+  type: typewriter
+  fontSize: 48
+  fontFamily: "Helvetica Neue"
+  fontStyle: bold
+  style: "color: yellow;"
+```
+
+| Field | Required | Type | Notes |
+|---|---|---|---|
+| `src` | yes | string | VTT path/URL, inline VTT body, or plain text |
+| `type` | opt | string | caption animation: `bounce`, `fade`, `typewriter`, `colorful`, etc. Default: plain static caption |
+| `fontSize` | opt | number | default 56 |
+| `fontFamily` | opt | string | font family |
+| `fontStyle` | opt | string | `normal`, `italic`, `bold`, etc. |
+| `style` | opt | string | inline CSS for the overlay container |
+
+> **HTML in cue text**: Cue text supports HTML tags with inline CSS, so you can style individual words:
+> ```vtt
+> 00:00:01.000 --> 00:00:03.000
+> Hello <span style="color:#ff6b6b">world</span>, welcome to <b>our show</b>!
+> ```
+> The engine renders cue text via `dangerouslySetInnerHTML`, making `<span>`, `<b>`, `<i>`, `<br>`, and inline `style` attributes all work.
+
+If `src` is plain text (no `-->` markers), it renders as a single caption for the full video duration. The `type` field maps to a `remotion-subtitle` animation component — omit for a plain static caption.
 
 
 ### Imports block (recommended)
@@ -176,9 +208,33 @@ When: voiceover, BGM, SFX. Required: `src` + (`duration` or `endAt`).
 
 `- audio src:bgm.mp3 duration:6 volume:0.4 loop:2`
 
-### `subtitle`
+### `subtitle` (root-level overlay)
 
-Subtitles are configured at the root level as a VTT overlay, not as tree nodes. Set `root.subtitle` in JSON, or provide a VTT file path via the pipeline. See [JSON Descriptive](json-descriptive.md) for details.
+Subtitles are configured at the root level as a VTT overlay, not as tree nodes. Set via YAML frontmatter `subtitle:` or `root.subtitle` in JSON.
+
+The `type` field selects an animated caption component from `remotion-subtitle`:
+
+| Value | Component |
+|---|---|
+| *(omit)* | `Caption` — plain static text |
+| `bounce` | `BounceCaption` — bouncing entrance |
+| `fade` | `FadeCaption` — fade in |
+| `typewriter` | `TypewriterCaption` — typewriter reveal |
+| `colorful` | `ColorfulCaption` — rainbow text |
+| `glowing` | `GlowingCaption` — glow effect |
+| `neon` | `NeonCaption` — neon sign |
+| `zoom` | `ZoomCaption` — zoom in |
+
+> **HTML in cue text**: Each cue's text is rendered via `dangerouslySetInnerHTML`, so you can use HTML tags with inline CSS to style individual words:
+> ```vtt
+> 00:00:01.000 --> 00:00:03.000
+> The <span style="color:#ff6b6b;font-weight:bold">quick</span> brown <span style="font-style:italic">fox</span> jumps over the lazy dog
+> ```
+> The `typewriter` caption animation correctly respects HTML tag boundaries (character reveal skips over tags, only animates visible text).
+
+Each cue is rendered as a separate `<Sequence>` for optimal performance — inactive cues consume zero CPU.
+
+See [JSON Descriptive](json-descriptive.md#subtitle-root-level-overlay) for the full field reference.
 
 ### `component`
 

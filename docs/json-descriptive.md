@@ -77,19 +77,27 @@ When to use: photos, stills, title cards.
 | `fit` | opt | `"contain"\|"cover"\|"fill"` | default `contain` |
 | `start` | opt | number | parallel only |
 
-### `subtitle`
+### `subtitle` (root-level overlay)
 
-When to use: captions, on-screen text, karaoke.
+When to use: captions, on-screen text, karaoke. Set as `root.subtitle` — not a tree node.
 
 | Field | Required | Type | Notes |
 |---|---|---|---|
-| `type` | yes | `"subtitle"` | |
-| `src` | opt | string | inline text, VTT URL, or raw VTT body |
-| `cues` | opt | cue[] | `{startFrom,endAt,text,className?,words?}` |
-| `duration` | cond | number | required if no cues/src |
-| `fontSize`,`fontStyle`,`captionType` | opt | | styling |
+| `src` | yes | string | VTT file path/URL, inline VTT body, or plain text |
+| `type` | opt | string | caption animation component: `bounce`, `fade`, `typewriter`, `colorful`, `glowing`, `neon`, etc. Default: plain `Caption` |
+| `style` | opt | string | inline CSS for the overlay container |
+| `fontSize` | opt | number\|string | default 56 |
+| `fontFamily` | opt | string | font family for subtitle text |
+| `fontStyle` | opt | string | `normal`, `italic`, `bold`, `bold italic`, etc. |
 
-If `cues` omitted and `src` is plain text, renders as a single caption for `duration`.
+> **HTML in cue text**: VTT cue text supports HTML tags with inline CSS for per-word styling:
+> ```vtt
+> 00:00:01.000 --> 00:00:03.000
+> The <span style="color:#ff6b6b;font-weight:bold">quick</span> brown <span style="font-style:italic">fox</span>
+> ```
+> Tags like `<span>`, `<b>`, `<i>`, `<br>`, and inline `style` attributes all work. The `typewriter` caption type respects HTML tag boundaries during character reveal.
+
+If `src` is plain text (no `-->`), renders as a single static caption for the entire video duration. The `type` field selects an animated caption component from `remotion-subtitle` — omit for a plain static caption.
 
 ### `component`
 

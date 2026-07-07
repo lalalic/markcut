@@ -4,6 +4,8 @@ description: A beginner's course on artificial intelligence
 width: 1920 
 height: 1080 
 fps: 30 
+subtitle:
+  type: Waving
 ---
 # video
 layout:series

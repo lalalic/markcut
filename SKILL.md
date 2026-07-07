@@ -45,6 +45,50 @@ npx markcut render <stream tree file> --aspect all  # MP4 output
 
 ---
 
+## Subtitle Overlay
+
+The engine supports a **root-level VTT subtitle overlay** with animated caption components.
+
+### Configuration
+
+```yaml
+# In markdown frontmatter
+subtitle:
+  src: captions.vtt
+  type: typewriter       # caption animation: bounce, fade, typewriter, colorful, glowing, neon, zoom, etc.
+  fontSize: 48
+  fontFamily: "Helvetica Neue"
+  fontStyle: bold
+```
+
+| Field | Required | Type | Notes |
+|---|---|---|---|
+| `src` | yes | string | VTT path/URL, inline VTT body, or plain text |
+| `type` | opt | string | caption animation component (default: plain static `Caption`) |
+| `fontSize` | opt | number\|string | default 56 |
+| `fontFamily` | opt | string | font family |
+| `fontStyle` | opt | string | `normal`, `italic`, `bold`, etc. |
+| `style` | opt | string | inline CSS for overlay container |
+
+Cue text supports **HTML tags** (`<span style="color:red">...</span>`). Each cue is rendered as a separate `<Sequence>` — inactive cues consume zero CPU.
+
+### Caption type reference
+
+| Value | Component | Effect |
+|---|---|---|
+| *(omit)* | `Caption` | Plain static text |
+| `bounce` | `BounceCaption` | Bouncing entrance |
+| `fade` | `FadeCaption` | Fade in |
+| `typewriter` | `TypewriterCaption` | Typewriter character reveal |
+| `colorful` | `ColorfulCaption` | Rainbow cycling colors |
+| `glowing` | `GlowingCaption` | Glow effect |
+| `neon` | `NeonCaption` | Neon sign |
+| `zoom` | `ZoomCaption` | Zoom in |
+| `explosive` | `ExplosiveCaption` | Burst effect |
+| `shake` | `ShakeCaption` | Shake effect |
+| `waving` | `WavingCaption` | Wavy text |
+| `rotating` | `RotatingCaption` | Rotation |
+
 ## AI Media Generation (TTS / STT / TTI / TTV)
 
 All four pipelines are configured via a **single CLI string** in frontmatter. The user/LLM embeds every tool-specific parameter directly in the string — only `{input}` and `{output}` are substituted by the engine.
