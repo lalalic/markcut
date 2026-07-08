@@ -104,7 +104,8 @@ export function Slide(props) {
 
 ## Hook
 instruction: "an AI video to attract audience"
-- video prompt:"On a barren hilltop, with desert in the distance and a ruined city skyline. An animated Minion shakes its head and says to the wallet robot, 'Look at this world — it's all AI's fault'"
+- video effects:[fadeIn, fadeOut]
+  prompt:"On a barren hilltop, with desert in the distance and a ruined city skyline. An animated Minion shakes its head and says to the wallet robot, 'Look at this world — it's all AI's fault'"
 
 ## Slides 
 layout:transitionSeries transition:fade transitionTime:0.5

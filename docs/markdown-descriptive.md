@@ -141,10 +141,7 @@ For compatibility, `import { Name } from "spec"` also works and produces the sam
 | `loop` | int >1 | audio |
 | `playbackRate` | number | video |
 | `jsx` | usage JSX expression (`"<ComA value={42} />"`); compiled at runtime with registered imports in scope | component |
-| `animation` | builtin name or `custom` | effect |
-| `animationTimingFunction` | `linear\|ease\|ease-in\|ease-out\|ease-in-out` | effect |
-| `animationIterationCount` | int (default 1) | effect |
-| `customKeyframes` | `{...}` JSON `{"0":{opacity:"0"},"100":{opacity:"1"}}` | effect |
+| `effects` | `[name, name(params...)]` e.g. `[fadeIn, bounceIn(1, ease-out, 2)]` | any leaf/container | Apply animations directly — no wrapper node needed |
 | `waypoints` | `[lat,lng,"label";...]` | map |
 | `travelMode` | `DRIVING\|WALKING\|BICYCLING\|TRANSIT` | map |
 | `routeColor` | hex color e.g. `"#FF5733"` | map |
@@ -233,6 +230,44 @@ The `type` field selects an animated caption component from `remotion-subtitle`:
 Each cue is rendered as a separate `<Sequence>` for optimal performance — inactive cues consume zero CPU.
 
 See [JSON Descriptive](json-descriptive.md#subtitle-root-level-overlay) for the full field reference.
+
+## Effects on Any Node
+
+Apply animations directly via the `effects` key on **any** node (leaf or container). No wrapper node needed.
+
+```md
+- image src:hero.jpg duration:3 effects:[fadeIn]
+- component duration:2 jsx:"<Title />" effects:[bounceIn]
+- video src:clip.mp4 duration:4 effects:[fadeIn, slideInLeft]
+```
+
+### Parameterized syntax
+
+Add positional parameters in parentheses — comma-separated.
+
+```md
+- image src:card.jpg duration:3 effects:[fadeIn(1.5)]
+- image src:card.jpg duration:3 effects:[fadeIn(1.5, ease-out)]
+- image src:card.jpg duration:3 effects:[fadeIn(1.5, ease-out, 2)]
+```
+
+Order: `(duration, timingFunction, iterationCount)`
+
+| Position | Parameter | Example |
+|---|---|---|
+| 1st | `duration` (seconds) | `fadeIn(1.5)` |
+| 2nd | `timingFunction` | `fadeIn(1.5, ease-out)` |
+| 3rd | `iterationCount` | `fadeIn(1.5, ease-out, 2)` |
+
+All parameters are optional — omit trailing ones.
+
+### Multiple effects
+
+Effects are applied outermost-first (first in the array is the outermost wrapper):
+
+```md
+- image src:hero.jpg duration:3 effects:[fadeIn, bounceIn]
+```
 
 ### `component`
 

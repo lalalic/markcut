@@ -49,6 +49,7 @@ When to use: any moving footage (.mp4, .mov, etc.).
 | `playbackRate` | opt | number | |
 | `width`,`height` | opt | number | default 1080×1920 |
 | `instruction`,`script`,`style` | opt | | metadata |
+| `effects` | opt | `string[]` or `object[]` | **New** — apply animations directly: `["fadeIn"]` or `[{animation:"bounceIn",animationTimingFunction:"ease-out"}]` |
 
 ### `audio`
 
@@ -64,6 +65,7 @@ When to use: voiceover, BGM, SFX.
 | `loop` | opt | int | loop count >1 |
 | `foreground` | opt | bool | ducks parent video audio |
 | `start` | opt | number | parallel only |
+| `effects` | opt | `string[]` or `object[]` | **New** — apply animations directly |
 
 ### `image`
 
@@ -108,6 +110,7 @@ When to use: JSX expression rendered at runtime with frontmatter imports in scop
 | `type` | yes | `"component"` | |
 | `jsx` | yes | string | JSX usage expression, e.g. `"<BarChart data={...} />"` |
 | `duration` | yes | number |
+| `effects` | opt | `string[]` or `object[]` | **New** — apply animations directly |
 
 ### `rhythm`
 
@@ -123,21 +126,24 @@ When to use: beat-synced audio (music drops, music-reactive reveals). Duration i
 
 Duration = `spots[last] + average_gap`. Equivalent to how long the last child plays.
 
-### `effect`
+### `effects` (on any node)
 
-When to use: CSS keyframe animation wrapper around children. Wraps children in an animated div.
+Apply CSS keyframe animations directly via the `effects` field — no wrapper node needed.
 
-| Field | Required | Type | Notes |
-|---|---|---|---|
-| `type` | yes | `"effect"` | |
-| `animation` | opt | string | builtin name (see list below) or `"custom"` |
-| `animationTimingFunction` | opt | enum | `linear\|ease\|ease-in\|ease-out\|ease-in-out` |
-| `animationIterationCount` | opt | int | default 1 |
-| `customKeyframes` | opt | object | `{"0":{"opacity":"0"},"100":{"opacity":"1"}}` |
-| `children` | yes | node[] | content to animate |
-| `duration` | cond | number | falls back to children max |
+Each entry is an animation name (string) with optional comma-separated positional parameters inside parentheses:
 
-Built-in `animation` names:
+```json
+{
+  "type": "image",
+  "src": "hero.jpg",
+  "duration": 3,
+  "effects": ["fadeIn", "bounceIn(1.5, ease-out, 2)"]
+}
+```
+
+Parameter order: `(duration, timingFunction, iterationCount)` — all optional.
+
+Built-in animation names:
 
 - **Fades**: `fadeIn`, `fadeOut`, `fadeInDown`, `fadeInUp`, `fadeInLeft`, `fadeInRight`, `fadeOutDown`, `fadeOutUp`, `fadeOutLeft`, `fadeOutRight`
 - **Slides in**: `slideInDown`, `slideInUp`, `slideInLeft`, `slideInRight`
@@ -148,6 +154,8 @@ Built-in `animation` names:
 - **Flips**: `flipInX`, `flipInY`
 - **Attention**: `pulse`, `flash`, `heartBeat`, `rubberBand`, `shakeX`, `shakeY`, `swing`, `tada`, `wobble`, `jello`
 - **Specials**: `rollIn`, `rollOut`, `jackInTheBox`, `lightSpeedIn`, `lightSpeedOut`
+
+See [Markdown Descriptive](markdown-descriptive.md#effects-on-any-node) for the full syntax reference.
 
 ### `map`
 

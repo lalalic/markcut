@@ -55,18 +55,14 @@ duration:5
 ## Feature1
 layout:transitionSeries transition:fade transitionTime:0.3
 duration:4
-- effect animation:fadeInRight duration:2
-  - component duration:2 jsx:"<FeatureCard title='[Feature 1]' description='[Description]' icon='⚡' />"
-- effect animation:fadeInLeft duration:2
-  - component duration:2 jsx:"<FeatureCard title='[Feature 2]' description='[Description]' icon='🎯' />"
+- component duration:2 jsx:"<FeatureCard title='[Feature 1]' description='[Description]' icon='⚡' />" effects:[fadeInRight]
+- component duration:2 jsx:"<FeatureCard title='[Feature 2]' description='[Description]' icon='🎯' />" effects:[fadeInLeft]
 
 ## Feature2
 layout:transitionSeries transition:fade transitionTime:0.3
 duration:4
-- effect animation:zoomIn duration:2
-  - component duration:2 jsx:"<FeatureCard title='[Feature 3]' description='[Description]' icon='🔒' />"
-- effect animation:zoomIn duration:2
-  - component duration:2 jsx:"<FeatureCard title='[Feature 4]' description='[Description]' icon='📊' />"
+- component duration:2 jsx:"<FeatureCard title='[Feature 3]' description='[Description]' icon='🔒' />" effects:[zoomIn]
+- component duration:2 jsx:"<FeatureCard title='[Feature 4]' description='[Description]' icon='📊' />" effects:[zoomIn]
 
 ## Demo
 layout:parallel script:"See it in action — [brief demo narration]"

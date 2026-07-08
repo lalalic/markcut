@@ -19,6 +19,16 @@ export interface CompileOptions {
   defaults?: Partial<Record<"image" | "video" | "audio" | "component" | "rhythm" | "include" | "map" | "effect", number>>;
 }
 
+/** A single effect spec — either a bare animation name or an object with options. */
+export type EffectSpec = string | {
+  animation: string;
+  /** Override the animation duration (seconds). Defaults to the node's own duration. */
+  duration?: number;
+  animationTimingFunction?: "linear" | "ease" | "ease-in" | "ease-out" | "ease-in-out";
+  animationIterationCount?: number;
+  customKeyframes?: Record<string, Record<string, string>>;
+};
+
 export interface DescriptiveBaseNode {
   id?: string;
   instruction?: string;
@@ -28,6 +38,10 @@ export interface DescriptiveBaseNode {
   isBackground?: boolean;
   duration?: number;
   start?: number;
+  /** Effects applied to this node (e.g. `["fadeIn", {animation: "bounceIn", animationTimingFunction: "ease-out"}]`).
+   *  Compiles into Effect wrapper streams at compile time, so the descriptive layer
+   *  doesn't need explicit `effect` parent nodes. */
+  effects?: EffectSpec[];
 }
 
 
@@ -253,6 +267,114 @@ function deriveLeafDuration(node: DescriptiveNode, ctx: CompileContext): number 
   return fallback;
 }
 
+/** Normalize an EffectSpec to its object form. */
+function normalizeEffectSpec(spec: EffectSpec): {
+  animation: string;
+  duration?: number;
+  animationTimingFunction?: "linear" | "ease" | "ease-in" | "ease-out" | "ease-in-out";
+  animationIterationCount?: number;
+  customKeyframes?: Record<string, Record<string, string>>;
+} {
+  if (typeof spec === "string") {
+    // Parse optional positional params in parentheses.
+    // Syntax: fadeIn  |  fadeIn(1)  |  fadeIn(1,ease-in)  |  fadeIn(1, ease-in, 1)
+    // Order: (duration, timingFunction, iterationCount)
+    const parenIdx = spec.indexOf("(");
+    if (parenIdx === -1) {
+      return { animation: spec };
+    }
+    const animation = spec.slice(0, parenIdx).trim();
+    const body = spec.slice(parenIdx + 1, spec.lastIndexOf(")")).trim();
+    const result: ReturnType<typeof normalizeEffectSpec> = { animation };
+    const parts = body.split(",").map((p) => p.trim());
+
+    if (parts[0]) {
+      const n = Number(parts[0]);
+      if (Number.isFinite(n)) result.duration = n;
+    }
+    if (parts[1]) result.animationTimingFunction = parts[1] as any;
+    if (parts[2]) {
+      const n = Number(parts[2]);
+      if (Number.isFinite(n)) result.animationIterationCount = n;
+    }
+    return result;
+  }
+  return spec;
+}
+
+/**
+ * Wrap a compiled stream inside Effect wrapper streams, applying the
+ * `effects` specs from the original descriptive node.
+ *
+ * The innermost effect wraps the leaf; the outermost effect carries
+ * the leaf's absolute timing (for correct placement in the parent timeline).
+ * Each effect's children have relative (start=0) timing.
+ */
+function wrapWithEffects(
+  node: { effects?: EffectSpec[] },
+  result: CompileResult,
+  parentKind: "series" | "parallel" | "transitionSeries",
+): CompileResult {
+  const rawEffects = node.effects;
+  if (!rawEffects || rawEffects.length === 0) return result;
+
+  const effects = rawEffects.map(normalizeEffectSpec);
+  const innerStream = result.stream;
+  const innerActions = (innerStream as any).actions ?? [];
+  const firstAction = innerActions[0] ?? {};
+  const absStart = firstAction.start ?? 0;
+  const absEnd = firstAction.end ?? result.duration;
+  const duration = absEnd - absStart;
+
+  // Reset inner stream's actions to be relative (start=0) so the effect
+  // wrapper owns the absolute timing. The EffectWrapper renders children
+  // with their relative actions inside its own Sequence.
+  const resetStream = {
+    ...innerStream,
+    actions: [{
+      ...firstAction,
+      id: uid(),
+      start: 0,
+      end: duration,
+    }],
+    durationInSeconds: duration,
+  } as any;
+
+  // Build nested effect wrappers from innermost → outermost.
+  // The outermost effect uses the original absolute timing;
+  // inner effects (for multiple effects) are relative to their parent effect.
+  let currentStream = resetStream;
+  for (let i = effects.length - 1; i >= 0; i--) {
+    const spec = effects[i]!;
+    const isOutermost = i === effects.length - 1;
+    const effStart = isOutermost ? absStart : 0;
+    // If spec has explicit duration, use it instead of the leaf's full duration
+    const specDuration = spec.duration ?? (isOutermost ? duration : duration);
+    const effEnd = isOutermost
+      ? (spec.duration != null ? effStart + spec.duration : absEnd)
+      : specDuration;
+
+    currentStream = {
+      id: uid(),
+      type: "effect",
+      animation: spec.animation,
+      durationInSeconds: spec.duration,
+      animationTimingFunction: spec.animationTimingFunction,
+      animationIterationCount: spec.animationIterationCount ?? 1,
+      customKeyframes: spec.customKeyframes,
+      children: [currentStream],
+      actions: [{
+        id: uid(),
+        start: effStart,
+        end: effEnd,
+      }],
+      visible: true,
+    } as Effect;
+  }
+
+  return { stream: currentStream, duration: result.duration };
+}
+
 function compileLeaf(node: Exclude<DescriptiveNode, DescriptiveContainer | DescriptiveScene | DescriptiveInclude | DescriptiveEffect>, ctx: CompileContext, parentKind: "series" | "parallel" | "transitionSeries"): CompileResult {
   const id = node.id ?? uid();
   const start = parentKind === "parallel" ? Math.max(0, node.start ?? 0) : 0;
@@ -378,25 +500,29 @@ function compileChildren(
   return children
     .filter((child) => child.visible !== false)
     .map((child) => {
+      let result: CompileResult;
       if (isContainer(child)) {
-        return compileContainer(child, ctx, parentKind);
+        result = compileContainer(child, ctx, parentKind);
+      } else if (isScene(child)) {
+        result = compileScene(child, ctx, parentKind);
+      } else if (isInclude(child)) {
+        result = compileInclude(child, ctx, parentKind);
+      } else if (isEffect(child)) {
+        result = compileEffect(child, ctx, parentKind);
+      } else if (isRhythm(child)) {
+        result = compileRhythm(child, ctx, parentKind);
+      } else if (isMap(child)) {
+        result = compileLeaf(child, ctx, parentKind);
+      } else {
+        result = compileLeaf(child, ctx, parentKind);
       }
-      if (isScene(child)) {
-        return compileScene(child, ctx, parentKind);
+      // Apply direct effects on any node (descriptive-layer shorthand).
+      // Effect wrapper nodes (type: "effect") already handle their own effects
+      // via compileEffect, so skip them to avoid double-wrapping.
+      if (!isEffect(child)) {
+        result = wrapWithEffects(child, result, parentKind);
       }
-      if (isInclude(child)) {
-        return compileInclude(child, ctx, parentKind);
-      }
-      if (isEffect(child)) {
-        return compileEffect(child, ctx, parentKind);
-      }
-      if (isRhythm(child)) {
-        return compileRhythm(child, ctx, parentKind);
-      }
-      if (isMap(child)) {
-        return compileLeaf(child, ctx, parentKind);
-      }
-      return compileLeaf(child, ctx, parentKind);
+      return result;
     });
 }
 

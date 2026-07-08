@@ -323,6 +323,231 @@ describe("compileDescriptiveRoot", () => {
     expect(map.travelMode).toBe("BICYCLING");
   });
 
+  it("compiles leaf node with effects=[fadeIn] (string shorthand)", () => {
+    const compiled = compileDescriptiveRoot({
+      layout: "series",
+      children: [
+        {
+          id: "img-fx",
+          type: "image",
+          src: "hero.jpg",
+          duration: 3,
+          effects: ["fadeIn"],
+        },
+      ],
+    });
+
+    // The leaf should be wrapped in an effect stream
+    const fx = compiled.children[0] as any;
+    expect(fx.type).toBe("effect");
+    expect(fx.animation).toBe("fadeIn");
+    expect(fx.animationIterationCount).toBe(1);
+    expect(fx.children).toHaveLength(1);
+    expect(fx.children[0].type).toBe("image");
+    expect(fx.children[0].src).toBe("hero.jpg");
+    // Effect action spans leaf duration
+    expect(fx.actions[0].start).toBe(0);
+    expect(fx.actions[0].end).toBe(3);
+    // Inner leaf action is relative (start=0)
+    expect(fx.children[0].actions[0].start).toBe(0);
+    expect(fx.children[0].actions[0].end).toBe(3);
+  });
+
+  it("compiles leaf node with effects as object specs", () => {
+    const compiled = compileDescriptiveRoot({
+      layout: "parallel",
+      children: [
+        {
+          id: "img-fx-obj",
+          type: "image",
+          src: "card.jpg",
+          duration: 2,
+          start: 1,
+          effects: [{
+            animation: "bounceIn",
+            animationTimingFunction: "ease-out",
+            animationIterationCount: 2,
+          }],
+        },
+      ],
+    });
+
+    const fx = compiled.children[0] as any;
+    expect(fx.type).toBe("effect");
+    expect(fx.animation).toBe("bounceIn");
+    expect(fx.animationTimingFunction).toBe("ease-out");
+    expect(fx.animationIterationCount).toBe(2);
+    // Outermost effect carries the absolute timing from parallel layout
+    expect(fx.actions[0].start).toBe(1);
+    expect(fx.actions[0].end).toBe(3);
+    // Inner leaf timing is relative
+    expect(fx.children[0].actions[0].start).toBe(0);
+    expect(fx.children[0].actions[0].end).toBe(2);
+  });
+
+  it("compiles effects on container (parallel) nodes", () => {
+    const compiled = compileDescriptiveRoot({
+      layout: "series",
+      children: [
+        {
+          id: "container-fx",
+          type: "parallel",
+          effects: ["fadeIn"],
+          children: [
+            { id: "c1", type: "image", src: "a.jpg", duration: 2 },
+            { id: "c2", type: "image", src: "b.jpg", duration: 3 },
+          ],
+        },
+      ],
+    });
+
+    const fx = compiled.children[0] as any;
+    expect(fx.type).toBe("effect");
+    expect(fx.animation).toBe("fadeIn");
+    expect(fx.children).toHaveLength(1);
+    const innerFolder = fx.children[0];
+    expect(innerFolder.type).toBe("folder");
+    expect(innerFolder.isSeries).toBe(false);
+    expect(innerFolder.children).toHaveLength(2);
+  });
+
+  it("compiles multiple effects nested", () => {
+    const compiled = compileDescriptiveRoot({
+      layout: "series",
+      children: [
+        {
+          id: "multi-fx",
+          type: "image",
+          src: "multi.jpg",
+          duration: 3,
+          effects: ["fadeIn", "bounceIn"],
+        },
+      ],
+    });
+
+    const outer = compiled.children[0] as any;
+    expect(outer.type).toBe("effect");
+    expect(outer.animation).toBe("fadeIn"); // outermost = first in array
+    expect(outer.children).toHaveLength(1);
+    const inner = outer.children[0];
+    expect(inner.type).toBe("effect");
+    expect(inner.animation).toBe("bounceIn");
+    expect(inner.children).toHaveLength(1);
+    expect(inner.children[0].type).toBe("image");
+  });
+
+  it("uses existing effect wrapper (type:effect) and ignores effects on it", () => {
+    // Explicit effect wrapper nodes should still work unchanged
+    const compiled = compileDescriptiveRoot({
+      layout: "series",
+      children: [
+        {
+          id: "fx-wrap",
+          type: "effect",
+          animation: "fadeIn",
+          duration: 3,
+          children: [
+            { id: "inner", type: "image", src: "inner.jpg", duration: 2 },
+          ],
+        },
+      ],
+    });
+
+    const fx = compiled.children[0] as any;
+    expect(fx.type).toBe("effect");
+    expect(fx.animation).toBe("fadeIn");
+    expect(fx.children).toHaveLength(1);
+    expect(fx.children[0].type).toBe("image");
+  });
+
+  it("compiles effect with named params including duration", () => {
+    const compiled = compileDescriptiveRoot({
+      layout: "series",
+      children: [
+        {
+          id: "named-fx",
+          type: "image",
+          src: "hero.jpg",
+          duration: 5,
+          effects: ["fadeIn(2, ease-out, 3)"],
+        },
+      ],
+    });
+
+    const fx = compiled.children[0] as any;
+    expect(fx.type).toBe("effect");
+    expect(fx.animation).toBe("fadeIn");
+    expect(fx.animationTimingFunction).toBe("ease-out");
+    expect(fx.animationIterationCount).toBe(3);
+    // Effect duration from param overrides to 2s
+    expect(fx.actions[0].end - fx.actions[0].start).toBe(2);
+    // Inner leaf still plays full 5s
+    expect(fx.children[0].actions[0].end - fx.children[0].actions[0].start).toBe(5);
+  });
+
+  it("compiles effect with comma-separated positional params (duration, timingFunction, iterationCount)", () => {
+    const compiled = compileDescriptiveRoot({
+      layout: "series",
+      children: [
+        {
+          id: "csv-fx",
+          type: "image",
+          src: "card.jpg",
+          duration: 4,
+          effects: ["fadeIn(2, ease-in, 3)"],
+        },
+      ],
+    });
+
+    const fx = compiled.children[0] as any;
+    expect(fx.type).toBe("effect");
+    expect(fx.animation).toBe("fadeIn");
+    expect(fx.animationTimingFunction).toBe("ease-in");
+    expect(fx.animationIterationCount).toBe(3);
+    expect(fx.actions[0].end - fx.actions[0].start).toBe(2);
+  });
+
+  it("compiles effect with positional params — duration only", () => {
+    const compiled = compileDescriptiveRoot({
+      layout: "series",
+      children: [
+        {
+          id: "dur-only",
+          type: "image",
+          src: "bg.jpg",
+          duration: 4,
+          effects: ["fadeIn(1.5)"],
+        },
+      ],
+    });
+
+    const fx = compiled.children[0] as any;
+    expect(fx.type).toBe("effect");
+    expect(fx.animation).toBe("fadeIn");
+    expect(fx.actions[0].end - fx.actions[0].start).toBe(1.5);
+  });
+
+  it("compiles effect with partial positional params — duration + timingFunction", () => {
+    const compiled = compileDescriptiveRoot({
+      layout: "series",
+      children: [
+        {
+          id: "partial-fx",
+          type: "image",
+          src: "card.jpg",
+          duration: 4,
+          effects: ["fadeIn(2.5, ease-out)"],
+        },
+      ],
+    });
+
+    const fx = compiled.children[0] as any;
+    expect(fx.animation).toBe("fadeIn");
+    expect(fx.animationTimingFunction).toBe("ease-out");
+    expect(fx.animationIterationCount).toBe(1);
+    expect(fx.actions[0].end - fx.actions[0].start).toBe(2.5);
+  });
+
   it("supports deep nested layout containers across all modes", () => {
     const compiled = compileDescriptiveRoot({
       layout: "series",

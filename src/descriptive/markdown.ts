@@ -134,6 +134,52 @@ function parseProps(raw: string): unknown {
   }
 }
 
+/**
+ * Parse a markdown `effects=[...]` value into an array of EffectSpec strings.
+ *
+ * Supports:
+ *   effects=[fadeIn]
+ *   effects=[fadeIn, bounceIn]
+ *   effects=[fadeIn(timingFunction:ease-out iterationCount:2)]
+ *
+ * Each element is kept as a string — the compiler's normalizeEffectSpec handles
+ * parsing the paren-based params.
+ */
+function parseEffects(raw: string): string[] {
+  const s = raw.trim();
+  if (!s.startsWith("[") || !s.endsWith("]")) return [];
+  const body = s.slice(1, -1).trim();
+  if (!body) return [];
+
+  const results: string[] = [];
+  let current = "";
+  let depth = 0;      // brackets
+  let parenDepth = 0; // parens for params
+  let inQuote = false;
+
+  for (let i = 0; i < body.length; i++) {
+    const ch = body[i]!;
+    if (ch === '"') { inQuote = !inQuote; current += ch; continue; }
+    if (!inQuote) {
+      if (ch === "[" || ch === "{") { depth++; current += ch; continue; }
+      if (ch === "]" || ch === "}") { depth = Math.max(0, depth - 1); current += ch; continue; }
+      if (ch === "(") { parenDepth++; current += ch; continue; }
+      if (ch === ")") { parenDepth = Math.max(0, parenDepth - 1); current += ch; continue; }
+      if (ch === "," && depth === 0 && parenDepth === 0) {
+        const trimmed = current.trim();
+        if (trimmed) results.push(trimmed);
+        current = "";
+        continue;
+      }
+    }
+    current += ch;
+  }
+  const trimmed = current.trim();
+  if (trimmed) results.push(trimmed);
+
+  return results;
+}
+
 function parseKeyValueTokens(tokens: string[]): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   let i = 0;
@@ -172,6 +218,7 @@ function parseKeyValueTokens(tokens: string[]): Record<string, unknown> {
       if (key === "waypoints") val = parseWaypoints(String(val));
       else if (key === "props" || key === "imports" || key === "components") val = parseProps(String(val));
       else if (key === "spots" || key === "customKeyframes") val = parseProps(String(val));
+      else if (key === "effects") val = parseEffects(String(val));
       else if (key !== "instruction" && key !== "script" && key !== "tts" && key !== "stt" && key !== "jsx" && key !== "prompt") {
         val = parseNumberMaybe(String(val));
       }
@@ -262,6 +309,7 @@ function parseNodeLine(content: string): DescriptiveNode {
       script: attrs.script as any,
       transition: attrs.transition as any,
       transitionTime: attrs.transitionTime as any,
+      effects: attrs.effects as any,
       children: [],
     };
     return node;
@@ -282,6 +330,7 @@ function parseNodeLine(content: string): DescriptiveNode {
       customKeyframes: attrs.customKeyframes as any,
       duration: attrs.duration as any,
       start: attrs.start as any,
+      effects: attrs.effects as any,
       children: [],
     };
     return node;
@@ -306,6 +355,7 @@ function parseNodeLine(content: string): DescriptiveNode {
         visible: attrs.visible as any,
         isBackground: attrs.isBackground as any,
         style: attrs.style as any,
+        effects: attrs.effects as any,
       };
       return node;
     }
@@ -330,6 +380,7 @@ function parseNodeLine(content: string): DescriptiveNode {
         visible: attrs.visible as any,
         isBackground: attrs.isBackground as any,
         style: attrs.style as any,
+        effects: attrs.effects as any,
       };
       return node;
     }
@@ -351,6 +402,7 @@ function parseNodeLine(content: string): DescriptiveNode {
         visible: attrs.visible as any,
         isBackground: attrs.isBackground as any,
         style: attrs.style as any,
+        effects: attrs.effects as any,
       };
       return node;
     }
@@ -367,6 +419,7 @@ function parseNodeLine(content: string): DescriptiveNode {
         visible: attrs.visible as any,
         isBackground: attrs.isBackground as any,
         style: attrs.style as any,
+        effects: attrs.effects as any,
       };
       return node;
     }
@@ -385,6 +438,7 @@ function parseNodeLine(content: string): DescriptiveNode {
         visible: attrs.visible as any,
         isBackground: attrs.isBackground as any,
         style: attrs.style as any,
+        effects: attrs.effects as any,
       };
       return node;
     }
@@ -401,6 +455,7 @@ function parseNodeLine(content: string): DescriptiveNode {
         visible: attrs.visible as any,
         isBackground: attrs.isBackground as any,
         style: attrs.style as any,
+        effects: attrs.effects as any,
       };
       return node;
     }
@@ -427,6 +482,7 @@ function parseNodeLine(content: string): DescriptiveNode {
         visible: attrs.visible as any,
         isBackground: attrs.isBackground as any,
         style: attrs.style as any,
+        effects: attrs.effects as any,
       };
       return node;
     }

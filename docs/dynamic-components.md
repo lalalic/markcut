@@ -2,21 +2,17 @@
 
 Three ways to add custom visual content without rebuilding the engine.
 
-## 1. Effect Wrapper (CSS Keyframes)
+## 1. Effects on Any Node (CSS Keyframes)
 
-Wrap any node with an `effect` stream to apply animation:
+Add the `effects` key to any node to apply CSS keyframe animations. No wrapper node needed.
 
 ```json
 {
   "id": "animated-scene",
-  "type": "effect",
-  "animation": "bounceIn",
-  "animationTimingFunction": "ease-out",
-  "animationIterationCount": 1,
-  "children": [
-    { "type": "image", "src": "photo.jpg", "actions": [{ "start": 0, "end": 3 }] }
-  ],
-  "actions": [{ "start": 0, "end": 3 }]
+  "type": "image",
+  "src": "photo.jpg",
+  "duration": 3,
+  "effects": ["bounceIn(1, ease-out, 2)"]
 }
 ```
 

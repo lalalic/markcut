@@ -96,6 +96,75 @@ function deriveLeafDuration(node2, ctx) {
   const fallback = ctx.defaults[node2.type];
   return fallback;
 }
+function normalizeEffectSpec(spec) {
+  if (typeof spec === "string") {
+    const parenIdx = spec.indexOf("(");
+    if (parenIdx === -1) {
+      return { animation: spec };
+    }
+    const animation = spec.slice(0, parenIdx).trim();
+    const body = spec.slice(parenIdx + 1, spec.lastIndexOf(")")).trim();
+    const result = { animation };
+    const parts = body.split(",").map((p) => p.trim());
+    if (parts[0]) {
+      const n = Number(parts[0]);
+      if (Number.isFinite(n)) result.duration = n;
+    }
+    if (parts[1]) result.animationTimingFunction = parts[1];
+    if (parts[2]) {
+      const n = Number(parts[2]);
+      if (Number.isFinite(n)) result.animationIterationCount = n;
+    }
+    return result;
+  }
+  return spec;
+}
+function wrapWithEffects(node2, result, parentKind) {
+  const rawEffects = node2.effects;
+  if (!rawEffects || rawEffects.length === 0) return result;
+  const effects = rawEffects.map(normalizeEffectSpec);
+  const innerStream = result.stream;
+  const innerActions = innerStream.actions ?? [];
+  const firstAction = innerActions[0] ?? {};
+  const absStart = firstAction.start ?? 0;
+  const absEnd = firstAction.end ?? result.duration;
+  const duration = absEnd - absStart;
+  const resetStream = {
+    ...innerStream,
+    actions: [{
+      ...firstAction,
+      id: uid(),
+      start: 0,
+      end: duration
+    }],
+    durationInSeconds: duration
+  };
+  let currentStream = resetStream;
+  for (let i = effects.length - 1; i >= 0; i--) {
+    const spec = effects[i];
+    const isOutermost = i === effects.length - 1;
+    const effStart = isOutermost ? absStart : 0;
+    const specDuration = spec.duration ?? (isOutermost ? duration : duration);
+    const effEnd = isOutermost ? spec.duration != null ? effStart + spec.duration : absEnd : specDuration;
+    currentStream = {
+      id: uid(),
+      type: "effect",
+      animation: spec.animation,
+      durationInSeconds: spec.duration,
+      animationTimingFunction: spec.animationTimingFunction,
+      animationIterationCount: spec.animationIterationCount ?? 1,
+      customKeyframes: spec.customKeyframes,
+      children: [currentStream],
+      actions: [{
+        id: uid(),
+        start: effStart,
+        end: effEnd
+      }],
+      visible: true
+    };
+  }
+  return { stream: currentStream, duration: result.duration };
+}
 function compileLeaf(node2, ctx, parentKind) {
   const id = node2.id ?? uid();
   const start = parentKind === "parallel" ? Math.max(0, node2.start ?? 0) : 0;
@@ -214,25 +283,26 @@ function compileLeaf(node2, ctx, parentKind) {
 }
 function compileChildren(children, ctx, parentKind) {
   return children.filter((child) => child.visible !== false).map((child) => {
+    let result;
     if (isContainer(child)) {
-      return compileContainer(child, ctx, parentKind);
+      result = compileContainer(child, ctx, parentKind);
+    } else if (isScene(child)) {
+      result = compileScene(child, ctx, parentKind);
+    } else if (isInclude(child)) {
+      result = compileInclude(child, ctx, parentKind);
+    } else if (isEffect(child)) {
+      result = compileEffect(child, ctx, parentKind);
+    } else if (isRhythm(child)) {
+      result = compileRhythm(child, ctx, parentKind);
+    } else if (isMap(child)) {
+      result = compileLeaf(child, ctx, parentKind);
+    } else {
+      result = compileLeaf(child, ctx, parentKind);
     }
-    if (isScene(child)) {
-      return compileScene(child, ctx, parentKind);
+    if (!isEffect(child)) {
+      result = wrapWithEffects(child, result, parentKind);
     }
-    if (isInclude(child)) {
-      return compileInclude(child, ctx, parentKind);
-    }
-    if (isEffect(child)) {
-      return compileEffect(child, ctx, parentKind);
-    }
-    if (isRhythm(child)) {
-      return compileRhythm(child, ctx, parentKind);
-    }
-    if (isMap(child)) {
-      return compileLeaf(child, ctx, parentKind);
-    }
-    return compileLeaf(child, ctx, parentKind);
+    return result;
   });
 }
 function aggregateDuration(children, kind, transitionTime) {
@@ -12341,6 +12411,57 @@ function parseProps(raw) {
     }
   }
 }
+function parseEffects(raw) {
+  const s = raw.trim();
+  if (!s.startsWith("[") || !s.endsWith("]")) return [];
+  const body = s.slice(1, -1).trim();
+  if (!body) return [];
+  const results = [];
+  let current = "";
+  let depth = 0;
+  let parenDepth = 0;
+  let inQuote = false;
+  for (let i = 0; i < body.length; i++) {
+    const ch = body[i];
+    if (ch === '"') {
+      inQuote = !inQuote;
+      current += ch;
+      continue;
+    }
+    if (!inQuote) {
+      if (ch === "[" || ch === "{") {
+        depth++;
+        current += ch;
+        continue;
+      }
+      if (ch === "]" || ch === "}") {
+        depth = Math.max(0, depth - 1);
+        current += ch;
+        continue;
+      }
+      if (ch === "(") {
+        parenDepth++;
+        current += ch;
+        continue;
+      }
+      if (ch === ")") {
+        parenDepth = Math.max(0, parenDepth - 1);
+        current += ch;
+        continue;
+      }
+      if (ch === "," && depth === 0 && parenDepth === 0) {
+        const trimmed2 = current.trim();
+        if (trimmed2) results.push(trimmed2);
+        current = "";
+        continue;
+      }
+    }
+    current += ch;
+  }
+  const trimmed = current.trim();
+  if (trimmed) results.push(trimmed);
+  return results;
+}
 function parseKeyValueTokens(tokens) {
   const out = {};
   let i = 0;
@@ -12375,6 +12496,7 @@ function parseKeyValueTokens(tokens) {
       if (key === "waypoints") val = parseWaypoints(String(val));
       else if (key === "props" || key === "imports" || key === "components") val = parseProps(String(val));
       else if (key === "spots" || key === "customKeyframes") val = parseProps(String(val));
+      else if (key === "effects") val = parseEffects(String(val));
       else if (key !== "instruction" && key !== "script" && key !== "tts" && key !== "stt" && key !== "jsx" && key !== "prompt") {
         val = parseNumberMaybe(String(val));
       }
@@ -12446,6 +12568,7 @@ function parseNodeLine(content3) {
       script: attrs2.script,
       transition: attrs2.transition,
       transitionTime: attrs2.transitionTime,
+      effects: attrs2.effects,
       children: []
     };
     return node2;
@@ -12463,6 +12586,7 @@ function parseNodeLine(content3) {
       customKeyframes: attrs2.customKeyframes,
       duration: attrs2.duration,
       start: attrs2.start,
+      effects: attrs2.effects,
       children: []
     };
     return node2;
@@ -12483,7 +12607,8 @@ function parseNodeLine(content3) {
         script: attrs.script,
         visible: attrs.visible,
         isBackground: attrs.isBackground,
-        style: attrs.style
+        style: attrs.style,
+        effects: attrs.effects
       };
       return node2;
     }
@@ -12506,7 +12631,8 @@ function parseNodeLine(content3) {
         script: attrs.script,
         visible: attrs.visible,
         isBackground: attrs.isBackground,
-        style: attrs.style
+        style: attrs.style,
+        effects: attrs.effects
       };
       return node2;
     }
@@ -12527,7 +12653,8 @@ function parseNodeLine(content3) {
         script: attrs.script,
         visible: attrs.visible,
         isBackground: attrs.isBackground,
-        style: attrs.style
+        style: attrs.style,
+        effects: attrs.effects
       };
       return node2;
     }
@@ -12542,7 +12669,8 @@ function parseNodeLine(content3) {
         script: attrs.script,
         visible: attrs.visible,
         isBackground: attrs.isBackground,
-        style: attrs.style
+        style: attrs.style,
+        effects: attrs.effects
       };
       return node2;
     }
@@ -12560,7 +12688,8 @@ function parseNodeLine(content3) {
         script: attrs.script,
         visible: attrs.visible,
         isBackground: attrs.isBackground,
-        style: attrs.style
+        style: attrs.style,
+        effects: attrs.effects
       };
       return node2;
     }
@@ -12576,7 +12705,8 @@ function parseNodeLine(content3) {
         script: attrs.script,
         visible: attrs.visible,
         isBackground: attrs.isBackground,
-        style: attrs.style
+        style: attrs.style,
+        effects: attrs.effects
       };
       return node2;
     }
@@ -12602,7 +12732,8 @@ function parseNodeLine(content3) {
         script: attrs.script,
         visible: attrs.visible,
         isBackground: attrs.isBackground,
-        style: attrs.style
+        style: attrs.style,
+        effects: attrs.effects
       };
       return node2;
     }

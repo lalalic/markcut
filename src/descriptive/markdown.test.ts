@@ -155,6 +155,66 @@ layout:series
     expect(fx.children[0]!.type).toBe("image");
   });
 
+  it("parses effects:[fadeIn] on leaf nodes", () => {
+    const doc = `# video
+## Scene
+- image src:card.jpg duration:2 effects:[fadeIn]`;
+    const parsed = parseMarkdownDescriptive(doc);
+
+    const scene = parsed.children[0]! as any;
+    const img = scene.children[0]!! as any;
+    expect(img.type).toBe("image");
+    expect(img.effects).toEqual(["fadeIn"]);
+  });
+
+  it("parses multiple effects and parameterized syntax", () => {
+    const doc = `# video
+## Scene
+- image src:card.jpg duration:3 effects:[fadeIn, bounceIn(1, ease-out, 2)]`;
+    const parsed = parseMarkdownDescriptive(doc);
+
+    const scene = parsed.children[0]! as any;
+    const img = scene.children[0]!! as any;
+    expect(img.effects).toHaveLength(2);
+    expect(img.effects![0]).toBe("fadeIn");
+    expect(img.effects![1]).toMatch(/^bounceIn\(/);
+  });
+
+  it("parses effects on component nodes", () => {
+    const doc = `# video
+## Demo
+- component duration:3 jsx:"<Headline />" effects:[fadeIn]`;
+    const parsed = parseMarkdownDescriptive(doc);
+
+    const scene = parsed.children[0]! as any;
+    const c = scene.children[0]!! as any;
+    expect(c.type).toBe("component");
+    expect(c.effects).toEqual(["fadeIn"]);
+  });
+
+  it("parses effects with comma-separated positional params — all three", () => {
+    const doc = `# video
+## Scene
+- image src:card.jpg duration:3 effects:[fadeIn(1.5, ease-out, 2)]`;
+    const parsed = parseMarkdownDescriptive(doc);
+
+    const scene = parsed.children[0]! as any;
+    const img = scene.children[0]!! as any;
+    expect(img.effects).toHaveLength(1);
+    expect(img.effects![0]).toBe("fadeIn(1.5, ease-out, 2)");
+  });
+
+  it("parses effects with comma-separated positional params — duration only", () => {
+    const doc = `# video
+## Scene
+- image src:card.jpg duration:4 effects:[fadeIn(2)]`;
+    const parsed = parseMarkdownDescriptive(doc);
+
+    const scene = parsed.children[0]! as any;
+    const img = scene.children[0]!! as any;
+    expect(img.effects![0]).toBe("fadeIn(2)");
+  });
+
   it("parses map node with waypoints", () => {
     const doc = `# video
 layout:series
