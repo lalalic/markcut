@@ -805,6 +805,7 @@ interface ResolvedImport {
  *   export { Name1, Name2 } from "spec"     — multiple from same source
  *   export function Name(...) { ... }       — inline component definition
  *   export default function Name(...) { ... } — inline default definition
+ *   import "spec"                           — side-effect import (no component registered)
  */
 
 export function parseImportsBlock(source: string): ImportEntry[] {
@@ -837,6 +838,14 @@ export function parseImportsBlock(source: string): ImportEntry[] {
     const defaultImport = /^import\s+(\w+)\s+from\s+["'`](.+?)["'`]\s*;?\s*$/.exec(line);
     if (defaultImport) {
       importedNames.set(defaultImport[1]!, { from: defaultImport[2]!, exports: "default" });
+      i++;
+      continue;
+    }
+
+    // import "spec"  — side-effect import, no component registered
+    const sideEffectImport = /^import\s+["'`](.+?)["'`]\s*;?\s*$/.exec(line);
+    if (sideEffectImport) {
+      // No component to register, just ensure the spec is extracted by extractDependencySpecs
       i++;
       continue;
     }
@@ -921,11 +930,16 @@ export function parseImportsBlock(source: string): ImportEntry[] {
  * Extract import lines from the source that are likely used by the given export function.
  * Finds `import` statements and returns them as a string to prepend to the function body.
  * Strips `npm:` prefix from package specifiers for esbuild compatibility.
+ *
+ * Skips bare side-effect imports (`import "spec"`) since they don't bring any names
+ * into scope and are already handled as bare imports in the generated index.js bundle.
  */
 function extractImportLines(source: string, functionName: string): string {
   const lines: string[] = [];
   for (const line of source.split("\n")) {
     const trimmed = line.trim();
+    // Skip bare side-effect imports — they don't bind names and are handled by the bundler
+    if (/^import\s+["'`]/.test(trimmed) && !/^import\s+[\w{]/.test(trimmed)) continue;
     if (/^import\s/.test(trimmed)) {
       // Strip npm: prefix from package specifiers (e.g. 'npm:react-markdown' → 'react-markdown')
       lines.push(trimmed.replace(/from\s+["'`]npm:([^"'`]+)["'`]/g, 'from "$1"'));
@@ -936,17 +950,29 @@ function extractImportLines(source: string, functionName: string): string {
 
 /**
  * Extract all dependency package specifiers from an imports block.
- * This includes both `export { X } from "spec"` and `import { X } from "spec"`.
+ * This includes:
+ *   - `export { X } from "spec"` and `import { X } from "spec"` (named re-exports / named imports)
+ *   - `import "spec"` (side-effect-only imports)
+ *
  * Used by the bundler to populate package.json.
  *
- * Returns the raw `from` spec strings (e.g. "npm:recharts", "react").
+ * Returns the raw spec strings (e.g. "npm:recharts", "react", "npm:@remotion/tailwind-v4").
  */
 export function extractDependencySpecs(source: string): string[] {
   const specs: string[] = [];
-  const re = /from\s+["'`](.+?)["'`]\s*;?\s*$/gm;
+  // Match `from "spec"` in export/import statements
+  const fromRe = /from\s+["'`](.+?)["'`]\s*;?\s*$/gm;
   let m;
-  while ((m = re.exec(source)) !== null) {
+  while ((m = fromRe.exec(source)) !== null) {
     specs.push(m[1]);
+  }
+  // Match bare side-effect imports: `import "spec"`
+  for (const line of source.split("\n")) {
+    const trimmed = line.trim();
+    const sideEffectMatch = /^import\s+["'`](.+?)["'`]\s*;?\s*$/.exec(trimmed);
+    if (sideEffectMatch) {
+      specs.push(sideEffectMatch[1]);
+    }
   }
   return specs;
 }

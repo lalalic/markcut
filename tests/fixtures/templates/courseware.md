@@ -12,6 +12,10 @@ layout:series
 ~~~js imports
 import ReactMarkdown from 'npm:react-markdown';
 import remarkGfm from 'npm:remark-gfm'
+export {Solid} from 'npm:remotion';
+export {checkerboard} from 'npm:@remotion/effects'
+
+
 
 export function Slide(props) {
   return <div className="slide"><ReactMarkdown remarkPlugins={[remarkGfm]} {...props}/></div>;
@@ -104,6 +108,14 @@ export function Slide(props) {
 
 ## Hook
 instruction: "an AI video to attract audience"
+- component duration:6 
+  ~~~jsx
+    <Solid
+        width={1280}
+        height={720}
+        
+      />
+  ~~~
 - video effects:[fadeIn, fadeOut]
   prompt:"On a barren hilltop, with desert in the distance and a ruined city skyline. An animated Minion shakes its head and says to the wallet robot, 'Look at this world — it's all AI's fault'"
 

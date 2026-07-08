@@ -176,3 +176,16 @@ export const builtinComponents = { ..., Badge };
   "actions": [{ "start": 1, "end": 4 }]
 }
 ```
+
+
+# common used components
+- `react-markdown` — render markdown content, use plugins to extend functionality
+  - `remark-gfm` — support GitHub Flavored Markdown (tables, strikethrough, task lists)
+  - `remark-toc` — generate table of contents
+  - `remark-math` — support math formulas
+  - `rehype-katex` — render math formulas with KaTeX
+  - `remark-mermaidjs` — render mermaid diagrams in 
+- `react-markdown-mermaid` — render mermaid diagrams in standalone mode (no need to install mermaid separately)
+
+- `@remotion/shapes` — render shapes like arrows, circles, rectangles, etc
+- `@remotion/starburst` — render starburst animations

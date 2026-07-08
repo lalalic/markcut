@@ -36,10 +36,48 @@ function getHostDeps() {
  * Resolve the best version for a package name.
  * If the host (markcut) already depends on it, use that exact version
  * (e.g. @remotion/player → "4.0.469"). Otherwise use "latest".
+ *
+ * Special handling for @remotion/* packages: they must use the SAME version
+ * as markcut's own `remotion` dependency to avoid React context mismatches
+ * and duplicate module instances at runtime.
  */
 function resolveVersion(pkgName) {
+  // All @remotion/* packages must match markcut's remotion version
+  if (pkgName.startsWith("@remotion/") || pkgName === "remotion") {
+    const hostDeps = getHostDeps();
+    const remotionVersion = hostDeps["remotion"];
+    if (remotionVersion) {
+      // Strip semver range (^/~) for exact pinning
+      return remotionVersion.replace(/^[\^~]/, "");
+    }
+  }
   const hostDeps = getHostDeps();
   return hostDeps[pkgName] || "latest";
+}
+
+/**
+ * Determine which packages should be externalized from the component bundle.
+ * These are packages already bundled in the main player.js that must be shared
+ * via import map to avoid duplicate React/Remotion instances (which would break
+ * context sharing and create multiple copies of singletons).
+ *
+ * Must stay in sync with the import map entries created in browser.tsx's
+ * `__remotionShared` registry. Only packages listed here AND registered in
+ * `__remotionShared` get proper import map resolution.
+ *
+ * Returns an array of esbuild --external arguments.
+ */
+function getSharedExternals() {
+  return [
+    // Core React — always needed
+    "react",
+    "react/jsx-runtime",
+    "react-dom",
+    // Remotion core — must be shared for context identity
+    "remotion",
+    // Commonly used @remotion/* sub-packages
+    "@remotion/player",
+  ];
 }
 
 /**
@@ -127,7 +165,11 @@ export async function bundleFromEntries(entries, extraSpecs = []) {
   }
   for (const dep of npmDeps) {
     if (dep.exportName === null) {
-      // Internal dep (from import statement) — no re-export needed, the inline function source has its own import
+      // Side-effect / internal dep — add bare import so the module is loaded
+      // for its side effects (e.g. `import "@remotion/tailwind-v4"`).
+      // Inline function sources may also import this package, but a second
+      // bare import is harmless (ESM caches the module).
+      lines.push('import "' + dep.pkgName + '";');
       continue;
     }
     if (dep.exportName === "default") {
@@ -163,13 +205,23 @@ export async function bundleFromEntries(entries, extraSpecs = []) {
   }
 
   // Bundle with esbuild
+  // Externalize shared packages (React, Remotion, @remotion/*) so the component
+  // bundle uses the same instances already loaded in the main player.js via import map.
+  // Also externalize node: protocol imports (node:module, etc.) which are not
+  // available in browser contexts — some packages use them for build-time helpers
+  // that aren't actually called during rendering.
   const outFile = join(CACHE_DIR, hash + ".js");
+  const externals = getSharedExternals();
+  const externalArgs = [
+    ...externals.map(p => `--external:${p}`),
+    "--external:node:*",
+  ].join(" ");
   if (!existsSync(outFile)) {
     console.log("  \ud83d\udd27 Bundling components \u2192 " + hash + ".js");
     try {
       execSync(
         'npx esbuild index.js --bundle --format=esm --outfile="' + outFile + '" ' +
-        "--external:react --external:react/jsx-runtime --external:react-dom " +
+        externalArgs + " " +
         "--platform=browser --target=es2020",
         { cwd: dir, stdio: "pipe", timeout: 30000 }
       );

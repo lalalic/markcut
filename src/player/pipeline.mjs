@@ -510,6 +510,11 @@ function parseImportsBlock(source) {
       i++;
       continue;
     }
+    const sideEffectImport = /^import\s+["'`](.+?)["'`]\s*;?\s*$/.exec(line);
+    if (sideEffectImport) {
+      i++;
+      continue;
+    }
     const namedReExport = /^export\s+\{\s*([^}]+)\}\s+from\s+["'`](.+?)["'`]\s*;?\s*$/.exec(line);
     if (namedReExport) {
       const namesStr = namedReExport[1];
@@ -571,6 +576,7 @@ function extractImportLines(source, functionName) {
   const lines = [];
   for (const line of source.split("\n")) {
     const trimmed = line.trim();
+    if (/^import\s+["'`]/.test(trimmed) && !/^import\s+[\w{]/.test(trimmed)) continue;
     if (/^import\s/.test(trimmed)) {
       lines.push(trimmed.replace(/from\s+["'`]npm:([^"'`]+)["'`]/g, 'from "$1"'));
     }
@@ -579,10 +585,17 @@ function extractImportLines(source, functionName) {
 }
 function extractDependencySpecs(source) {
   const specs = [];
-  const re = /from\s+["'`](.+?)["'`]\s*;?\s*$/gm;
+  const fromRe = /from\s+["'`](.+?)["'`]\s*;?\s*$/gm;
   let m;
-  while ((m = re.exec(source)) !== null) {
+  while ((m = fromRe.exec(source)) !== null) {
     specs.push(m[1]);
+  }
+  for (const line of source.split("\n")) {
+    const trimmed = line.trim();
+    const sideEffectMatch = /^import\s+["'`](.+?)["'`]\s*;?\s*$/.exec(trimmed);
+    if (sideEffectMatch) {
+      specs.push(sideEffectMatch[1]);
+    }
   }
   return specs;
 }
