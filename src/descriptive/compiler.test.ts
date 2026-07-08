@@ -1,24 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { compileDescriptiveRoot, resolveComponentImportSpec, parseImportsBlock, extractDependencySpecs } from "./compiler";
-
-describe("resolveComponentImportSpec", () => {
-  it("returns the trimmed spec unchanged", () => {
-    expect(resolveComponentImportSpec("npm:react-stat-counter")).toBe("npm:react-stat-counter");
-    expect(resolveComponentImportSpec("npm:@org/pkg")).toBe("npm:@org/pkg");
-    expect(resolveComponentImportSpec("npm:react@18.2.0")).toBe("npm:react@18.2.0");
-    expect(resolveComponentImportSpec("git:foo/bar")).toBe("git:foo/bar");
-    expect(resolveComponentImportSpec("github:user/repo@main/src/Logo.tsx")).toBe("github:user/repo@main/src/Logo.tsx");
-    expect(resolveComponentImportSpec("https://cdn.example.com/c.js")).toBe("https://cdn.example.com/c.js");
-    expect(resolveComponentImportSpec("./local/Comp.js")).toBe("./local/Comp.js");
-    expect(resolveComponentImportSpec("npm:recharts#es/BarChart")).toBe("npm:recharts#es/BarChart");
-  });
-
-  it("trims whitespace from spec", () => {
-    expect(resolveComponentImportSpec("  npm:pkg  ")).toBe("npm:pkg");
-    expect(resolveComponentImportSpec("  github:user/repo  ")).toBe("github:user/repo");
-    expect(resolveComponentImportSpec("  https://cdn.example.com/c.js  ")).toBe("https://cdn.example.com/c.js");
-  });
-});
+import { compileDescriptiveRoot, parseImportsBlock, extractDependencySpecs } from "./compiler";
 describe("parseImportsBlock", () => {
   it("parses named re-exports: export { Name } from \"spec\"", () => {
     const entries = parseImportsBlock(`export { PieChart } from "npm:recharts"`);

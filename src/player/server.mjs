@@ -11,11 +11,12 @@
  */
 import { spawn } from "node:child_process";
 import { createServer } from "node:http";
-import { readFileSync, writeFileSync, watchFile, existsSync, statSync, createReadStream } from "node:fs";
+import { readFileSync, writeFileSync, watchFile, existsSync } from "node:fs";
 import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isDescriptiveRoot, resolveAndCompile, resolveAndCompileMarkdown, parseImportsBlock, extractDependencySpecs } from "./pipeline.mjs";
 import { bundleFromEntries } from "./bundler.mjs";
+import { extractScenes, MIME, serveFile, handleShutdown } from "./server-shared.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, "..", "..");
@@ -43,56 +44,7 @@ const TTS_OUTPUT_DIR = join(dirname(VIDEO_JSON), "assets", "tts");
 const MEDIA_OUTPUT_DIR = join(dirname(VIDEO_JSON), "assets", "media");
 const WHISPER_BIN = process.env.WHISPER_BIN || "/Users/lir/Library/Python/3.9/bin/whisper";
 
-// ─── Extract scene info from compiled root ───────────────────────────────
-function extractScenes(root) {
-  const scenes = [];
-  let totalDuration = 0;
-
-  // Format 1: scenes as direct children of root
-  if (root.children?.length && !root.children.find(c => c.name === "scenes" || c.id === "scenes")) {
-    let offset = 0;
-    for (const s of root.children) {
-      if (!(s.type === "folder" || s.type === "scene" || s.children?.length)) continue;
-      if (s.isBackground) continue;
-      const leaf = (s.children || []).find(c => c.src && (c.type === "image" || c.type === "video"));
-      const action = leaf?.actions?.[0] || s.actions?.[0] || {};
-      const dur = (action.end || 5) - (action.start || 0);
-      scenes.push({
-        name: s.name || s.id || "scene",
-        start: offset,
-        end: offset + dur,
-        duration: dur,
-        src: leaf?.src || "",
-        mediaType: leaf?.type || "unknown",
-      });
-      offset += dur;
-    }
-    totalDuration = offset;
-  }
-
-  // Format 2: scenes wrapped in a "scenes" folder
-  const scenesFolder = root.children?.find(c => c.name === "scenes" || c.id === "scenes");
-  if (scenesFolder?.children && scenes.length === 0) {
-    let offset = 0;
-    for (const s of scenesFolder.children) {
-      const child = s.children?.[0] || {};
-      const action = child?.actions?.[0];
-      const dur = action ? (action.end - action.start) : 5;
-      scenes.push({
-        name: s.name,
-        start: offset,
-        end: offset + dur,
-        duration: dur,
-        src: child.src || "",
-        mediaType: child.type || "unknown",
-      });
-      offset += dur;
-    }
-    totalDuration = offset;
-  }
-
-  return { scenes, totalDuration };
-}
+// ─── extractScenes imported from ./server-shared.mjs ────────────────────
 
 // ─── Compiled root cache (avoids re-running pipeline on every fetch) ─────
 let compiledRootCache = null;
@@ -239,20 +191,7 @@ if (MODE_EDIT) {
     }
   });
 }
-// ─── MIME types ──────────────────────────────────────────────────────────
-const MIME = {
-  ".html": "text/html; charset=utf-8",
-  ".js": "text/javascript",
-  ".css": "text/css",
-  ".json": "application/json",
-  ".png": "image/png",
-  ".jpg": "image/jpeg",
-  ".mp4": "video/mp4",
-  ".mp3": "audio/mpeg",
-  ".wav": "audio/wav",
-  ".vtt": "text/vtt",
-  ".wasm": "application/wasm",
-};
+// ─── MIME imported from ./server-shared.mjs ──────────────────────────────
 
 // ─── Resolve asset path ──────────────────────────────────────────────────
 function resolveAsset(urlPath) {
@@ -427,10 +366,7 @@ const server = createServer(async (req, res) => {
 
     // API: Shutdown — kill the server, return control to terminal
     if (path === "/api/shutdown") {
-      res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ shutting_down: true }));
-      console.log("\n  🚪 Close requested from browser — shutting down\n");
-      process.exit(0);
+      handleShutdown(req, res, "Close requested from browser — shutting down");
       return;
     }
 
@@ -710,39 +646,7 @@ IMPORTANT: Read the full existing JSON file before editing. Only edit the JSON f
 
     // Serve static files from ROOT/public/
     const assetPath = resolveAsset(path);
-    if (assetPath && existsSync(assetPath)) {
-      const ext = path.slice(path.lastIndexOf("."));
-      const mime = MIME[ext] || "application/octet-stream";
-      const stat = statSync(assetPath);
-      const fileSize = stat.size;
-      const cacheControl = ext === ".js" || ext === ".html" ? "no-cache" : "public, max-age=3600";
-      const range = req.headers.range;
-      if (range) {
-        const parts = range.replace(/bytes=/, "").split("-");
-        const start = parseInt(parts[0], 10);
-        const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-        const chunkSize = end - start + 1;
-        const stream = createReadStream(assetPath, { start, end });
-        res.writeHead(206, {
-          "Content-Range": "bytes " + start + "-" + end + "/" + fileSize,
-          "Accept-Ranges": "bytes",
-          "Content-Length": chunkSize,
-          "Content-Type": mime,
-          "Cache-Control": cacheControl,
-        });
-        stream.pipe(res);
-      } else {
-        const data = readFileSync(assetPath);
-        res.writeHead(200, {
-          "Content-Type": mime,
-          "Accept-Ranges": "bytes",
-          "Content-Length": fileSize,
-          "Cache-Control": cacheControl,
-        });
-        res.end(data);
-      }
-      return;
-    }
+    if (assetPath && serveFile(req, res, assetPath)) return;
 
     res.writeHead(404);
     res.end("Not found");

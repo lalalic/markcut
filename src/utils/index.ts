@@ -7,18 +7,6 @@ export function uid(): string {
   return Math.random().toString(36).slice(2, 10);
 }
 
-export function hash(value: unknown): string {
-  const s = typeof value === "string" ? value : JSON.stringify(value);
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
-  return h.toString(36);
-}
-
-export function isURL(s: unknown): boolean {
-  if (typeof s !== "string") return false;
-  return /^(https?:|file:|data:|blob:|\/)/.test(s);
-}
-
 const KEBAB = /[^a-zA-Z0-9_-]+/g;
 export function toClassName(s: string): string {
   return (s || "").replace(KEBAB, "-").replace(/^-+|-+$/g, "");
@@ -44,18 +32,6 @@ export function cssJS(css?: string | Record<string, unknown>): Record<string, un
     out[camel] = v;
   }
   return out;
-}
-
-export function pick<T extends object, K extends keyof T>(o: T, keys: K[]): Pick<T, K> {
-  const r = {} as Pick<T, K>;
-  for (const k of keys) if (k in o) r[k] = o[k];
-  return r;
-}
-
-export function omit<T extends object, K extends keyof T>(o: T, keys: K[]): Omit<T, K> {
-  const r = { ...o } as T;
-  for (const k of keys) delete r[k];
-  return r as Omit<T, K>;
 }
 
 /**

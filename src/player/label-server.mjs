@@ -9,10 +9,11 @@
  * Labels are saved to labels.json alongside the source.
  */
 import { createServer } from "node:http";
-import { readFileSync, writeFileSync, existsSync, statSync, createReadStream } from "node:fs";
-import { resolve, dirname, join, extname } from "node:path";
+import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isDescriptiveRoot, resolveAndCompile, resolveAndCompileMarkdown } from "./pipeline.mjs";
+import { extractScenes, MIME, serveFile, handleShutdown } from "./server-shared.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, "..", "..");
@@ -23,72 +24,7 @@ const sourceArg = process.argv.slice(2).find(a => !a.startsWith("--"));
 const SOURCE = sourceArg ? resolve(sourceArg) : resolve(".");
 const IS_MARKDOWN = SOURCE.endsWith(".md");
 
-// ─── Scene extraction (same logic as server.mjs) ───────────────────────
-function extractScenes(root) {
-  const scenes = [];
-  let totalDuration = 0;
-
-  if (root.children?.length && !root.children.find(c => c.name === "scenes" || c.id === "scenes")) {
-    let offset = 0;
-    for (const s of root.children) {
-      if (!(s.type === "folder" || s.type === "scene" || s.children?.length)) continue;
-      if (s.isBackground) continue;
-      const leaf = (s.children || []).find(c => c.src && (c.type === "image" || c.type === "video"));
-      const action = leaf?.actions?.[0] || s.actions?.[0] || {};
-      const dur = (action.end || 5) - (action.start || 0);
-      scenes.push({
-        name: s.name || s.id || "scene",
-        start: offset,
-        end: offset + dur,
-        duration: dur,
-        src: leaf?.src || "",
-        mediaType: leaf?.type || "unknown",
-      });
-      offset += dur;
-    }
-    totalDuration = offset;
-  }
-
-  const scenesFolder = root.children?.find(c => c.name === "scenes" || c.id === "scenes");
-  if (scenesFolder?.children && scenes.length === 0) {
-    let offset = 0;
-    for (const s of scenesFolder.children) {
-      const child = s.children?.[0] || {};
-      const action = child?.actions?.[0];
-      const dur = action ? (action.end - action.start) : 5;
-      scenes.push({
-        name: s.name,
-        start: offset,
-        end: offset + dur,
-        duration: dur,
-        src: child.src || "",
-        mediaType: child.type || "unknown",
-      });
-      offset += dur;
-    }
-    totalDuration = offset;
-  }
-
-  // Flat scenes array (labels.json format)
-  if (scenes.length === 0 && Array.isArray(root.scenes)) {
-    let offset = 0;
-    for (const s of root.scenes) {
-      const dur = (s.end ?? (s.start ?? 0) + 5) - (s.start ?? 0);
-      scenes.push({
-        name: s.name || "scene",
-        start: offset,
-        end: offset + dur,
-        duration: dur,
-        src: s.src || "",
-        mediaType: s.mediaType || "unknown",
-      });
-      offset += dur;
-    }
-    totalDuration = offset;
-  }
-
-  return { scenes, totalDuration };
-}
+// ─── extractScenes imported from ./server-shared.mjs ────────────────────
 
 // ─── Load + compile (handles compiled JSON, descriptive JSON, markdown) ──
 async function loadSource() {
@@ -187,23 +123,7 @@ if (existsSync(SOURCE)) {
   console.error(`Source not found: ${SOURCE}`);
   process.exit(1);
 }
-// ─── MIME types ────────────────────────────────────────────────────────
-const MIME = {
-  ".html": "text/html; charset=utf-8",
-  ".js": "text/javascript",
-  ".css": "text/css",
-  ".json": "application/json",
-  ".png": "image/png",
-  ".jpg": "image/jpeg",
-  ".jpeg": "image/jpeg",
-  ".webp": "image/webp",
-  ".gif": "image/gif",
-  ".mp4": "video/mp4",
-  ".webm": "video/webm",
-  ".mov": "video/quicktime",
-  ".mp3": "audio/mpeg",
-  ".wasm": "application/wasm",
-};
+// ─── MIME imported from ./server-shared.mjs ──────────────────────────────
 
 // ─── HTML page ─────────────────────────────────────────────────────────
 function getHtml() {
@@ -532,10 +452,8 @@ const server = createServer((req, res) => {
 
     // API: Shutdown
     if (path === "/api/shutdown") {
-      res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ shutting_down: true }));
-      console.log("\\n  🚪 Shutdown requested\\n");
-      process.exit(0);
+      handleShutdown(req, res, "Shutdown requested");
+      return;
     }
 
     // Serve player bundle
@@ -558,35 +476,7 @@ const server = createServer((req, res) => {
 
     // Serve from public/ (with range request support for video/audio)
     const publicPath = join(ROOT, "public", path);
-    if (existsSync(publicPath) && statSync(publicPath).isFile()) {
-      const ext = extname(publicPath).toLowerCase();
-      const mime = MIME[ext] || "application/octet-stream";
-      const fileSize = statSync(publicPath).size;
-      const range = req.headers.range;
-      if (range) {
-        const parts = range.replace(/bytes=/, "").split("-");
-        const start = parseInt(parts[0], 10);
-        const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-        const chunkSize = end - start + 1;
-        const stream = createReadStream(publicPath, { start, end });
-        res.writeHead(206, {
-          "Content-Range": `bytes ${start}-${end}/${fileSize}`,
-          "Accept-Ranges": "bytes",
-          "Content-Length": chunkSize,
-          "Content-Type": mime,
-        });
-        stream.pipe(res);
-      } else {
-        const data = readFileSync(publicPath);
-        res.writeHead(200, {
-          "Content-Type": mime,
-          "Accept-Ranges": "bytes",
-          "Content-Length": fileSize,
-        });
-        res.end(data);
-      }
-      return;
-    }
+    if (serveFile(req, res, publicPath)) return;
 
     res.writeHead(404);
     res.end("Not found");

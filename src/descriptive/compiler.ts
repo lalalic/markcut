@@ -843,10 +843,6 @@ export function extractDependencySpecs(source: string): string[] {
   }
   return specs;
 }
-export function resolveComponentImportSpec(spec: string): string {
-  return spec.trim();
-}
-
 function resolveComponentSources(root: DescriptiveRoot): Map<string, ResolvedImport> {
   const registry = new Map<string, ResolvedImport>();
 
@@ -861,7 +857,7 @@ function resolveComponentSources(root: DescriptiveRoot): Map<string, ResolvedImp
     if (!entry.name) continue;
     const resolved: ResolvedImport = { exports: entry.exports };
     if (entry.from) {
-      resolved.src = resolveComponentImportSpec(entry.from);
+      resolved.src = entry.from.trim();
     }
     if (entry.jsx) {
       resolved.definitionJsx = entry.jsx;

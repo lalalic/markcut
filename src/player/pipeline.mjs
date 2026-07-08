@@ -53,8 +53,7 @@ var compiler_exports = {};
 __export(compiler_exports, {
   compileDescriptiveRoot: () => compileDescriptiveRoot,
   extractDependencySpecs: () => extractDependencySpecs,
-  parseImportsBlock: () => parseImportsBlock,
-  resolveComponentImportSpec: () => resolveComponentImportSpec
+  parseImportsBlock: () => parseImportsBlock
 });
 function isContainer(node2) {
   return node2.type === "series" || node2.type === "parallel" || node2.type === "transitionSeries";
@@ -517,9 +516,6 @@ function extractDependencySpecs(source) {
   }
   return specs;
 }
-function resolveComponentImportSpec(spec) {
-  return spec.trim();
-}
 function resolveComponentSources(root) {
   const registry = /* @__PURE__ */ new Map();
   let entries = root.imports;
@@ -531,7 +527,7 @@ function resolveComponentSources(root) {
     if (!entry.name) continue;
     const resolved = { exports: entry.exports };
     if (entry.from) {
-      resolved.src = resolveComponentImportSpec(entry.from);
+      resolved.src = entry.from.trim();
     }
     if (entry.jsx) {
       resolved.definitionJsx = entry.jsx;

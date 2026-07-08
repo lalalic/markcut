@@ -740,7 +740,7 @@ describe("Instruction Field", () => {
   });
 
   it("preserves instruction through render pipeline", async () => {
-    // Render a fixture where image has a description — the engine should not strip it
+    // Render a fixture where image has an instruction — the engine should not strip it
     const fixture = {
       root: {
         id: "root",

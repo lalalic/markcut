@@ -154,8 +154,6 @@ export * from "./context/index";
 export * from "./descriptive/compiler";
 export * from "./descriptive/markdown";
 export { getDurationInSeconds } from "./utils/index";
-// DynamicLoader removed — component rendering now uses react-jsx-parser
-// via ComposeContext.components registry loaded from root.imports.
 export { builtinAnimations } from "./types/keyframes";
 // Resolve functions (TTS, STT, media probe) are available via
 // import from "markcut/descriptive-resolve" for CLI use.
