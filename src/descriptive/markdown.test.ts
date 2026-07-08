@@ -47,6 +47,27 @@ describe("parseMarkdownDescriptive", () => {
     expect(journey.transitionTime).toBe(0.4);
   });
 
+  it("accepts merged transition syntax: transition:fade(0.5)", () => {
+    const doc = `# video\nlayout:series\n## Scene\nlayout:transitionSeries transition:fade(0.5)\n- image src:a.jpg duration:2\n- image src:b.jpg duration:2`;
+    const parsed = parseMarkdownDescriptive(doc);
+
+    const scene = parsed.children[0]! as any;
+    expect(scene.layout).toBe("transitionSeries");
+    expect(scene.transition).toBe("fade");
+    expect(scene.transitionTime).toBe(0.5);
+  });
+
+  it("accepts merged transition syntax: transition:fade(0.3) with explicit transitionTime override", () => {
+    const doc = `# video\nlayout:series\n## Scene\nlayout:transitionSeries transition:fade(0.3) transitionTime:0.8\n- image src:a.jpg duration:2\n- image src:b.jpg duration:2`;
+    const parsed = parseMarkdownDescriptive(doc);
+
+    const scene = parsed.children[0]! as any;
+    expect(scene.layout).toBe("transitionSeries");
+    expect(scene.transition).toBe("fade");
+    // Separate transitionTime overrides the inline time
+    expect(scene.transitionTime).toBe(0.8);
+  });
+
   it("accepts full-word type tokens", () => {
     const doc = `# video\nlayout:series\n## Intro\nlayout:parallel\n- image src:cover.jpg duration:2\n- video src:clip.mp4 startFrom:1 endAt:3\n- audio src:bgm.mp3 duration:3 volume:0.5\n- component duration:2 jsx:"<AnimatedHeadline />"\n- effect animation:fadeIn\n  - image src:card.jpg duration:1\n- map duration:2 waypoints:[37.77,-122.41,\"SF\";34.05,-118.24,\"LA\"]`;
     const parsed = parseMarkdownDescriptive(doc);

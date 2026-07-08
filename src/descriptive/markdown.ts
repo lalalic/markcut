@@ -210,6 +210,18 @@ function parseKeyValueTokens(tokens: string[]): Record<string, unknown> {
       }
       if (key === "transition") {
         const s = String(val);
+        // Support "name(time)" format e.g. "fade(0.5)" to merge transition + transitionTime
+        const parenMatch = s.match(/^(\w+)\((\d+(?:\.\d+)?)\)$/);
+        if (parenMatch) {
+          const [, name, timeStr] = parenMatch;
+          if (!TRANSITION_VALUES.has(name as any)) {
+            throw new Error(`invalid transition value: ${name}`);
+          }
+          out["transition"] = name;
+          out["transitionTime"] = Number(timeStr);
+          i++;
+          continue;
+        }
         if (!TRANSITION_VALUES.has(s as any)) {
           throw new Error(`invalid transition value: ${s}`);
         }

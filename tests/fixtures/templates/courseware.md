@@ -4,15 +4,12 @@ description: A beginner's course on artificial intelligence
 width: 1920 
 height: 1080 
 fps: 30 
-subtitle:
-  type: Waving
 ---
 # video
 layout:series
 ~~~js imports
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm'
-export {Solid} from 'remotion';
 
 export function Slide(props) {
   return <div className="slide"><ReactMarkdown remarkPlugins={[remarkGfm]} {...props}/></div>;
@@ -104,14 +101,11 @@ export function Slide(props) {
 ~~~
 
 ## Hook
-instruction: "an AI video to attract audience"
-- component duration:6 
-  jsx:"<Solid width={1280} height={720} color='red'/>"
-- video effects:[fadeIn, fadeOut]
+- video 
   prompt:"On a barren hilltop, with desert in the distance and a ruined city skyline. An animated Minion shakes its head and says to the wallet robot, 'Look at this world — it's all AI's fault'"
 
 ## Slides 
-layout:transitionSeries transition:fade transitionTime:0.5
+layout:transitionSeries transition:fade(0.5)
 
 ### TitleSlide
 layout:parallel

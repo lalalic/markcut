@@ -53,7 +53,9 @@ var compiler_exports = {};
 __export(compiler_exports, {
   compileDescriptiveRoot: () => compileDescriptiveRoot,
   extractDependencySpecs: () => extractDependencySpecs,
-  parseImportsBlock: () => parseImportsBlock
+  parseImportsBlock: () => parseImportsBlock,
+  parseTransition: () => parseTransition,
+  resolveTransition: () => resolveTransition
 });
 function isContainer(node2) {
   return node2.type === "series" || node2.type === "parallel" || node2.type === "transitionSeries";
@@ -118,6 +120,25 @@ function normalizeEffectSpec(spec) {
     return result;
   }
   return spec;
+}
+function parseTransition(val) {
+  if (!val) return { name: void 0, time: void 0 };
+  const parenMatch = val.match(/^(\w+)\((\d+(?:\.\d+)?)\)$/);
+  if (parenMatch) {
+    return { name: parenMatch[1], time: Number(parenMatch[2]) };
+  }
+  return { name: val, time: void 0 };
+}
+function resolveTransition(transition, transitionTime) {
+  const parsed = parseTransition(transition);
+  const name = parsed.name ?? "fade";
+  const inlineTime = parsed.time;
+  const time = transitionTime ?? inlineTime ?? 0.5;
+  if (!VALID_TRANSITIONS.has(name)) {
+    console.warn(`invalid transition "${name}", falling back to "fade"`);
+    return { name: "fade", time };
+  }
+  return { name, time };
 }
 function wrapWithEffects(node2, result, parentKind) {
   const rawEffects = node2.effects;
@@ -323,6 +344,7 @@ function compileScene(node2, ctx, parentKind) {
   const id = node2.id ?? uid();
   ensureUniqueIds(node2.children, id);
   const sceneKind = node2.layout ?? "parallel";
+  const resolved = resolveTransition(node2.transition, node2.transitionTime);
   const compiledChildren = compileChildren(node2.children, ctx, sceneKind);
   const sceneChildren = sceneKind === "parallel" ? compiledChildren.map((c) => c.stream) : [
     {
@@ -330,13 +352,13 @@ function compileScene(node2, ctx, parentKind) {
       type: "folder",
       visible: true,
       isSeries: true,
-      transition: sceneKind === "transitionSeries" ? node2.transition ?? "fade" : void 0,
-      transitionTime: sceneKind === "transitionSeries" ? node2.transitionTime ?? 0.5 : 0.5,
+      transition: sceneKind === "transitionSeries" ? resolved.name : void 0,
+      transitionTime: sceneKind === "transitionSeries" ? resolved.time : 0.5,
       children: compiledChildren.map((c) => c.stream),
-      durationInSeconds: aggregateDuration(compiledChildren, sceneKind, node2.transitionTime)
+      durationInSeconds: aggregateDuration(compiledChildren, sceneKind, resolved.time)
     }
   ];
-  const sceneContentDuration = sceneKind === "parallel" ? aggregateDuration(compiledChildren, "parallel") : aggregateDuration(compiledChildren, sceneKind, node2.transitionTime);
+  const sceneContentDuration = sceneKind === "parallel" ? aggregateDuration(compiledChildren, "parallel") : aggregateDuration(compiledChildren, sceneKind, resolved.time);
   const localDuration = Math.max(node2.duration ?? 0, sceneContentDuration);
   const start = parentKind === "parallel" ? Math.max(0, node2.start ?? 0) : 0;
   const end = start + localDuration;
@@ -467,8 +489,9 @@ function compileRhythm(node2, ctx, parentKind) {
 function compileContainer(node2, ctx, parentKind) {
   const id = node2.id ?? uid();
   ensureUniqueIds(node2.children, id);
+  const resolved = node2.type === "transitionSeries" ? resolveTransition(node2.transition, node2.transitionTime) : { name: "fade", time: 0.5 };
   const children = compileChildren(node2.children, ctx, node2.type);
-  const duration = aggregateDuration(children, node2.type, node2.transitionTime);
+  const duration = aggregateDuration(children, node2.type, resolved.time);
   const stream = {
     id,
     type: "folder",
@@ -476,8 +499,8 @@ function compileContainer(node2, ctx, parentKind) {
     visible: node2.visible ?? true,
     isBackground: node2.isBackground,
     isSeries: node2.type !== "parallel",
-    transition: node2.type === "transitionSeries" ? node2.transition ?? "fade" : void 0,
-    transitionTime: node2.type === "transitionSeries" ? node2.transitionTime ?? 0.5 : 0.5,
+    transition: node2.type === "transitionSeries" ? resolved.name : void 0,
+    transitionTime: node2.type === "transitionSeries" ? resolved.time : 0.5,
     children: children.map((c) => c.stream),
     durationInSeconds: duration
   };
@@ -666,8 +689,9 @@ function compileDescriptiveRoot(input, options = {}) {
   warnUnregisteredComponents(input, registry);
   ensureUniqueIds(input.children, "root");
   const rootKind = input.layout ?? "series";
+  const resolved = resolveTransition(input.transition, input.transitionTime);
   const children = compileChildren(input.children, ctx, rootKind);
-  const duration = aggregateDuration(children, rootKind, input.transitionTime);
+  const duration = aggregateDuration(children, rootKind, resolved.time);
   const compiled = {
     id: "root",
     type: "root",
@@ -680,14 +704,14 @@ function compileDescriptiveRoot(input, options = {}) {
     stylesheet: input.stylesheet,
     subtitle: input.subtitle,
     isSeries: rootKind !== "parallel",
-    transition: rootKind === "transitionSeries" ? input.transition ?? "fade" : void 0,
-    transitionTime: rootKind === "transitionSeries" ? input.transitionTime ?? 0.5 : 0.5,
+    transition: rootKind === "transitionSeries" ? resolved.name : void 0,
+    transitionTime: rootKind === "transitionSeries" ? resolved.time : 0.5,
     children: children.map((c) => c.stream),
     durationInSeconds: duration
   };
   return compiled;
 }
-var DEFAULTS, KNOWN_HTML_TAGS;
+var DEFAULTS, VALID_TRANSITIONS, KNOWN_HTML_TAGS;
 var init_compiler = __esm({
   "src/descriptive/compiler.ts"() {
     "use strict";
@@ -702,6 +726,7 @@ var init_compiler = __esm({
       map: 4,
       effect: 2
     };
+    VALID_TRANSITIONS = /* @__PURE__ */ new Set(["fade", "slide", "wipe", "flip", "clockWipe"]);
     KNOWN_HTML_TAGS = /* @__PURE__ */ new Set([
       "A",
       "Abbr",
@@ -12502,6 +12527,17 @@ function parseKeyValueTokens(tokens) {
       }
       if (key === "transition") {
         const s = String(val);
+        const parenMatch = s.match(/^(\w+)\((\d+(?:\.\d+)?)\)$/);
+        if (parenMatch) {
+          const [, name, timeStr] = parenMatch;
+          if (!TRANSITION_VALUES.has(name)) {
+            throw new Error(`invalid transition value: ${name}`);
+          }
+          out["transition"] = name;
+          out["transitionTime"] = Number(timeStr);
+          i++;
+          continue;
+        }
         if (!TRANSITION_VALUES.has(s)) {
           throw new Error(`invalid transition value: ${s}`);
         }

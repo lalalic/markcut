@@ -599,6 +599,57 @@ describe("compileDescriptiveRoot", () => {
     expect(innerTransition.transition).toBe("fade");
   });
 
+  it("supports merged transition syntax: transition:'wipe(0.8)' (inline time)", () => {
+    const compiled = compileDescriptiveRoot({
+      layout: "parallel",
+      children: [
+        {
+          id: "ts",
+          type: "transitionSeries",
+          transition: "wipe(0.8)",
+          children: [
+            { id: "a1", type: "image", src: "a.jpg", duration: 2 },
+            { id: "a2", type: "image", src: "b.jpg", duration: 2 },
+          ],
+        },
+      ],
+    });
+
+    // ts local duration = 2 + 2 - 0.8 = 3.2
+    expect(compiled.durationInSeconds).toBeCloseTo(3.2);
+
+    const ts = compiled.children.find((c: any) => c.id === "ts") as any;
+    expect(ts.transition).toBe("wipe");
+    expect(ts.transitionTime).toBe(0.8);
+    expect(ts.durationInSeconds).toBeCloseTo(3.2);
+  });
+
+  it("supports merged transition syntax inline time + separate transitionTime (separate wins)", () => {
+    const compiled = compileDescriptiveRoot({
+      layout: "series",
+      children: [
+        {
+          id: "ts",
+          type: "transitionSeries",
+          transition: "fade(0.5)",
+          transitionTime: 0.9,
+          children: [
+            { id: "a1", type: "image", src: "a.jpg", duration: 2 },
+            { id: "a2", type: "image", src: "b.jpg", duration: 2 },
+          ],
+        },
+      ],
+    });
+
+    // separate transitionTime (0.9) overrides inline (0.5)
+    // ts local duration = 2 + 2 - 0.9 = 3.1
+    expect(compiled.durationInSeconds).toBeCloseTo(3.1);
+
+    const ts = compiled.children.find((c: any) => c.id === "ts") as any;
+    expect(ts.transition).toBe("fade");
+    expect(ts.transitionTime).toBe(0.9);
+  });
+
   it("supports transitionSeries nested inside parallel", () => {
     const compiled = compileDescriptiveRoot({
       layout: "parallel",

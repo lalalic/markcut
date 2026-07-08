@@ -120,7 +120,7 @@ export interface DescriptiveScene extends DescriptiveBaseNode {
   title?: string;
   tts?: string;
   layout?: "series" | "parallel" | "transitionSeries";
-  transition?: "fade" | "slide" | "wipe" | "flip" | "clockWipe";
+  transition?: string;
   transitionTime?: number;
   children: DescriptiveNode[];
 }
@@ -155,7 +155,7 @@ export interface DescriptiveMap extends DescriptiveBaseNode {
 
 export interface DescriptiveContainer extends DescriptiveBaseNode {
   type: "series" | "parallel" | "transitionSeries";
-  transition?: "fade" | "slide" | "wipe" | "flip" | "clockWipe";
+  transition?: string;
   transitionTime?: number;
   children: DescriptiveNode[];
 }
@@ -185,7 +185,7 @@ export interface DescriptiveRoot {
   tti?: string;
   ttv?: string;
   layout?: "series" | "parallel" | "transitionSeries";
-  transition?: "fade" | "slide" | "wipe" | "flip" | "clockWipe";
+  transition?: string;
   transitionTime?: number;
   /** Global subtitle overlay. src = VTT file with absolute timestamps. Set by resolveScripts pipeline. */
   subtitle?: SubtitleOverlay;
@@ -300,6 +300,45 @@ function normalizeEffectSpec(spec: EffectSpec): {
     return result;
   }
   return spec;
+}
+
+/** Supported transition names for the compiled schema. */
+const VALID_TRANSITIONS = new Set(["fade", "slide", "wipe", "flip", "clockWipe"]);
+
+/**
+ * Parse a transition value that may include a parenthesized time, e.g.
+ *   "fade"       → { name: "fade", time: undefined }
+ *   "fade(0.5)"  → { name: "fade", time: 0.5 }
+ */
+export function parseTransition(val: string | undefined): { name?: string; time?: number } {
+  if (!val) return { name: undefined, time: undefined };
+  const parenMatch = val.match(/^(\w+)\((\d+(?:\.\d+)?)\)$/);
+  if (parenMatch) {
+    return { name: parenMatch[1]!, time: Number(parenMatch[2]) };
+  }
+  return { name: val, time: undefined };
+}
+
+/**
+ * Resolve the effective transition name and time from a descriptive node.
+ * Supports inline "name(time)" format on `transition`, with `transitionTime`
+ * as fallback.
+ */
+export function resolveTransition(
+  transition: string | undefined,
+  transitionTime: number | undefined,
+): { name: string; time: number } {
+  const parsed = parseTransition(transition);
+  const name = parsed.name ?? "fade";
+  // Separate transitionTime overrides inline time from "fade(0.5)" syntax
+  const inlineTime = parsed.time;
+  const time = transitionTime ?? inlineTime ?? 0.5;
+  // Ensure name is a valid compiled transition
+  if (!VALID_TRANSITIONS.has(name as any)) {
+    console.warn(`invalid transition "${name}", falling back to "fade"`);
+    return { name: "fade", time };
+  }
+  return { name, time };
 }
 
 /**
@@ -555,6 +594,7 @@ function compileScene(
   ensureUniqueIds(node.children, id);
 
   const sceneKind = node.layout ?? "parallel";
+  const resolved = resolveTransition(node.transition, node.transitionTime);
   const compiledChildren = compileChildren(node.children, ctx, sceneKind);
   const sceneChildren = sceneKind === "parallel"
     ? compiledChildren.map((c) => c.stream)
@@ -564,16 +604,16 @@ function compileScene(
         type: "folder",
         visible: true,
         isSeries: true,
-        transition: sceneKind === "transitionSeries" ? node.transition ?? "fade" : undefined,
-        transitionTime: sceneKind === "transitionSeries" ? node.transitionTime ?? 0.5 : 0.5,
+        transition: sceneKind === "transitionSeries" ? resolved.name : undefined,
+        transitionTime: sceneKind === "transitionSeries" ? resolved.time : 0.5,
         children: compiledChildren.map((c) => c.stream),
-        durationInSeconds: aggregateDuration(compiledChildren, sceneKind, node.transitionTime),
+        durationInSeconds: aggregateDuration(compiledChildren, sceneKind, resolved.time),
       } as Folder,
     ];
 
   const sceneContentDuration = sceneKind === "parallel"
     ? aggregateDuration(compiledChildren, "parallel")
-    : aggregateDuration(compiledChildren, sceneKind, node.transitionTime);
+    : aggregateDuration(compiledChildren, sceneKind, resolved.time);
   const localDuration = Math.max(node.duration ?? 0, sceneContentDuration);
   const start = parentKind === "parallel" ? Math.max(0, node.start ?? 0) : 0;
   const end = start + localDuration;
@@ -757,8 +797,11 @@ function compileContainer(node: DescriptiveContainer, ctx: CompileContext, paren
   const id = node.id ?? uid();
   ensureUniqueIds(node.children, id);
 
+  const resolved = node.type === "transitionSeries"
+    ? resolveTransition(node.transition, node.transitionTime)
+    : { name: "fade", time: 0.5 };
   const children = compileChildren(node.children, ctx, node.type);
-  const duration = aggregateDuration(children, node.type, node.transitionTime);
+  const duration = aggregateDuration(children, node.type, resolved.time);
 
   const stream: Folder = {
     id,
@@ -767,8 +810,8 @@ function compileContainer(node: DescriptiveContainer, ctx: CompileContext, paren
     visible: node.visible ?? true,
     isBackground: node.isBackground,
     isSeries: node.type !== "parallel",
-    transition: node.type === "transitionSeries" ? node.transition ?? "fade" : undefined,
-    transitionTime: node.type === "transitionSeries" ? node.transitionTime ?? 0.5 : 0.5,
+    transition: node.type === "transitionSeries" ? resolved.name : undefined,
+    transitionTime: node.type === "transitionSeries" ? resolved.time : 0.5,
     children: children.map((c) => c.stream),
     durationInSeconds: duration,
   };
@@ -1085,8 +1128,9 @@ export function compileDescriptiveRoot(input: DescriptiveRoot, options: CompileO
   ensureUniqueIds(input.children, "root");
 
   const rootKind = input.layout ?? "series";
+  const resolved = resolveTransition(input.transition, input.transitionTime);
   const children = compileChildren(input.children, ctx, rootKind);
-  const duration = aggregateDuration(children, rootKind, input.transitionTime);
+  const duration = aggregateDuration(children, rootKind, resolved.time);
 
   const compiled: Root = {
     id: "root",
@@ -1100,8 +1144,8 @@ export function compileDescriptiveRoot(input: DescriptiveRoot, options: CompileO
     stylesheet: input.stylesheet,
     subtitle: input.subtitle,
     isSeries: rootKind !== "parallel",
-    transition: rootKind === "transitionSeries" ? input.transition ?? "fade" : undefined,
-    transitionTime: rootKind === "transitionSeries" ? input.transitionTime ?? 0.5 : 0.5,
+    transition: rootKind === "transitionSeries" ? resolved.name : undefined,
+    transitionTime: rootKind === "transitionSeries" ? resolved.time : 0.5,
     children: children.map((c) => c.stream),
     durationInSeconds: duration,
   };
