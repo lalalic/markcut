@@ -176,9 +176,9 @@ When to use: embed an external video JSON (stream tree or scene-based).
 
 ## Imports
 
-External React components are registered via `root.imports`. Each entry defines the component's name and origin (`from:` URL or `jsx:` inline definition).
+External React components are registered via `root.imports`. In the **descriptive** form (input to the pipeline), it's an array of import entries. In the **compiled** form (output of the server pipeline, consumed by the player), it's a string URL pointing to a pre-bundled ESM module.
 
-### Root-level imports array
+### Descriptive form (input)
 
 ```json
 {
@@ -199,20 +199,21 @@ External React components are registered via `root.imports`. Each entry defines 
 | `jsx` | cond | string | inline component definition source (e.g. `"export default ({text}) => <span>{text}</span>"`) |
 | `exports` | opt | string | named export to pick from the module (default: `"default"`) |
 
-### `from:` spec forms
+### `from:` spec forms (descriptive form)
 
-| Pattern | Resolves to |
+| Pattern | Resolved by bundler as |
 |---|---|
-| `npm:pkg` | `https://esm.sh/pkg` |
-| `npm:pkg@1.2.3` | `https://esm.sh/pkg@1.2.3` |
-| `git:user/repo` | `https://esm.sh/gh/user/repo` |
-| `git:user/repo@branch/path` | `https://esm.sh/gh/user/repo@branch/path` |
-| `github:user/repo` | same as `git:` |
-| `https://...`, `http://...`, local path | used as-is |
+| `npm:pkg` | npm package — `npm install pkg`, then `esbuild` re-exports it |
+| `npm:pkg@1.2.3` | npm package with pinned version |
+| `npm:@scope/pkg#module` | npm scoped package |
+| `git:user/repo/path` | Raw specifier passed to esbuild; requires the module to be resolvable |
+| `github:user/repo/path` | Same as `git:` |
+| `https://...`, `http://...` | Raw URL passed directly to esbuild as an external |
+| local path | Filesystem path relative to the bundle project |
 
 ### Imports block (markdown only)
 
-The `` ```imports `` code block is a markdown-only feature. See [Markdown Strict Descriptive](markdown-strict-descriptive.md#frontmatter) for the full reference.
+The `` ```js imports `` or `~~~js imports` code block is a markdown-only feature. See [Markdown Descriptive](markdown-descriptive.md) for the full reference.
 
 ### Using imports in component nodes
 
@@ -238,7 +239,7 @@ Inline `jsx:` definitions in the imports array are also available as JSX tags in
 { "type": "component", "jsx": "<Greeting name='World' />", "duration": 2 }
 ```
 
-> Components defined via `jsx:` inline definitions are compiled at runtime with Babel and loaded as blob URLs. They have access to `useCurrentFrame()`, `interpolate()`, and other Remotion hooks.
+> Components defined via `jsx:` inline definitions are bundled by the player server at startup and loaded as a single ESM module. They have access to `useCurrentFrame()`, `interpolate()`, and other Remotion hooks via the bundled module's imports.
 
 ### Imports in markdown
 

@@ -50,17 +50,23 @@ Wrap any node with an `effect` stream to apply animation:
 
 Percentages `"0"`–`"100"` map to action duration. Any numeric CSS property works.
 
-## 2. Remote Components (load from URL)
+## 2. Remote Components (bundler-based)
 
-Register remote components via `import` in a `` ~~~js imports `` block:
+Register remote React components via the `~~~js imports` code fence (markdown) or `root.imports` array (JSON descriptive). The player server bundles all registered components into a single ESM module at startup.
 
-```
+```markdown
 ~~~js imports
-import { Badge } from "https://cdn.example.com/components/badge.js"
+export { BarChart } from "npm:recharts"
+export { Hello } from "git:user/repo/path/to/Hello.tsx"
+export { Badge } from "https://cdn.example.com/components/badge.js"
+
+export function Slide(props) {
+  return <div style={{color: '#fff'}}>{props.children}</div>;
+}
 ~~~
 ```
 
-Then reference them in component JSX:
+Then use them in component JSX:
 
 ```json
 {
@@ -70,28 +76,60 @@ Then reference them in component JSX:
 }
 ```
 
-### Remote Component Convention
+### How it works
 
-The module file must use `window.__React` and `window.__Remotion`:
+1. The server extracts the imports block from the source file
+2. `parseImportsBlock` resolves `export { X } from "spec"` and `export function X() {}` patterns
+3. Inline functions' source code is scanned for `import X from "pkg"` statements — those packages are added to dependencies
+4. `bundleFromEntries` creates a temp npm project, installs all packages, and runs `esbuild` to produce a single ESM file
+5. The bundled file URL is set on `root.imports` and served from `/.component-cache/<hash>.js`
+6. At runtime, `RemotionEngine.useComponentRegistry` does a dynamic `import(url)` to load all named exports
+7. react-jsx-parser resolves component tags from the loaded registry
 
-```js
-const React = window.__React;
-const { useCurrentFrame, interpolate } = window.__Remotion;
+### Import spec forms
 
-function Badge(props) {
-  const frame = useCurrentFrame();
-  return React.createElement("div", {
-    style: { background: props.color, padding: "12px 24px",
-             borderRadius: "8px", color: "white", fontSize: "48px" }
-  }, props.text);
+| Pattern | Resolves to | Example |
+|---|---|---|
+| `npm:pkg` | npm package (installed + bundled) | `export { BarChart } from "npm:recharts"` |
+| `git:user/repo` | GitHub repo source | `export { Comp } from "git:user/repo/src/Comp.tsx"` |
+| `https://...` | Raw URL (used as-is) | `export { X } from "https://cdn.example.com/x.js"` |
+| local path | Filesystem path | `export { X } from "./local/Component.tsx"` |
+
+### Inline functions
+
+Define components directly in the imports block. Dependencies used inside the function body are automatically detected and installed:
+
+```markdown
+~~~js imports
+import ReactMarkdown from "npm:react-markdown"
+
+export function Slide({ children }) {
+  return <div className="slide"><ReactMarkdown>{children}</ReactMarkdown></div>;
 }
-
-module.exports = { default: Badge };
+~~~
 ```
 
-### Preloading
+The `import` statements at the top serve dual purpose: they bring packages into scope inside inline functions AND tell the bundler what to install. The packages are added to `package.json` during bundling.
 
-No need to preload — components are bundled into a single ESM module by the player server at compile time. The engine loads the bundle automatically when the composition mounts. All imported components arrive in one `import()` call from `root.imports`.
+### Component Contract
+
+Props injected automatically:
+- Nothing special required — just standard React props. The engine passes any `data` bindings from the component node as JSX variables.
+
+For frame-accurate animation, use standard Remotion hooks inside inline functions:
+
+```markdown
+~~~js imports
+import { useCurrentFrame } from "remotion"
+
+export function FadeIn({ children }) {
+  const frame = useCurrentFrame();
+  const opacity = Math.min(1, frame / 15);
+  return <div style={{ opacity }}>{children}</div>;
+}
+~~~
+
+Note: `remotion` and `react` are automatically available in the bundle's external scope — they do NOT need to be imported from `npm:remotion`. However, adding `import { useCurrentFrame } from "remotion"` in the imports block is harmless and makes the dependency explicit.
 
 ## 3. Custom Components
 

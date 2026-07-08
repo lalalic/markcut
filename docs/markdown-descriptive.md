@@ -90,6 +90,8 @@ Think of this block as the **index file** for the video's component scope. `expo
 
 The imports block is the **primary** way to register components. The legacy YAML `imports:` array in frontmatter is still supported as a fallback, but the code block is preferred.
 
+> **How it works**: The server extracts the imports block from the raw source, parses it with `parseImportsBlock`, then runs `bundleFromEntries` which creates a temp npm project, installs packages, and bundles everything into a single ESM file with esbuild. The resulting bundle URL is set on `root.imports` (e.g. `/.component-cache/be710e5c.js`). At render time, `RemotionEngine.useComponentRegistry` dynamically imports this URL and feeds the named exports to react-jsx-parser.
+
 Supported patterns inside the block:
 
 | Pattern | Effect |
@@ -105,18 +107,14 @@ For compatibility, `import { Name } from "spec"` also works and produces the sam
 
 `from:` spec forms:
 
-| Prefix | Resolves to |
+| Prefix | Resolved by bundler as |
 |---|---|
-| `npm:pkg` | `https://esm.sh/pkg` |
-| `npm:pkg@1.2.3` | `https://esm.sh/pkg@1.2.3` |
-| `npm:pkg#module/path` | `https://esm.sh/pkg/module/path` — internal module |
-| `npm:@scope/pkg#module` | `https://esm.sh/@scope/pkg/module` |
-| `git:user/repo` | `https://esm.sh/gh/user/repo` |
-| `git:user/repo@br/path` | `https://esm.sh/gh/user/repo@br/path` |
-| `github:user/repo@br/...` | same as `git:` |
-| `https://...`, `http://...`, path | used as-is |
-
-The `#module` suffix separates the package name from an internal module path. It works with all prefixes: `npm:pkg#sub/path`, `git:user/repo#src/Comp.tsx`, etc. The `#` is replaced with `/` in the resolved URL.
+| `npm:pkg` | npm package — `npm install pkg`, then `esbuild` re-exports it |
+| `npm:pkg@1.2.3` | npm package with pinned version |
+| `npm:@scope/pkg#module` | npm scoped package |
+| `git:user/repo/path` | Raw specifier passed to esbuild; requires resolvable module |
+| `github:user/repo/path` | Same as `git:` |
+| `https://...`, `http://...`, path | Used as-is by esbuild |
 
 ## Key Reference (use these names)
 

@@ -900,15 +900,6 @@ export function compileDescriptiveRoot(input: DescriptiveRoot, options: CompileO
   const children = compileChildren(input.children, ctx, rootKind);
   const duration = aggregateDuration(children, rootKind, input.transitionTime);
 
-  // Preserve unresolved import sources so the server can bundle them.
-  // The server reads _importSources to know which packages to npm install + esbuild.
-  let _importSources: ImportEntry[] | undefined;
-  if (input.importsBlock) {
-    _importSources = parseImportsBlock(input.importsBlock);
-  } else if (input.imports) {
-    _importSources = input.imports;
-  }
-
   const compiled: Root = {
     id: "root",
     type: "root",
@@ -926,7 +917,5 @@ export function compileDescriptiveRoot(input: DescriptiveRoot, options: CompileO
     children: children.map((c) => c.stream),
     durationInSeconds: duration,
   };
-  // Attach server-side bundling info (not part of the public schema)
-  if (_importSources) (compiled as any)._importSources = _importSources;
   return compiled;
 }

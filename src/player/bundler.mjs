@@ -158,6 +158,8 @@ export async function bundleFromEntries(entries, extraSpecs = []) {
       console.error("  \u26a0\ufe0f  npm install failed:", e.stderr?.toString().slice(0, 300));
       throw new Error("Failed to install dependencies: " + (e.stderr?.toString().slice(0, 200) || e.message));
     }
+  } else {
+    console.log("  \ud83d\udce6 Dependencies cached");
   }
 
   // Bundle with esbuild
@@ -175,10 +177,12 @@ export async function bundleFromEntries(entries, extraSpecs = []) {
       console.error("  \u26a0\ufe0f  esbuild failed:", e.stderr?.toString().slice(0, 300));
       throw new Error("Failed to bundle components: " + (e.stderr?.toString().slice(0, 200) || e.message));
     }
+  } else {
+    console.log("  \ud83d\udce6 Components cached \u2192 " + hash + ".js");
   }
 
   const result = {
-    url: "/.component-cache/" + hash + ".js",
+    url: outFile,
     exports: all.filter(e => e.exportName !== null).map(e => e.name),
   };
   BUNDLED.set(hash, result);

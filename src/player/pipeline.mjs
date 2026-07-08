@@ -563,12 +563,6 @@ function compileDescriptiveRoot(input, options = {}) {
   const rootKind = input.layout ?? "series";
   const children = compileChildren(input.children, ctx, rootKind);
   const duration = aggregateDuration(children, rootKind, input.transitionTime);
-  let _importSources;
-  if (input.importsBlock) {
-    _importSources = parseImportsBlock(input.importsBlock);
-  } else if (input.imports) {
-    _importSources = input.imports;
-  }
   const compiled = {
     id: "root",
     type: "root",
@@ -586,7 +580,6 @@ function compileDescriptiveRoot(input, options = {}) {
     children: children.map((c) => c.stream),
     durationInSeconds: duration
   };
-  if (_importSources) compiled._importSources = _importSources;
   return compiled;
 }
 var DEFAULTS;

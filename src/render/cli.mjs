@@ -219,7 +219,7 @@ async function main() {
             stdoutBuffer += chunk.toString();
             if (stdoutBuffer.includes("Player ready") || stdoutBuffer.includes("Label Preview")) {
               serverReady = true;
-              console.log(`\n▶ Starting player${args.label ? " (label mode)" : " (edit mode)"} at http://localhost:${port}\n`);
+
               try {
                 execSync(`open http://localhost:${port}`, { stdio: "ignore" });
               } catch {}

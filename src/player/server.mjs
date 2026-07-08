@@ -96,8 +96,41 @@ function extractScenes(root) {
 
 // ─── Compiled root cache (avoids re-running pipeline on every fetch) ─────
 let compiledRootCache = null;
-let compiledRootIsDescriptive = false;
 let pipelineRunning = false;
+
+/**
+ * Extract component import entries from the raw file source.
+ * Handles both markdown (```js imports code fence) and JSON formats.
+ */
+function extractImportEntries(raw) {
+  let entries = null;
+  let extraSpecs = [];
+
+  if (IS_MARKDOWN) {
+    // Extract ```js imports or ~~~js imports code fence from markdown.
+    // Supports both tilde (~) and backtick (`) fence styles (3+ delimiters).
+    const match = raw.match(/^(```|~~~)\s*js imports\s*\n([\s\S]*?)^\1\s*$/m);
+    if (match) {
+      entries = parseImportsBlock(match[2]);
+      extraSpecs = extractDependencySpecs(match[2]);
+    }
+  } else {
+    // Extract from parsed JSON root
+    try {
+      const parsed = JSON.parse(raw);
+      const root = parsed.root || parsed;
+      if (root.imports && Array.isArray(root.imports)) {
+        entries = root.imports;
+        extraSpecs = entries.filter(e => e.from).map(e => e.from);
+      } else if (root.importsBlock) {
+        entries = parseImportsBlock(root.importsBlock);
+        extraSpecs = extractDependencySpecs(root.importsBlock);
+      }
+    } catch { /* invalid JSON — skip */ }
+  }
+
+  return { entries, extraSpecs };
+}
 
 /**
  * Read the input file (.json or .md), detect format, run pipeline,
@@ -107,6 +140,11 @@ async function loadCompiledRoot() {
   if (compiledRootCache) return compiledRootCache;
 
   const raw = readFileSync(VIDEO_JSON, "utf-8");
+
+  // Extract component imports from raw source BEFORE compiling,
+  // so the server can bundle them and set compiled.imports directly.
+  const { entries: importEntries, extraSpecs } = extractImportEntries(raw);
+
   let compiled;
 
   if (IS_MARKDOWN) {
@@ -117,7 +155,6 @@ async function loadCompiledRoot() {
       mediaOutputDir: MEDIA_OUTPUT_DIR,
       whisperBin: existsSync(WHISPER_BIN) ? WHISPER_BIN : undefined,
     });
-    compiledRootIsDescriptive = true;
   } else {
     const parsed = JSON.parse(raw);
     const root = parsed.root || parsed;
@@ -131,47 +168,22 @@ async function loadCompiledRoot() {
         whisperBin: existsSync(WHISPER_BIN) ? WHISPER_BIN : undefined,
       });
     } else {
-      compiledRootIsDescriptive = false;
       compiled = root;
     }
   }
 
-  // Bundle component imports if any exist
-  try {
-    // Read import sources from the compiled root's _importSources field
-    // (populated by compileDescriptiveRoot). No need to regex raw markdown.
-    let importEntries = compiled._importSources || null;
-    let extraSpecs = [];
-
-    if (!importEntries && compiledRootIsDescriptive) {
-      // Fallback for descriptive JSON that wasn't compiled yet:
-      // extract imports from the parsed root directly
-      const parsedRoot = JSON.parse(raw).root || JSON.parse(raw);
-      if (parsedRoot.imports) {
-        importEntries = parsedRoot.imports;
-      } else if (parsedRoot.importsBlock) {
-        importEntries = parseImportsBlock(parsedRoot.importsBlock);
-        extraSpecs = extractDependencySpecs(parsedRoot.importsBlock);
-      }
-    } else if (importEntries) {
-      // Extract dependency specs from the entries for the bundler
-      for (const entry of importEntries) {
-        if (entry.from) {
-          extraSpecs.push(entry.from);
-        }
-      }
-    }
-
-    if (importEntries && importEntries.length > 0) {
+  // Bundle component imports — sets compiled.imports to the bundle URL
+  if (importEntries && importEntries.length > 0) {
+    try {
       const bundle = await bundleFromEntries(importEntries, extraSpecs);
       if (bundle.url) {
         compiled.imports = bundle.url;
         console.log(`  ✅ Components: ${bundle.exports.join(", ")}`);
       }
+    } catch (e) {
+      console.error("  ⚠️  Component bundling failed:", e.message);
+      // Continue without bundled components — JSX will fail gracefully
     }
-  } catch (e) {
-    console.error("  ⚠️  Component bundling failed:", e.message);
-    // Continue without bundled components — JSX will fail gracefully
   }
 
   compiledRootCache = compiled;
@@ -655,8 +667,15 @@ IMPORTANT: Read the full existing JSON file before editing. Only edit the JSON f
     if (path === "/api/video-data") {
       try {
         const root = await loadCompiledRoot();
+        // Convert absolute import bundle path to server-relative URL
+        // for the browser (import() needs a URL the server can serve).
+        const rootOut = { ...root };
+        if (typeof rootOut.imports === "string" && rootOut.imports.startsWith("/")) {
+          const rel = rootOut.imports.replace(ROOT + "/public", "");
+          rootOut.imports = rel.startsWith("/") ? rel : "/" + rel;
+        }
         res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(JSON.stringify(root));
+        res.end(JSON.stringify(rootOut));
       } catch (e) {
         res.writeHead(500, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: e.message }));
