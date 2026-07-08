@@ -68,6 +68,23 @@ export const root = folder.extend({
   metadata: z.string().optional(),
   stylesheet: z.string().optional().describe("global css; selectors use .type and .name"),
   subtitle: subtitleOverlay.optional().describe("global subtitle overlay; src is a VTT file with absolute timestamps"),
+  /**
+   * Component registry source for react-jsx-parser.
+   *
+   * Two runtime forms (the descriptive ImportEntry[] array is resolved by the
+   * compiler/server BEFORE reaching here):
+   *   - string: URL to a pre-bundled ESM module whose named exports are the
+   *             components (set by the player server after bundling frontmatter
+   *             `imports:`).
+   *   - object: inline `{ Name: ComponentType }` map for programmatic use.
+   *
+   * Without this field declared, zod's default `.strip()` removes it during
+   * `root.parse()`, so the registry never loads at runtime.
+   */
+  imports: z
+    .union([z.string(), z.record(z.string(), z.any())])
+    .optional()
+    .describe("component registry: URL to a pre-bundled module (string) or inline component map (object)"),
 });
 export type Root = z.infer<typeof root>;
 
@@ -103,16 +120,12 @@ export type Image = z.infer<typeof image>;
  * Component node — JSX usage expression compiled at runtime.
  *
  * The `jsx` field is a React JSX expression (e.g. "<BarChart data={...} />").
- * Component tag names are resolved from the `imports` map at runtime.
- *
- * The `imports` map is populated by the descriptive compiler from frontmatter
- * `imports:` entries. Each key is a component name, each value is a URL or
- * `__jsx__:name` for inline definitions.
+ * Component tag names are resolved from the `components` map at runtime in compose context.
+
  */
 export const component = base.extend({
   type: z.literal("component").default("component"),
   jsx: z.string().describe("usage JSX expression compiled at runtime; tag names resolved from imports"),
-  imports: z.record(z.string(), z.string()).optional().describe("resolved frontmatter imports: name → URL. Values prefixed `__jsx__:` are inline definitions."),
   data: z.record(z.string(), z.string()).optional().describe("extra variables (e.g. from ~~~md source code fences) available in JSX scope"),
   actions: z.array(action).min(1).default(() => [action.parse({})]),
 });

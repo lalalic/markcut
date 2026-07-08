@@ -1,27 +1,19 @@
 import * as React from "react";
 import { Sequence, useVideoConfig } from "remotion";
-import { useJsxWithImports } from "./DynamicLoader";
+import { ComposeContext } from "../context/index";
+import JsxParser from "react-jsx-parser";
 import type { Component } from "../schema/index";
 
 /**
  * Component leaf — renders a JSX usage expression at runtime.
- * Component tag names are resolved from the `imports` map.
- * See `compileJsxWithImports` in DynamicLoader for compilation details.
+ * Component tag names are resolved from ComposeContext.components
+ * (populated by the engine from root.imports).
  */
 export function ComponentLeaf({ stream }: { stream: Component }) {
   const { fps } = useVideoConfig();
-  const [error, setError] = React.useState<string | null>(null);
-  const Comp = useJsxWithImports(stream.jsx, stream.imports ?? undefined, stream.data ?? undefined, (err, ctx) => {
-    setError(`Component error: ${err instanceof Error ? err.message : String(err)}`);
-  });
+  const { components } = React.useContext(ComposeContext);
 
-  if (error) {
-    return React.createElement("div", {
-      style: { color: "red", padding: 20, fontFamily: "sans-serif", fontSize: 14, background: "rgba(0,0,0,0.8)" },
-    }, error);
-  }
-
-  if (!Comp) return null;
+  if (!stream.jsx) return null;
 
   return (
     <>
@@ -35,7 +27,16 @@ export function ComponentLeaf({ stream }: { stream: Component }) {
             from={Math.floor(fps * start)}
             layout="none"
           >
-            <Comp action={a} />
+            <JsxParser
+              style={{ width: "100%", height: "100%" }}
+              components={components}
+              bindings={stream.data}
+              jsx={stream.jsx}
+              blacklistedAttrs={[]}
+              disableKeyGeneration={true}
+              onError={error => console.warn({jsx: stream.jsx, error: error.message})}
+              renderError={({ error }) => <div style={{ color: "red", padding: 20, fontSize: "larger" }}>{error}</div>}
+          />
           </Sequence>
         );
       })}

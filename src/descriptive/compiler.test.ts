@@ -130,20 +130,30 @@ export function Hello({ name }) {
       children: [{ type: "component", jsx: "<PieChart />", duration: 1 }],
     });
     const c = compiled.children[0] as any;
-    // imports removed from component schema — now at root level
+    // Per-node imports are no longer populated — components come from root.imports
     expect(c.imports).toBeUndefined();
   });
 });
 
 describe("compileDescriptiveRoot — component imports", () => {
-  // NOTE: In the current architecture, imports are at the root level,
-  // not per-component. Components no longer have an `imports` field.
-  // See md-descriptive.test.ts for compiler tests with the new architecture.
+  // Components resolve imports through the global root.imports → ComposeContext
+  // path, not through per-node imports.
   
-  it("component nodes have no per-component imports", () => {
-    // This test verifies the new architecture: imports are at root level.
-    // Previously, imports were attached to each component node.
-    expect(true).toBe(true);
+  it("component nodes do not carry per-node imports", () => {
+    const compiled = compileDescriptiveRoot({
+      layout: "series",
+      importsBlock: `export { PieChart } from "npm:recharts"
+export { BarChart } from "npm:recharts"`,
+      children: [
+        { type: "component", jsx: "<PieChart />", duration: 1 },
+        { type: "component", jsx: "<BarChart />", duration: 1 },
+      ],
+    });
+    const c1 = compiled.children[0] as any;
+    const c2 = compiled.children[1] as any;
+    // Per-node imports field is undefined — components resolve at root level
+    expect(c1.imports).toBeUndefined();
+    expect(c2.imports).toBeUndefined();
   });
 });
 

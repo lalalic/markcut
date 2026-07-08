@@ -138,25 +138,27 @@ async function loadCompiledRoot() {
 
   // Bundle component imports if any exist
   try {
-    let importEntries = null;
+    // Read import sources from the compiled root's _importSources field
+    // (populated by compileDescriptiveRoot). No need to regex raw markdown.
+    let importEntries = compiled._importSources || null;
     let extraSpecs = [];
 
-    if (IS_MARKDOWN) {
-      // For markdown: extract the imports block from the raw source
-      const importsBlockMatch = raw.match(/(?:```|~~~)(?:js|javascript)\s+imports\s*\n([\s\S]*?)(?:```|~~~)/i);
-      if (importsBlockMatch) {
-        importEntries = parseImportsBlock(importsBlockMatch[1]);
-        extraSpecs = extractDependencySpecs(importsBlockMatch[1]);
-      }
-    } else if (compiledRootIsDescriptive) {
-      // For descriptive JSON: extract imports from the parsed root directly
-      // (before compilation, the root has an `imports` array and optional `importsBlock`)
+    if (!importEntries && compiledRootIsDescriptive) {
+      // Fallback for descriptive JSON that wasn't compiled yet:
+      // extract imports from the parsed root directly
       const parsedRoot = JSON.parse(raw).root || JSON.parse(raw);
       if (parsedRoot.imports) {
         importEntries = parsedRoot.imports;
       } else if (parsedRoot.importsBlock) {
         importEntries = parseImportsBlock(parsedRoot.importsBlock);
         extraSpecs = extractDependencySpecs(parsedRoot.importsBlock);
+      }
+    } else if (importEntries) {
+      // Extract dependency specs from the entries for the bundler
+      for (const entry of importEntries) {
+        if (entry.from) {
+          extraSpecs.push(entry.from);
+        }
       }
     }
 

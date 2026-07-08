@@ -76,6 +76,26 @@ export async function bundleFromEntries(entries, extraSpecs = []) {
     }
   }
 
+  // Extract dependencies from inline function sources.
+  // Inline functions (export function X() {...}) often contain `import ... from "pkg"`
+  // statements (prepended by extractImportLines in the compiler). These packages
+  // must be in package.json for esbuild to resolve them. The server only passes
+  // `entry.from` specs via extraSpecs — import statements inside inline defs
+  // are invisible to the server, so we scan them here.
+  for (const inline of inlineFuncs) {
+    const re = /from\s+["'`](npm:)?([^"'`\s]+)["'`]/g;
+    let m;
+    while ((m = re.exec(inline.source)) !== null) {
+      const pkgName = m[2];
+      // Skip relative paths (./foo, ../foo) and bare URL imports
+      if (pkgName.startsWith(".") || /^https?:/.test(pkgName)) continue;
+      if (!existingPkgs.has(pkgName)) {
+        existingPkgs.add(pkgName);
+        npmDeps.push({ name: pkgName, pkgName, exportName: null });
+      }
+    }
+  }
+
   if (npmDeps.length === 0 && inlineFuncs.length === 0) return { url: null, exports: [] };
 
   // Create a stable hash from sorted entries

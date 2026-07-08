@@ -178,7 +178,7 @@ function compileLeaf(node2, ctx, parentKind) {
         ...base,
         type: "component",
         jsx: node2.jsx,
-        bindings: Object.keys(bindings).length ? bindings : void 0,
+        data: Object.keys(bindings).length ? bindings : void 0,
         actions: [action]
       };
       return { stream, duration: end };
@@ -563,7 +563,13 @@ function compileDescriptiveRoot(input, options = {}) {
   const rootKind = input.layout ?? "series";
   const children = compileChildren(input.children, ctx, rootKind);
   const duration = aggregateDuration(children, rootKind, input.transitionTime);
-  return {
+  let _importSources;
+  if (input.importsBlock) {
+    _importSources = parseImportsBlock(input.importsBlock);
+  } else if (input.imports) {
+    _importSources = input.imports;
+  }
+  const compiled = {
     id: "root",
     type: "root",
     visible: true,
@@ -580,6 +586,8 @@ function compileDescriptiveRoot(input, options = {}) {
     children: children.map((c) => c.stream),
     durationInSeconds: duration
   };
+  if (_importSources) compiled._importSources = _importSources;
+  return compiled;
 }
 var DEFAULTS;
 var init_compiler = __esm({

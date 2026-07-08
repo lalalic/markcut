@@ -39,14 +39,18 @@ const DefaultContainer: ComposeContextValue["Container"] = ({ children, style, c
  */
 function useComponentRegistry(imports: unknown): Record<string, React.ComponentType<any>> | null {
   const [registry, setRegistry] = React.useState<Record<string, React.ComponentType<any>> | null>(null);
-  const handleRef = React.useRef<string | null>(null);
+  // delayRender() returns a numeric handle that continueRender() consumes.
+  const handleRef = React.useRef<number | null>(null);
 
   React.useEffect(() => {
     if (!imports) {
-      setRegistry({});
+      // No registry to load — stay null so ComposeContext falls back to
+      // `compose.components` (programmatic API). Returning `{}` here would
+      // shadow the host-provided registry with an empty object.
+      setRegistry(null);
       return;
     }
-    if (typeof imports === "object" && imports !== null) {
+    if (typeof imports === "object" && imports !== null && !Array.isArray(imports)) {
       setRegistry(imports as Record<string, React.ComponentType<any>>);
       return;
     }
@@ -65,7 +69,7 @@ function useComponentRegistry(imports: unknown): Record<string, React.ComponentT
         })
         .catch((err: Error) => {
           console.error("Failed to load component registry:", err);
-          setRegistry({});
+          setRegistry(null);
           if (handleRef.current) {
             continueRender(handleRef.current);
             handleRef.current = null;
@@ -73,7 +77,7 @@ function useComponentRegistry(imports: unknown): Record<string, React.ComponentT
         });
       return;
     }
-    setRegistry({});
+    setRegistry(null);
   }, [imports]);
 
   return registry;

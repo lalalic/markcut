@@ -778,7 +778,7 @@ var require_scheduler = __commonJS({
 var require_react_dom_production = __commonJS({
   "node_modules/react-dom/cjs/react-dom.production.js"(exports) {
     "use strict";
-    var React47 = require_react();
+    var React46 = require_react();
     function formatProdErrorMessage(code) {
       var url2 = "https://react.dev/errors/" + code;
       if (1 < arguments.length) {
@@ -818,7 +818,7 @@ var require_react_dom_production = __commonJS({
         implementation
       };
     }
-    var ReactSharedInternals = React47.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
+    var ReactSharedInternals = React46.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
     function getCrossOriginStringAs(as, input) {
       if ("font" === as) return "";
       if ("string" === typeof input)
@@ -954,7 +954,7 @@ var require_react_dom_client_production = __commonJS({
   "node_modules/react-dom/cjs/react-dom-client.production.js"(exports) {
     "use strict";
     var Scheduler = require_scheduler();
-    var React47 = require_react();
+    var React46 = require_react();
     var ReactDOM = require_react_dom();
     function formatProdErrorMessage(code) {
       var url2 = "https://react.dev/errors/" + code;
@@ -1145,7 +1145,7 @@ var require_react_dom_client_production = __commonJS({
       return null;
     }
     var isArrayImpl = Array.isArray;
-    var ReactSharedInternals = React47.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
+    var ReactSharedInternals = React46.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
     var ReactDOMSharedInternals = ReactDOM.__DOM_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
     var sharedNotPendingObject = {
       pending: false,
@@ -3280,10 +3280,10 @@ var require_react_dom_client_production = __commonJS({
         refCount: 0
       };
     }
-    function releaseCache(cache2) {
-      cache2.refCount--;
-      0 === cache2.refCount && scheduleCallback$2(NormalPriority, function() {
-        cache2.controller.abort();
+    function releaseCache(cache) {
+      cache.refCount--;
+      0 === cache.refCount && scheduleCallback$2(NormalPriority, function() {
+        cache.controller.abort();
       });
     }
     var currentEntangledListeners = null;
@@ -8643,21 +8643,21 @@ var require_react_dom_client_production = __commonJS({
           case 23:
           case 22:
             if (null !== fiber.memoizedState && null !== fiber.memoizedState.cachePool) {
-              var cache2 = fiber.memoizedState.cachePool.pool;
-              null != cache2 && cache2.refCount++;
+              var cache = fiber.memoizedState.cachePool.pool;
+              null != cache && cache.refCount++;
             }
             break;
           case 24:
             releaseCache(fiber.memoizedState.cache);
         }
-        cache2 = fiber.child;
-        if (null !== cache2) cache2.return = fiber, nextEffect = cache2;
+        cache = fiber.child;
+        if (null !== cache) cache.return = fiber, nextEffect = cache;
         else
           a: for (fiber = deletedSubtreeRoot; null !== nextEffect; ) {
-            cache2 = nextEffect;
-            var sibling2 = cache2.sibling, returnFiber = cache2.return;
-            detachFiberAfterEffects(cache2);
-            if (cache2 === fiber) {
+            cache = nextEffect;
+            var sibling2 = cache.sibling, returnFiber = cache.return;
+            detachFiberAfterEffects(cache);
+            if (cache === fiber) {
               nextEffect = null;
               break a;
             }
@@ -8672,8 +8672,8 @@ var require_react_dom_client_production = __commonJS({
     }
     var DefaultAsyncDispatcher = {
       getCacheForType: function(resourceType) {
-        var cache2 = readContext(CacheContext), cacheForType = cache2.data.get(resourceType);
-        void 0 === cacheForType && (cacheForType = resourceType(), cache2.data.set(resourceType, cacheForType));
+        var cache = readContext(CacheContext), cacheForType = cache.data.get(resourceType);
+        void 0 === cacheForType && (cacheForType = resourceType(), cache.data.set(resourceType, cacheForType));
         return cacheForType;
       },
       cacheSignal: function() {
@@ -11812,24 +11812,24 @@ var require_react_dom_client_production = __commonJS({
     var tagCaches = null;
     function getHydratableHoistableCache(type, keyAttribute, ownerDocument) {
       if (null === tagCaches) {
-        var cache2 = /* @__PURE__ */ new Map();
+        var cache = /* @__PURE__ */ new Map();
         var caches = tagCaches = /* @__PURE__ */ new Map();
-        caches.set(ownerDocument, cache2);
+        caches.set(ownerDocument, cache);
       } else
-        caches = tagCaches, cache2 = caches.get(ownerDocument), cache2 || (cache2 = /* @__PURE__ */ new Map(), caches.set(ownerDocument, cache2));
-      if (cache2.has(type)) return cache2;
-      cache2.set(type, null);
+        caches = tagCaches, cache = caches.get(ownerDocument), cache || (cache = /* @__PURE__ */ new Map(), caches.set(ownerDocument, cache));
+      if (cache.has(type)) return cache;
+      cache.set(type, null);
       ownerDocument = ownerDocument.getElementsByTagName(type);
       for (caches = 0; caches < ownerDocument.length; caches++) {
         var node = ownerDocument[caches];
         if (!(node[internalHoistableMarker] || node[internalInstanceKey] || "link" === type && "stylesheet" === node.getAttribute("rel")) && "http://www.w3.org/2000/svg" !== node.namespaceURI) {
           var nodeKey = node.getAttribute(keyAttribute) || "";
           nodeKey = type + nodeKey;
-          var existing = cache2.get(nodeKey);
-          existing ? existing.push(node) : cache2.set(nodeKey, [node]);
+          var existing = cache.get(nodeKey);
+          existing ? existing.push(node) : cache.set(nodeKey, [node]);
         }
       }
-      return cache2;
+      return cache;
     }
     function mountHoistable(hoistableRoot, type, instance) {
       hoistableRoot = hoistableRoot.ownerDocument || hoistableRoot;
@@ -12591,7 +12591,7 @@ var require_react_dom_client_production = __commonJS({
         0 === i3 && attemptExplicitHydrationTarget(target);
       }
     };
-    var isomorphicReactPackageVersion$jscomp$inline_1840 = React47.version;
+    var isomorphicReactPackageVersion$jscomp$inline_1840 = React46.version;
     if ("19.2.5" !== isomorphicReactPackageVersion$jscomp$inline_1840)
       throw Error(
         formatProdErrorMessage(
@@ -12803,60 +12803,6 @@ var import_jsx_runtime39 = __toESM(require_jsx_runtime(), 1);
 var import_jsx_runtime40 = __toESM(require_jsx_runtime(), 1);
 
 // node_modules/remotion/dist/esm/index.mjs
-var esm_exports = {};
-__export(esm_exports, {
-  AbsoluteFill: () => AbsoluteFill,
-  AnimatedImage: () => AnimatedImage,
-  Artifact: () => Artifact,
-  Audio: () => Audio,
-  CanvasImage: () => CanvasImage,
-  Composition: () => Composition,
-  Config: () => Config,
-  Easing: () => Easing,
-  Experimental: () => Experimental,
-  Folder: () => Folder,
-  FolderContext: () => FolderContext,
-  Freeze: () => Freeze,
-  HTML_IN_CANVAS_UNSUPPORTED_MESSAGE: () => HTML_IN_CANVAS_UNSUPPORTED_MESSAGE,
-  Html5Audio: () => Html5Audio,
-  Html5Video: () => Html5Video,
-  HtmlInCanvas: () => HtmlInCanvas,
-  IFrame: () => IFrame,
-  Img: () => Img,
-  Internals: () => Internals,
-  Loop: () => Loop,
-  MediaPlaybackError: () => MediaPlaybackError,
-  OffthreadVideo: () => OffthreadVideo,
-  Sequence: () => Sequence,
-  Series: () => Series,
-  Solid: () => Solid,
-  Still: () => Still,
-  VERSION: () => VERSION,
-  Video: () => Video,
-  assertValidInterpolateEasingOption: () => assertValidInterpolateEasingOption,
-  cancelRender: () => cancelRender,
-  continueRender: () => continueRender,
-  delayRender: () => delayRender,
-  getInputProps: () => getInputProps,
-  getRemotionEnvironment: () => getRemotionEnvironment,
-  getStaticFiles: () => getStaticFiles,
-  interpolate: () => interpolate,
-  interpolateColors: () => interpolateColors,
-  isHtmlInCanvasSupported: () => isHtmlInCanvasSupported,
-  measureSpring: () => measureSpring,
-  prefetch: () => prefetch,
-  random: () => random,
-  registerRoot: () => registerRoot,
-  spring: () => spring,
-  staticFile: () => staticFile,
-  useBufferState: () => useBufferState,
-  useCurrentFrame: () => useCurrentFrame,
-  useCurrentScale: () => useCurrentScale,
-  useDelayRender: () => useDelayRender,
-  useRemotionEnvironment: () => useRemotionEnvironment,
-  useVideoConfig: () => useVideoConfig,
-  watchStaticFile: () => watchStaticFile
-});
 var import_react = __toESM(require_react(), 1);
 var import_react2 = __toESM(require_react(), 1);
 var import_react_dom = __toESM(require_react_dom(), 1);
@@ -13005,9 +12951,6 @@ if (typeof import_react.createContext !== "function") {
   throw new Error(err.join(`
 `));
 }
-var Clipper = () => {
-  throw new Error("<Clipper> has been removed as of Remotion v4.0.228. The native clipping APIs were experimental and subject to removal at any time. We removed them because they were sparingly used and made rendering often slower rather than faster.");
-};
 var CanUseRemotionHooks = (0, import_react3.createContext)(false);
 var CanUseRemotionHooksProvider = ({ children }) => {
   return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CanUseRemotionHooks.Provider, {
@@ -13157,54 +13100,11 @@ function truthy(value) {
   return Boolean(value);
 }
 var getRegex = () => /^([a-zA-Z0-9-\u4E00-\u9FFF])+$/g;
-var isFolderNameValid = (name) => name.match(getRegex());
-var validateFolderName = (name) => {
-  if (name === void 0 || name === null) {
-    throw new TypeError("You must pass a name to a <Folder />.");
-  }
-  if (typeof name !== "string") {
-    throw new TypeError(`The "name" you pass into <Folder /> must be a string. Got: ${typeof name}`);
-  }
-  if (!isFolderNameValid(name)) {
-    throw new Error(`Folder name can only contain a-z, A-Z, 0-9 and -. You passed ${name}`);
-  }
-};
 var invalidFolderNameErrorMessage = `Folder name must match ${String(getRegex())}`;
 var FolderContext = (0, import_react7.createContext)({
   folderName: null,
   parentName: null
 });
-var Folder = ({ name, children }) => {
-  const parent = (0, import_react7.useContext)(FolderContext);
-  const { registerFolder, unregisterFolder } = (0, import_react7.useContext)(CompositionSetters);
-  const nonce = useNonce();
-  validateFolderName(name);
-  const parentNameArr = [parent.parentName, parent.folderName].filter(truthy);
-  const parentName = parentNameArr.length === 0 ? null : parentNameArr.join("/");
-  const value = (0, import_react7.useMemo)(() => {
-    return {
-      folderName: name,
-      parentName
-    };
-  }, [name, parentName]);
-  (0, import_react7.useEffect)(() => {
-    registerFolder(name, parentName, nonce.get());
-    return () => {
-      unregisterFolder(name, parentName);
-    };
-  }, [
-    name,
-    parent.folderName,
-    parentName,
-    registerFolder,
-    unregisterFolder,
-    nonce
-  ]);
-  return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(FolderContext.Provider, {
-    value,
-    children
-  });
-};
 function getNodeEnvString() {
   return ["NOD", "E_EN", "V"].join("");
 }
@@ -14191,9 +14091,6 @@ var checkMultipleRemotionVersions = () => {
 Check that all your Remotion packages are on the same version. If your dependencies depend on Remotion, make them peer dependencies. You can also run \`npx remotion versions\` from your terminal to see which versions are mismatching.`);
   }
   set2();
-};
-var Null = () => {
-  throw new Error("<Null> has been removed as of Remotion v4.0.228. The native clipping APIs were experimental and subject to removal at any time. We removed them because they were sparingly used and made rendering often slower rather than faster.");
 };
 var SequenceContext = (0, import_react21.createContext)(null);
 var exports_timeline_position_state = {};
@@ -15899,10 +15796,10 @@ var decodeImage = async ({
   if (!selectedTrack) {
     throw new Error("No selected track");
   }
-  const cache2 = [];
+  const cache = [];
   let durationFound = null;
   const getFrameByIndex = async (frameIndex) => {
-    const foundInCache = cache2.find((c3) => c3.frameIndex === frameIndex);
+    const foundInCache = cache.find((c3) => c3.frameIndex === frameIndex);
     if (foundInCache && foundInCache.frame) {
       return foundInCache;
     }
@@ -15913,7 +15810,7 @@ var decodeImage = async ({
     if (foundInCache) {
       foundInCache.frame = frame.image;
     } else {
-      cache2.push({
+      cache.push({
         frame: frame.image,
         frameIndex,
         timeInSeconds: frame.image.timestamp / 1e6
@@ -15926,7 +15823,7 @@ var decodeImage = async ({
     };
   };
   const clearCache = (closeToTimeInSec) => {
-    const itemsInCache = cache2.filter((c3) => c3.frame);
+    const itemsInCache = cache.filter((c3) => c3.frame);
     const sortByClosestToCurrentTime = itemsInCache.sort((a2, b3) => {
       const aDiff = Math.abs(a2.timeInSeconds - closeToTimeInSec);
       const bDiff = Math.abs(b3.timeInSeconds - closeToTimeInSec);
@@ -15949,7 +15846,7 @@ var decodeImage = async ({
       loopBehavior,
       timeInSec
     });
-    const framesBefore = cache2.filter((c3) => c3.timeInSeconds <= actualTimeInSec);
+    const framesBefore = cache.filter((c3) => c3.timeInSeconds <= actualTimeInSec);
     const biggestIndex = framesBefore.map((c3) => c3.frameIndex).reduce((a2, b3) => Math.max(a2, b3), 0);
     let i3 = biggestIndex;
     while (true) {
@@ -15992,7 +15889,7 @@ var decodeImage = async ({
       timeInSec
     });
     await ensureFrameBeforeAndAfter({ timeInSec: actualTimeInSec, loopBehavior });
-    const itemsInCache = cache2.filter((c3) => c3.frame);
+    const itemsInCache = cache.filter((c3) => c3.frame);
     const closest = itemsInCache.reduce((a2, b3) => {
       const aDiff = Math.abs(a2.timeInSeconds - actualTimeInSec);
       const bDiff = Math.abs(b3.timeInSeconds - actualTimeInSec);
@@ -16857,10 +16754,6 @@ var playbackLogging = ({
 var PreloadContext = (0, import_react42.createContext)({});
 var preloads = {};
 var updaters = [];
-var setPreloads = (updater) => {
-  preloads = updater(preloads);
-  updaters.forEach((u2) => u2());
-};
 var PrefetchProvider = ({ children }) => {
   const [_preloads, _setPreloads] = (0, import_react42.useState)(() => preloads);
   (0, import_react42.useEffect)(() => {
@@ -16902,165 +16795,6 @@ var usePreload = (src) => {
     return preloads2[withoutHashFragment] + src.slice(hashFragmentIndex);
   }
   return preloads2[withoutHashFragment];
-};
-var blobToBase64 = function(blob) {
-  const reader = new FileReader();
-  return new Promise((resolve, reject) => {
-    reader.onload = function() {
-      const dataUrl = reader.result;
-      resolve(dataUrl);
-    };
-    reader.onerror = (err) => {
-      return reject(err);
-    };
-    reader.readAsDataURL(blob);
-  });
-};
-var getBlobFromReader = async ({
-  reader,
-  contentType,
-  contentLength,
-  onProgress
-}) => {
-  let receivedLength = 0;
-  const chunks = [];
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) {
-      break;
-    }
-    chunks.push(value);
-    receivedLength += value.length;
-    if (onProgress) {
-      onProgress({ loadedBytes: receivedLength, totalBytes: contentLength });
-    }
-  }
-  const chunksAll = new Uint8Array(receivedLength);
-  let position = 0;
-  for (const chunk of chunks) {
-    chunksAll.set(chunk, position);
-    position += chunk.length;
-  }
-  return new Blob([chunksAll], {
-    type: contentType ?? void 0
-  });
-};
-var prefetch = (src, options) => {
-  const method = options?.method ?? "blob-url";
-  const logLevel = options?.logLevel ?? "info";
-  const srcWithoutHash = getSrcWithoutHash(src);
-  if (getRemotionEnvironment().isRendering) {
-    return {
-      free: () => {
-        return;
-      },
-      waitUntilDone: () => Promise.resolve(srcWithoutHash)
-    };
-  }
-  Log.verbose({ logLevel, tag: "prefetch" }, `Starting prefetch ${srcWithoutHash}`);
-  let canceled = false;
-  let objectUrl = null;
-  let resolve = () => {
-    return;
-  };
-  let reject = () => {
-    return;
-  };
-  const waitUntilDone = new Promise((res, rej) => {
-    resolve = res;
-    reject = rej;
-  });
-  const controller = new AbortController();
-  let canBeAborted = true;
-  fetch(srcWithoutHash, {
-    signal: controller.signal,
-    credentials: options?.credentials ?? void 0
-  }).then((res) => {
-    canBeAborted = false;
-    if (canceled) {
-      return null;
-    }
-    if (!res.ok) {
-      throw new Error(`HTTP error, status = ${res.status}`);
-    }
-    const headerContentType = res.headers.get("Content-Type");
-    const contentType = options?.contentType ?? headerContentType;
-    const hasProperContentType = contentType && (contentType.startsWith("video/") || contentType.startsWith("audio/") || contentType.startsWith("image/"));
-    if (!hasProperContentType) {
-      console.warn(`Called prefetch() on ${srcWithoutHash} which returned a "Content-Type" of ${headerContentType}. Prefetched content should have a proper content type (video/... or audio/...) or a contentType passed the options of prefetch(). Otherwise, prefetching will not work properly in all browsers.`);
-    }
-    if (!res.body) {
-      throw new Error(`HTTP response of ${srcWithoutHash} has no body`);
-    }
-    const reader = res.body.getReader();
-    return getBlobFromReader({
-      reader,
-      contentType: options?.contentType ?? headerContentType ?? null,
-      contentLength: res.headers.get("Content-Length") ? parseInt(res.headers.get("Content-Length"), 10) : null,
-      onProgress: options?.onProgress
-    });
-  }).then((buf) => {
-    if (!buf) {
-      return;
-    }
-    const actualBlob = options?.contentType ? new Blob([buf], { type: options.contentType }) : buf;
-    if (method === "base64") {
-      return blobToBase64(actualBlob);
-    }
-    return URL.createObjectURL(actualBlob);
-  }).then((url2) => {
-    if (canceled) {
-      return;
-    }
-    playbackLogging({
-      logLevel,
-      tag: "prefetch",
-      message: `Finished prefetch ${srcWithoutHash} with method ${method}`,
-      mountTime: null
-    });
-    objectUrl = url2;
-    setPreloads((p2) => ({
-      ...p2,
-      [srcWithoutHash]: objectUrl
-    }));
-    resolve(objectUrl);
-  }).catch((err) => {
-    if (err?.message.includes("free() called")) {
-      return;
-    }
-    reject(err);
-  });
-  return {
-    free: () => {
-      playbackLogging({
-        logLevel,
-        tag: "prefetch",
-        message: `Freeing ${srcWithoutHash}`,
-        mountTime: null
-      });
-      if (objectUrl) {
-        if (method === "blob-url") {
-          URL.revokeObjectURL(objectUrl);
-        }
-        setPreloads((p2) => {
-          const copy = { ...p2 };
-          delete copy[srcWithoutHash];
-          return copy;
-        });
-      } else {
-        canceled = true;
-        if (canBeAborted) {
-          try {
-            controller.abort(new Error("free() called"));
-          } catch {
-          }
-        }
-      }
-    },
-    waitUntilDone: () => {
-      return waitUntilDone;
-    }
-  };
 };
 var validateMediaProps = (props, component2) => {
   if (typeof props.volume !== "number" && typeof props.volume !== "function" && typeof props.volume !== "undefined") {
@@ -20151,36 +19885,6 @@ var Easing = class _Easing {
     };
   }
 };
-var warnedServer = false;
-var warnedPlayer = false;
-var warnServerOnce = () => {
-  if (warnedServer) {
-    return;
-  }
-  warnedServer = true;
-  console.warn("Called getStaticFiles() on the server. The API is only available in the browser. An empty array was returned.");
-};
-var warnPlayerOnce = () => {
-  if (warnedPlayer) {
-    return;
-  }
-  warnedPlayer = true;
-  console.warn("Called getStaticFiles() while using the Remotion Player. The API is only available while using the Remotion Studio. An empty array was returned.");
-};
-var getStaticFiles = () => {
-  if (ENABLE_V5_BREAKING_CHANGES) {
-    throw new Error("getStaticFiles() has moved into the `@remotion/studio` package. Update your imports.");
-  }
-  if (typeof document === "undefined") {
-    warnServerOnce();
-    return [];
-  }
-  if (window.remotion_isPlayer) {
-    warnPlayerOnce();
-    return [];
-  }
-  return window.remotion_staticFiles;
-};
 var IFrameRefForwarding = ({
   onLoad,
   onError,
@@ -20708,18 +20412,6 @@ var getPreviewDomElement = () => {
 var MaxMediaCacheSizeContext = import_react68.default.createContext(null);
 var Root = null;
 var listeners = [];
-var registerRoot = (comp) => {
-  if (!comp) {
-    throw new Error(`You must pass a React component to registerRoot(), but ${JSON.stringify(comp)} was passed.`);
-  }
-  if (Root) {
-    throw new Error("registerRoot() was called more than once.");
-  }
-  Root = comp;
-  listeners.forEach((l2) => {
-    l2(comp);
-  });
-};
 var getRoot = () => {
   return Root;
 };
@@ -21039,36 +20731,6 @@ var calculateScale = ({
     return ratio;
   }
   return Number(previewSize);
-};
-var useCurrentScale = (options) => {
-  const hasContext = import_react72.default.useContext(CurrentScaleContext);
-  const zoomContext = import_react72.default.useContext(PreviewSizeContext);
-  const config2 = useUnsafeVideoConfig();
-  const env = useRemotionEnvironment();
-  if (hasContext === null || config2 === null || zoomContext === null) {
-    if (options?.dontThrowIfOutsideOfRemotion) {
-      return 1;
-    }
-    if (env.isRendering) {
-      return 1;
-    }
-    throw new Error([
-      "useCurrentScale() was called outside of a Remotion context.",
-      "This hook can only be called in a component that is being rendered by Remotion.",
-      "If you want to this hook to return 1 outside of Remotion, pass {dontThrowIfOutsideOfRemotion: true} as an option.",
-      "If you think you called this hook in a Remotion component, make sure all versions of Remotion are aligned."
-    ].join(`
-`));
-  }
-  if (hasContext.type === "scale") {
-    return hasContext.scale;
-  }
-  return calculateScale({
-    canvasSize: hasContext.canvasSize,
-    compositionHeight: config2.height,
-    compositionWidth: config2.width,
-    previewSize: zoomContext.size.size
-  });
 };
 var getOffthreadVideoSource = ({
   src,
@@ -21705,40 +21367,6 @@ var OffthreadVideo = ({
 };
 addSequenceStackTraces(OffthreadVideo);
 var WATCH_REMOTION_STATIC_FILES = "remotion_staticFilesChanged";
-var watchStaticFile = (fileName, callback) => {
-  if (ENABLE_V5_BREAKING_CHANGES) {
-    throw new Error("watchStaticFile() has moved into the `@remotion/studio` package. Update your imports.");
-  }
-  if (!getRemotionEnvironment().isStudio) {
-    console.warn("The watchStaticFile() API is only available while using the Remotion Studio.");
-    return { cancel: () => {
-      return;
-    } };
-  }
-  const withoutStaticBase = fileName.startsWith(window.remotion_staticBase) ? fileName.replace(window.remotion_staticBase, "") : fileName;
-  const withoutLeadingSlash = withoutStaticBase.startsWith("/") ? withoutStaticBase.slice(1) : withoutStaticBase;
-  let prevFileData = window.remotion_staticFiles.find((file2) => file2.name === withoutLeadingSlash);
-  const checkFile = (event) => {
-    const staticFiles = event.detail.files;
-    const newFileData = staticFiles.find((file2) => file2.name === withoutLeadingSlash);
-    if (!newFileData) {
-      if (prevFileData !== void 0) {
-        callback(null);
-      }
-      prevFileData = void 0;
-      return;
-    }
-    if (prevFileData === void 0 || prevFileData.lastModified !== newFileData.lastModified) {
-      callback(newFileData);
-      prevFileData = newFileData;
-    }
-  };
-  window.addEventListener(WATCH_REMOTION_STATIC_FILES, checkFile);
-  const cancel = () => {
-    return window.removeEventListener(WATCH_REMOTION_STATIC_FILES, checkFile);
-  };
-  return { cancel };
-};
 function useRemotionContexts() {
   const compositionManagerCtx = import_react77.default.useContext(CompositionManager);
   const timelineContext = import_react77.default.useContext(TimelineContext);
@@ -21954,521 +21582,6 @@ var Internals = {
 };
 var NUMBER = "[-+]?\\d*\\.?\\d+";
 var PERCENTAGE = NUMBER + "%";
-function call(...args) {
-  return "\\(\\s*(" + args.join(")\\s*,\\s*(") + ")\\s*\\)";
-}
-var MODERN_VALUE = "(?:none|[-+]?\\d*\\.?\\d+(?:%|deg|rad|grad|turn)?)";
-function modernColorCall(name) {
-  return new RegExp(name + "\\(\\s*(" + MODERN_VALUE + ")\\s+(" + MODERN_VALUE + ")\\s+(" + MODERN_VALUE + ")(?:\\s*\\/\\s*(" + MODERN_VALUE + "))?\\s*\\)");
-}
-function getMatchers() {
-  const cachedMatchers = {
-    rgb: void 0,
-    rgba: void 0,
-    hsl: void 0,
-    hsla: void 0,
-    hex3: void 0,
-    hex4: void 0,
-    hex5: void 0,
-    hex6: void 0,
-    hex8: void 0,
-    oklch: void 0,
-    oklab: void 0,
-    lab: void 0,
-    lch: void 0,
-    hwb: void 0
-  };
-  if (cachedMatchers.rgb === void 0) {
-    cachedMatchers.rgb = new RegExp("rgb" + call(NUMBER, NUMBER, NUMBER));
-    cachedMatchers.rgba = new RegExp("rgba" + call(NUMBER, NUMBER, NUMBER, NUMBER));
-    cachedMatchers.hsl = new RegExp("hsl" + call(NUMBER, PERCENTAGE, PERCENTAGE));
-    cachedMatchers.hsla = new RegExp("hsla" + call(NUMBER, PERCENTAGE, PERCENTAGE, NUMBER));
-    cachedMatchers.hex3 = /^#([0-9a-fA-F]{1})([0-9a-fA-F]{1})([0-9a-fA-F]{1})$/;
-    cachedMatchers.hex4 = /^#([0-9a-fA-F]{1})([0-9a-fA-F]{1})([0-9a-fA-F]{1})([0-9a-fA-F]{1})$/;
-    cachedMatchers.hex6 = /^#([0-9a-fA-F]{6})$/;
-    cachedMatchers.hex8 = /^#([0-9a-fA-F]{8})$/;
-    cachedMatchers.oklch = modernColorCall("oklch");
-    cachedMatchers.oklab = modernColorCall("oklab");
-    cachedMatchers.lab = modernColorCall("lab");
-    cachedMatchers.lch = modernColorCall("lch");
-    cachedMatchers.hwb = modernColorCall("hwb");
-  }
-  return cachedMatchers;
-}
-function hue2rgb(p2, q, t) {
-  if (t < 0) {
-    t += 1;
-  }
-  if (t > 1) {
-    t -= 1;
-  }
-  if (t < 1 / 6) {
-    return p2 + (q - p2) * 6 * t;
-  }
-  if (t < 1 / 2) {
-    return q;
-  }
-  if (t < 2 / 3) {
-    return p2 + (q - p2) * (2 / 3 - t) * 6;
-  }
-  return p2;
-}
-function hslToRgb(h2, s2, l2) {
-  const q = l2 < 0.5 ? l2 * (1 + s2) : l2 + s2 - l2 * s2;
-  const p2 = 2 * l2 - q;
-  const r = hue2rgb(p2, q, h2 + 1 / 3);
-  const g2 = hue2rgb(p2, q, h2);
-  const b22 = hue2rgb(p2, q, h2 - 1 / 3);
-  return Math.round(r * 255) << 24 | Math.round(g2 * 255) << 16 | Math.round(b22 * 255) << 8;
-}
-function parse255(str) {
-  const int2 = Number.parseInt(str, 10);
-  if (int2 < 0) {
-    return 0;
-  }
-  if (int2 > 255) {
-    return 255;
-  }
-  return int2;
-}
-function parse360(str) {
-  const int2 = Number.parseFloat(str);
-  return (int2 % 360 + 360) % 360 / 360;
-}
-function parse1(str) {
-  const num = Number.parseFloat(str);
-  if (num < 0) {
-    return 0;
-  }
-  if (num > 1) {
-    return 255;
-  }
-  return Math.round(num * 255);
-}
-function parsePercentage(str) {
-  const int2 = Number.parseFloat(str);
-  if (int2 < 0) {
-    return 0;
-  }
-  if (int2 > 100) {
-    return 1;
-  }
-  return int2 / 100;
-}
-function parseModernComponent(str, percentScale) {
-  if (str === "none")
-    return 0;
-  if (str.endsWith("%")) {
-    return Number.parseFloat(str) / 100 * percentScale;
-  }
-  return Number.parseFloat(str);
-}
-function parseHueAngle(str) {
-  if (str === "none")
-    return 0;
-  if (str.endsWith("rad")) {
-    return Number.parseFloat(str) * 180 / Math.PI;
-  }
-  if (str.endsWith("grad"))
-    return Number.parseFloat(str) * 0.9;
-  if (str.endsWith("turn"))
-    return Number.parseFloat(str) * 360;
-  return Number.parseFloat(str);
-}
-function parseModernAlpha(str) {
-  if (str === void 0 || str === "none")
-    return 1;
-  if (str.endsWith("%")) {
-    return Math.max(0, Math.min(1, Number.parseFloat(str) / 100));
-  }
-  return Math.max(0, Math.min(1, Number.parseFloat(str)));
-}
-function linearToSrgb(c22) {
-  if (c22 <= 31308e-7)
-    return 12.92 * c22;
-  return 1.055 * c22 ** (1 / 2.4) - 0.055;
-}
-function clamp01(v2) {
-  return Math.max(0, Math.min(1, v2));
-}
-function rgbFloatToInt(r, g2, b22, alpha) {
-  const ri = Math.round(clamp01(r) * 255);
-  const gi = Math.round(clamp01(g2) * 255);
-  const bi = Math.round(clamp01(b22) * 255);
-  const ai = Math.round(clamp01(alpha) * 255);
-  return (ri << 24 | gi << 16 | bi << 8 | ai) >>> 0;
-}
-function oklabToSrgb(L, a2, b22) {
-  const l_ = L + 0.3963377774 * a2 + 0.2158037573 * b22;
-  const m_ = L - 0.1055613458 * a2 - 0.0638541728 * b22;
-  const s_ = L - 0.0894841775 * a2 - 1.291485548 * b22;
-  const l2 = l_ * l_ * l_;
-  const m2 = m_ * m_ * m_;
-  const s2 = s_ * s_ * s_;
-  const rLin = 4.0767416621 * l2 - 3.3077115913 * m2 + 0.2309699292 * s2;
-  const gLin = -1.2684380046 * l2 + 2.6097574011 * m2 - 0.3413193965 * s2;
-  const bLin = -0.0041960863 * l2 - 0.7034186147 * m2 + 1.707614701 * s2;
-  return [linearToSrgb(rLin), linearToSrgb(gLin), linearToSrgb(bLin)];
-}
-function labToSrgb(L, a2, b22) {
-  const epsilon3 = 216 / 24389;
-  const kappa = 24389 / 27;
-  const Xn = 0.95047;
-  const Yn = 1;
-  const Zn = 1.08883;
-  const fy = (L + 16) / 116;
-  const fx = a2 / 500 + fy;
-  const fz = fy - b22 / 200;
-  const fx3 = fx * fx * fx;
-  const fz3 = fz * fz * fz;
-  const xr = fx3 > epsilon3 ? fx3 : (116 * fx - 16) / kappa;
-  const yr = L > kappa * epsilon3 ? ((L + 16) / 116) ** 3 : L / kappa;
-  const zr = fz3 > epsilon3 ? fz3 : (116 * fz - 16) / kappa;
-  const X = xr * Xn;
-  const Y = yr * Yn;
-  const Z = zr * Zn;
-  const rLin = 3.2404542 * X - 1.5371385 * Y - 0.4985314 * Z;
-  const gLin = -0.969266 * X + 1.8760108 * Y + 0.041556 * Z;
-  const bLin = 0.0556434 * X - 0.2040259 * Y + 1.0572252 * Z;
-  return [linearToSrgb(rLin), linearToSrgb(gLin), linearToSrgb(bLin)];
-}
-function hwbToSrgb(h2, w2, bk) {
-  if (w2 + bk >= 1) {
-    const gray = w2 / (w2 + bk);
-    return [gray, gray, gray];
-  }
-  const q = 1;
-  const p2 = 0;
-  const r = hue2rgb(p2, q, h2 + 1 / 3);
-  const g2 = hue2rgb(p2, q, h2);
-  const bl = hue2rgb(p2, q, h2 - 1 / 3);
-  const factor = 1 - w2 - bk;
-  return [r * factor + w2, g2 * factor + w2, bl * factor + w2];
-}
-var colorNames = {
-  transparent: 0,
-  aliceblue: 4042850303,
-  antiquewhite: 4209760255,
-  aqua: 16777215,
-  aquamarine: 2147472639,
-  azure: 4043309055,
-  beige: 4126530815,
-  bisque: 4293182719,
-  black: 255,
-  blanchedalmond: 4293643775,
-  blue: 65535,
-  blueviolet: 2318131967,
-  brown: 2771004159,
-  burlywood: 3736635391,
-  burntsienna: 3934150143,
-  cadetblue: 1604231423,
-  chartreuse: 2147418367,
-  chocolate: 3530104575,
-  coral: 4286533887,
-  cornflowerblue: 1687547391,
-  cornsilk: 4294499583,
-  crimson: 3692313855,
-  cyan: 16777215,
-  darkblue: 35839,
-  darkcyan: 9145343,
-  darkgoldenrod: 3095792639,
-  darkgray: 2846468607,
-  darkgreen: 6553855,
-  darkgrey: 2846468607,
-  darkkhaki: 3182914559,
-  darkmagenta: 2332068863,
-  darkolivegreen: 1433087999,
-  darkorange: 4287365375,
-  darkorchid: 2570243327,
-  darkred: 2332033279,
-  darksalmon: 3918953215,
-  darkseagreen: 2411499519,
-  darkslateblue: 1211993087,
-  darkslategray: 793726975,
-  darkslategrey: 793726975,
-  darkturquoise: 13554175,
-  darkviolet: 2483082239,
-  deeppink: 4279538687,
-  deepskyblue: 12582911,
-  dimgray: 1768516095,
-  dimgrey: 1768516095,
-  dodgerblue: 512819199,
-  firebrick: 2988581631,
-  floralwhite: 4294635775,
-  forestgreen: 579543807,
-  fuchsia: 4278255615,
-  gainsboro: 3705462015,
-  ghostwhite: 4177068031,
-  gold: 4292280575,
-  goldenrod: 3668254975,
-  gray: 2155905279,
-  green: 8388863,
-  greenyellow: 2919182335,
-  grey: 2155905279,
-  honeydew: 4043305215,
-  hotpink: 4285117695,
-  indianred: 3445382399,
-  indigo: 1258324735,
-  ivory: 4294963455,
-  khaki: 4041641215,
-  lavender: 3873897215,
-  lavenderblush: 4293981695,
-  lawngreen: 2096890111,
-  lemonchiffon: 4294626815,
-  lightblue: 2916673279,
-  lightcoral: 4034953471,
-  lightcyan: 3774873599,
-  lightgoldenrodyellow: 4210742015,
-  lightgray: 3553874943,
-  lightgreen: 2431553791,
-  lightgrey: 3553874943,
-  lightpink: 4290167295,
-  lightsalmon: 4288707327,
-  lightseagreen: 548580095,
-  lightskyblue: 2278488831,
-  lightslategray: 2005441023,
-  lightslategrey: 2005441023,
-  lightsteelblue: 2965692159,
-  lightyellow: 4294959359,
-  lime: 16711935,
-  limegreen: 852308735,
-  linen: 4210091775,
-  magenta: 4278255615,
-  maroon: 2147483903,
-  mediumaquamarine: 1724754687,
-  mediumblue: 52735,
-  mediumorchid: 3126187007,
-  mediumpurple: 2473647103,
-  mediumseagreen: 1018393087,
-  mediumslateblue: 2070474495,
-  mediumspringgreen: 16423679,
-  mediumturquoise: 1221709055,
-  mediumvioletred: 3340076543,
-  midnightblue: 421097727,
-  mintcream: 4127193855,
-  mistyrose: 4293190143,
-  moccasin: 4293178879,
-  navajowhite: 4292783615,
-  navy: 33023,
-  oldlace: 4260751103,
-  olive: 2155872511,
-  olivedrab: 1804477439,
-  orange: 4289003775,
-  orangered: 4282712319,
-  orchid: 3664828159,
-  palegoldenrod: 4008225535,
-  palegreen: 2566625535,
-  paleturquoise: 2951671551,
-  palevioletred: 3681588223,
-  papayawhip: 4293907967,
-  peachpuff: 4292524543,
-  peru: 3448061951,
-  pink: 4290825215,
-  plum: 3718307327,
-  powderblue: 2967529215,
-  purple: 2147516671,
-  rebeccapurple: 1714657791,
-  red: 4278190335,
-  rosybrown: 3163525119,
-  royalblue: 1097458175,
-  saddlebrown: 2336560127,
-  salmon: 4202722047,
-  sandybrown: 4104413439,
-  seagreen: 780883967,
-  seashell: 4294307583,
-  sienna: 2689740287,
-  silver: 3233857791,
-  skyblue: 2278484991,
-  slateblue: 1784335871,
-  slategray: 1887473919,
-  slategrey: 1887473919,
-  snow: 4294638335,
-  springgreen: 16744447,
-  steelblue: 1182971135,
-  tan: 3535047935,
-  teal: 8421631,
-  thistle: 3636451583,
-  tomato: 4284696575,
-  turquoise: 1088475391,
-  violet: 4001558271,
-  wheat: 4125012991,
-  white: 4294967295,
-  whitesmoke: 4126537215,
-  yellow: 4294902015,
-  yellowgreen: 2597139199
-};
-function normalizeColor(color) {
-  const matchers = getMatchers();
-  let match;
-  if (matchers.hex6) {
-    if (match = matchers.hex6.exec(color)) {
-      return Number.parseInt(match[1] + "ff", 16) >>> 0;
-    }
-  }
-  if (colorNames[color] !== void 0) {
-    return colorNames[color];
-  }
-  if (matchers.rgb) {
-    if (match = matchers.rgb.exec(color)) {
-      return (parse255(match[1]) << 24 | parse255(match[2]) << 16 | parse255(match[3]) << 8 | 255) >>> 0;
-    }
-  }
-  if (matchers.rgba) {
-    if (match = matchers.rgba.exec(color)) {
-      return (parse255(match[1]) << 24 | parse255(match[2]) << 16 | parse255(match[3]) << 8 | parse1(match[4])) >>> 0;
-    }
-  }
-  if (matchers.hex3) {
-    if (match = matchers.hex3.exec(color)) {
-      return Number.parseInt(match[1] + match[1] + match[2] + match[2] + match[3] + match[3] + "ff", 16) >>> 0;
-    }
-  }
-  if (matchers.hex8) {
-    if (match = matchers.hex8.exec(color)) {
-      return Number.parseInt(match[1], 16) >>> 0;
-    }
-  }
-  if (matchers.hex4) {
-    if (match = matchers.hex4.exec(color)) {
-      return Number.parseInt(match[1] + match[1] + match[2] + match[2] + match[3] + match[3] + match[4] + match[4], 16) >>> 0;
-    }
-  }
-  if (matchers.hsl) {
-    if (match = matchers.hsl.exec(color)) {
-      return (hslToRgb(parse360(match[1]), parsePercentage(match[2]), parsePercentage(match[3])) | 255) >>> 0;
-    }
-  }
-  if (matchers.hsla) {
-    if (match = matchers.hsla.exec(color)) {
-      return (hslToRgb(parse360(match[1]), parsePercentage(match[2]), parsePercentage(match[3])) | parse1(match[4])) >>> 0;
-    }
-  }
-  if (matchers.oklch) {
-    if (match = matchers.oklch.exec(color)) {
-      const L = parseModernComponent(match[1], 1);
-      const C = parseModernComponent(match[2], 0.4);
-      const H = parseHueAngle(match[3]);
-      const alpha = parseModernAlpha(match[4]);
-      const hRad = H * Math.PI / 180;
-      const [r, g2, b22] = oklabToSrgb(L, C * Math.cos(hRad), C * Math.sin(hRad));
-      return rgbFloatToInt(r, g2, b22, alpha);
-    }
-  }
-  if (matchers.oklab) {
-    if (match = matchers.oklab.exec(color)) {
-      const L = parseModernComponent(match[1], 1);
-      const a2 = parseModernComponent(match[2], 0.4);
-      const b22 = parseModernComponent(match[3], 0.4);
-      const alpha = parseModernAlpha(match[4]);
-      const [r, g2, bl] = oklabToSrgb(L, a2, b22);
-      return rgbFloatToInt(r, g2, bl, alpha);
-    }
-  }
-  if (matchers.lab) {
-    if (match = matchers.lab.exec(color)) {
-      const L = parseModernComponent(match[1], 100);
-      const a2 = parseModernComponent(match[2], 125);
-      const b22 = parseModernComponent(match[3], 125);
-      const alpha = parseModernAlpha(match[4]);
-      const [r, g2, bl] = labToSrgb(L, a2, b22);
-      return rgbFloatToInt(r, g2, bl, alpha);
-    }
-  }
-  if (matchers.lch) {
-    if (match = matchers.lch.exec(color)) {
-      const L = parseModernComponent(match[1], 100);
-      const C = parseModernComponent(match[2], 150);
-      const H = parseHueAngle(match[3]);
-      const alpha = parseModernAlpha(match[4]);
-      const hRad = H * Math.PI / 180;
-      const [r, g2, bl] = labToSrgb(L, C * Math.cos(hRad), C * Math.sin(hRad));
-      return rgbFloatToInt(r, g2, bl, alpha);
-    }
-  }
-  if (matchers.hwb) {
-    if (match = matchers.hwb.exec(color)) {
-      const H = parseHueAngle(match[1]);
-      const W = parseModernComponent(match[2], 1);
-      const B = parseModernComponent(match[3], 1);
-      const alpha = parseModernAlpha(match[4]);
-      const [r, g2, bl] = hwbToSrgb(H / 360, W, B);
-      return rgbFloatToInt(r, g2, bl, alpha);
-    }
-  }
-  throw new Error(`invalid color string ${color} provided`);
-}
-var opacity = (c22) => {
-  return (c22 >> 24 & 255) / 255;
-};
-var red = (c22) => {
-  return c22 >> 16 & 255;
-};
-var green = (c22) => {
-  return c22 >> 8 & 255;
-};
-var blue = (c22) => {
-  return c22 & 255;
-};
-var rgbaColor = (r, g2, b22, alpha) => {
-  return `rgba(${r}, ${g2}, ${b22}, ${alpha})`;
-};
-function processColor(color) {
-  const normalizedColor = normalizeColor(color);
-  return (normalizedColor << 24 | normalizedColor >>> 8) >>> 0;
-}
-var interpolateColorsRGB = (value, inputRange, colors) => {
-  const [r, g2, b22, a2] = [red, green, blue, opacity].map((f2) => {
-    const unrounded = interpolate(value, inputRange, colors.map((c22) => f2(c22)), {
-      extrapolateLeft: "clamp",
-      extrapolateRight: "clamp"
-    });
-    if (f2 === opacity) {
-      return Number(unrounded.toFixed(3));
-    }
-    return Math.round(unrounded);
-  });
-  return rgbaColor(r, g2, b22, a2);
-};
-var interpolateColors = (input, inputRange, outputRange) => {
-  if (typeof input === "undefined") {
-    throw new TypeError("input can not be undefined");
-  }
-  if (typeof inputRange === "undefined") {
-    throw new TypeError("inputRange can not be undefined");
-  }
-  if (typeof outputRange === "undefined") {
-    throw new TypeError("outputRange can not be undefined");
-  }
-  if (inputRange.length !== outputRange.length) {
-    throw new TypeError("inputRange (" + inputRange.length + " values provided) and outputRange (" + outputRange.length + " values provided) must have the same length");
-  }
-  const processedOutputRange = outputRange.map((c22) => processColor(c22));
-  return interpolateColorsRGB(input, inputRange, processedOutputRange);
-};
-var validateFrame = ({
-  allowFloats,
-  durationInFrames,
-  frame
-}) => {
-  if (typeof frame === "undefined") {
-    throw new TypeError(`Argument missing for parameter "frame"`);
-  }
-  if (typeof frame !== "number") {
-    throw new TypeError(`Argument passed for "frame" is not a number: ${frame}`);
-  }
-  if (!Number.isFinite(frame)) {
-    throw new RangeError(`Frame ${frame} is not finite`);
-  }
-  if (frame % 1 !== 0 && !allowFloats) {
-    throw new RangeError(`Argument for frame must be an integer, but got ${frame}`);
-  }
-  if (frame < 0 && frame < -durationInFrames) {
-    throw new RangeError(`Cannot use frame ${frame}: Duration of composition is ${durationInFrames}, therefore the lowest frame that can be rendered is ${-durationInFrames}`);
-  }
-  if (frame > durationInFrames - 1) {
-    throw new RangeError(`Cannot use frame ${frame}: Duration of composition is ${durationInFrames}, therefore the highest frame that can be rendered is ${durationInFrames - 1}`);
-  }
-};
 var flattenChildren = (children) => {
   const childrenArray = import_react79.default.Children.toArray(children);
   return childrenArray.reduce((flatChildren, child) => {
@@ -22573,240 +21686,6 @@ var Series = Object.assign(wrapInSchema(SeriesInner, sequenceSchemaDefaultLayout
 });
 addSequenceStackTraces(Series);
 addSequenceStackTraces(SeriesSequence);
-var validateSpringDuration = (dur) => {
-  if (typeof dur === "undefined") {
-    return;
-  }
-  if (typeof dur !== "number") {
-    throw new TypeError(`A "duration" of a spring must be a "number" but is "${typeof dur}"`);
-  }
-  if (Number.isNaN(dur)) {
-    throw new TypeError('A "duration" of a spring is NaN, which it must not be');
-  }
-  if (!Number.isFinite(dur)) {
-    throw new TypeError('A "duration" of a spring must be finite, but is ' + dur);
-  }
-  if (dur <= 0) {
-    throw new TypeError('A "duration" of a spring must be positive, but is ' + dur);
-  }
-};
-var defaultSpringConfig = {
-  damping: 10,
-  mass: 1,
-  stiffness: 100,
-  overshootClamping: false
-};
-var advanceCache = {};
-function advance({
-  animation,
-  now,
-  config: config2
-}) {
-  const { toValue, lastTimestamp, current: current2, velocity } = animation;
-  const deltaTime = Math.min(now - lastTimestamp, 64);
-  if (config2.damping <= 0) {
-    throw new Error("Spring damping must be greater than 0, otherwise the spring() animation will never end, causing an infinite loop.");
-  }
-  const c22 = config2.damping;
-  const m2 = config2.mass;
-  const k2 = config2.stiffness;
-  const cacheKey = [
-    toValue,
-    lastTimestamp,
-    current2,
-    velocity,
-    c22,
-    m2,
-    k2,
-    now
-  ].join("-");
-  if (advanceCache[cacheKey]) {
-    return advanceCache[cacheKey];
-  }
-  const v0 = -velocity;
-  const x0 = toValue - current2;
-  const zeta = c22 / (2 * Math.sqrt(k2 * m2));
-  const omega0 = Math.sqrt(k2 / m2);
-  const omega1 = omega0 * Math.sqrt(1 - zeta ** 2);
-  const t = deltaTime / 1e3;
-  const sin1 = Math.sin(omega1 * t);
-  const cos1 = Math.cos(omega1 * t);
-  const underDampedEnvelope = Math.exp(-zeta * omega0 * t);
-  const underDampedFrag1 = underDampedEnvelope * (sin1 * ((v0 + zeta * omega0 * x0) / omega1) + x0 * cos1);
-  const underDampedPosition = toValue - underDampedFrag1;
-  const underDampedVelocity = zeta * omega0 * underDampedFrag1 - underDampedEnvelope * (cos1 * (v0 + zeta * omega0 * x0) - omega1 * x0 * sin1);
-  const criticallyDampedEnvelope = Math.exp(-omega0 * t);
-  const criticallyDampedPosition = toValue - criticallyDampedEnvelope * (x0 + (v0 + omega0 * x0) * t);
-  const criticallyDampedVelocity = criticallyDampedEnvelope * (v0 * (t * omega0 - 1) + t * x0 * omega0 * omega0);
-  const animationNode = {
-    toValue,
-    prevPosition: current2,
-    lastTimestamp: now,
-    current: zeta < 1 ? underDampedPosition : criticallyDampedPosition,
-    velocity: zeta < 1 ? underDampedVelocity : criticallyDampedVelocity
-  };
-  advanceCache[cacheKey] = animationNode;
-  return animationNode;
-}
-var calculationCache = {};
-function springCalculation({
-  frame,
-  fps,
-  config: config2 = {}
-}) {
-  const from = 0;
-  const to = 1;
-  const cacheKey = [
-    frame,
-    fps,
-    config2.damping,
-    config2.mass,
-    config2.overshootClamping,
-    config2.stiffness
-  ].join("-");
-  if (calculationCache[cacheKey]) {
-    return calculationCache[cacheKey];
-  }
-  let animation = {
-    lastTimestamp: 0,
-    current: from,
-    toValue: to,
-    velocity: 0,
-    prevPosition: 0
-  };
-  const frameClamped = Math.max(0, frame);
-  const unevenRest = frameClamped % 1;
-  for (let f2 = 0; f2 <= Math.floor(frameClamped); f2++) {
-    if (f2 === Math.floor(frameClamped)) {
-      f2 += unevenRest;
-    }
-    const time3 = f2 / fps * 1e3;
-    animation = advance({
-      animation,
-      now: time3,
-      config: {
-        ...defaultSpringConfig,
-        ...config2
-      }
-    });
-  }
-  calculationCache[cacheKey] = animation;
-  return animation;
-}
-var cache = /* @__PURE__ */ new Map();
-function measureSpring({
-  fps,
-  config: config2 = {},
-  threshold = 5e-3
-}) {
-  if (typeof threshold !== "number") {
-    throw new TypeError(`threshold must be a number, got ${threshold} of type ${typeof threshold}`);
-  }
-  if (threshold === 0) {
-    return Infinity;
-  }
-  if (threshold === 1) {
-    return 0;
-  }
-  if (isNaN(threshold)) {
-    throw new TypeError("Threshold is NaN");
-  }
-  if (!Number.isFinite(threshold)) {
-    throw new TypeError("Threshold is not finite");
-  }
-  if (threshold < 0) {
-    throw new TypeError("Threshold is below 0");
-  }
-  const cacheKey = [
-    fps,
-    config2.damping,
-    config2.mass,
-    config2.overshootClamping,
-    config2.stiffness,
-    threshold
-  ].join("-");
-  if (cache.has(cacheKey)) {
-    return cache.get(cacheKey);
-  }
-  validateFps(fps, "to the measureSpring() function", false);
-  let frame = 0;
-  let finishedFrame = 0;
-  const calc = () => {
-    return springCalculation({
-      fps,
-      frame,
-      config: config2
-    });
-  };
-  let animation = calc();
-  const calcDifference = () => {
-    return Math.abs(animation.current - animation.toValue);
-  };
-  let difference = calcDifference();
-  while (difference >= threshold) {
-    frame++;
-    animation = calc();
-    difference = calcDifference();
-  }
-  finishedFrame = frame;
-  for (let i3 = 0; i3 < 20; i3++) {
-    frame++;
-    animation = calc();
-    difference = calcDifference();
-    if (difference >= threshold) {
-      i3 = 0;
-      finishedFrame = frame + 1;
-    }
-  }
-  cache.set(cacheKey, finishedFrame);
-  return finishedFrame;
-}
-function spring({
-  frame: passedFrame,
-  fps,
-  config: config2 = {},
-  from = 0,
-  to = 1,
-  durationInFrames: passedDurationInFrames,
-  durationRestThreshold,
-  delay: delay2 = 0,
-  reverse = false
-}) {
-  validateSpringDuration(passedDurationInFrames);
-  validateFrame({
-    frame: passedFrame,
-    durationInFrames: Infinity,
-    allowFloats: true
-  });
-  validateFps(fps, "to spring()", false);
-  const needsToCalculateNaturalDuration = reverse || typeof passedDurationInFrames !== "undefined";
-  const naturalDuration = needsToCalculateNaturalDuration ? measureSpring({
-    fps,
-    config: config2,
-    threshold: durationRestThreshold
-  }) : void 0;
-  const naturalDurationGetter = needsToCalculateNaturalDuration ? {
-    get: () => naturalDuration
-  } : {
-    get: () => {
-      throw new Error("did not calculate natural duration, this is an error with Remotion. Please report");
-    }
-  };
-  const reverseProcessed = reverse ? (passedDurationInFrames ?? naturalDurationGetter.get()) - passedFrame : passedFrame;
-  const delayProcessed = reverseProcessed + (reverse ? delay2 : -delay2);
-  const durationProcessed = passedDurationInFrames === void 0 ? delayProcessed : delayProcessed / (passedDurationInFrames / naturalDurationGetter.get());
-  if (passedDurationInFrames && delayProcessed > passedDurationInFrames) {
-    return to;
-  }
-  const spr = springCalculation({
-    fps,
-    frame: durationProcessed,
-    config: config2
-  });
-  const inner2 = config2.overshootClamping ? to >= from ? Math.min(spr.current, to) : Math.max(spr.current, to) : spr.current;
-  const interpolated = from === 0 && to === 1 ? inner2 : interpolate(inner2, [0, 1], [from, to]);
-  return interpolated;
-}
 var problematicCharacters = {
   "%3A": ":",
   "%2F": "/",
@@ -22894,14 +21773,6 @@ var staticFile = (path) => {
     return `/${preparsed}`;
   }
   return preparsed;
-};
-var Still = (props2) => {
-  const newProps = {
-    ...props2,
-    durationInFrames: 1,
-    fps: 1
-  };
-  return import_react81.default.createElement(Composition, newProps);
 };
 var roundTo6Commas = (num) => {
   return Math.round(num * 1e5) / 1e5;
@@ -23357,13 +22228,7 @@ var VideoForwardingFunction = (props2, ref2) => {
 };
 var Html5Video = (0, import_react82.forwardRef)(VideoForwardingFunction);
 addSequenceStackTraces(Html5Video);
-var Video = Html5Video;
 checkMultipleRemotionVersions();
-var Experimental = {
-  Clipper,
-  Null,
-  useIsPlayer
-};
 var proxyObj = {};
 var Config = new Proxy(proxyObj, {
   get(_, prop) {
@@ -23654,14 +22519,14 @@ var deserializeJSONWithSpecialTypes2 = (data2) => {
 };
 var NUMBER2 = "[-+]?\\d*\\.?\\d+";
 var PERCENTAGE2 = NUMBER2 + "%";
-function call2(...args) {
+function call(...args) {
   return "\\(\\s*(" + args.join(")\\s*,\\s*(") + ")\\s*\\)";
 }
-var MODERN_VALUE2 = "(?:none|[-+]?\\d*\\.?\\d+(?:%|deg|rad|grad|turn)?)";
-function modernColorCall2(name) {
-  return new RegExp(name + "\\(\\s*(" + MODERN_VALUE2 + ")\\s+(" + MODERN_VALUE2 + ")\\s+(" + MODERN_VALUE2 + ")(?:\\s*\\/\\s*(" + MODERN_VALUE2 + "))?\\s*\\)");
+var MODERN_VALUE = "(?:none|[-+]?\\d*\\.?\\d+(?:%|deg|rad|grad|turn)?)";
+function modernColorCall(name) {
+  return new RegExp(name + "\\(\\s*(" + MODERN_VALUE + ")\\s+(" + MODERN_VALUE + ")\\s+(" + MODERN_VALUE + ")(?:\\s*\\/\\s*(" + MODERN_VALUE + "))?\\s*\\)");
 }
-function getMatchers2() {
+function getMatchers() {
   const cachedMatchers = {
     rgb: void 0,
     rgba: void 0,
@@ -23679,23 +22544,23 @@ function getMatchers2() {
     hwb: void 0
   };
   if (cachedMatchers.rgb === void 0) {
-    cachedMatchers.rgb = new RegExp("rgb" + call2(NUMBER2, NUMBER2, NUMBER2));
-    cachedMatchers.rgba = new RegExp("rgba" + call2(NUMBER2, NUMBER2, NUMBER2, NUMBER2));
-    cachedMatchers.hsl = new RegExp("hsl" + call2(NUMBER2, PERCENTAGE2, PERCENTAGE2));
-    cachedMatchers.hsla = new RegExp("hsla" + call2(NUMBER2, PERCENTAGE2, PERCENTAGE2, NUMBER2));
+    cachedMatchers.rgb = new RegExp("rgb" + call(NUMBER2, NUMBER2, NUMBER2));
+    cachedMatchers.rgba = new RegExp("rgba" + call(NUMBER2, NUMBER2, NUMBER2, NUMBER2));
+    cachedMatchers.hsl = new RegExp("hsl" + call(NUMBER2, PERCENTAGE2, PERCENTAGE2));
+    cachedMatchers.hsla = new RegExp("hsla" + call(NUMBER2, PERCENTAGE2, PERCENTAGE2, NUMBER2));
     cachedMatchers.hex3 = /^#([0-9a-fA-F]{1})([0-9a-fA-F]{1})([0-9a-fA-F]{1})$/;
     cachedMatchers.hex4 = /^#([0-9a-fA-F]{1})([0-9a-fA-F]{1})([0-9a-fA-F]{1})([0-9a-fA-F]{1})$/;
     cachedMatchers.hex6 = /^#([0-9a-fA-F]{6})$/;
     cachedMatchers.hex8 = /^#([0-9a-fA-F]{8})$/;
-    cachedMatchers.oklch = modernColorCall2("oklch");
-    cachedMatchers.oklab = modernColorCall2("oklab");
-    cachedMatchers.lab = modernColorCall2("lab");
-    cachedMatchers.lch = modernColorCall2("lch");
-    cachedMatchers.hwb = modernColorCall2("hwb");
+    cachedMatchers.oklch = modernColorCall("oklch");
+    cachedMatchers.oklab = modernColorCall("oklab");
+    cachedMatchers.lab = modernColorCall("lab");
+    cachedMatchers.lch = modernColorCall("lch");
+    cachedMatchers.hwb = modernColorCall("hwb");
   }
   return cachedMatchers;
 }
-function hue2rgb2(p2, q, t) {
+function hue2rgb(p2, q, t) {
   if (t < 0) {
     t += 1;
   }
@@ -23713,15 +22578,15 @@ function hue2rgb2(p2, q, t) {
   }
   return p2;
 }
-function hslToRgb2(h2, s2, l2) {
+function hslToRgb(h2, s2, l2) {
   const q = l2 < 0.5 ? l2 * (1 + s2) : l2 + s2 - l2 * s2;
   const p2 = 2 * l2 - q;
-  const r = hue2rgb2(p2, q, h2 + 1 / 3);
-  const g2 = hue2rgb2(p2, q, h2);
-  const b3 = hue2rgb2(p2, q, h2 - 1 / 3);
+  const r = hue2rgb(p2, q, h2 + 1 / 3);
+  const g2 = hue2rgb(p2, q, h2);
+  const b3 = hue2rgb(p2, q, h2 - 1 / 3);
   return Math.round(r * 255) << 24 | Math.round(g2 * 255) << 16 | Math.round(b3 * 255) << 8;
 }
-function parse2552(str) {
+function parse255(str) {
   const int2 = Number.parseInt(str, 10);
   if (int2 < 0) {
     return 0;
@@ -23731,11 +22596,11 @@ function parse2552(str) {
   }
   return int2;
 }
-function parse3602(str) {
+function parse360(str) {
   const int2 = Number.parseFloat(str);
   return (int2 % 360 + 360) % 360 / 360;
 }
-function parse12(str) {
+function parse1(str) {
   const num = Number.parseFloat(str);
   if (num < 0) {
     return 0;
@@ -23745,7 +22610,7 @@ function parse12(str) {
   }
   return Math.round(num * 255);
 }
-function parsePercentage2(str) {
+function parsePercentage(str) {
   const int2 = Number.parseFloat(str);
   if (int2 < 0) {
     return 0;
@@ -23755,7 +22620,7 @@ function parsePercentage2(str) {
   }
   return int2 / 100;
 }
-function parseModernComponent2(str, percentScale) {
+function parseModernComponent(str, percentScale) {
   if (str === "none")
     return 0;
   if (str.endsWith("%")) {
@@ -23763,7 +22628,7 @@ function parseModernComponent2(str, percentScale) {
   }
   return Number.parseFloat(str);
 }
-function parseHueAngle2(str) {
+function parseHueAngle(str) {
   if (str === "none")
     return 0;
   if (str.endsWith("rad")) {
@@ -23775,7 +22640,7 @@ function parseHueAngle2(str) {
     return Number.parseFloat(str) * 360;
   return Number.parseFloat(str);
 }
-function parseModernAlpha2(str) {
+function parseModernAlpha(str) {
   if (str === void 0 || str === "none")
     return 1;
   if (str.endsWith("%")) {
@@ -23783,22 +22648,22 @@ function parseModernAlpha2(str) {
   }
   return Math.max(0, Math.min(1, Number.parseFloat(str)));
 }
-function linearToSrgb2(c3) {
+function linearToSrgb(c3) {
   if (c3 <= 31308e-7)
     return 12.92 * c3;
   return 1.055 * c3 ** (1 / 2.4) - 0.055;
 }
-function clamp012(v2) {
+function clamp01(v2) {
   return Math.max(0, Math.min(1, v2));
 }
-function rgbFloatToInt2(r, g2, b3, alpha) {
-  const ri = Math.round(clamp012(r) * 255);
-  const gi = Math.round(clamp012(g2) * 255);
-  const bi = Math.round(clamp012(b3) * 255);
-  const ai = Math.round(clamp012(alpha) * 255);
+function rgbFloatToInt(r, g2, b3, alpha) {
+  const ri = Math.round(clamp01(r) * 255);
+  const gi = Math.round(clamp01(g2) * 255);
+  const bi = Math.round(clamp01(b3) * 255);
+  const ai = Math.round(clamp01(alpha) * 255);
   return (ri << 24 | gi << 16 | bi << 8 | ai) >>> 0;
 }
-function oklabToSrgb2(L, a2, b3) {
+function oklabToSrgb(L, a2, b3) {
   const l_ = L + 0.3963377774 * a2 + 0.2158037573 * b3;
   const m_ = L - 0.1055613458 * a2 - 0.0638541728 * b3;
   const s_ = L - 0.0894841775 * a2 - 1.291485548 * b3;
@@ -23808,9 +22673,9 @@ function oklabToSrgb2(L, a2, b3) {
   const rLin = 4.0767416621 * l2 - 3.3077115913 * m2 + 0.2309699292 * s2;
   const gLin = -1.2684380046 * l2 + 2.6097574011 * m2 - 0.3413193965 * s2;
   const bLin = -0.0041960863 * l2 - 0.7034186147 * m2 + 1.707614701 * s2;
-  return [linearToSrgb2(rLin), linearToSrgb2(gLin), linearToSrgb2(bLin)];
+  return [linearToSrgb(rLin), linearToSrgb(gLin), linearToSrgb(bLin)];
 }
-function labToSrgb2(L, a2, b3) {
+function labToSrgb(L, a2, b3) {
   const epsilon3 = 216 / 24389;
   const kappa = 24389 / 27;
   const Xn = 0.95047;
@@ -23830,22 +22695,22 @@ function labToSrgb2(L, a2, b3) {
   const rLin = 3.2404542 * X - 1.5371385 * Y - 0.4985314 * Z;
   const gLin = -0.969266 * X + 1.8760108 * Y + 0.041556 * Z;
   const bLin = 0.0556434 * X - 0.2040259 * Y + 1.0572252 * Z;
-  return [linearToSrgb2(rLin), linearToSrgb2(gLin), linearToSrgb2(bLin)];
+  return [linearToSrgb(rLin), linearToSrgb(gLin), linearToSrgb(bLin)];
 }
-function hwbToSrgb2(h2, w2, bk) {
+function hwbToSrgb(h2, w2, bk) {
   if (w2 + bk >= 1) {
     const gray = w2 / (w2 + bk);
     return [gray, gray, gray];
   }
   const q = 1;
   const p2 = 0;
-  const r = hue2rgb2(p2, q, h2 + 1 / 3);
-  const g2 = hue2rgb2(p2, q, h2);
-  const bl = hue2rgb2(p2, q, h2 - 1 / 3);
+  const r = hue2rgb(p2, q, h2 + 1 / 3);
+  const g2 = hue2rgb(p2, q, h2);
+  const bl = hue2rgb(p2, q, h2 - 1 / 3);
   const factor = 1 - w2 - bk;
   return [r * factor + w2, g2 * factor + w2, bl * factor + w2];
 }
-var colorNames2 = {
+var colorNames = {
   transparent: 0,
   aliceblue: 4042850303,
   antiquewhite: 4209760255,
@@ -23997,25 +22862,25 @@ var colorNames2 = {
   yellow: 4294902015,
   yellowgreen: 2597139199
 };
-function normalizeColor2(color) {
-  const matchers = getMatchers2();
+function normalizeColor(color) {
+  const matchers = getMatchers();
   let match;
   if (matchers.hex6) {
     if (match = matchers.hex6.exec(color)) {
       return Number.parseInt(match[1] + "ff", 16) >>> 0;
     }
   }
-  if (colorNames2[color] !== void 0) {
-    return colorNames2[color];
+  if (colorNames[color] !== void 0) {
+    return colorNames[color];
   }
   if (matchers.rgb) {
     if (match = matchers.rgb.exec(color)) {
-      return (parse2552(match[1]) << 24 | parse2552(match[2]) << 16 | parse2552(match[3]) << 8 | 255) >>> 0;
+      return (parse255(match[1]) << 24 | parse255(match[2]) << 16 | parse255(match[3]) << 8 | 255) >>> 0;
     }
   }
   if (matchers.rgba) {
     if (match = matchers.rgba.exec(color)) {
-      return (parse2552(match[1]) << 24 | parse2552(match[2]) << 16 | parse2552(match[3]) << 8 | parse12(match[4])) >>> 0;
+      return (parse255(match[1]) << 24 | parse255(match[2]) << 16 | parse255(match[3]) << 8 | parse1(match[4])) >>> 0;
     }
   }
   if (matchers.hex3) {
@@ -24035,70 +22900,70 @@ function normalizeColor2(color) {
   }
   if (matchers.hsl) {
     if (match = matchers.hsl.exec(color)) {
-      return (hslToRgb2(parse3602(match[1]), parsePercentage2(match[2]), parsePercentage2(match[3])) | 255) >>> 0;
+      return (hslToRgb(parse360(match[1]), parsePercentage(match[2]), parsePercentage(match[3])) | 255) >>> 0;
     }
   }
   if (matchers.hsla) {
     if (match = matchers.hsla.exec(color)) {
-      return (hslToRgb2(parse3602(match[1]), parsePercentage2(match[2]), parsePercentage2(match[3])) | parse12(match[4])) >>> 0;
+      return (hslToRgb(parse360(match[1]), parsePercentage(match[2]), parsePercentage(match[3])) | parse1(match[4])) >>> 0;
     }
   }
   if (matchers.oklch) {
     if (match = matchers.oklch.exec(color)) {
-      const L = parseModernComponent2(match[1], 1);
-      const C = parseModernComponent2(match[2], 0.4);
-      const H = parseHueAngle2(match[3]);
-      const alpha = parseModernAlpha2(match[4]);
+      const L = parseModernComponent(match[1], 1);
+      const C = parseModernComponent(match[2], 0.4);
+      const H = parseHueAngle(match[3]);
+      const alpha = parseModernAlpha(match[4]);
       const hRad = H * Math.PI / 180;
-      const [r, g2, b3] = oklabToSrgb2(L, C * Math.cos(hRad), C * Math.sin(hRad));
-      return rgbFloatToInt2(r, g2, b3, alpha);
+      const [r, g2, b3] = oklabToSrgb(L, C * Math.cos(hRad), C * Math.sin(hRad));
+      return rgbFloatToInt(r, g2, b3, alpha);
     }
   }
   if (matchers.oklab) {
     if (match = matchers.oklab.exec(color)) {
-      const L = parseModernComponent2(match[1], 1);
-      const a2 = parseModernComponent2(match[2], 0.4);
-      const b3 = parseModernComponent2(match[3], 0.4);
-      const alpha = parseModernAlpha2(match[4]);
-      const [r, g2, bl] = oklabToSrgb2(L, a2, b3);
-      return rgbFloatToInt2(r, g2, bl, alpha);
+      const L = parseModernComponent(match[1], 1);
+      const a2 = parseModernComponent(match[2], 0.4);
+      const b3 = parseModernComponent(match[3], 0.4);
+      const alpha = parseModernAlpha(match[4]);
+      const [r, g2, bl] = oklabToSrgb(L, a2, b3);
+      return rgbFloatToInt(r, g2, bl, alpha);
     }
   }
   if (matchers.lab) {
     if (match = matchers.lab.exec(color)) {
-      const L = parseModernComponent2(match[1], 100);
-      const a2 = parseModernComponent2(match[2], 125);
-      const b3 = parseModernComponent2(match[3], 125);
-      const alpha = parseModernAlpha2(match[4]);
-      const [r, g2, bl] = labToSrgb2(L, a2, b3);
-      return rgbFloatToInt2(r, g2, bl, alpha);
+      const L = parseModernComponent(match[1], 100);
+      const a2 = parseModernComponent(match[2], 125);
+      const b3 = parseModernComponent(match[3], 125);
+      const alpha = parseModernAlpha(match[4]);
+      const [r, g2, bl] = labToSrgb(L, a2, b3);
+      return rgbFloatToInt(r, g2, bl, alpha);
     }
   }
   if (matchers.lch) {
     if (match = matchers.lch.exec(color)) {
-      const L = parseModernComponent2(match[1], 100);
-      const C = parseModernComponent2(match[2], 150);
-      const H = parseHueAngle2(match[3]);
-      const alpha = parseModernAlpha2(match[4]);
+      const L = parseModernComponent(match[1], 100);
+      const C = parseModernComponent(match[2], 150);
+      const H = parseHueAngle(match[3]);
+      const alpha = parseModernAlpha(match[4]);
       const hRad = H * Math.PI / 180;
-      const [r, g2, bl] = labToSrgb2(L, C * Math.cos(hRad), C * Math.sin(hRad));
-      return rgbFloatToInt2(r, g2, bl, alpha);
+      const [r, g2, bl] = labToSrgb(L, C * Math.cos(hRad), C * Math.sin(hRad));
+      return rgbFloatToInt(r, g2, bl, alpha);
     }
   }
   if (matchers.hwb) {
     if (match = matchers.hwb.exec(color)) {
-      const H = parseHueAngle2(match[1]);
-      const W = parseModernComponent2(match[2], 1);
-      const B = parseModernComponent2(match[3], 1);
-      const alpha = parseModernAlpha2(match[4]);
-      const [r, g2, bl] = hwbToSrgb2(H / 360, W, B);
-      return rgbFloatToInt2(r, g2, bl, alpha);
+      const H = parseHueAngle(match[1]);
+      const W = parseModernComponent(match[2], 1);
+      const B = parseModernComponent(match[3], 1);
+      const alpha = parseModernAlpha(match[4]);
+      const [r, g2, bl] = hwbToSrgb(H / 360, W, B);
+      return rgbFloatToInt(r, g2, bl, alpha);
     }
   }
   throw new Error(`invalid color string ${color} provided`);
 }
-function processColor2(color) {
-  const normalizedColor = normalizeColor2(color);
+function processColor(color) {
+  const normalizedColor = normalizeColor(color);
   return (normalizedColor << 24 | normalizedColor >>> 8) >>> 0;
 }
 var proResProfileOptions = [
@@ -24186,7 +23051,7 @@ var sequenceSchemaDefaultLayoutNone2 = {
   }
 };
 var ENABLE_V5_BREAKING_CHANGES2 = false;
-var validateFrame2 = ({
+var validateFrame = ({
   allowFloats,
   durationInFrames,
   frame
@@ -24323,13 +23188,13 @@ var getOffthreadVideoSource2 = ({
   return `http://localhost:${window.remotion_proxyPort}/proxy?src=${encodeURIComponent(getAbsoluteSrc2(src))}&time=${encodeURIComponent(Math.max(0, currentTime))}&transparent=${String(transparent)}&toneMapped=${String(toneMapped)}`;
 };
 var NoReactInternals = {
-  processColor: processColor2,
+  processColor,
   truthy: truthy2,
   validateFps: validateFps2,
   validateDimension: validateDimension2,
   validateDurationInFrames: validateDurationInFrames2,
   validateDefaultAndInputProps: validateDefaultAndInputProps2,
-  validateFrame: validateFrame2,
+  validateFrame,
   serializeJSONWithSpecialTypes: serializeJSONWithSpecialTypes2,
   bundleName: "bundle.js",
   bundleMapName: "bundle.js.map",
@@ -24343,7 +23208,7 @@ var NoReactInternals = {
   ENABLE_V5_BREAKING_CHANGES: ENABLE_V5_BREAKING_CHANGES2,
   MIN_NODE_VERSION: ENABLE_V5_BREAKING_CHANGES2 ? 18 : 16,
   MIN_BUN_VERSION: ENABLE_V5_BREAKING_CHANGES2 ? "1.1.3" : "1.0.3",
-  colorNames: colorNames2,
+  colorNames,
   DATE_TOKEN: DATE_TOKEN2,
   FILE_TOKEN: FILE_TOKEN2,
   validateCodec: validateCodec2,
@@ -27937,7 +26802,7 @@ var forward2 = import_react110.forwardRef;
 var Thumbnail = forward2(ThumbnailFn);
 
 // src/entry.tsx
-var React45 = __toESM(require_react(), 1);
+var React44 = __toESM(require_react(), 1);
 
 // src/context/index.tsx
 var React8 = __toESM(require_react(), 1);
@@ -27949,7 +26814,7 @@ var ComposeContext = React8.createContext({
 var AudioContext2 = React8.createContext(null);
 
 // src/types/Folder.tsx
-var React43 = __toESM(require_react(), 1);
+var React41 = __toESM(require_react(), 1);
 
 // node_modules/@remotion/transitions/dist/esm/index.mjs
 var import_react113 = __toESM(require_react(), 1);
@@ -30487,9 +29352,6 @@ function ImageLeaf({ stream: stream2 }) {
 }
 
 // src/types/Component.tsx
-var React26 = __toESM(require_react(), 1);
-
-// src/types/DynamicLoader.tsx
 var React25 = __toESM(require_react(), 1);
 
 // node_modules/react-jsx-parser/dist/react-jsx-parser.min.js
@@ -34055,7 +32917,7 @@ Defaulting to 2020, but this will stop working in the future.`);
         forceU = false;
       return this.at(this.nextIndex(this.pos, forceU), forceU);
     };
-    RegExpValidationState3.prototype.advance = function advance3(forceU) {
+    RegExpValidationState3.prototype.advance = function advance2(forceU) {
       if (forceU === void 0)
         forceU = false;
       this.pos = this.nextIndex(this.pos, forceU);
@@ -39602,7 +38464,7 @@ RegExpValidationState.prototype.lookahead = function lookahead(forceU) {
     forceU = false;
   return this.at(this.nextIndex(this.pos, forceU), forceU);
 };
-RegExpValidationState.prototype.advance = function advance2(forceU) {
+RegExpValidationState.prototype.advance = function advance(forceU) {
   if (forceU === void 0)
     forceU = false;
   this.pos = this.nextIndex(this.pos, forceU);
@@ -41862,156 +40724,12 @@ __publicField(JsxParser, "defaultProps", {
 });
 var source_default = JsxParser;
 
-// src/types/DynamicLoader.tsx
-if (typeof window !== "undefined") {
-  window.__React = React25;
-  window.__Remotion = esm_exports;
-  globalThis.React = React25;
-}
-var reactShimInjected = false;
-function ensureReactShim() {
-  if (reactShimInjected) return;
-  if (typeof window === "undefined") return;
-  if (document.querySelector("#rmtr-react-shim")) {
-    reactShimInjected = true;
-    return;
-  }
-  try {
-    const blobReact = new Blob(
-      [
-        `
-        const R = globalThis.React;
-        export const {
-          useState,
-          useEffect,
-          useRef,
-          useMemo,
-          useCallback,
-          useContext,
-          useReducer,
-          useLayoutEffect,
-          useImperativeHandle,
-          useDebugValue,
-          useId,
-          useSyncExternalStore,
-          useTransition,
-          useDeferredValue,
-          createElement,
-          Fragment,
-          Suspense,
-          forwardRef,
-          Children,
-          isValidElement,
-          cloneElement,
-          createContext,
-          PureComponent,
-          Component,
-          lazy,
-          memo,
-        } = R;
-        export default R;
-      `
-      ],
-      { type: "application/javascript" }
-    );
-    const urlReact = URL.createObjectURL(blobReact);
-    const blobJsxRuntime = new Blob(
-      [
-        `
-        const R = globalThis.React;
-        const { createElement, Fragment } = R;
-        export { Fragment };
-        export function jsx(type, props, key) {
-          return createElement(type, key != null ? { ...props, key } : props);
-        }
-        export function jsxs(type, props, key) {
-          return createElement(type, key != null ? { ...props, key } : props);
-        }
-        export function jsxDEV(type, props, key, isStaticChildren, source, self) {
-          return createElement(type, key != null ? { ...props, key } : props);
-        }
-      `
-      ],
-      { type: "application/javascript" }
-    );
-    const urlJsxRuntime = URL.createObjectURL(blobJsxRuntime);
-    const script = document.createElement("script");
-    script.type = "importmap";
-    script.id = "rmtr-react-shim";
-    script.textContent = JSON.stringify({
-      imports: {
-        react: urlReact,
-        "react/jsx-runtime": urlJsxRuntime
-      }
-    });
-    document.head.appendChild(script);
-    reactShimInjected = true;
-  } catch {
-    reactShimInjected = true;
-  }
-}
-var dynamicImport = typeof window !== "undefined" ? (url2) => import(
-  /* webpackIgnore: true */
-  url2
-) : null;
-function useJsxWithImports(jsx68, imports, data2, onError) {
-  const [wrapper, setWrapper] = React25.useState(null);
-  const handleRef = React25.useRef(null);
-  React25.useEffect(() => {
-    if (!jsx68) return;
-    handleRef.current = delayRender("Loading component bundle");
-    (async () => {
-      ensureReactShim();
-      let components = {};
-      const bundleUrl = window.__componentsBundleUrl;
-      if (bundleUrl && dynamicImport) {
-        try {
-          const bundle = await dynamicImport(bundleUrl);
-          components = bundle;
-        } catch (e) {
-          onError?.(e, { source: jsx68 });
-        }
-      }
-      const bindings = {};
-      if (data2) {
-        for (const [k2, v2] of Object.entries(data2)) {
-          bindings[k2] = v2;
-        }
-      }
-      const Wrapper = React25.forwardRef((_props, _ref) => {
-        return React25.createElement(source_default, {
-          jsx: jsx68,
-          components,
-          bindings,
-          renderInWrapper: false,
-          showDefaultNames: false
-        });
-      });
-      Wrapper.displayName = "JsxWrapper";
-      setWrapper(() => Wrapper);
-      if (handleRef.current) {
-        continueRender(handleRef.current);
-        handleRef.current = null;
-      }
-    })();
-  }, [jsx68, imports, data2, onError]);
-  return wrapper;
-}
-
 // src/types/Component.tsx
 var import_jsx_runtime80 = __toESM(require_jsx_runtime(), 1);
 function ComponentLeaf({ stream: stream2 }) {
   const { fps } = useVideoConfig();
-  const [error49, setError] = React26.useState(null);
-  const Comp = useJsxWithImports(stream2.jsx, stream2.imports ?? void 0, stream2.data ?? void 0, (err, ctx) => {
-    setError(`Component error: ${err instanceof Error ? err.message : String(err)}`);
-  });
-  if (error49) {
-    return React26.createElement("div", {
-      style: { color: "red", padding: 20, fontFamily: "sans-serif", fontSize: 14, background: "rgba(0,0,0,0.8)" }
-    }, error49);
-  }
-  if (!Comp) return null;
+  const { components } = React25.useContext(ComposeContext);
+  if (!stream2.jsx) return null;
   return /* @__PURE__ */ (0, import_jsx_runtime80.jsx)(import_jsx_runtime80.Fragment, { children: stream2.actions.map((a2) => {
     const start = a2.start ?? 0;
     const end = a2.end ?? start + 1;
@@ -42021,7 +40739,19 @@ function ComponentLeaf({ stream: stream2 }) {
         durationInFrames: Math.max(1, Math.floor(fps * (end - start))),
         from: Math.floor(fps * start),
         layout: "none",
-        children: /* @__PURE__ */ (0, import_jsx_runtime80.jsx)(Comp, { action: a2 })
+        children: /* @__PURE__ */ (0, import_jsx_runtime80.jsx)(
+          source_default,
+          {
+            style: { width: "100%", height: "100%" },
+            components,
+            bindings: stream2.data,
+            jsx: stream2.jsx,
+            blacklistedAttrs: [],
+            disableKeyGeneration: true,
+            onError: (error49) => console.warn({ jsx: stream2.jsx, error: error49.message }),
+            renderError: ({ error: error49 }) => /* @__PURE__ */ (0, import_jsx_runtime80.jsx)("div", { style: { color: "red", padding: 20, fontSize: "larger" }, children: error49 })
+          }
+        )
       },
       a2.id
     );
@@ -42071,7 +40801,7 @@ function RhythmLeaf({ stream: stream2 }) {
 var import_react127 = __toESM(require_react(), 1);
 
 // node_modules/@vis.gl/react-google-maps/dist/index.modern.mjs
-var React27 = __toESM(require_react(), 1);
+var React26 = __toESM(require_react(), 1);
 var import_react126 = __toESM(require_react(), 1);
 var import_react_dom3 = __toESM(require_react_dom(), 1);
 var import_fast_deep_equal = __toESM(require_fast_deep_equal(), 1);
@@ -43015,13 +41745,13 @@ function useMapsLibrary(name) {
   return (ctx === null || ctx === void 0 ? void 0 : ctx.loadedLibraries[name]) || null;
 }
 var _a;
-var { useLayoutEffect: useLayoutEffect15, useRef: useRef31 } = React27;
-var useBeforeEffect = (_a = React27.useInsertionEffect) !== null && _a !== void 0 ? _a : useLayoutEffect15;
+var { useLayoutEffect: useLayoutEffect15, useRef: useRef30 } = React26;
+var useBeforeEffect = (_a = React26.useInsertionEffect) !== null && _a !== void 0 ? _a : useLayoutEffect15;
 function forbiddenInRender() {
   throw new Error("useEffectEvent: invalid call during rendering.");
 }
 function useEffectEventPolyfill(fn) {
-  const ref2 = useRef31(forbiddenInRender);
+  const ref2 = useRef30(forbiddenInRender);
   useBeforeEffect(() => {
     ref2.current = fn;
   }, [fn]);
@@ -44560,7 +43290,7 @@ function getCurrentStep(leg, currentInSecond) {
 }
 
 // src/types/Include.tsx
-var React35 = __toESM(require_react(), 1);
+var React30 = __toESM(require_react(), 1);
 var import_jsx_runtime83 = __toESM(require_jsx_runtime(), 1);
 var ASPECT_DIMS = {
   "16x9": { width: 1920, height: 1080 },
@@ -44580,15 +43310,15 @@ function resolveIncludeSrc(src) {
 }
 function IncludeLeaf({ stream: stream2 }) {
   const { fps: parentFps, width: parentWidth, height: parentHeight } = useVideoConfig();
-  const { Container } = React35.useContext(ComposeContext);
-  const parentAudio = React35.useContext(AudioContext2);
+  const { Container } = React30.useContext(ComposeContext);
+  const parentAudio = React30.useContext(AudioContext2);
   if (!stream2.actions?.length) return null;
-  const [externalData, setExternalData] = React35.useState(null);
-  const [loadError, setLoadError] = React35.useState(null);
-  const [handle] = React35.useState(
+  const [externalData, setExternalData] = React30.useState(null);
+  const [loadError, setLoadError] = React30.useState(null);
+  const [handle] = React30.useState(
     () => stream2.src ? delayRender(`Loading include: ${stream2.src}`) : null
   );
-  React35.useEffect(() => {
+  React30.useEffect(() => {
     if (!stream2.src || !handle) return;
     let active = true;
     const url2 = resolveIncludeSrc(stream2.src);
@@ -44612,16 +43342,16 @@ function IncludeLeaf({ stream: stream2 }) {
       active = false;
     };
   }, [stream2.src, handle]);
-  React35.useMemo(() => {
+  React30.useMemo(() => {
     if (!stream2.src) {
       getDurationInSeconds(stream2, true);
     }
   }, [stream2, stream2.src]);
-  const audioCtx = React35.useMemo(
+  const audioCtx = React30.useMemo(
     () => ({ id: stream2.id, foreground: true, parent: parentAudio }),
     [stream2.id, parentAudio]
   );
-  const renderExternalContent = React35.useCallback(() => {
+  const renderExternalContent = React30.useCallback(() => {
     if (!externalData) return null;
     if (loadError) {
       return /* @__PURE__ */ (0, import_jsx_runtime83.jsxs)("div", { style: { color: "#ff4444", fontSize: 24, padding: 40 }, children: [
@@ -44792,12 +43522,12 @@ function IncludeLeaf({ stream: stream2 }) {
 }
 
 // src/types/Scene.tsx
-var React39 = __toESM(require_react(), 1);
+var React35 = __toESM(require_react(), 1);
 var import_jsx_runtime84 = __toESM(require_jsx_runtime(), 1);
 function SceneLeaf({ stream: stream2 }) {
-  const { Container } = React39.useContext(ComposeContext);
-  const parentAudio = React39.useContext(AudioContext2);
-  const audioCtx = React39.useMemo(
+  const { Container } = React35.useContext(ComposeContext);
+  const parentAudio = React35.useContext(AudioContext2);
+  const audioCtx = React35.useMemo(
     () => ({ id: stream2.id, parent: parentAudio }),
     [stream2.id, parentAudio]
   );
@@ -44814,7 +43544,7 @@ function SceneLeaf({ stream: stream2 }) {
 }
 
 // src/types/Effect.tsx
-var React41 = __toESM(require_react(), 1);
+var React39 = __toESM(require_react(), 1);
 
 // src/types/keyframes.ts
 function parseKeyframeData(data2) {
@@ -45208,7 +43938,7 @@ function EffectWrapper({
   const frame = useCurrentFrame();
   const { fps, width, height } = useVideoConfig();
   const actions = stream2.actions ?? [];
-  const styles = React41.useMemo(() => {
+  const styles = React39.useMemo(() => {
     const result = [];
     for (const action2 of actions) {
       const start = Math.ceil(action2.start * fps);
@@ -45280,17 +44010,17 @@ var NotSeries = ({ children }) => /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(
 NotSeries.Sequence = ({ children }) => /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(import_jsx_runtime86.Fragment, { children });
 function FolderLeaf({ stream: stream2 }) {
   const { fps, width, height } = useVideoConfig();
-  const { Container } = React43.useContext(ComposeContext);
-  const parentAudio = React43.useContext(AudioContext2);
+  const { Container } = React41.useContext(ComposeContext);
+  const parentAudio = React41.useContext(AudioContext2);
   const isSeries = !!stream2.isSeries;
   const transition = stream2.transition;
   const transitionTime = stream2.transitionTime ?? 0.5;
   const isRoot = stream2.id === "root";
-  const TypedSeries = React43.useMemo(() => {
+  const TypedSeries = React41.useMemo(() => {
     if (!isSeries) return NotSeries;
     return transition ? TransitionSeries : Series;
   }, [isSeries, transition]);
-  const transEl = React43.useMemo(() => {
+  const transEl = React41.useMemo(() => {
     if (!isSeries || !transition) return null;
     const presentation = TransitionPresets[transition]?.(
       transition === "clockWipe" ? { width, height } : void 0
@@ -45309,7 +44039,7 @@ function FolderLeaf({ stream: stream2 }) {
     const durFrames = Math.max(1, Math.floor(dur * fps));
     const SequenceWrap = TypedSeries.Sequence ?? Sequence;
     const isLeaf = child.type !== "folder" && child.type !== "root" && child.type !== "effect";
-    const childContent = isLeaf ? React43.createElement(Leaves[child.type] ?? (() => null), { stream: child }) : child.type === "effect" ? /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(EffectWrapper, { stream: child, children: /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(FolderLeaf, { stream: child }) }) : React43.createElement(FolderLeaf, { stream: child });
+    const childContent = isLeaf ? React41.createElement(Leaves[child.type] ?? (() => null), { stream: child }) : child.type === "effect" ? /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(EffectWrapper, { stream: child, children: /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(FolderLeaf, { stream: child }) }) : React41.createElement(FolderLeaf, { stream: child });
     const wrapped = /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(
       Container,
       {
@@ -45329,10 +44059,10 @@ function FolderLeaf({ stream: stream2 }) {
   }).filter(Boolean);
   if (isSeries && transEl) {
     for (let i3 = 1; i3 < sequences.length; i3 += 2) {
-      sequences.splice(i3, 0, React43.cloneElement(transEl, { key: `t${i3}` }));
+      sequences.splice(i3, 0, React41.cloneElement(transEl, { key: `t${i3}` }));
     }
   }
-  const audioCtx = React43.useMemo(
+  const audioCtx = React41.useMemo(
     () => stream2.type !== "folder" ? { id: stream2.id, parent: parentAudio } : parentAudio,
     [stream2.id, stream2.type, parentAudio]
   );
@@ -45352,7 +44082,7 @@ function FolderLeaf({ stream: stream2 }) {
 }
 
 // src/types/Subtitle.tsx
-var React44 = __toESM(require_react(), 1);
+var React43 = __toESM(require_react(), 1);
 
 // node_modules/remotion-subtitle/dist/index.esm.js
 var index_esm_exports = {};
@@ -45678,8 +44408,8 @@ function CueFrame({
 }) {
   const durationInFrames = Math.max(1, Math.floor((cue.endAt - cue.startFrom) * fps));
   const from = Math.floor(cue.startFrom * fps);
-  const captionText = React44.useMemo(() => supportHtml(cue.text), [cue.text]);
-  const textStyle = React44.useMemo(
+  const captionText = React43.useMemo(() => supportHtml(cue.text), [cue.text]);
+  const textStyle = React43.useMemo(
     () => ({
       ...DEFAULT_TEXT_STYLE,
       fontSize: subtitle.fontSize ?? DEFAULT_TEXT_STYLE.fontSize,
@@ -45692,12 +44422,12 @@ function CueFrame({
 }
 function SubtitleOverlay({ subtitle }) {
   const { fps } = useVideoConfig();
-  const [cues, setCues] = React44.useState(null);
-  const CaptionComponent = React44.useMemo(
+  const [cues, setCues] = React43.useState(null);
+  const CaptionComponent = React43.useMemo(
     () => resolveCaption(subtitle.type),
     [subtitle.type]
   );
-  React44.useEffect(() => {
+  React43.useEffect(() => {
     const { src } = subtitle;
     if (src.includes("-->")) {
       setCues(parseVTT(src));
@@ -59561,7 +58291,21 @@ var root = folder.extend({
   instruction: external_exports.string().optional(),
   metadata: external_exports.string().optional(),
   stylesheet: external_exports.string().optional().describe("global css; selectors use .type and .name"),
-  subtitle: subtitleOverlay.optional().describe("global subtitle overlay; src is a VTT file with absolute timestamps")
+  subtitle: subtitleOverlay.optional().describe("global subtitle overlay; src is a VTT file with absolute timestamps"),
+  /**
+   * Component registry source for react-jsx-parser.
+   *
+   * Two runtime forms (the descriptive ImportEntry[] array is resolved by the
+   * compiler/server BEFORE reaching here):
+   *   - string: URL to a pre-bundled ESM module whose named exports are the
+   *             components (set by the player server after bundling frontmatter
+   *             `imports:`).
+   *   - object: inline `{ Name: ComponentType }` map for programmatic use.
+   *
+   * Without this field declared, zod's default `.strip()` removes it during
+   * `root.parse()`, so the registry never loads at runtime.
+   */
+  imports: external_exports.union([external_exports.string(), external_exports.record(external_exports.string(), external_exports.any())]).optional().describe("component registry: URL to a pre-bundled module (string) or inline component map (object)")
 });
 var video = base.extend({
   type: external_exports.literal("video").default("video"),
@@ -59588,7 +58332,6 @@ var image = base.extend({
 var component = base.extend({
   type: external_exports.literal("component").default("component"),
   jsx: external_exports.string().describe("usage JSX expression compiled at runtime; tag names resolved from imports"),
-  imports: external_exports.record(external_exports.string(), external_exports.string()).optional().describe("resolved frontmatter imports: name \u2192 URL. Values prefixed `__jsx__:` are inline definitions."),
   data: external_exports.record(external_exports.string(), external_exports.string()).optional().describe("extra variables (e.g. from ~~~md source code fences) available in JSX scope"),
   actions: external_exports.array(action).min(1).default(() => [action.parse({})])
 });
@@ -60513,14 +59256,14 @@ var DEFAULT_DUMP_OPTIONS = {
 var import_jsx_runtime88 = __toESM(require_jsx_runtime(), 1);
 var DefaultContainer2 = ({ children, style: style2, className: className2 }) => /* @__PURE__ */ (0, import_jsx_runtime88.jsx)("div", { className: className2, style: { position: "absolute", inset: 0, ...style2 }, children });
 function useComponentRegistry(imports) {
-  const [registry2, setRegistry] = React45.useState(null);
-  const handleRef = React45.useRef(null);
-  React45.useEffect(() => {
+  const [registry2, setRegistry] = React44.useState(null);
+  const handleRef = React44.useRef(null);
+  React44.useEffect(() => {
     if (!imports) {
-      setRegistry({});
+      setRegistry(null);
       return;
     }
-    if (typeof imports === "object" && imports !== null) {
+    if (typeof imports === "object" && imports !== null && !Array.isArray(imports)) {
       setRegistry(imports);
       return;
     }
@@ -60539,7 +59282,7 @@ function useComponentRegistry(imports) {
         }
       }).catch((err) => {
         console.error("Failed to load component registry:", err);
-        setRegistry({});
+        setRegistry(null);
         if (handleRef.current) {
           continueRender(handleRef.current);
           handleRef.current = null;
@@ -60547,12 +59290,12 @@ function useComponentRegistry(imports) {
       });
       return;
     }
-    setRegistry({});
+    setRegistry(null);
   }, [imports]);
   return registry2;
 }
 function RemotionEngine({ root: root2, compose, background = "#000" }) {
-  const parsed = React45.useMemo(() => {
+  const parsed = React44.useMemo(() => {
     if (!root2) {
       return {
         id: "root",
@@ -60569,8 +59312,8 @@ function RemotionEngine({ root: root2, compose, background = "#000" }) {
     return root.parse(root2);
   }, [root2]);
   const registry2 = useComponentRegistry(parsed.imports);
-  React45.useMemo(() => getDurationInSeconds(parsed, true), [parsed]);
-  const value = React45.useMemo(
+  React44.useMemo(() => getDurationInSeconds(parsed, true), [parsed]);
+  const value = React44.useMemo(
     () => ({
       Container: compose?.Container ?? DefaultContainer2,
       onError: compose?.onError,
