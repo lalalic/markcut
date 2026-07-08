@@ -1087,42 +1087,95 @@ var require_format = __commonJS({
 init_compiler();
 
 // src/descriptive/resolve.ts
-import { execSync as execSync2, exec } from "node:child_process";
+import { execSync as execSync2 } from "node:child_process";
 import { existsSync as existsSync2, mkdirSync as mkdirSync2, readFileSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { join, resolve as resolvePath } from "node:path";
 
-// src/render/tts.ts
-import { execSync } from "node:child_process";
+// src/render/cli-tools.ts
+import { execSync, exec } from "node:child_process";
 import { existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
-var DEFAULT_CLI = 'edge-tts --voice "en-US-GuyNeural" --text "{input}" --write-media "{output}"';
+var DEFAULT_TTS_CLI = 'uvx edge-tts --voice "en-US-GuyNeural" --text "{input}" --write-media "{output}"';
+var DEFAULT_STT_CLI = 'uvx --from openai-whisper whisper "{input}" --output_format vtt --output_dir "{output}"';
+var DEFAULT_TTI_CLI = 'uvx --from mflux mflux-generate-flux2 --model flux2-klein-4b --steps 5 --prompt "{input}" --output "{output}"';
+var DEFAULT_TTV_CLI = "";
+function substituteCli(template, input, output) {
+  return template.replace(/\{input\}/g, input.replace(/"/g, '\\"')).replace(/\{output\}/g, output);
+}
 function generateTTS(text3, outputPath, cli) {
   mkdirSync(dirname(outputPath), { recursive: true });
-  const cmd = (cli ?? DEFAULT_CLI).replace(/\{input\}/g, text3.replace(/"/g, '\\"')).replace(/\{output\}/g, outputPath);
+  const cmd = substituteCli(cli ?? DEFAULT_TTS_CLI, text3, outputPath);
   try {
     execSync(cmd, { stdio: "pipe" });
   } catch (e) {
-    const hint = cli?.includes("edge-tts") ? "The voice may not support this language. Try setting root.tts to a different voice (e.g. 'zh-CN-XiaoxiaoNeural' for Chinese)." : "Check that the TTS CLI is installed and the template is correct. Set root.tts to configure.";
-    console.warn(`  \u26A0 TTS failed: ${e.message}. ${hint}`);
+    console.warn(`  \u26A0 TTS failed: ${e.message}`);
     return "";
   }
-  if (existsSync(outputPath)) {
-    const label = outputPath.split("/").pop()?.replace(/\.\w+$/, "") ?? "";
-    console.log(`  \u2713 TTS: ${label}`);
-    return outputPath;
+  return existsSync(outputPath) ? outputPath : "";
+}
+async function generateSTT(audioPath, outputDir, cli) {
+  const cmd = substituteCli(cli ?? DEFAULT_STT_CLI, audioPath, outputDir);
+  await new Promise((resolve, reject) => {
+    exec(cmd, { timeout: 12e4 }, (err) => {
+      if (err) reject(err);
+      else resolve();
+    });
+  });
+}
+function generateTTI(prompt, outputPath, cli) {
+  mkdirSync(dirname(outputPath), { recursive: true });
+  const cmd = substituteCli(cli ?? DEFAULT_TTI_CLI, prompt, outputPath);
+  try {
+    execSync(cmd, {
+      encoding: "utf-8",
+      stdio: ["pipe", "pipe", "pipe"],
+      timeout: 3e5,
+      env: { ...process.env, TTI_CMD: cli ?? DEFAULT_TTI_CLI }
+    });
+  } catch (e) {
+    console.error(`  \u2717 TTI failed: ${e.message}`);
+    return "";
   }
-  const mp3Path = outputPath.replace(/\.wav$/, ".mp3");
-  if (existsSync(mp3Path)) {
-    try {
-      execSync(`ffmpeg -y -i "${mp3Path}" "${outputPath}" 2>/dev/null`, { stdio: "pipe" });
-      execSync(`rm "${mp3Path}"`, { stdio: "pipe" });
-      return outputPath;
-    } catch {
-      return mp3Path;
+  return existsSync(outputPath) ? outputPath : "";
+}
+function generateTTV(prompt, outputPath, cli, ttiCmd) {
+  mkdirSync(dirname(outputPath), { recursive: true });
+  if (!cli) {
+    const pngPath = outputPath.replace(/\.mp4$/, ".png");
+    const imageResult = generateTTI(prompt, pngPath, ttiCmd);
+    if (!imageResult || !existsSync(imageResult)) {
+      console.error(`  \u2717 TTV: TTI step produced no image for "${prompt.slice(0, 50)}..."`);
+      return "";
     }
+    try {
+      execSync(
+        `ffmpeg -y -loop 1 -i "${pngPath}" -c:v libx264 -t 3 -pix_fmt yuv420p "${outputPath}"`,
+        { stdio: ["pipe", "pipe", "pipe"], timeout: 6e4 }
+      );
+    } catch (e) {
+      console.error(`  \u2717 TTV: ffmpeg failed: ${e.message}`);
+      return "";
+    }
+    try {
+      execSync(`rm "${pngPath}"`, { stdio: "pipe" });
+    } catch {
+    }
+    return existsSync(outputPath) ? outputPath : "";
   }
-  return "";
+  const cmd = substituteCli(cli, prompt, outputPath);
+  try {
+    execSync(cmd, {
+      encoding: "utf-8",
+      stdio: ["pipe", "pipe", "pipe"],
+      timeout: 3e5,
+      env: { ...process.env, TTI_CMD: ttiCmd ?? DEFAULT_TTI_CLI }
+    });
+  } catch (e) {
+    console.error(`  \u2717 TTV failed: ${e.message}`);
+    return "";
+  }
+  return existsSync(outputPath) ? outputPath : "";
 }
 
 // src/descriptive/resolve.ts
@@ -1219,7 +1272,7 @@ async function resolveScripts(root, options) {
   }
   for (const { node: node2, id } of toProcess) {
     const safeId = id.replace(/[^a-zA-Z0-9_-]/g, "_");
-    const audioPath = join(options.outputDir, `${safeId}.wav`);
+    const audioPath = join(options.outputDir, `${safeId}.mp3`);
     const ttsCli = node2.tts ?? clone.tts ?? options.ttsCli ?? DEFAULT_TTS_CLI;
     const cacheKey = computeCacheKey({ script: node2.script, cli: ttsCli });
     const cached = checkCache(cache, `tts:${safeId}`, cacheKey);
@@ -1309,14 +1362,8 @@ async function resolveSubtitles(root, options) {
       vttPath = cachedVtt;
       sttCachedCount++;
     } else {
-      const cmd = sttCli.replace(/\{input\}/g, audioSrc).replace(/\{output\}/g, options.outputDir);
       try {
-        await new Promise((resolvePromise, reject) => {
-          exec(cmd, { timeout: 12e4 }, (err) => {
-            if (err) reject(err);
-            else resolvePromise();
-          });
-        });
+        await generateSTT(audioSrc, options.outputDir, sttCli);
       } catch {
         console.warn(`  \u26A0 STT failed for ${clipName}. Install whisper (pip install openai-whisper) or set root.stt.`);
         sttFailedCount++;
@@ -1371,10 +1418,6 @@ async function resolveSubtitles(root, options) {
   if (cacheDirty) writeCacheManifest(options.outputDir, cache);
   return clone;
 }
-var DEFAULT_TTS_CLI = 'uvx edge-tts --voice "en-US-GuyNeural" --text "{input}" --write-media "{output}"';
-var DEFAULT_STT_CLI = 'uvx --from openai-whisper whisper "{input}" --output_format vtt --output_dir "{output}"';
-var DEFAULT_TTI_CLI = 'uvx --from mflux mflux-generate-flux2 --model flux2-klein-4b --steps 5 --prompt "{input}" --output "{output}"';
-var DEFAULT_TTV_CLI = 'ffmpeg -y -f lavfi -i "color=c=#1a1a2e:s=1080x1920:d=1.5" -f lavfi -i "color=c=#2d2d5e:s=1080x1920:d=1.5" -f lavfi -i "color=c=#1a3a2e:s=1080x1920:d=2" -filter_complex "[0:v][1:v][2:v]concat=n=3:v=1:a=0[v]" -map "[v]" -c:v libx264 -pix_fmt yuv420p "{output}"';
 async function resolveGeneratedMedia(root, options) {
   const clone = JSON.parse(JSON.stringify(root));
   mkdirSync2(options.outputDir, { recursive: true });
@@ -1401,18 +1444,11 @@ async function resolveGeneratedMedia(root, options) {
       console.log(`  \u2713 ${label}: ${safeId} (cached)`);
       continue;
     }
-    const cmd = cli.replace(/\{input\}/g, prompt.replace(/"/g, '\\"')).replace(/\{output\}/g, outputPath);
     try {
       console.log(`  \u{1F50A} ${label}: ${safeId}...`);
       const ttiCmd = clone.tti ?? options.ttiCli ?? DEFAULT_TTI_CLI;
-      execSync2(cmd, {
-        encoding: "utf-8",
-        stdio: ["pipe", "pipe", "pipe"],
-        timeout: 3e5,
-        // 5 min
-        env: { ...process.env, TTI_CMD: ttiCmd }
-      });
-      if (existsSync2(outputPath)) {
+      const result = type === "image" ? generateTTI(prompt, outputPath, cli) : generateTTV(prompt, outputPath, cli, ttiCmd);
+      if (result) {
         node2.src = outputPath;
         updateCache(cache, `gen:${safeId}`, cacheKey, outputPath);
         cacheDirty = true;

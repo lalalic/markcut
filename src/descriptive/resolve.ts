@@ -7,11 +7,20 @@
  * These run BEFORE compileDescriptiveRoot() so the synchronous compiler
  * has complete duration and renderable children.
  */
-import { execSync, exec } from "node:child_process";
+import { execSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync, statSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { join, dirname, resolve as resolvePath } from "node:path";
-import { generateTTS } from "../render/tts";
+import {
+  generateTTS,
+  generateSTT,
+  generateTTI,
+  generateTTV,
+  DEFAULT_TTS_CLI,
+  DEFAULT_STT_CLI,
+  DEFAULT_TTI_CLI,
+  DEFAULT_TTV_CLI,
+} from "../render/cli-tools";
 import { walkDown } from "../utils";
 import type { DescriptiveNode, DescriptiveRoot } from "./compiler";
 
@@ -198,7 +207,7 @@ export async function resolveScripts(
 
   for (const { node, id } of toProcess) {
     const safeId = id.replace(/[^a-zA-Z0-9_-]/g, "_");
-    const audioPath = join(options.outputDir, `${safeId}.wav`);
+    const audioPath = join(options.outputDir, `${safeId}.mp3`);
 
     // Resolve TTS config: scene-level overrides root-level overrides CLI defaults
     const ttsCli = node.tts ?? clone.tts ?? options.ttsCli ?? DEFAULT_TTS_CLI;
@@ -360,17 +369,8 @@ export async function resolveSubtitles(
       vttPath = cachedVtt;
       sttCachedCount++;
     } else {
-      // Run STT CLI with {input} and {output} substitution (async, non-blocking)
-      const cmd = sttCli
-        .replace(/\{input\}/g, audioSrc)
-        .replace(/\{output\}/g, options.outputDir);
       try {
-        await new Promise<void>((resolvePromise, reject) => {
-          exec(cmd, { timeout: 120_000 }, (err) => {
-            if (err) reject(err);
-            else resolvePromise();
-          });
-        });
+        await generateSTT(audioSrc, options.outputDir, sttCli);
       } catch {
         console.warn(`  ⚠ STT failed for ${clipName}. Install whisper (pip install openai-whisper) or set root.stt.`);
         sttFailedCount++;
@@ -442,11 +442,6 @@ export interface ResolveGeneratedMediaOptions {
   ttvCli?: string;
 }
 
-const DEFAULT_TTS_CLI = 'uvx edge-tts --voice "en-US-GuyNeural" --text "{input}" --write-media "{output}"';
-const DEFAULT_STT_CLI = 'uvx --from openai-whisper whisper "{input}" --output_format vtt --output_dir "{output}"';
-const DEFAULT_TTI_CLI = 'uvx --from mflux mflux-generate-flux2 --model flux2-klein-4b --steps 5 --prompt "{input}" --output "{output}"';
-const DEFAULT_TTV_CLI = 'ffmpeg -y -f lavfi -i "color=c=#1a1a2e:s=1080x1920:d=1.5" -f lavfi -i "color=c=#2d2d5e:s=1080x1920:d=1.5" -f lavfi -i "color=c=#1a3a2e:s=1080x1920:d=2" -filter_complex "[0:v][1:v][2:v]concat=n=3:v=1:a=0[v]" -map "[v]" -c:v libx264 -pix_fmt yuv420p "{output}"';
-
 /**
  * Walk the descriptive tree, find image/video nodes with `prompt` but no `src`,
  * run the configured TTI/TTV CLI to generate media, and set `src` to the output.
@@ -504,21 +499,13 @@ export async function resolveGeneratedMedia(
       continue;
     }
 
-// Build the CLI command — substitute {input}, {output}
-      const cmd = cli
-        .replace(/\{input\}/g, prompt.replace(/"/g, '\\"'))
-      .replace(/\{output\}/g, outputPath);
-
     try {
       console.log(`  🔊 ${label}: ${safeId}...`);
       const ttiCmd = clone.tti ?? options.ttiCli ?? DEFAULT_TTI_CLI;
-      execSync(cmd, {
-        encoding: "utf-8",
-        stdio: ["pipe", "pipe", "pipe"],
-        timeout: 300_000, // 5 min
-        env: { ...process.env, TTI_CMD: ttiCmd },
-      });
-      if (existsSync(outputPath)) {
+      const result = type === "image"
+        ? generateTTI(prompt, outputPath, cli)
+        : generateTTV(prompt, outputPath, cli, ttiCmd);
+      if (result) {
         node.src = outputPath;
         updateCache(cache, `gen:${safeId}`, cacheKey, outputPath);
         cacheDirty = true;

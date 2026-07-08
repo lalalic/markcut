@@ -5,22 +5,21 @@ import { tmpdir } from "node:os";
 import { resolveMediaDurations, resolveScripts, resolveSubtitles, resolveGeneratedMedia } from "./resolve";
 import type { DescriptiveRoot } from "./compiler";
 
-// ── Mock generateTTS ──────────────────────────────────────────────────────
+// ── Mock CLI tools ────────────────────────────────────────────────────────
 
-vi.mock("../render/tts", () => ({
+vi.mock("../render/cli-tools", () => ({
   generateTTS: vi.fn(),
+  generateSTT: vi.fn(),
+  generateTTI: vi.fn(),
+  generateTTV: vi.fn(),
+  // Default CLI templates (needed by resolve.ts imports)
+  DEFAULT_TTS_CLI: 'echo tts {input} > {output}',
+  DEFAULT_STT_CLI: 'echo stt {input} > {output}',
+  DEFAULT_TTI_CLI: 'echo tti {input} > {output}',
+  DEFAULT_TTV_CLI: '',
 }));
 
-import { generateTTS } from "../render/tts";
-
-// ── Mock child_process for functions that call exec/execSync ───────────────
-
-vi.mock("node:child_process", () => ({
-  execSync: vi.fn(),
-  exec: vi.fn(),
-}));
-
-import { execSync, exec } from "node:child_process";
+import { generateTTS, generateSTT, generateTTI, generateTTV } from "../render/cli-tools";
 
 let tmpDir: string;
 
@@ -57,8 +56,8 @@ describe("resolveScripts", () => {
     // When no ttsCli override, falls back to DEFAULT_TTS_CLI
     expect(generateTTS).toHaveBeenCalledWith(
       "Hello world",
-      expect.stringContaining("Hook.wav"),
-      expect.stringContaining("edge-tts"),
+      expect.stringContaining("Hook.mp3"),
+      expect.stringContaining("tts"),
     );
   });
 
@@ -109,11 +108,9 @@ describe("resolveSubtitles", () => {
     const audioPath = join(tmpDir, "narration.wav");
     writeFileSync(audioPath, "fake-audio");
 
-    // exec writes a VTT file (callback-style)
-    (exec as any).mockImplementation((_cmd: string, _opts: any, cb: Function) => {
+    (generateSTT as any).mockImplementation(async () => {
       writeFileSync(join(tmpDir, "narration.vtt"),
         "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\nHello world\n");
-      cb(null, "", "");
     });
 
     const root: DescriptiveRoot = {
@@ -149,7 +146,7 @@ describe("resolveSubtitles", () => {
 describe("resolveGeneratedMedia", () => {
   it("generates image from prompt via TTI CLI", async () => {
     const out = join(tmpDir, "image-0.png");
-    (execSync as any).mockImplementation(() => { writeFileSync(out, "fake-png"); });
+    (generateTTI as any).mockReturnValue(out);
 
     const root: DescriptiveRoot = {
       children: [{
@@ -161,15 +158,16 @@ describe("resolveGeneratedMedia", () => {
     const result = await resolveGeneratedMedia(root, { outputDir: tmpDir, ttiCli: "gen-img --prompt {input} --out {output}" });
     const img = (result.children[0] as any).children[0];
     expect(img.src).toBe(out);
-    expect(execSync).toHaveBeenCalledWith(
-      'gen-img --prompt sunset --out ' + join(tmpDir, "image-0.png"),
-      expect.objectContaining({ stdio: ["pipe", "pipe", "pipe"] }),
+    expect(generateTTI).toHaveBeenCalledWith(
+      "sunset",
+      join(tmpDir, "image-0.png"),
+      "gen-img --prompt {input} --out {output}",
     );
   });
 
   it("generates video from prompt via TTV CLI", async () => {
     const out = join(tmpDir, "video-0.mp4");
-    (execSync as any).mockImplementation(() => { writeFileSync(out, "fake-mp4"); });
+    (generateTTV as any).mockReturnValue(out);
 
     const root: DescriptiveRoot = {
       children: [{
@@ -181,9 +179,11 @@ describe("resolveGeneratedMedia", () => {
     const result = await resolveGeneratedMedia(root, { outputDir: tmpDir, ttvCli: "gen-vid --prompt {input} --out {output}" });
     const vid = (result.children[0] as any).children[0];
     expect(vid.src).toBe(out);
-    expect(execSync).toHaveBeenCalledWith(
-      'gen-vid --prompt ocean waves --out ' + join(tmpDir, "video-0.mp4"),
-      expect.objectContaining({ stdio: ["pipe", "pipe", "pipe"] }),
+    expect(generateTTV).toHaveBeenCalledWith(
+      "ocean waves",
+      join(tmpDir, "video-0.mp4"),
+      "gen-vid --prompt {input} --out {output}",
+      expect.any(String), // ttiCmd defaults to DEFAULT_TTI_CLI
     );
   });
 
@@ -196,12 +196,13 @@ describe("resolveGeneratedMedia", () => {
     };
 
     await resolveGeneratedMedia(root, { outputDir: tmpDir });
-    expect(execSync).not.toHaveBeenCalled();
+    expect(generateTTI).not.toHaveBeenCalled();
+    expect(generateTTV).not.toHaveBeenCalled();
   });
 
   it("uses default TTI CLI when no options or root.tti provided", async () => {
     const out = join(tmpDir, "image-0.png");
-    (execSync as any).mockImplementation(() => { writeFileSync(out, "fake-png"); });
+    (generateTTI as any).mockReturnValue(out);
 
     const root: DescriptiveRoot = {
       children: [{
@@ -211,17 +212,14 @@ describe("resolveGeneratedMedia", () => {
     };
 
     await resolveGeneratedMedia(root, { outputDir: tmpDir });
-    // Should use DEFAULT_TTI_CLI (pi agent) when nothing else specified
-    expect(execSync).toHaveBeenCalledTimes(1);
-    const cmd = (execSync as any).mock.calls[0][0] as string;
-    expect(cmd).toContain("pi");
-    expect(cmd).toContain("generate image");
-    expect(cmd).toContain("default test");
+    expect(generateTTI).toHaveBeenCalledTimes(1);
+    const prompt = (generateTTI as any).mock.calls[0][0];
+    expect(prompt).toBe("default test");
   });
 
   it("root.tti overrides options.ttiCli", async () => {
     const out = join(tmpDir, "image-0.png");
-    (execSync as any).mockImplementation(() => { writeFileSync(out, "fake-png"); });
+    (generateTTI as any).mockReturnValue(out);
 
     const root: DescriptiveRoot = {
       tti: "root-tti {input} --out {output}",
@@ -232,15 +230,16 @@ describe("resolveGeneratedMedia", () => {
     };
 
     await resolveGeneratedMedia(root, { outputDir: tmpDir, ttiCli: "option-tti {input}" });
-    expect(execSync).toHaveBeenCalledWith(
-      'root-tti override test --out ' + join(tmpDir, "image-0.png"),
-      expect.anything(),
+    expect(generateTTI).toHaveBeenCalledWith(
+      "override test",
+      join(tmpDir, "image-0.png"),
+      "root-tti {input} --out {output}",
     );
   });
 
   it("options.ttiCli overrides default when no root.tti", async () => {
     const out = join(tmpDir, "image-0.png");
-    (execSync as any).mockImplementation(() => { writeFileSync(out, "fake-png"); });
+    (generateTTI as any).mockReturnValue(out);
 
     const root: DescriptiveRoot = {
       children: [{
@@ -250,15 +249,15 @@ describe("resolveGeneratedMedia", () => {
     };
 
     await resolveGeneratedMedia(root, { outputDir: tmpDir, ttiCli: "custom-tti --prompt {input} --out {output}" });
-    expect(execSync).toHaveBeenCalledWith(
-      'custom-tti --prompt test --out ' + join(tmpDir, "image-0.png"),
-      expect.anything(),
+    expect(generateTTI).toHaveBeenCalledWith(
+      "test",
+      join(tmpDir, "image-0.png"),
+      "custom-tti --prompt {input} --out {output}",
     );
   });
 
-  it("skips node when execSync produces no output file", async () => {
-    // execSync succeeds but writes nothing
-    (execSync as any).mockReturnValue(Buffer.from(""));
+  it("skips node when generateTTI produces no output", async () => {
+    (generateTTI as any).mockReturnValue("");
 
     const root: DescriptiveRoot = {
       children: [{
@@ -270,11 +269,11 @@ describe("resolveGeneratedMedia", () => {
     const result = await resolveGeneratedMedia(root, { outputDir: tmpDir, ttiCli: "gen {input}" });
     const img = (result.children[0] as any).children[0];
     expect(img.src).toBeUndefined();
-    expect(execSync).toHaveBeenCalledTimes(1);
+    expect(generateTTI).toHaveBeenCalledTimes(1);
   });
 
-  it("continues when execSync throws", async () => {
-    (execSync as any).mockImplementation(() => { throw new Error("CLI not found"); });
+  it("continues when generateTTI throws", async () => {
+    (generateTTI as any).mockImplementation(() => { throw new Error("CLI not found"); });
 
     const root: DescriptiveRoot = {
       children: [{
@@ -287,15 +286,16 @@ describe("resolveGeneratedMedia", () => {
     const img = (result.children[0] as any).children[0];
     expect(img.src).toBeUndefined();
     // Does NOT throw — error is caught and logged
-    expect(execSync).toHaveBeenCalledTimes(1);
+    expect(generateTTI).toHaveBeenCalledTimes(1);
   });
 
-  it("caches generated output and skips second execSync call", async () => {
+  it("caches generated output and skips second generateTTI call", async () => {
     const out = join(tmpDir, "image-0.png");
     let callCount = 0;
-    (execSync as any).mockImplementation(() => {
+    (generateTTI as any).mockImplementation((_p: string, outputPath: string) => {
       callCount++;
       writeFileSync(out, "fake-png");
+      return outputPath;
     });
 
     const root: DescriptiveRoot = {
@@ -311,16 +311,16 @@ describe("resolveGeneratedMedia", () => {
 
     // Second call on same root with same prompt — should use cache
     const result = await resolveGeneratedMedia(root, { outputDir: tmpDir, ttiCli: "gen {input}" });
-    // execSync not called again (cache hit)
+    // generateTTI not called again (cache hit)
     expect(callCount).toBe(1);
     const img = (result.children[0] as any).children[0];
     expect(img.src).toBe(out);
   });
 
   it("processes multiple image nodes with prompts", async () => {
-    (execSync as any)
-      .mockImplementationOnce(() => { writeFileSync(join(tmpDir, "image-0.png"), "a"); })
-      .mockImplementationOnce(() => { writeFileSync(join(tmpDir, "image-1.png"), "b"); });
+    (generateTTI as any)
+      .mockReturnValueOnce(join(tmpDir, "image-0.png"))
+      .mockReturnValueOnce(join(tmpDir, "image-1.png"));
 
     const root: DescriptiveRoot = {
       children: [{
@@ -336,7 +336,7 @@ describe("resolveGeneratedMedia", () => {
     const images = (result.children[0] as any).children;
     expect(images[0].src).toBe(join(tmpDir, "image-0.png"));
     expect(images[1].src).toBe(join(tmpDir, "image-1.png"));
-    expect(execSync).toHaveBeenCalledTimes(2);
+    expect(generateTTI).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -480,9 +480,10 @@ describe("resolveSubtitles — additional", () => {
   it("respects root.stt override", async () => {
     const audioPath = join(tmpDir, "n.wav");
     writeFileSync(audioPath, "fake");
-    (exec as any).mockImplementation((_cmd: string, _opts: any, cb: Function) => {
+    (generateSTT as any).mockResolvedValue(undefined);
+    // generateSTT writes the VTT file — simulate that
+    const origImpl = (generateSTT as any).mockImplementation(async () => {
       writeFileSync(join(tmpDir, "n.vtt"), "WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nhi\n");
-      cb(null, "", "");
     });
 
     const root: DescriptiveRoot = {
@@ -495,21 +496,16 @@ describe("resolveSubtitles — additional", () => {
     };
 
     await resolveSubtitles(root, { outputDir: tmpDir });
-    expect(exec).toHaveBeenCalledWith(
-      'custom-stt ' + audioPath + ' --out ' + tmpDir,
-      expect.objectContaining({ timeout: 120000 }),
-      expect.any(Function),
-    );
+    expect(generateSTT).toHaveBeenCalledWith(audioPath, tmpDir, "custom-stt {input} --out {output}");
   });
 
-  it("caches STT output and skips second exec", async () => {
+  it("caches STT output and skips second generateSTT call", async () => {
     const audioPath = join(tmpDir, "cached.wav");
     writeFileSync(audioPath, "fake");
     let callCount = 0;
-    (exec as any).mockImplementation((_cmd: string, _opts: any, cb: Function) => {
+    (generateSTT as any).mockImplementation(async () => {
       callCount++;
       writeFileSync(join(tmpDir, "cached.vtt"), "WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nok\n");
-      cb(null, "", "");
     });
 
     const root: DescriptiveRoot = {
@@ -527,12 +523,10 @@ describe("resolveSubtitles — additional", () => {
     expect(callCount).toBe(1); // cached
   });
 
-  it("skips gracefully when exec callback receives error", async () => {
+  it("skips gracefully when generateSTT throws", async () => {
     const audioPath = join(tmpDir, "fail.wav");
     writeFileSync(audioPath, "fake");
-    (exec as any).mockImplementation((_cmd: string, _opts: any, cb: Function) => {
-      cb(new Error("whisper not found"));
-    });
+    (generateSTT as any).mockRejectedValue(new Error("whisper not found"));
 
     const root: DescriptiveRoot = {
       children: [{
@@ -544,7 +538,7 @@ describe("resolveSubtitles — additional", () => {
 
     const result = await resolveSubtitles(root, { outputDir: tmpDir });
     expect(result.subtitle).toBeUndefined();
-    expect(exec).toHaveBeenCalledTimes(1);
+    expect(generateSTT).toHaveBeenCalledTimes(1);
   });
 
   it("merges VTT from multiple audio clips with correct offsets", async () => {
@@ -552,14 +546,12 @@ describe("resolveSubtitles — additional", () => {
     const a2 = join(tmpDir, "clip2.wav");
     writeFileSync(a1, "fake");
     writeFileSync(a2, "fake");
-    (exec as any)
-      .mockImplementationOnce((_cmd: string, _opts: any, cb: Function) => {
+    (generateSTT as any)
+      .mockImplementationOnce(async () => {
         writeFileSync(join(tmpDir, "clip1.vtt"), "WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nfirst\n");
-        cb(null, "", "");
       })
-      .mockImplementationOnce((_cmd: string, _opts: any, cb: Function) => {
+      .mockImplementationOnce(async () => {
         writeFileSync(join(tmpDir, "clip2.vtt"), "WEBVTT\n\n00:00:00.500 --> 00:00:01.500\nsecond\n");
-        cb(null, "", "");
       });
 
     const root: any = {
@@ -587,9 +579,8 @@ describe("resolveSubtitles — additional", () => {
   it("handles empty VTT from STT CLI (no cues)", async () => {
     const audioPath = join(tmpDir, "empty.wav");
     writeFileSync(audioPath, "fake");
-    (exec as any).mockImplementation((_cmd: string, _opts: any, cb: Function) => {
+    (generateSTT as any).mockImplementation(async () => {
       writeFileSync(join(tmpDir, "empty.vtt"), "WEBVTT\n\n");
-      cb(null, "", "");
     });
 
     const root: any = {
@@ -610,7 +601,7 @@ describe("resolveSubtitles — additional", () => {
 describe("resolveGeneratedMedia — TTV additional", () => {
   it("uses default TTV CLI when no options or root.ttv provided", async () => {
     const out = join(tmpDir, "video-0.mp4");
-    (execSync as any).mockImplementation(() => { writeFileSync(out, "fake-mp4"); });
+    (generateTTV as any).mockReturnValue(out);
 
     const root: DescriptiveRoot = {
       children: [{
@@ -620,15 +611,16 @@ describe("resolveGeneratedMedia — TTV additional", () => {
     };
 
     await resolveGeneratedMedia(root, { outputDir: tmpDir });
-    expect(execSync).toHaveBeenCalledTimes(1);
-    const cmd = (execSync as any).mock.calls[0][0] as string;
-    expect(cmd).toContain("pi");
-    expect(cmd).toContain("generate video");
+    expect(generateTTV).toHaveBeenCalledTimes(1);
+    // Default TTV: empty CLI → generateTTV calls generateTTI + ffmpeg internally
+    const [prompt, , cli] = (generateTTV as any).mock.calls[0];
+    expect(prompt).toBe("waves");
+    expect(cli).toBe("");
   });
 
   it("root.ttv overrides options.ttvCli", async () => {
     const out = join(tmpDir, "video-0.mp4");
-    (execSync as any).mockImplementation(() => { writeFileSync(out, "fake-mp4"); });
+    (generateTTV as any).mockReturnValue(out);
 
     const root: DescriptiveRoot = {
       ttv: "root-ttv {input} --out {output}",
@@ -639,15 +631,17 @@ describe("resolveGeneratedMedia — TTV additional", () => {
     };
 
     await resolveGeneratedMedia(root, { outputDir: tmpDir, ttvCli: "option-ttv {input}" });
-    expect(execSync).toHaveBeenCalledWith(
-      'root-ttv test --out ' + join(tmpDir, "video-0.mp4"),
-      expect.anything(),
+    expect(generateTTV).toHaveBeenCalledWith(
+      "test",
+      join(tmpDir, "video-0.mp4"),
+      "root-ttv {input} --out {output}",
+      expect.any(String),
     );
   });
 
   it("options.ttvCli overrides default when no root.ttv", async () => {
     const out = join(tmpDir, "video-0.mp4");
-    (execSync as any).mockImplementation(() => { writeFileSync(out, "fake-mp4"); });
+    (generateTTV as any).mockReturnValue(out);
 
     const root: DescriptiveRoot = {
       children: [{
@@ -657,18 +651,21 @@ describe("resolveGeneratedMedia — TTV additional", () => {
     };
 
     await resolveGeneratedMedia(root, { outputDir: tmpDir, ttvCli: "custom-ttv {input} --out {output}" });
-    expect(execSync).toHaveBeenCalledWith(
-      'custom-ttv test --out ' + join(tmpDir, "video-0.mp4"),
-      expect.anything(),
+    expect(generateTTV).toHaveBeenCalledWith(
+      "test",
+      join(tmpDir, "video-0.mp4"),
+      "custom-ttv {input} --out {output}",
+      expect.any(String),
     );
   });
 
-  it("caches TTV output and skips second execSync", async () => {
+  it("caches TTV output and skips second generateTTV call", async () => {
     const out = join(tmpDir, "video-0.mp4");
     let callCount = 0;
-    (execSync as any).mockImplementation(() => {
+    (generateTTV as any).mockImplementation(() => {
       callCount++;
       writeFileSync(out, "fake");
+      return out;
     });
 
     const root: DescriptiveRoot = {
@@ -685,8 +682,8 @@ describe("resolveGeneratedMedia — TTV additional", () => {
     expect((result.children[0] as any).children[0].src).toBe(out);
   });
 
-  it("skips node when execSync produces no output for TTV", async () => {
-    (execSync as any).mockReturnValue(Buffer.from(""));
+  it("skips node when generateTTV produces no output", async () => {
+    (generateTTV as any).mockReturnValue("");
 
     const root: DescriptiveRoot = {
       children: [{
@@ -699,8 +696,8 @@ describe("resolveGeneratedMedia — TTV additional", () => {
     expect((result.children[0] as any).children[0].src).toBeUndefined();
   });
 
-  it("continues when execSync throws for TTV", async () => {
-    (execSync as any).mockImplementation(() => { throw new Error("CLI not found"); });
+  it("continues when generateTTV throws", async () => {
+    (generateTTV as any).mockImplementation(() => { throw new Error("CLI not found"); });
 
     const root: DescriptiveRoot = {
       children: [{
@@ -711,13 +708,13 @@ describe("resolveGeneratedMedia — TTV additional", () => {
 
     const result = await resolveGeneratedMedia(root, { outputDir: tmpDir, ttvCli: "gen {input}" });
     expect((result.children[0] as any).children[0].src).toBeUndefined();
-    expect(execSync).toHaveBeenCalledTimes(1);
+    expect(generateTTV).toHaveBeenCalledTimes(1);
   });
 
   it("processes multiple video nodes with prompts", async () => {
-    (execSync as any)
-      .mockImplementationOnce(() => { writeFileSync(join(tmpDir, "video-0.mp4"), "a"); })
-      .mockImplementationOnce(() => { writeFileSync(join(tmpDir, "video-1.mp4"), "b"); });
+    (generateTTV as any)
+      .mockReturnValueOnce(join(tmpDir, "video-0.mp4"))
+      .mockReturnValueOnce(join(tmpDir, "video-1.mp4"));
 
     const root: DescriptiveRoot = {
       children: [{
@@ -733,7 +730,7 @@ describe("resolveGeneratedMedia — TTV additional", () => {
     const vids = (result.children[0] as any).children;
     expect(vids[0].src).toBe(join(tmpDir, "video-0.mp4"));
     expect(vids[1].src).toBe(join(tmpDir, "video-1.mp4"));
-    expect(execSync).toHaveBeenCalledTimes(2);
+    expect(generateTTV).toHaveBeenCalledTimes(2);
   });
 });
 
