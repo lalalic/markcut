@@ -351,7 +351,6 @@ export async function resolveSubtitles(
   const mergedLines: string[] = ["WEBVTT", ""];
   let cueIndex = 1;
 
-  let sttCachedCount = 0;
   let sttFailedCount = 0;
 
   for (const { audioSrc, offset } of clips) {
@@ -364,25 +363,25 @@ export async function resolveSubtitles(
     const clipName = audioSrc.split("/").pop()!;
 
     let vttPath: string | null = null;
+    // Cache per-clip STT by audio hash + CLI (individual VTT files are stable)
     const cachedVtt = checkCache(cache, sttKey, sttCacheKey);
     if (cachedVtt) {
       vttPath = cachedVtt;
-      sttCachedCount++;
     } else {
       try {
         await generateSTT(audioSrc, options.outputDir, sttCli);
+        // Find generated VTT file
+        const base = audioSrc.replace(/\.wav$/, "").replace(/\.mp3$/, "");
+        const name = base.split("/").pop()!;
+        const candidate = join(options.outputDir, `${name}.vtt`);
+        if (existsSync(candidate)) {
+          vttPath = candidate;
+          updateCache(cache, sttKey, sttCacheKey, vttPath);
+          cacheDirty = true;
+        }
       } catch {
         console.warn(`  ⚠ STT failed for ${clipName}. Install whisper (pip install openai-whisper) or set root.stt.`);
         sttFailedCount++;
-      }
-      // Find generated VTT file
-      const base = audioSrc.replace(/\.wav$/, "").replace(/\.mp3$/, "");
-      const name = base.split("/").pop()!;
-      const candidate = join(options.outputDir, `${name}.vtt`);
-      if (existsSync(candidate)) {
-        vttPath = candidate;
-        updateCache(cache, sttKey, sttCacheKey, vttPath);
-        cacheDirty = true;
       }
     }
 
@@ -414,9 +413,9 @@ export async function resolveSubtitles(
   }
 
   if (clips.length > 0) {
-    const transcribed = clips.length - sttCachedCount - sttFailedCount;
+    const transcribed = clips.length - sttFailedCount;
     if (transcribed > 0 || sttFailedCount > 0) {
-      console.log(`  📝 STT: ${transcribed} transcribed, ${sttCachedCount} cached${sttFailedCount > 0 ? `, ${sttFailedCount} failed` : ""}`);
+      console.log(`  📝 STT: ${transcribed} transcribed${sttFailedCount > 0 ? `, ${sttFailedCount} failed` : ""}`);
     }
   }
 

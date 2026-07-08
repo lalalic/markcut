@@ -1349,7 +1349,6 @@ async function resolveSubtitles(root, options) {
   );
   const mergedLines = ["WEBVTT", ""];
   let cueIndex = 1;
-  let sttCachedCount = 0;
   let sttFailedCount = 0;
   for (const { audioSrc, offset } of clips) {
     const audioHash = existsSync2(audioSrc) ? createHash("sha1").update(readFileSync(audioSrc)).digest("hex").slice(0, 12) : audioSrc;
@@ -1360,21 +1359,20 @@ async function resolveSubtitles(root, options) {
     const cachedVtt = checkCache(cache, sttKey, sttCacheKey);
     if (cachedVtt) {
       vttPath = cachedVtt;
-      sttCachedCount++;
     } else {
       try {
         await generateSTT(audioSrc, options.outputDir, sttCli);
+        const base = audioSrc.replace(/\.wav$/, "").replace(/\.mp3$/, "");
+        const name = base.split("/").pop();
+        const candidate = join(options.outputDir, `${name}.vtt`);
+        if (existsSync2(candidate)) {
+          vttPath = candidate;
+          updateCache(cache, sttKey, sttCacheKey, vttPath);
+          cacheDirty = true;
+        }
       } catch {
         console.warn(`  \u26A0 STT failed for ${clipName}. Install whisper (pip install openai-whisper) or set root.stt.`);
         sttFailedCount++;
-      }
-      const base = audioSrc.replace(/\.wav$/, "").replace(/\.mp3$/, "");
-      const name = base.split("/").pop();
-      const candidate = join(options.outputDir, `${name}.vtt`);
-      if (existsSync2(candidate)) {
-        vttPath = candidate;
-        updateCache(cache, sttKey, sttCacheKey, vttPath);
-        cacheDirty = true;
       }
     }
     if (!vttPath || !existsSync2(vttPath)) continue;
@@ -1404,9 +1402,9 @@ async function resolveSubtitles(root, options) {
     }
   }
   if (clips.length > 0) {
-    const transcribed = clips.length - sttCachedCount - sttFailedCount;
+    const transcribed = clips.length - sttFailedCount;
     if (transcribed > 0 || sttFailedCount > 0) {
-      console.log(`  \u{1F4DD} STT: ${transcribed} transcribed, ${sttCachedCount} cached${sttFailedCount > 0 ? `, ${sttFailedCount} failed` : ""}`);
+      console.log(`  \u{1F4DD} STT: ${transcribed} transcribed${sttFailedCount > 0 ? `, ${sttFailedCount} failed` : ""}`);
     }
   }
   if (cueIndex > 1) {
