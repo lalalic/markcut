@@ -12,10 +12,10 @@
 # 5. BGM: soft ambient/classical music at very low volume throughout
 
 # Required external packages/components:
-#   - npm:book-cover — renders book cover with title, author, decorative border
-#   - npm:ambient-background — slowly drifting parallax image (subtle motion)
-#   - npm:page-turn — page-turn animation transition between chapters
-#   - npm:progress-bar — reading progress indicator at bottom
+#   - book-cover — renders book cover with title, author, decorative border
+#   - ambient-background — slowly drifting parallax image (subtle motion)
+#   - page-turn — page-turn animation transition between chapters
+#   - progress-bar — reading progress indicator at bottom
 
 # Missing capabilities to add:
 #   - TTS with word-level timestamps for karaoke-style subtitle highlight
@@ -67,7 +67,7 @@ duration:8
 - component duration:8 jsx:"<BookCover title='[Book Title]' author='[Author]' variant='closing' />"
 
 ~~~js imports
-import { BookCover } from "npm:book-cover"
-import { AmbientBackground } from "npm:ambient-background"
-import { ProgressBar } from "npm:progress-bar"
+import { BookCover } from "book-cover"
+import { AmbientBackground } from "ambient-background"
+import { ProgressBar } from "progress-bar"
 ~~~

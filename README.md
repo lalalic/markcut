@@ -35,7 +35,7 @@ storyboard.md  ──[parse]──▶  DescriptiveRoot  ──[compile]──▶
 |---|---|
 | **Markdown input** | Write `## Scene` headings, `- bullet` leaves. Components via `jsx:"<Tag />"` syntax |
 | **JS imports block** | `` ```js imports `` code fence with real ESM `import` statements instead of YAML |
-| **Dynamic components** | Load any React component from npm, GitHub, or any URL via `import { X } from "npm:pkg"` |
+| **Dynamic components** | Load any React component from npm, GitHub, or any URL via `import { X } from "pkg"` |
 | **Tween animation** | `tween(from, to)` function calls in JSX for frame-accurate numeric animation |
 | **Compiled input** | Pre-compiled stream tree for direct Remotion rendering |
 | **TTS narration** | `script` field → edge-tts CLI → WAV audio. Configurable engine (mlx-audio, custom) |
@@ -67,8 +67,8 @@ Components are registered via frontmatter `imports:` or a `` ```js imports `` co
 
 ````
 ```js imports
-import { DeviceMockup } from "npm:mockup-component"
-import { StatCounter } from "npm:stat-counter"
+import { DeviceMockup } from "mockup-component"
+import { StatCounter } from "stat-counter"
 
 // Inline component definition
 export function Greeting({ name }) {

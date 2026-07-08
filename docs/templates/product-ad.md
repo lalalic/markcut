@@ -12,11 +12,11 @@
 # 5. BGM: energetic background music throughout
 
 # Required external packages/components:
-#   - npm:device-mockup — renders phone/laptop/browser mockup with screenshot overlay
-#   - npm:text-reveal — animated text reveal with typing or fade-in effects
-#   - npm:particle-background — animated particle/confetti background
-#   - npm:qr-code — renders QR code component
-#   - npm:countdown-timer — animated countdown for limited-time offers
+#   - device-mockup — renders phone/laptop/browser mockup with screenshot overlay
+#   - text-reveal — animated text reveal with typing or fade-in effects
+#   - particle-background — animated particle/confetti background
+#   - qr-code — renders QR code component
+#   - countdown-timer — animated countdown for limited-time offers
 
 # Missing capabilities to add:
 #   - TTI: generate product hero images from description
@@ -78,10 +78,10 @@ duration:5
 - component duration:5 jsx:"<QRCode url='[landing-url]' size={200} />"
 
 ~~~js imports
-import { TextReveal } from "npm:text-reveal"
-import { DeviceMockup } from "npm:device-mockup"
-import { FeatureCard } from "npm:product-ad-kit"
-import { QRCode } from "npm:qr-code"
+import { TextReveal } from "text-reveal"
+import { DeviceMockup } from "device-mockup"
+import { FeatureCard } from "product-ad-kit"
+import { QRCode } from "qr-code"
 
 export function FeatureCard({ title, description, icon }) {
   return (

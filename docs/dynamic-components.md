@@ -52,7 +52,7 @@ Register remote React components via the `~~~js imports` code fence (markdown) o
 
 ```markdown
 ~~~js imports
-export { BarChart } from "npm:recharts"
+export { BarChart } from "recharts"
 export { Hello } from "git:user/repo/path/to/Hello.tsx"
 export { Badge } from "https://cdn.example.com/components/badge.js"
 
@@ -86,7 +86,7 @@ Then use them in component JSX:
 
 | Pattern | Resolves to | Example |
 |---|---|---|
-| `npm:pkg` | npm package (installed + bundled) | `export { BarChart } from "npm:recharts"` |
+| `pkg` or `npm:pkg` | npm package (installed + bundled) | `export { BarChart } from "recharts"` |
 | `git:user/repo` | GitHub repo source | `export { Comp } from "git:user/repo/src/Comp.tsx"` |
 | `https://...` | Raw URL (used as-is) | `export { X } from "https://cdn.example.com/x.js"` |
 | local path | Filesystem path | `export { X } from "./local/Component.tsx"` |
@@ -97,7 +97,7 @@ Define components directly in the imports block. Dependencies used inside the fu
 
 ```markdown
 ~~~js imports
-import ReactMarkdown from "npm:react-markdown"
+import ReactMarkdown from "react-markdown"
 
 export function Slide({ children }) {
   return <div className="slide"><ReactMarkdown>{children}</ReactMarkdown></div>;
@@ -125,7 +125,7 @@ export function FadeIn({ children }) {
 }
 ~~~
 
-Note: `remotion` and `react` are automatically available in the bundle's external scope — they do NOT need to be imported from `npm:remotion`. However, adding `import { useCurrentFrame } from "remotion"` in the imports block is harmless and makes the dependency explicit.
+Note: `remotion` and `react` are automatically available in the bundle's external scope — they do NOT need to be imported. However, adding `import { useCurrentFrame } from "remotion"` in the imports block is harmless and makes the dependency explicit.
 
 ## 3. Custom Components
 

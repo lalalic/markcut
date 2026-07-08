@@ -12,11 +12,11 @@
 # 5. Rating/verdict scene with star rating component
 
 # Required external packages/components:
-#   - npm:star-rating — renders star/dot rating display with animation
-#   - npm:text-annotation — draws text labels, arrows, circles on top of video
-#   - npm:split-screen — dual video/image side by side comparison layout
-#   - npm:timeline-marker — visual timeline bar showing chapter markers
-#   - npm:cinematic-text — movie-title style text with letterbox
+#   - star-rating — renders star/dot rating display with animation
+#   - text-annotation — draws text labels, arrows, circles on top of video
+#   - split-screen — dual video/image side by side comparison layout
+#   - timeline-marker — visual timeline bar showing chapter markers
+#   - cinematic-text — movie-title style text with letterbox
 
 # Missing capabilities to add:
 #   - Frame capture: extract a still frame from a video clip at a specific timestamp
@@ -68,10 +68,10 @@ duration:8
 - component duration:8 jsx:"<TextOverlay text='Final Verdict' position='center' />"
 
 ~~~js imports
-import { CinematicText } from "npm:cinematic-text"
-import { TextAnnotation } from "npm:text-annotation"
-import { SplitScreen } from "npm:split-screen"
-import { StarRating } from "npm:star-rating"
+import { CinematicText } from "cinematic-text"
+import { TextAnnotation } from "text-annotation"
+import { SplitScreen } from "split-screen"
+import { StarRating } from "star-rating"
 
 export function TextOverlay({ text, position }) {
   const posStyle = position === 'bottom' ? {bottom:40} : position === 'top' ? {top:40} : {top:'50%'}

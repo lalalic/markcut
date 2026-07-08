@@ -78,7 +78,7 @@ function TweenedJsxParser({
 export function ComponentLeaf({ stream }: { stream: Component }) {
   const { fps } = useVideoConfig();
   const { components } = React.useContext(ComposeContext);
-  const bindings = React.useMemo(() => ({ components, ...stream.data }), [stream.data]);
+  const bindings = React.useMemo(() => ({ ...components, ...stream.data }), [stream.data, components]);
 
   if (!stream.jsx) return null;
 

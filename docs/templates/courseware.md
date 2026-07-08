@@ -15,7 +15,7 @@
 
 # Required external packages/components:
 #   - github:user/remotion-engine/src/components/MarpSlide.tsx — Marp markdown slide renderer
-#   - npm:@marp-team/marp-core — Marp markdown parser (loaded dynamically by MarpSlide)
+#   - @marp-team/marp-core — Marp markdown parser (loaded dynamically by MarpSlide)
 
 # Tips:
 # - Use Marp's extended syntax: --- for slide breaks, ## for headings, - for bullets

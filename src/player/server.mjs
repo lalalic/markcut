@@ -57,12 +57,14 @@ let pipelineRunning = false;
 function extractImportEntries(raw) {
   let entries = null;
   let extraSpecs = [];
+  let rawSource = null;
 
   if (IS_MARKDOWN) {
     // Extract ```js imports or ~~~js imports code fence from markdown.
     // Supports both tilde (~) and backtick (`) fence styles (3+ delimiters).
     const match = raw.match(/^(```|~~~)\s*js imports\s*\n([\s\S]*?)^\1\s*$/m);
     if (match) {
+      rawSource = match[2];
       entries = parseImportsBlock(match[2]);
       extraSpecs = extractDependencySpecs(match[2]);
     }
@@ -75,13 +77,14 @@ function extractImportEntries(raw) {
         entries = root.imports;
         extraSpecs = entries.filter(e => e.from).map(e => e.from);
       } else if (root.importsBlock) {
+        rawSource = root.importsBlock;
         entries = parseImportsBlock(root.importsBlock);
         extraSpecs = extractDependencySpecs(root.importsBlock);
       }
     } catch { /* invalid JSON — skip */ }
   }
 
-  return { entries, extraSpecs };
+  return { entries, extraSpecs, rawSource };
 }
 
 /**
@@ -95,7 +98,7 @@ async function loadCompiledRoot() {
 
   // Extract component imports from raw source BEFORE compiling,
   // so the server can bundle them and set compiled.imports directly.
-  const { entries: importEntries, extraSpecs } = extractImportEntries(raw);
+  const { entries: importEntries, extraSpecs, rawSource } = extractImportEntries(raw);
 
   let compiled;
 
@@ -125,9 +128,10 @@ async function loadCompiledRoot() {
   }
 
   // Bundle component imports — sets compiled.imports to the bundle URL
-  if (importEntries && importEntries.length > 0) {
+  const shouldBundle = (importEntries && importEntries.length > 0) || (rawSource && rawSource.trim());
+  if (shouldBundle) {
     try {
-      const bundle = await bundleFromEntries(importEntries, extraSpecs);
+      const bundle = await bundleFromEntries(importEntries || [], extraSpecs, rawSource);
       if (bundle.url) {
         compiled.imports = bundle.url;
         console.log(`  ✅ Components: ${bundle.exports.join(", ")}`);

@@ -12,11 +12,11 @@
 # 5. Route markers and travel mode (DRIVING, WALKING, etc.)
 
 # Required external packages/components:
-#   - npm:location-card — overlay card with location name, coordinates, date
-#   - npm:weather-icon — displays weather icon + temperature for the location
-#   - npm:photo-frame — decorative frame around travel photos
-#   - npm:travel-stats — displays journey stats (distance, duration, stops)
-#   - npm:compass-animation — animated compass rose overlay
+#   - location-card — overlay card with location name, coordinates, date
+#   - weather-icon — displays weather icon + temperature for the location
+#   - photo-frame — decorative frame around travel photos
+#   - travel-stats — displays journey stats (distance, duration, stops)
+#   - compass-animation — animated compass rose overlay
 
 # Missing capabilities to add:
 #   - TTI: generate travel photos from location description + time of day
@@ -70,9 +70,9 @@ duration:8
 - component duration:8 jsx:"<TravelStats distance='[X km]' duration='[Y days]' stops={[stopCount]} variant='summary' />"
 
 ~~~js imports
-import { LocationCard } from "npm:location-card"
-import { WeatherIcon } from "npm:weather-icon"
-import { PhotoFrame } from "npm:photo-frame"
-import { TravelStats } from "npm:travel-stats"
-import { CompassAnimation } from "npm:compass-animation"
+import { LocationCard } from "location-card"
+import { WeatherIcon } from "weather-icon"
+import { PhotoFrame } from "photo-frame"
+import { TravelStats } from "travel-stats"
+import { CompassAnimation } from "compass-animation"
 ~~~

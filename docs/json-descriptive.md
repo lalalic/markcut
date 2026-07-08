@@ -191,7 +191,7 @@ External React components are registered via `root.imports`. In the **descriptiv
 ```json
 {
   "imports": [
-    { "name": "BarChart", "from": "npm:@nivo/bar" },
+    { "name": "BarChart", "from": "@nivo/bar" },
     { "name": "Logo", "from": "git:myorg/assets/src/Logo.tsx" },
     { "name": "Greeting", "jsx": "export default ({name}) => <h1 style={{color:'#fff'}}>Hello {name}</h1>" }
   ]
@@ -211,9 +211,9 @@ External React components are registered via `root.imports`. In the **descriptiv
 
 | Pattern | Resolved by bundler as |
 |---|---|
-| `npm:pkg` | npm package — `npm install pkg`, then `esbuild` re-exports it |
-| `npm:pkg@1.2.3` | npm package with pinned version |
-| `npm:@scope/pkg#module` | npm scoped package |
+| `pkg` or `npm:pkg` | npm package — `npm install pkg`, then `esbuild` re-exports it |
+| `pkg@1.2.3` or `npm:pkg@1.2.3` | npm package with pinned version |
+| `@scope/pkg` or `npm:@scope/pkg` | npm scoped package |
 | `git:user/repo/path` | Raw specifier passed to esbuild; requires the module to be resolvable |
 | `github:user/repo/path` | Same as `git:` |
 | `https://...`, `http://...` | Raw URL passed directly to esbuild as an external |

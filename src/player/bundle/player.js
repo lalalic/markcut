@@ -41992,6 +41992,7 @@ function TweenedJsxParser({
 function ComponentLeaf({ stream: stream2 }) {
   const { fps } = useVideoConfig();
   const { components } = React26.useContext(ComposeContext);
+  const bindings = React26.useMemo(() => ({ ...components, ...stream2.data }), [stream2.data, components]);
   if (!stream2.jsx) return null;
   return /* @__PURE__ */ (0, import_jsx_runtime80.jsx)(import_jsx_runtime80.Fragment, { children: stream2.actions.map((a2) => {
     const start = a2.start ?? 0;
@@ -42007,7 +42008,7 @@ function ComponentLeaf({ stream: stream2 }) {
           {
             jsx: stream2.jsx,
             components,
-            data: stream2.data,
+            data: bindings,
             action: a2
           }
         )

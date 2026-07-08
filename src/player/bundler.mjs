@@ -116,26 +116,48 @@ function getSharedExternals() {
  *
  * @param {Array<{name:string, from?:string, jsx?:string, exports?:string}>} entries  — export entries (component registrations)
  * @param {string[]} [extraSpecs]  — additional dependency specs from import statements (e.g. ["react", "npm:lodash"])
+ * @param {string} [rawSource]  — optional raw imports block source. If provided, used as the bundle entry
+ *   instead of rebuilding from entries. Entries/extraSpecs are still used for dependency resolution.
  * @returns {Promise<{url:string|null, exports:string[]}>}
  */
-export async function bundleFromEntries(entries, extraSpecs = []) {
-  if ((!entries || entries.length === 0) && extraSpecs.length === 0) return { url: null, exports: [] };
+export async function bundleFromEntries(entries, extraSpecs = [], rawSource = null) {
+  const hasEntries = entries && entries.length > 0;
+  const hasRaw = rawSource && rawSource.trim();
 
   // Separate npm imports from inline function definitions
   const npmDeps = [];
   const inlineFuncs = [];
 
-  for (const entry of entries || []) {
-    if (entry.from) {
-      const { pkgName, importSpecifier } = parseNpmSpec(entry.from);
-      const exportName = entry.exports || "default";
-      npmDeps.push({ name: entry.name, pkgName, importSpecifier, exportName });
-    } else if (entry.jsx) {
-      inlineFuncs.push({ name: entry.name, source: entry.jsx });
+  if (hasRaw) {
+    // Strip npm: prefixes from the raw source so esbuild can resolve them
+    rawSource = rawSource.replace(/from\s+["'`]npm:([^"'`]+)["'`]/g, 'from "$1"');
+
+    // Extract deps from raw source using the same pattern as extractDependencySpecs
+    const fromRe = /from\s+["'`](.+?)["'`]\s*;?\s*$/gm;
+    let m;
+    while ((m = fromRe.exec(rawSource)) !== null) {
+      extraSpecs.push(m[1]);
+    }
+    // Also catch bare side-effect imports: import "spec"
+    const bareRe = /^import\s+["'`](.+?)["'`]\s*;?\s*$/gm;
+    while ((m = bareRe.exec(rawSource)) !== null) {
+      extraSpecs.push(m[1]);
     }
   }
 
-  // Add extra dependency specs (from import statements) that don't overlap with existing npmDeps
+  if (hasEntries) {
+    for (const entry of entries) {
+      if (entry.from) {
+        const { pkgName, importSpecifier } = parseNpmSpec(entry.from);
+        const exportName = entry.exports || "default";
+        npmDeps.push({ name: entry.name, pkgName, importSpecifier, exportName });
+      } else if (entry.jsx) {
+        inlineFuncs.push({ name: entry.name, source: entry.jsx });
+      }
+    }
+  }
+
+  // Add extra dependency specs that don't overlap with existing npmDeps
   const existingPkgs = new Set(npmDeps.map(d => d.pkgName));
   for (const spec of extraSpecs) {
     const { pkgName, importSpecifier } = parseNpmSpec(spec);
@@ -146,17 +168,11 @@ export async function bundleFromEntries(entries, extraSpecs = []) {
   }
 
   // Extract dependencies from inline function sources.
-  // Inline functions (export function X() {...}) often contain `import ... from "pkg"`
-  // statements (prepended by extractImportLines in the compiler). These packages
-  // must be in package.json for esbuild to resolve them. The server only passes
-  // `entry.from` specs via extraSpecs — import statements inside inline defs
-  // are invisible to the server, so we scan them here.
   for (const inline of inlineFuncs) {
     const re = /from\s+["'`](npm:)?([^"'`\s]+)["'`]/g;
     let m;
     while ((m = re.exec(inline.source)) !== null) {
       const { pkgName, importSpecifier } = parseNpmSpec(m[2]);
-      // Skip relative paths (./foo, ../foo) and bare URL imports
       if (pkgName.startsWith(".") || /^https?:/.test(pkgName)) continue;
       if (!existingPkgs.has(pkgName)) {
         existingPkgs.add(pkgName);
@@ -165,15 +181,19 @@ export async function bundleFromEntries(entries, extraSpecs = []) {
     }
   }
 
-  if (npmDeps.length === 0 && inlineFuncs.length === 0) return { url: null, exports: [] };
+  if (npmDeps.length === 0 && inlineFuncs.length === 0 && !hasRaw) return { url: null, exports: [] };
 
-  // Create a stable hash from sorted entries
-  const all = [...npmDeps, ...inlineFuncs].sort((a, b) => a.name.localeCompare(b.name));
-  const hashInput = all.map(e => {
-    const kind = e.source ? "inline:" : "npm:";
-    const detail = e.source || e.importSpecifier + "+" + e.exportName;
-    return e.name + "=" + kind + detail;
-  }).join(",");
+  // Create a stable hash from sorted inputs
+  const sortedDeps = [...npmDeps].sort((a, b) => a.name.localeCompare(b.name));
+  const sortedFuncs = [...inlineFuncs].sort((a, b) => a.name.localeCompare(b.name));
+  const all = [...sortedDeps, ...sortedFuncs];
+  const hashInput = hasRaw
+    ? rawSource
+    : all.map(e => {
+        const kind = e.source ? "inline:" : "npm:";
+        const detail = e.source || e.importSpecifier + "+" + e.exportName;
+        return e.name + "=" + kind + detail;
+      }).join(",");
   const hash = createHash("md5").update(hashInput).digest("hex").slice(0, 8);
 
   if (BUNDLED.has(hash)) return BUNDLED.get(hash);
@@ -188,34 +208,38 @@ export async function bundleFromEntries(entries, extraSpecs = []) {
   }
   writeFileSync(join(dir, "package.json"), JSON.stringify(pkgJson, null, 2));
 
-  // Build index.js — one file per inline function + re-exports for npm
-  const lines = [];
-  for (const inline of inlineFuncs) {
-    writeFileSync(join(dir, inline.name + ".jsx"), inline.source + "\n");
-    lines.push("export { " + inline.name + " } from \"./" + inline.name + '.jsx";');
-  }
-  for (const dep of npmDeps) {
-    if (dep.exportName === null) {
-      // Side-effect / internal dep — add bare import so the module is loaded
-      // for its side effects (e.g. `import "@remotion/tailwind-v4"`).
-      // Inline function sources may also import this package, but a second
-      // bare import is harmless (ESM caches the module).
-      lines.push('import "' + dep.importSpecifier + '";');
-      continue;
+  // Build index.js / index.jsx
+  let lines;
+  let entryFile = "index.js";
+  if (hasRaw) {
+    // Use raw source directly as the entry — preserves console.log, imports, exports, everything
+    // Name it .jsx so esbuild enables JSX parsing automatically
+    entryFile = "index.jsx";
+    lines = [rawSource];
+  } else {
+    lines = [];
+    for (const inline of inlineFuncs) {
+      writeFileSync(join(dir, inline.name + ".jsx"), inline.source + "\n");
+      lines.push("export { " + inline.name + " } from \"./" + inline.name + '.jsx";');
     }
-    if (dep.exportName === "default") {
-      // Default export: use namespace import with fallback chain
-      lines.push(
-        'import * as __' + dep.name + ' from "' + dep.importSpecifier + '";' +
-        '\nconst ' + dep.name + ' = __' + dep.name + '.default ?? __' + dep.name + '.' + dep.name +
-        ' ?? Object.values(__' + dep.name + ').find(v => typeof v === "function" || v?.$$typeof);' +
-        '\nexport { ' + dep.name + ' };'
-      );
-    } else {
-      lines.push('export { ' + dep.exportName + ' as ' + dep.name + ' } from "' + dep.importSpecifier + '";');
+    for (const dep of npmDeps) {
+      if (dep.exportName === null) {
+        lines.push('import "' + dep.importSpecifier + '";');
+        continue;
+      }
+      if (dep.exportName === "default") {
+        lines.push(
+          'import * as __' + dep.name + ' from "' + dep.importSpecifier + '";' +
+          '\nconst ' + dep.name + ' = __' + dep.name + '.default ?? __' + dep.name + '.' + dep.name +
+          ' ?? Object.values(__' + dep.name + ').find(v => typeof v === "function" || v?.$$typeof);' +
+          '\nexport { ' + dep.name + ' };'
+        );
+      } else {
+        lines.push('export { ' + dep.exportName + ' as ' + dep.name + ' } from "' + dep.importSpecifier + '";');
+      }
     }
   }
-  writeFileSync(join(dir, "index.js"), lines.join("\n\n") + "\n");
+  writeFileSync(join(dir, entryFile), lines.join("\n\n") + "\n");
 
   // npm install (skip if node_modules already exists)
   if (!existsSync(join(dir, "node_modules"))) {
@@ -236,11 +260,6 @@ export async function bundleFromEntries(entries, extraSpecs = []) {
   }
 
   // Bundle with esbuild
-  // Externalize shared packages (React, Remotion, @remotion/*) so the component
-  // bundle uses the same instances already loaded in the main player.js via import map.
-  // Also externalize node: protocol imports (node:module, etc.) which are not
-  // available in browser contexts — some packages use them for build-time helpers
-  // that aren't actually called during rendering.
   const outFile = join(CACHE_DIR, hash + ".js");
   const externals = getSharedExternals();
   const externalArgs = [
@@ -251,7 +270,7 @@ export async function bundleFromEntries(entries, extraSpecs = []) {
     console.log("  \ud83d\udd27 Bundling components \u2192 " + hash + ".js");
     try {
       execSync(
-        'npx esbuild index.js --bundle --format=esm --outfile="' + outFile + '" ' +
+        'npx esbuild ' + entryFile + ' --bundle --format=esm --outfile="' + outFile + '" ' +
         externalArgs + " " +
         "--platform=browser --target=es2020",
         { cwd: dir, stdio: "pipe", timeout: 30000 }
@@ -264,9 +283,34 @@ export async function bundleFromEntries(entries, extraSpecs = []) {
     console.log("  \ud83d\udce6 Components cached \u2192 " + hash + ".js");
   }
 
+  // Extract export names from raw source for the log message
+  let exportNames;
+  if (hasRaw) {
+    exportNames = [];
+    const exportRe = /export\s+(?:\{([^}]+)\}|function\s+(\w+)|default\s+(\w+))/g;
+    let m;
+    while ((m = exportRe.exec(rawSource)) !== null) {
+      if (m[1]) {
+        // export { Name1, Name2 } or export { Name } from "..."
+        m[1].split(",").forEach(p => {
+          const trimmed = p.trim();
+          if (trimmed) exportNames.push(trimmed);
+        });
+      } else if (m[2]) {
+        // export function Name(...)
+        exportNames.push(m[2]);
+      } else if (m[3]) {
+        // export default Name
+        exportNames.push(m[3]);
+      }
+    }
+  } else {
+    exportNames = all.filter(e => e.exportName !== null).map(e => e.name);
+  }
+
   const result = {
     url: outFile,
-    exports: all.filter(e => e.exportName !== null).map(e => e.name),
+    exports: exportNames,
   };
   BUNDLED.set(hash, result);
   return result;

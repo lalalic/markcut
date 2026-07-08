@@ -76,9 +76,9 @@ Use a `` ~~~js imports `` code fence at end of the document (or anywhere in the 
 
 ```
 ~~~js imports
-export { PieChart } from "npm:recharts"
-export { BarChart, LineChart } from "npm:recharts"
-export { StatCounter as Counter } from "npm:stat-counter"
+export { PieChart } from "recharts"
+export { BarChart, LineChart } from "recharts"
+export { StatCounter as Counter } from "stat-counter"
 
 export function Hello({ name }) {
   return <div style={{color: '#fff'}}>Hello {name}</div>;
@@ -109,9 +109,9 @@ For compatibility, `import { Name } from "spec"` also works and produces the sam
 
 | Prefix | Resolved by bundler as |
 |---|---|
-| `npm:pkg` | npm package — `npm install pkg`, then `esbuild` re-exports it |
-| `npm:pkg@1.2.3` | npm package with pinned version |
-| `npm:@scope/pkg#module` | npm scoped package |
+| `pkg` or `npm:pkg` | npm package — `npm install pkg`, then `esbuild` re-exports it |
+| `pkg@1.2.3` or `npm:pkg@1.2.3` | npm package with pinned version |
+| `@scope/pkg` or `npm:@scope/pkg` | npm scoped package |
 | `git:user/repo/path` | Raw specifier passed to esbuild; requires resolvable module |
 | `github:user/repo/path` | Same as `git:` |
 | `https://...`, `http://...`, path | Used as-is by esbuild |
@@ -277,7 +277,7 @@ Components must be registered via a `` ~~~js imports `` code block. Usage is via
 
 ```md
 ~~~js imports
-import { StatCounter } from "npm:stat-counter"
+import { StatCounter } from "stat-counter"
 import { Logo } from "github:myorg/design#Logo"
 ~~~
 
@@ -429,7 +429,7 @@ fps: 30
 # video
 layout:series
 ~~~js imports
-export { StatCounter } from "npm:stat-counter"
+export { StatCounter } from "stat-counter"
 export { Logo } from "github:myorg/design-system#Logo"
 
 export function Greeting({ name }) {

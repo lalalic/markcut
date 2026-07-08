@@ -12,10 +12,10 @@
 # 5. Scene illustrations should be consistent in style (use same TTI prompt prefix)
 
 # Required external packages/components:
-#   - npm:story-title — animated story title with decorative elements
-#   - npm:speech-bubble — comic-style speech bubble for character dialogue
-#   - npm:particle-effect — falling leaves/snow/stars for atmosphere
-#   - npm:character-display — renders a character portrait with name label
+#   - story-title — animated story title with decorative elements
+#   - speech-bubble — comic-style speech bubble for character dialogue
+#   - particle-effect — falling leaves/snow/stars for atmosphere
+#   - character-display — renders a character portrait with name label
 
 # Missing capabilities to add:
 #   - Character consistency: same character across multiple generated images
@@ -67,7 +67,7 @@ duration:10
 - component duration:10 jsx:"<StoryTitle title='The End' variant='closing' />"
 
 ~~~js imports
-import { StoryTitle } from "npm:story-title"
-import { SpeechBubble } from "npm:speech-bubble"
-import { ParticleEffect } from "npm:particle-effect"
+import { StoryTitle } from "story-title"
+import { SpeechBubble } from "speech-bubble"
+import { ParticleEffect } from "particle-effect"
 ~~~
