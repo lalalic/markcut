@@ -13,9 +13,9 @@ layout:series
 import ReactMarkdown from 'npm:react-markdown';
 import remarkGfm from 'npm:remark-gfm'
 export {Solid} from 'npm:remotion';
-export {checkerboard} from 'npm:@remotion/effects'
+export {checkerboard} from 'npm:@remotion/effects';
 
-
+console.log({checkerboard, Solid})
 
 export function Slide(props) {
   return <div className="slide"><ReactMarkdown remarkPlugins={[remarkGfm]} {...props}/></div>;
@@ -113,7 +113,7 @@ instruction: "an AI video to attract audience"
     <Solid
         width={1280}
         height={720}
-        
+
       />
   ~~~
 - video effects:[fadeIn, fadeOut]

@@ -33,6 +33,37 @@ function getHostDeps() {
 }
 
 /**
+ * Parse an npm specifier into package name and full import specifier.
+ *
+ * Examples:
+ *   "npm:recharts"                   → { pkgName: "recharts",             importSpecifier: "recharts" }
+ *   "npm:react-markdown"             → { pkgName: "react-markdown",      importSpecifier: "react-markdown" }
+ *   "npm:@remotion/effects"          → { pkgName: "@remotion/effects",   importSpecifier: "@remotion/effects" }
+ *   "npm:@remotion/effects/checkerboard" → { pkgName: "@remotion/effects", importSpecifier: "@remotion/effects/checkerboard" }
+ *   "npm:package/sub/path"           → { pkgName: "package",             importSpecifier: "package/sub/path" }
+ *
+ * The pkgName is used for package.json dependencies (npm install).
+ * The importSpecifier is used in import/export statements (esbuild resolves it
+ * via the installed package's exports map).
+ */
+function parseNpmSpec(spec) {
+  const raw = spec.startsWith("npm:") ? spec.slice(4) : spec;
+  // Scoped package: @scope/name[/subpath]
+  if (raw.startsWith("@")) {
+    const parts = raw.split("/");
+    // @scope/name is the package (first two slash-delimited parts)
+    const pkgName = parts.slice(0, 2).join("/");
+    return { pkgName, importSpecifier: raw };
+  }
+  // Unscoped package: package[/subpath]
+  const slashIdx = raw.indexOf("/");
+  if (slashIdx === -1) {
+    return { pkgName: raw, importSpecifier: raw };
+  }
+  return { pkgName: raw.slice(0, slashIdx), importSpecifier: raw };
+}
+
+/**
  * Resolve the best version for a package name.
  * If the host (markcut) already depends on it, use that exact version
  * (e.g. @remotion/player → "4.0.469"). Otherwise use "latest".
@@ -96,9 +127,9 @@ export async function bundleFromEntries(entries, extraSpecs = []) {
 
   for (const entry of entries || []) {
     if (entry.from) {
-      const pkgName = entry.from.startsWith("npm:") ? entry.from.slice(4) : entry.from;
+      const { pkgName, importSpecifier } = parseNpmSpec(entry.from);
       const exportName = entry.exports || "default";
-      npmDeps.push({ name: entry.name, pkgName, exportName });
+      npmDeps.push({ name: entry.name, pkgName, importSpecifier, exportName });
     } else if (entry.jsx) {
       inlineFuncs.push({ name: entry.name, source: entry.jsx });
     }
@@ -107,10 +138,10 @@ export async function bundleFromEntries(entries, extraSpecs = []) {
   // Add extra dependency specs (from import statements) that don't overlap with existing npmDeps
   const existingPkgs = new Set(npmDeps.map(d => d.pkgName));
   for (const spec of extraSpecs) {
-    const pkgName = spec.startsWith("npm:") ? spec.slice(4) : spec;
+    const { pkgName, importSpecifier } = parseNpmSpec(spec);
     if (!existingPkgs.has(pkgName)) {
       existingPkgs.add(pkgName);
-      npmDeps.push({ name: pkgName, pkgName, exportName: null }); // no re-export needed
+      npmDeps.push({ name: importSpecifier, pkgName, importSpecifier, exportName: null }); // no re-export needed
     }
   }
 
@@ -124,12 +155,12 @@ export async function bundleFromEntries(entries, extraSpecs = []) {
     const re = /from\s+["'`](npm:)?([^"'`\s]+)["'`]/g;
     let m;
     while ((m = re.exec(inline.source)) !== null) {
-      const pkgName = m[2];
+      const { pkgName, importSpecifier } = parseNpmSpec(m[2]);
       // Skip relative paths (./foo, ../foo) and bare URL imports
       if (pkgName.startsWith(".") || /^https?:/.test(pkgName)) continue;
       if (!existingPkgs.has(pkgName)) {
         existingPkgs.add(pkgName);
-        npmDeps.push({ name: pkgName, pkgName, exportName: null });
+        npmDeps.push({ name: importSpecifier, pkgName, importSpecifier, exportName: null });
       }
     }
   }
@@ -140,7 +171,7 @@ export async function bundleFromEntries(entries, extraSpecs = []) {
   const all = [...npmDeps, ...inlineFuncs].sort((a, b) => a.name.localeCompare(b.name));
   const hashInput = all.map(e => {
     const kind = e.source ? "inline:" : "npm:";
-    const detail = e.source || e.pkgName + "+" + e.exportName;
+    const detail = e.source || e.importSpecifier + "+" + e.exportName;
     return e.name + "=" + kind + detail;
   }).join(",");
   const hash = createHash("md5").update(hashInput).digest("hex").slice(0, 8);
@@ -169,19 +200,19 @@ export async function bundleFromEntries(entries, extraSpecs = []) {
       // for its side effects (e.g. `import "@remotion/tailwind-v4"`).
       // Inline function sources may also import this package, but a second
       // bare import is harmless (ESM caches the module).
-      lines.push('import "' + dep.pkgName + '";');
+      lines.push('import "' + dep.importSpecifier + '";');
       continue;
     }
     if (dep.exportName === "default") {
       // Default export: use namespace import with fallback chain
       lines.push(
-        'import * as __' + dep.name + ' from "' + dep.pkgName + '";' +
+        'import * as __' + dep.name + ' from "' + dep.importSpecifier + '";' +
         '\nconst ' + dep.name + ' = __' + dep.name + '.default ?? __' + dep.name + '.' + dep.name +
         ' ?? Object.values(__' + dep.name + ').find(v => typeof v === "function" || v?.$$typeof);' +
         '\nexport { ' + dep.name + ' };'
       );
     } else {
-      lines.push('export { ' + dep.exportName + ' as ' + dep.name + ' } from "' + dep.pkgName + '";');
+      lines.push('export { ' + dep.exportName + ' as ' + dep.name + ' } from "' + dep.importSpecifier + '";');
     }
   }
   writeFileSync(join(dir, "index.js"), lines.join("\n\n") + "\n");
