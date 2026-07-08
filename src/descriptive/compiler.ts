@@ -30,25 +30,6 @@ export interface DescriptiveBaseNode {
   start?: number;
 }
 
-/** CLI command template for text-to-speech.
- *  Built-in vars: {input}, {output}.
- *  Default: edge-tts --voice "en-US-GuyNeural" --text "{input}" --write-media "{output}" */
-export type TtsConfig = string;
-
-/** CLI command template for speech-to-text.
- *  Built-in vars: {input}, {output}.
- *  Default: whisper "{input}" --output_format vtt --output_dir "{output}" */
-export type SttConfig = string;
-
-/** CLI command template for text-to-image.
- *  Built-in vars: {input}, {output}.
- *  Default: pi --model agnes-2.0-flash --print "generate image: {input}" --output "{output}" */
-export type TtiConfig = string;
-
-/** CLI command template for text-to-video.
- *  Built-in vars: {input}, {output}.
- *  Default: pi --model agnes-2.0-flash --print "generate video: {input}" --output "{output}" */
-export type TtvConfig = string;
 
 export interface DescriptiveVideo extends DescriptiveBaseNode {
   type: "video";
@@ -879,6 +860,64 @@ function resolveComponentSources(root: DescriptiveRoot): Map<string, ResolvedImp
   return registry;
 }
 
+/** Known HTML/SVG tag names — uppercase first char means component reference. */
+const KNOWN_HTML_TAGS = new Set([
+  "A", "Abbr", "Address", "Area", "Article", "Aside", "Audio",
+  "B", "Base", "Bdi", "Bdo", "Blockquote", "Body", "Br", "Button",
+  "Canvas", "Caption", "Cite", "Code", "Col", "Colgroup", "Data", "Datalist",
+  "Dd", "Del", "Details", "Dfn", "Dialog", "Div", "Dl", "Dt", "Em", "Embed",
+  "Fieldset", "Figcaption", "Figure", "Footer", "Form", "H1", "H2", "H3",
+  "H4", "H5", "H6", "Head", "Header", "Hgroup", "Hr", "Html", "I", "Iframe",
+  "Img", "Input", "Ins", "Kbd", "Label", "Legend", "Li", "Link", "Main",
+  "Map", "Mark", "Menu", "Meta", "Meter", "Nav", "Noscript", "Object", "Ol",
+  "Optgroup", "Option", "Output", "P", "Picture", "Pre", "Progress", "Q",
+  "Rp", "Rt", "Ruby", "S", "Samp", "Script", "Section", "Select", "Slot",
+  "Small", "Source", "Span", "Strong", "Style", "Sub", "Summary", "Sup",
+  "Table", "Tbody", "Td", "Template", "Textarea", "Tfoot", "Th", "Thead",
+  "Time", "Title", "Tr", "Track", "U", "Ul", "Var", "Video", "Wbr",
+  // SVG
+  "Svg", "Circle", "ClipPath", "Defs", "Ellipse", "FeBlend", "FeColorMatrix",
+  "FeComponentTransfer", "FeComposite", "FeConvolveMatrix", "FeDiffuseLighting",
+  "FeDisplacementMap", "FeDistantLight", "FeDropShadow", "FeFlood", "FeFuncA",
+  "FeFuncB", "FeFuncG", "FeFuncR", "FeGaussianBlur", "FeImage", "FeMerge",
+  "FeMergeNode", "FeMorphology", "FeOffset", "FePointLight", "FeSpecularLighting",
+  "FeSpotLight", "FeTile", "FeTurbulence", "Filter", "ForeignObject", "G",
+  "Image", "Line", "LinearGradient", "Marker", "Mask", "Path", "Pattern",
+  "Polygon", "Polyline", "RadialGradient", "Rect", "Stop", "Text",
+  "TextPath", "Tspan", "Use", "View",
+]);
+
+/**
+ * Walk the descriptive tree and warn about JSX component tags
+ * that aren't registered in the imports registry.
+ */
+function warnUnregisteredComponents(root: DescriptiveRoot, registry: Map<string, unknown>): void {
+  const registeredNames = new Set(registry.keys());
+
+  const tagRe = /<\s*\/?\s*([A-Z][a-zA-Z0-9]*)/g;
+  const visit = (node: DescriptiveNode): void => {
+    if (node.type === "component" && node.jsx) {
+      const found = new Set<string>();
+      let m;
+      tagRe.lastIndex = 0;
+      while ((m = tagRe.exec(node.jsx)) !== null) {
+        const tag = m[1]!;
+        if (!registeredNames.has(tag) && !KNOWN_HTML_TAGS.has(tag)) {
+          found.add(tag);
+        }
+      }
+      if (found.size > 0) {
+        console.warn(`  ⚠ ${[...found].sort().join(", ")}: missing from imports`);
+      }
+    }
+    const children = (node as { children?: DescriptiveNode[] }).children;
+    if (Array.isArray(children)) {
+      for (const c of children) visit(c);
+    }
+  };
+  for (const c of root.children) visit(c);
+}
+
 export function compileDescriptiveRoot(input: DescriptiveRoot, options: CompileOptions = {}): Root {
   const ctx: CompileContext = {
     defaults: {
@@ -888,7 +927,8 @@ export function compileDescriptiveRoot(input: DescriptiveRoot, options: CompileO
   };
 
   // Resolve frontmatter imports / inline component defs onto each component node.
-  resolveComponentSources(input);
+  const registry = resolveComponentSources(input);
+  warnUnregisteredComponents(input, registry);
 
   ensureUniqueIds(input.children, "root");
 

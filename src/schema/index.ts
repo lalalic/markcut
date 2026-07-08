@@ -215,7 +215,6 @@ export const mapWaypoint = z.object({
   label: z.string().optional(),
   media: z.string().optional().describe("image/video src for waypoint marker"),
 });
-export type MapWaypoint = z.infer<typeof mapWaypoint>;
 
 export const mapStream = base.extend({
   type: z.literal("map").default("map"),
@@ -249,7 +248,4 @@ export const stream = z.discriminatedUnion("type", [
 ]);
 export type Stream = z.infer<typeof stream>;
 
-export const types = {
-  root, folder, video, audio, image, component,
-  effect, rhythm, map: mapStream, include, scene,
-} as const;
+

@@ -60,17 +60,3 @@ export function generateTTS(
   return "";
 }
 
-/**
- * List available edge-tts voices (convenience helper).
- */
-export function listVoices(): string[] {
-  try {
-    const output = execSync("edge-tts --list-voices 2>/dev/null", { encoding: "utf-8" });
-    return output
-      .split("\n")
-      .filter((l) => l.startsWith("Name:"))
-      .map((l) => l.replace("Name: ", "").trim());
-  } catch {
-    return [];
-  }
-}

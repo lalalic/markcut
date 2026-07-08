@@ -25,7 +25,7 @@ export const ComposeContext = React.createContext<ComposeContextValue>({
   Container: DefaultContainer,
 });
 
-export interface AudioContextValue {
+interface AudioContextValue {
   id: string;
   /** When true, sibling video/audio mute themselves. */
   foreground?: boolean;

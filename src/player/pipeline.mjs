@@ -547,6 +547,31 @@ function resolveComponentSources(root) {
   for (const c of root.children) visit(c);
   return registry;
 }
+function warnUnregisteredComponents(root, registry) {
+  const registeredNames = new Set(registry.keys());
+  const tagRe = /<\s*\/?\s*([A-Z][a-zA-Z0-9]*)/g;
+  const visit = (node2) => {
+    if (node2.type === "component" && node2.jsx) {
+      const found = /* @__PURE__ */ new Set();
+      let m;
+      tagRe.lastIndex = 0;
+      while ((m = tagRe.exec(node2.jsx)) !== null) {
+        const tag = m[1];
+        if (!registeredNames.has(tag) && !KNOWN_HTML_TAGS.has(tag)) {
+          found.add(tag);
+        }
+      }
+      if (found.size > 0) {
+        console.warn(`  \u26A0 ${[...found].sort().join(", ")}: missing from imports`);
+      }
+    }
+    const children = node2.children;
+    if (Array.isArray(children)) {
+      for (const c of children) visit(c);
+    }
+  };
+  for (const c of root.children) visit(c);
+}
 function compileDescriptiveRoot(input, options = {}) {
   const ctx = {
     defaults: {
@@ -554,7 +579,8 @@ function compileDescriptiveRoot(input, options = {}) {
       ...options.defaults ?? {}
     }
   };
-  resolveComponentSources(input);
+  const registry = resolveComponentSources(input);
+  warnUnregisteredComponents(input, registry);
   ensureUniqueIds(input.children, "root");
   const rootKind = input.layout ?? "series";
   const children = compileChildren(input.children, ctx, rootKind);
@@ -578,7 +604,7 @@ function compileDescriptiveRoot(input, options = {}) {
   };
   return compiled;
 }
-var DEFAULTS;
+var DEFAULTS, KNOWN_HTML_TAGS;
 var init_compiler = __esm({
   "src/descriptive/compiler.ts"() {
     "use strict";
@@ -593,6 +619,170 @@ var init_compiler = __esm({
       map: 4,
       effect: 2
     };
+    KNOWN_HTML_TAGS = /* @__PURE__ */ new Set([
+      "A",
+      "Abbr",
+      "Address",
+      "Area",
+      "Article",
+      "Aside",
+      "Audio",
+      "B",
+      "Base",
+      "Bdi",
+      "Bdo",
+      "Blockquote",
+      "Body",
+      "Br",
+      "Button",
+      "Canvas",
+      "Caption",
+      "Cite",
+      "Code",
+      "Col",
+      "Colgroup",
+      "Data",
+      "Datalist",
+      "Dd",
+      "Del",
+      "Details",
+      "Dfn",
+      "Dialog",
+      "Div",
+      "Dl",
+      "Dt",
+      "Em",
+      "Embed",
+      "Fieldset",
+      "Figcaption",
+      "Figure",
+      "Footer",
+      "Form",
+      "H1",
+      "H2",
+      "H3",
+      "H4",
+      "H5",
+      "H6",
+      "Head",
+      "Header",
+      "Hgroup",
+      "Hr",
+      "Html",
+      "I",
+      "Iframe",
+      "Img",
+      "Input",
+      "Ins",
+      "Kbd",
+      "Label",
+      "Legend",
+      "Li",
+      "Link",
+      "Main",
+      "Map",
+      "Mark",
+      "Menu",
+      "Meta",
+      "Meter",
+      "Nav",
+      "Noscript",
+      "Object",
+      "Ol",
+      "Optgroup",
+      "Option",
+      "Output",
+      "P",
+      "Picture",
+      "Pre",
+      "Progress",
+      "Q",
+      "Rp",
+      "Rt",
+      "Ruby",
+      "S",
+      "Samp",
+      "Script",
+      "Section",
+      "Select",
+      "Slot",
+      "Small",
+      "Source",
+      "Span",
+      "Strong",
+      "Style",
+      "Sub",
+      "Summary",
+      "Sup",
+      "Table",
+      "Tbody",
+      "Td",
+      "Template",
+      "Textarea",
+      "Tfoot",
+      "Th",
+      "Thead",
+      "Time",
+      "Title",
+      "Tr",
+      "Track",
+      "U",
+      "Ul",
+      "Var",
+      "Video",
+      "Wbr",
+      // SVG
+      "Svg",
+      "Circle",
+      "ClipPath",
+      "Defs",
+      "Ellipse",
+      "FeBlend",
+      "FeColorMatrix",
+      "FeComponentTransfer",
+      "FeComposite",
+      "FeConvolveMatrix",
+      "FeDiffuseLighting",
+      "FeDisplacementMap",
+      "FeDistantLight",
+      "FeDropShadow",
+      "FeFlood",
+      "FeFuncA",
+      "FeFuncB",
+      "FeFuncG",
+      "FeFuncR",
+      "FeGaussianBlur",
+      "FeImage",
+      "FeMerge",
+      "FeMergeNode",
+      "FeMorphology",
+      "FeOffset",
+      "FePointLight",
+      "FeSpecularLighting",
+      "FeSpotLight",
+      "FeTile",
+      "FeTurbulence",
+      "Filter",
+      "ForeignObject",
+      "G",
+      "Image",
+      "Line",
+      "LinearGradient",
+      "Marker",
+      "Mask",
+      "Path",
+      "Pattern",
+      "Polygon",
+      "Polyline",
+      "RadialGradient",
+      "Rect",
+      "Stop",
+      "Text",
+      "TextPath",
+      "Tspan",
+      "Use",
+      "View"
+    ]);
   }
 });
 

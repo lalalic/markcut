@@ -778,7 +778,7 @@ var require_scheduler = __commonJS({
 var require_react_dom_production = __commonJS({
   "node_modules/react-dom/cjs/react-dom.production.js"(exports) {
     "use strict";
-    var React46 = require_react();
+    var React47 = require_react();
     function formatProdErrorMessage(code) {
       var url2 = "https://react.dev/errors/" + code;
       if (1 < arguments.length) {
@@ -818,7 +818,7 @@ var require_react_dom_production = __commonJS({
         implementation
       };
     }
-    var ReactSharedInternals = React46.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
+    var ReactSharedInternals = React47.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
     function getCrossOriginStringAs(as, input) {
       if ("font" === as) return "";
       if ("string" === typeof input)
@@ -954,7 +954,7 @@ var require_react_dom_client_production = __commonJS({
   "node_modules/react-dom/cjs/react-dom-client.production.js"(exports) {
     "use strict";
     var Scheduler = require_scheduler();
-    var React46 = require_react();
+    var React47 = require_react();
     var ReactDOM = require_react_dom();
     function formatProdErrorMessage(code) {
       var url2 = "https://react.dev/errors/" + code;
@@ -1145,7 +1145,7 @@ var require_react_dom_client_production = __commonJS({
       return null;
     }
     var isArrayImpl = Array.isArray;
-    var ReactSharedInternals = React46.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
+    var ReactSharedInternals = React47.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
     var ReactDOMSharedInternals = ReactDOM.__DOM_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
     var sharedNotPendingObject = {
       pending: false,
@@ -12591,7 +12591,7 @@ var require_react_dom_client_production = __commonJS({
         0 === i3 && attemptExplicitHydrationTarget(target);
       }
     };
-    var isomorphicReactPackageVersion$jscomp$inline_1840 = React46.version;
+    var isomorphicReactPackageVersion$jscomp$inline_1840 = React47.version;
     if ("19.2.5" !== isomorphicReactPackageVersion$jscomp$inline_1840)
       throw Error(
         formatProdErrorMessage(
@@ -26802,7 +26802,7 @@ var forward2 = import_react110.forwardRef;
 var Thumbnail = forward2(ThumbnailFn);
 
 // src/entry.tsx
-var React44 = __toESM(require_react(), 1);
+var React45 = __toESM(require_react(), 1);
 
 // src/context/index.tsx
 var React8 = __toESM(require_react(), 1);
@@ -26814,7 +26814,7 @@ var ComposeContext = React8.createContext({
 var AudioContext2 = React8.createContext(null);
 
 // src/types/Folder.tsx
-var React41 = __toESM(require_react(), 1);
+var React43 = __toESM(require_react(), 1);
 
 // node_modules/@remotion/transitions/dist/esm/index.mjs
 var import_react113 = __toESM(require_react(), 1);
@@ -29352,7 +29352,7 @@ function ImageLeaf({ stream: stream2 }) {
 }
 
 // src/types/Component.tsx
-var React25 = __toESM(require_react(), 1);
+var React26 = __toESM(require_react(), 1);
 
 // node_modules/react-jsx-parser/dist/react-jsx-parser.min.js
 var import_react125 = __toESM(require_react());
@@ -40724,11 +40724,140 @@ __publicField(JsxParser, "defaultProps", {
 });
 var source_default = JsxParser;
 
+// src/utils/tween.ts
+var React25 = __toESM(require_react(), 1);
+var EASING_MAP = {
+  linear: void 0,
+  ease: Easing.ease,
+  easeIn: Easing.in(Easing.ease),
+  easeOut: Easing.out(Easing.ease),
+  easeInOut: Easing.inOut(Easing.ease)
+};
+function isHexColor(v2) {
+  return typeof v2 === "string" && /^#[0-9a-fA-F]{3,8}$/.test(v2);
+}
+function hexToNumber(hex3) {
+  const s2 = hex3.replace(/^#/, "");
+  if (s2.length === 3) {
+    return parseInt(s2[0] + s2[0] + s2[1] + s2[1] + s2[2] + s2[2], 16);
+  }
+  return parseInt(s2, 16);
+}
+function lerp(a2, b3, t) {
+  return a2 + (b3 - a2) * t;
+}
+function useTweenBindings(action2) {
+  const frame = useCurrentFrame();
+  const actionDurationFrames = Math.max(1, Math.floor(((action2.end ?? 1) - (action2.start ?? 0)) * 30));
+  const cacheRef = React25.useRef(/* @__PURE__ */ new Map());
+  const prevFrameRef = React25.useRef(frame);
+  if (prevFrameRef.current !== frame) {
+    cacheRef.current = /* @__PURE__ */ new Map();
+    prevFrameRef.current = frame;
+  }
+  const tween = React25.useCallback(
+    (from, to, easing) => {
+      const key = `${from},${to},${easing || "linear"}`;
+      const cached2 = cacheRef.current.get(key);
+      if (cached2 !== void 0) return cached2;
+      const easingFn = easing ? EASING_MAP[easing] : void 0;
+      if (isHexColor(from) && isHexColor(to)) {
+        const fromNum2 = hexToNumber(from);
+        const toNum2 = hexToNumber(to);
+        const t = actionDurationFrames > 0 ? interpolate(frame, [0, actionDurationFrames], [0, 1], {
+          extrapolateLeft: "clamp",
+          extrapolateRight: "clamp",
+          easing: easingFn
+        }) : 1;
+        const r = Math.round(lerp(fromNum2 >> 16 & 255, toNum2 >> 16 & 255, t));
+        const g2 = Math.round(lerp(fromNum2 >> 8 & 255, toNum2 >> 8 & 255, t));
+        const b3 = Math.round(lerp(fromNum2 & 255, toNum2 & 255, t));
+        const val2 = `#${r.toString(16).padStart(2, "0")}${g2.toString(16).padStart(2, "0")}${b3.toString(16).padStart(2, "0")}`;
+        cacheRef.current.set(key, val2);
+        return val2;
+      }
+      const fromNum = Number(from);
+      const toNum = Number(to);
+      if (!Number.isFinite(fromNum) || !Number.isFinite(toNum)) {
+        return to;
+      }
+      const val = interpolate(frame, [0, actionDurationFrames], [fromNum, toNum], {
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+        easing: easingFn
+      });
+      cacheRef.current.set(key, val);
+      return val;
+    },
+    [frame, actionDurationFrames]
+  );
+  return { tween, interpolate };
+}
+
 // src/types/Component.tsx
 var import_jsx_runtime80 = __toESM(require_jsx_runtime(), 1);
+function findUnknownComponentTags(jsx68, registered) {
+  const tags = /* @__PURE__ */ new Set();
+  const re = /<\s*\/?\s*([A-Z][a-zA-Z0-9]*)/g;
+  let m2;
+  while ((m2 = re.exec(jsx68)) !== null) {
+    const tag = m2[1];
+    if (!registered?.[tag]) tags.add(tag);
+  }
+  return [...tags].sort();
+}
+function TweenedJsxParser({
+  jsx: jsx68,
+  components,
+  data: data2,
+  action: action2
+}) {
+  const tweenBindings = useTweenBindings(action2);
+  const unknownTags = React26.useMemo(() => findUnknownComponentTags(jsx68, components), [jsx68, components]);
+  const [jsxError, setJsxError] = React26.useState(null);
+  return /* @__PURE__ */ (0, import_jsx_runtime80.jsxs)(import_jsx_runtime80.Fragment, { children: [
+    unknownTags.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime80.jsxs)("div", { style: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      background: "rgba(255, 200, 0, 0.85)",
+      color: "#000",
+      padding: "6px 12px",
+      fontSize: 12,
+      fontFamily: "monospace",
+      zIndex: 100,
+      whiteSpace: "pre-wrap",
+      wordBreak: "break-all"
+    }, children: [
+      "\u26A0 Missing component",
+      unknownTags.length > 1 ? "s" : "",
+      ": ",
+      unknownTags.join(", "),
+      components ? ` (${Object.keys(components).length} registered)` : " (0 registered)"
+    ] }),
+    jsxError && /* @__PURE__ */ (0, import_jsx_runtime80.jsx)("div", { style: { color: "red", padding: 20, fontSize: "larger" }, children: jsxError }),
+    /* @__PURE__ */ (0, import_jsx_runtime80.jsx)(
+      source_default,
+      {
+        style: { width: "100%", height: "100%" },
+        components,
+        bindings: { ...data2, ...tweenBindings },
+        jsx: jsx68,
+        blacklistedAttrs: [],
+        disableKeyGeneration: true,
+        onError: (error49) => {
+          console.warn({ jsx: jsx68, error: error49.message });
+          setJsxError(error49.message);
+        },
+        renderError: ({ error: error49 }) => /* @__PURE__ */ (0, import_jsx_runtime80.jsx)("div", { style: { color: "red", padding: 20, fontSize: "larger" }, children: error49 })
+      }
+    )
+  ] });
+}
 function ComponentLeaf({ stream: stream2 }) {
   const { fps } = useVideoConfig();
-  const { components } = React25.useContext(ComposeContext);
+  const { components } = React26.useContext(ComposeContext);
   if (!stream2.jsx) return null;
   return /* @__PURE__ */ (0, import_jsx_runtime80.jsx)(import_jsx_runtime80.Fragment, { children: stream2.actions.map((a2) => {
     const start = a2.start ?? 0;
@@ -40740,16 +40869,12 @@ function ComponentLeaf({ stream: stream2 }) {
         from: Math.floor(fps * start),
         layout: "none",
         children: /* @__PURE__ */ (0, import_jsx_runtime80.jsx)(
-          source_default,
+          TweenedJsxParser,
           {
-            style: { width: "100%", height: "100%" },
-            components,
-            bindings: stream2.data,
             jsx: stream2.jsx,
-            blacklistedAttrs: [],
-            disableKeyGeneration: true,
-            onError: (error49) => console.warn({ jsx: stream2.jsx, error: error49.message }),
-            renderError: ({ error: error49 }) => /* @__PURE__ */ (0, import_jsx_runtime80.jsx)("div", { style: { color: "red", padding: 20, fontSize: "larger" }, children: error49 })
+            components,
+            data: stream2.data,
+            action: a2
           }
         )
       },
@@ -40801,7 +40926,7 @@ function RhythmLeaf({ stream: stream2 }) {
 var import_react127 = __toESM(require_react(), 1);
 
 // node_modules/@vis.gl/react-google-maps/dist/index.modern.mjs
-var React26 = __toESM(require_react(), 1);
+var React27 = __toESM(require_react(), 1);
 var import_react126 = __toESM(require_react(), 1);
 var import_react_dom3 = __toESM(require_react_dom(), 1);
 var import_fast_deep_equal = __toESM(require_fast_deep_equal(), 1);
@@ -41745,13 +41870,13 @@ function useMapsLibrary(name) {
   return (ctx === null || ctx === void 0 ? void 0 : ctx.loadedLibraries[name]) || null;
 }
 var _a;
-var { useLayoutEffect: useLayoutEffect15, useRef: useRef30 } = React26;
-var useBeforeEffect = (_a = React26.useInsertionEffect) !== null && _a !== void 0 ? _a : useLayoutEffect15;
+var { useLayoutEffect: useLayoutEffect15, useRef: useRef31 } = React27;
+var useBeforeEffect = (_a = React27.useInsertionEffect) !== null && _a !== void 0 ? _a : useLayoutEffect15;
 function forbiddenInRender() {
   throw new Error("useEffectEvent: invalid call during rendering.");
 }
 function useEffectEventPolyfill(fn) {
-  const ref2 = useRef30(forbiddenInRender);
+  const ref2 = useRef31(forbiddenInRender);
   useBeforeEffect(() => {
     ref2.current = fn;
   }, [fn]);
@@ -43290,7 +43415,7 @@ function getCurrentStep(leg, currentInSecond) {
 }
 
 // src/types/Include.tsx
-var React30 = __toESM(require_react(), 1);
+var React35 = __toESM(require_react(), 1);
 var import_jsx_runtime83 = __toESM(require_jsx_runtime(), 1);
 var ASPECT_DIMS = {
   "16x9": { width: 1920, height: 1080 },
@@ -43310,15 +43435,15 @@ function resolveIncludeSrc(src) {
 }
 function IncludeLeaf({ stream: stream2 }) {
   const { fps: parentFps, width: parentWidth, height: parentHeight } = useVideoConfig();
-  const { Container } = React30.useContext(ComposeContext);
-  const parentAudio = React30.useContext(AudioContext2);
+  const { Container } = React35.useContext(ComposeContext);
+  const parentAudio = React35.useContext(AudioContext2);
   if (!stream2.actions?.length) return null;
-  const [externalData, setExternalData] = React30.useState(null);
-  const [loadError, setLoadError] = React30.useState(null);
-  const [handle] = React30.useState(
+  const [externalData, setExternalData] = React35.useState(null);
+  const [loadError, setLoadError] = React35.useState(null);
+  const [handle] = React35.useState(
     () => stream2.src ? delayRender(`Loading include: ${stream2.src}`) : null
   );
-  React30.useEffect(() => {
+  React35.useEffect(() => {
     if (!stream2.src || !handle) return;
     let active = true;
     const url2 = resolveIncludeSrc(stream2.src);
@@ -43342,16 +43467,16 @@ function IncludeLeaf({ stream: stream2 }) {
       active = false;
     };
   }, [stream2.src, handle]);
-  React30.useMemo(() => {
+  React35.useMemo(() => {
     if (!stream2.src) {
       getDurationInSeconds(stream2, true);
     }
   }, [stream2, stream2.src]);
-  const audioCtx = React30.useMemo(
+  const audioCtx = React35.useMemo(
     () => ({ id: stream2.id, foreground: true, parent: parentAudio }),
     [stream2.id, parentAudio]
   );
-  const renderExternalContent = React30.useCallback(() => {
+  const renderExternalContent = React35.useCallback(() => {
     if (!externalData) return null;
     if (loadError) {
       return /* @__PURE__ */ (0, import_jsx_runtime83.jsxs)("div", { style: { color: "#ff4444", fontSize: 24, padding: 40 }, children: [
@@ -43522,12 +43647,12 @@ function IncludeLeaf({ stream: stream2 }) {
 }
 
 // src/types/Scene.tsx
-var React35 = __toESM(require_react(), 1);
+var React39 = __toESM(require_react(), 1);
 var import_jsx_runtime84 = __toESM(require_jsx_runtime(), 1);
 function SceneLeaf({ stream: stream2 }) {
-  const { Container } = React35.useContext(ComposeContext);
-  const parentAudio = React35.useContext(AudioContext2);
-  const audioCtx = React35.useMemo(
+  const { Container } = React39.useContext(ComposeContext);
+  const parentAudio = React39.useContext(AudioContext2);
+  const audioCtx = React39.useMemo(
     () => ({ id: stream2.id, parent: parentAudio }),
     [stream2.id, parentAudio]
   );
@@ -43544,7 +43669,7 @@ function SceneLeaf({ stream: stream2 }) {
 }
 
 // src/types/Effect.tsx
-var React39 = __toESM(require_react(), 1);
+var React41 = __toESM(require_react(), 1);
 
 // src/types/keyframes.ts
 function parseKeyframeData(data2) {
@@ -43938,7 +44063,7 @@ function EffectWrapper({
   const frame = useCurrentFrame();
   const { fps, width, height } = useVideoConfig();
   const actions = stream2.actions ?? [];
-  const styles = React39.useMemo(() => {
+  const styles = React41.useMemo(() => {
     const result = [];
     for (const action2 of actions) {
       const start = Math.ceil(action2.start * fps);
@@ -44010,17 +44135,17 @@ var NotSeries = ({ children }) => /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(
 NotSeries.Sequence = ({ children }) => /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(import_jsx_runtime86.Fragment, { children });
 function FolderLeaf({ stream: stream2 }) {
   const { fps, width, height } = useVideoConfig();
-  const { Container } = React41.useContext(ComposeContext);
-  const parentAudio = React41.useContext(AudioContext2);
+  const { Container } = React43.useContext(ComposeContext);
+  const parentAudio = React43.useContext(AudioContext2);
   const isSeries = !!stream2.isSeries;
   const transition = stream2.transition;
   const transitionTime = stream2.transitionTime ?? 0.5;
   const isRoot = stream2.id === "root";
-  const TypedSeries = React41.useMemo(() => {
+  const TypedSeries = React43.useMemo(() => {
     if (!isSeries) return NotSeries;
     return transition ? TransitionSeries : Series;
   }, [isSeries, transition]);
-  const transEl = React41.useMemo(() => {
+  const transEl = React43.useMemo(() => {
     if (!isSeries || !transition) return null;
     const presentation = TransitionPresets[transition]?.(
       transition === "clockWipe" ? { width, height } : void 0
@@ -44039,7 +44164,7 @@ function FolderLeaf({ stream: stream2 }) {
     const durFrames = Math.max(1, Math.floor(dur * fps));
     const SequenceWrap = TypedSeries.Sequence ?? Sequence;
     const isLeaf = child.type !== "folder" && child.type !== "root" && child.type !== "effect";
-    const childContent = isLeaf ? React41.createElement(Leaves[child.type] ?? (() => null), { stream: child }) : child.type === "effect" ? /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(EffectWrapper, { stream: child, children: /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(FolderLeaf, { stream: child }) }) : React41.createElement(FolderLeaf, { stream: child });
+    const childContent = isLeaf ? React43.createElement(Leaves[child.type] ?? (() => null), { stream: child }) : child.type === "effect" ? /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(EffectWrapper, { stream: child, children: /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(FolderLeaf, { stream: child }) }) : React43.createElement(FolderLeaf, { stream: child });
     const wrapped = /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(
       Container,
       {
@@ -44059,10 +44184,10 @@ function FolderLeaf({ stream: stream2 }) {
   }).filter(Boolean);
   if (isSeries && transEl) {
     for (let i3 = 1; i3 < sequences.length; i3 += 2) {
-      sequences.splice(i3, 0, React41.cloneElement(transEl, { key: `t${i3}` }));
+      sequences.splice(i3, 0, React43.cloneElement(transEl, { key: `t${i3}` }));
     }
   }
-  const audioCtx = React41.useMemo(
+  const audioCtx = React43.useMemo(
     () => stream2.type !== "folder" ? { id: stream2.id, parent: parentAudio } : parentAudio,
     [stream2.id, stream2.type, parentAudio]
   );
@@ -44082,7 +44207,7 @@ function FolderLeaf({ stream: stream2 }) {
 }
 
 // src/types/Subtitle.tsx
-var React43 = __toESM(require_react(), 1);
+var React44 = __toESM(require_react(), 1);
 
 // node_modules/remotion-subtitle/dist/index.esm.js
 var index_esm_exports = {};
@@ -44408,8 +44533,8 @@ function CueFrame({
 }) {
   const durationInFrames = Math.max(1, Math.floor((cue.endAt - cue.startFrom) * fps));
   const from = Math.floor(cue.startFrom * fps);
-  const captionText = React43.useMemo(() => supportHtml(cue.text), [cue.text]);
-  const textStyle = React43.useMemo(
+  const captionText = React44.useMemo(() => supportHtml(cue.text), [cue.text]);
+  const textStyle = React44.useMemo(
     () => ({
       ...DEFAULT_TEXT_STYLE,
       fontSize: subtitle.fontSize ?? DEFAULT_TEXT_STYLE.fontSize,
@@ -44422,12 +44547,12 @@ function CueFrame({
 }
 function SubtitleOverlay({ subtitle }) {
   const { fps } = useVideoConfig();
-  const [cues, setCues] = React43.useState(null);
-  const CaptionComponent = React43.useMemo(
+  const [cues, setCues] = React44.useState(null);
+  const CaptionComponent = React44.useMemo(
     () => resolveCaption(subtitle.type),
     [subtitle.type]
   );
-  React43.useEffect(() => {
+  React44.useEffect(() => {
     const { src } = subtitle;
     if (src.includes("-->")) {
       setCues(parseVTT(src));
@@ -59256,9 +59381,9 @@ var DEFAULT_DUMP_OPTIONS = {
 var import_jsx_runtime88 = __toESM(require_jsx_runtime(), 1);
 var DefaultContainer2 = ({ children, style: style2, className: className2 }) => /* @__PURE__ */ (0, import_jsx_runtime88.jsx)("div", { className: className2, style: { position: "absolute", inset: 0, ...style2 }, children });
 function useComponentRegistry(imports) {
-  const [registry2, setRegistry] = React44.useState(null);
-  const handleRef = React44.useRef(null);
-  React44.useEffect(() => {
+  const [registry2, setRegistry] = React45.useState(null);
+  const handleRef = React45.useRef(null);
+  React45.useEffect(() => {
     if (!imports) {
       setRegistry(null);
       return;
@@ -59295,7 +59420,7 @@ function useComponentRegistry(imports) {
   return registry2;
 }
 function MarkCut({ root: root2, compose, background = "#000" }) {
-  const parsed = React44.useMemo(() => {
+  const parsed = React45.useMemo(() => {
     if (!root2) {
       return {
         id: "root",
@@ -59312,8 +59437,8 @@ function MarkCut({ root: root2, compose, background = "#000" }) {
     return root.parse(root2);
   }, [root2]);
   const registry2 = useComponentRegistry(parsed.imports);
-  React44.useMemo(() => getDurationInSeconds(parsed, true), [parsed]);
-  const value = React44.useMemo(
+  React45.useMemo(() => getDurationInSeconds(parsed, true), [parsed]);
+  const value = React45.useMemo(
     () => ({
       Container: compose?.Container ?? DefaultContainer2,
       onError: compose?.onError,
