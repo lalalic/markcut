@@ -12,7 +12,7 @@ import {
   type DescriptiveRoot,
 } from "./descriptive/compiler";
 
-export interface RemotionEngineProps {
+export interface MarkCutProps {
   /** Stream tree. Will be parsed by zod (defaults applied). */
   root: unknown;
   /** Optional host-provided Container + components registry. */
@@ -21,7 +21,7 @@ export interface RemotionEngineProps {
   background?: string;
 }
 
-export interface DescriptiveCompositionProps extends Omit<RemotionEngineProps, "root"> {
+export interface DescriptiveCompositionProps extends Omit<MarkCutProps, "root"> {
   root: DescriptiveRoot;
   compileOptions?: CompileOptions;
 }
@@ -83,7 +83,7 @@ function useComponentRegistry(imports: unknown): Record<string, React.ComponentT
   return registry;
 }
 
-export function RemotionEngine({ root, compose, background = "#000" }: RemotionEngineProps) {
+export function MarkCut({ root, compose, background = "#000" }: MarkCutProps) {
   const parsed = React.useMemo<Root>(() => {
     if (!root) {
       // Return a minimal valid root when no data is provided (e.g. studio placeholder)
@@ -140,7 +140,7 @@ export function DescriptiveComposition({
   );
 
   return (
-    <RemotionEngine
+    <MarkCut
       root={compiled}
       compose={compose}
       background={background}

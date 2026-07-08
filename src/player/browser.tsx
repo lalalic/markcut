@@ -1,12 +1,12 @@
 /**
  * Browser player entry point.
  * Bundled with esbuild and served by the player server.
- * Renders stream tree JSON using @remotion/player with RemotionEngine.
+ * Renders stream tree JSON using @remotion/player with MarkCut.
  */
 import React, { useRef, useEffect, useCallback } from "react";
 import { createRoot } from "react-dom/client";
 import { Player } from "@remotion/player";
-import { RemotionEngine, getDurationInSeconds } from "../entry";
+import { MarkCut, getDurationInSeconds } from "../entry";
 
 // Expose React globally + import map shim for component bundles.
 // Component modules import from "react" (they're built with --external:react),
@@ -126,7 +126,7 @@ function PlayerApp() {
   },
     React.createElement(Player, {
       ref: playerRef,
-      component: RemotionEngine,
+      component: MarkCut,
       inputProps: {
         root: data,
         compose: {},

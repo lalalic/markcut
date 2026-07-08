@@ -90,7 +90,7 @@ Think of this block as the **index file** for the video's component scope. `expo
 
 The imports block is the **primary** way to register components. The legacy YAML `imports:` array in frontmatter is still supported as a fallback, but the code block is preferred.
 
-> **How it works**: The server extracts the imports block from the raw source, parses it with `parseImportsBlock`, then runs `bundleFromEntries` which creates a temp npm project, installs packages, and bundles everything into a single ESM file with esbuild. The resulting bundle URL is set on `root.imports` (e.g. `/.component-cache/be710e5c.js`). At render time, `RemotionEngine.useComponentRegistry` dynamically imports this URL and feeds the named exports to react-jsx-parser.
+> **How it works**: The server extracts the imports block from the raw source, parses it with `parseImportsBlock`, then runs `bundleFromEntries` which creates a temp npm project, installs packages, and bundles everything into a single ESM file with esbuild. The resulting bundle URL is set on `root.imports` (e.g. `/.component-cache/be710e5c.js`). At render time, `MarkCut.useComponentRegistry` dynamically imports this URL and feeds the named exports to react-jsx-parser.
 
 Supported patterns inside the block:
 

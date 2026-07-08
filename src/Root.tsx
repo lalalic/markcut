@@ -1,10 +1,10 @@
 import { Composition, getInputProps } from "remotion";
-import { RemotionEngine } from "./entry";
+import { MarkCut } from "./entry";
 import { getDurationInSeconds } from "./utils";
 import { root as rootSchema } from "./schema";
 
 const RootComposition = (props: any) => (
-  <RemotionEngine
+  <MarkCut
     {...props}
     compose={{
       ...(props.compose ?? {}),

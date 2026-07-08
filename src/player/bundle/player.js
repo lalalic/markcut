@@ -59294,7 +59294,7 @@ function useComponentRegistry(imports) {
   }, [imports]);
   return registry2;
 }
-function RemotionEngine({ root: root2, compose, background = "#000" }) {
+function MarkCut({ root: root2, compose, background = "#000" }) {
   const parsed = React44.useMemo(() => {
     if (!root2) {
       return {
@@ -59427,7 +59427,7 @@ function PlayerApp() {
     },
     import_react129.default.createElement(Player, {
       ref: playerRef,
-      component: RemotionEngine,
+      component: MarkCut,
       inputProps: {
         root: data2,
         compose: {}

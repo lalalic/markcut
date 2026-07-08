@@ -45,7 +45,7 @@ storyboard.md  ──[parse]──▶  DescriptiveRoot  ──[compile]──▶
 | **Live edit** | `--edit` watches the input file, re-runs pipeline, auto-reloads player |
 | **Label mode** | `--label` interactive player with per-scene label input, saves to labels.json |
 | **CLI** | `render`, `preview` commands for MP4 export and Remotion Studio |
-| **Programmatic** | `RemotionEngine` / `DescriptiveComposition` React components for embedding |
+| **Programmatic** | `MarkCut` / `DescriptiveComposition` React components for embedding |
 
 ## Example
 
@@ -101,7 +101,7 @@ Inline components can be defined entirely in the imports block using `export fun
 
 ```
 src/
-├── entry.tsx              ← Library entry: RemotionEngine + DescriptiveComposition
+├── entry.tsx              ← Library entry: MarkCut + DescriptiveComposition
 ├── index.ts               ← Remotion registerRoot (for studio/render CLI)
 ├── Root.tsx               ← Remotion Composition wrapper
 ├── schema/                ← Zod schemas for all stream types

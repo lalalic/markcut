@@ -55,7 +55,7 @@ markcut preview <file.json|.md> [--edit] [--label] [--port 3001]
 
 ```
 src/
-├── entry.tsx              → RemotionEngine + DescriptiveComposition
+├── entry.tsx              → MarkCut + DescriptiveComposition
 ├── descriptive/           → Compiler, markdown parser, resolve pipeline
 ├── types/                 → React renderers (one per stream type)
 ├── schema/                → Zod stream tree schemas
@@ -73,7 +73,7 @@ src/
 Register components at render time:
 
 ```tsx
-<RemotionEngine
+<MarkCut
   root={descriptiveJson}
   compose={{ components: { AnimatedHeadline, StatCounter } }}
 />
@@ -166,7 +166,7 @@ All types share base fields from `BaseShape`: `id`, `name`, `title`, `descriptio
 1. `Root.tsx` reads `getInputProps()` → parses via Zod `rootSchema`
 2. `getDurationInSeconds()` stamps `durationInSeconds` on every node
 3. `Composition.durationInFrames` is set to total duration
-4. `RemotionEngine` wraps everything in `ComposeContext` + `ThemeProvider` + `AbsoluteFill`
+4. `MarkCut` wraps everything in `ComposeContext` + `ThemeProvider` + `AbsoluteFill`
 5. `FolderLeaf` recursively renders the tree
 
 ### CLI Usage

@@ -83,7 +83,7 @@ Then use them in component JSX:
 3. Inline functions' source code is scanned for `import X from "pkg"` statements — those packages are added to dependencies
 4. `bundleFromEntries` creates a temp npm project, installs all packages, and runs `esbuild` to produce a single ESM file
 5. The bundled file URL is set on `root.imports` and served from `/.component-cache/<hash>.js`
-6. At runtime, `RemotionEngine.useComponentRegistry` does a dynamic `import(url)` to load all named exports
+6. At runtime, `MarkCut.useComponentRegistry` does a dynamic `import(url)` to load all named exports
 7. react-jsx-parser resolves component tags from the loaded registry
 
 ### Import spec forms

@@ -141,7 +141,7 @@ function CueFrame({
  *   "bounce", "fade", "typewriter", "colorful", "glowing", "neon", etc.
  * Defaults to plain `Caption` when type is omitted.
  *
- * Mounted once inside AbsoluteFill in RemotionEngine when root.subtitle is set.
+ * Mounted once inside AbsoluteFill in MarkCut when root.subtitle is set.
  */
 export function SubtitleOverlay({ subtitle }: { subtitle: SubtitleOverlayConfig }) {
   const { fps } = useVideoConfig();
