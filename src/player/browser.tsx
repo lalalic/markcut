@@ -107,11 +107,21 @@ function PlayerApp() {
   const [error, setError] = React.useState<string | null>(null);
   const [data, setData] = React.useState<any>(null);
   const [refreshKey, setRefreshKey] = React.useState(0);
+  const [muted, setMuted] = React.useState(false);
+  const [volume, setVolume] = React.useState(1);
+  const seekAttemptedRef = React.useRef(false);
+  const mountedRef = React.useRef(true);
 
-  // Parse URL params for agent automation
+  // Parse URL params
   const urlParams = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
   const autoPlay = urlParams.get("autoplay") === "true";
-  const startAt = parseFloat(urlParams.get("start") || "0") || 0;
+  const startAt = parseFloat(urlParams.get("start") || urlParams.get("t") || "0") || 0;
+
+  // Derive player config from data early so effects can reference them safely.
+  // These are computed on every render but only meaningful when data is set.
+  const fps = data?.fps ?? 30;
+  const durationInSeconds = data ? (getDurationInSeconds(data, true) || 5) : 5;
+  const durationInFrames = Math.max(1, Math.ceil(durationInSeconds * fps));
 
   const loadData = React.useCallback(() => {
     setReady(false);
@@ -129,14 +139,166 @@ function PlayerApp() {
     loadData();
     const handler = () => { setRefreshKey(k => k + 1); };
     window.addEventListener("refresh-player", handler);
-    return () => window.removeEventListener("refresh-player", handler);
+    return () => { mountedRef.current = false; window.removeEventListener("refresh-player", handler); };
   }, [loadData]);
 
   React.useEffect(() => {
     if (refreshKey > 0) loadData();
   }, [refreshKey, loadData]);
 
-  // Expose seek API for external scripts (runs after each render, ref gets populated)
+  // Seek to startAt once player is mounted
+  React.useEffect(() => {
+    if (!ready || !data || seekAttemptedRef.current) return;
+    if (startAt > 0 && playerRef.current) {
+      // Small delay to let the player fully initialize
+      const timer = setTimeout(() => {
+        if (!mountedRef.current || !playerRef.current) return;
+        const frame = Math.round(startAt * fps);
+        playerRef.current.seekTo(frame);
+        seekAttemptedRef.current = true;
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+    seekAttemptedRef.current = true;
+  }, [ready, data, startAt, fps]);
+
+  // Keyboard shortcuts
+  React.useEffect(() => {
+    if (!ready || !playerRef.current) return;
+
+    const FWD_SECONDS = 5;
+    const BACK_SECONDS = 5;
+    const VOLUME_STEP = 0.1;
+
+    function seekRelative(deltaSec: number) {
+      const p = playerRef.current;
+      if (!p) return;
+      const frame = p.getCurrentFrame() + Math.round(deltaSec * fps);
+      p.seekTo(Math.max(0, frame));
+    }
+
+    function seekPercent(pct: number) {
+      const p = playerRef.current;
+      if (!p) return;
+      p.seekTo(Math.round(pct * durationInFrames));
+    }
+
+    function showHelp() {
+      // eslint-disable-next-line no-console
+      console.log(`%c🎬 MarkCut Player Shortcuts
+━━━━━━━━━━━━━━━━━━━━━
+  Space / K    Play / Pause
+  ← / →        Seek -${BACK_SECONDS}s / +${FWD_SECONDS}s
+  Shift+←/→    Seek -1 / +1 frame
+  J            Rewind 2×
+  L            Forward 2×
+  ↑ / ↓        Volume +${Math.round(VOLUME_STEP * 100)}% / -${Math.round(VOLUME_STEP * 100)}%
+  M            Mute toggle
+  F            Fullscreen toggle
+  0-9          Seek to 0%-90%
+  ?            Show this help`, "font-size:14px;");
+    }
+
+    function onKey(e: KeyboardEvent) {
+      // Ignore if focus is inside a form element
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+
+      const p = playerRef.current;
+      if (!p) return;
+
+      switch (e.key) {
+        case " ":
+        case "k":
+        case "K":
+          e.preventDefault();
+          p.toggle();
+          break;
+
+        case "ArrowLeft":
+          e.preventDefault();
+          seekRelative(e.shiftKey ? -1 / fps : -BACK_SECONDS);
+          break;
+
+        case "ArrowRight":
+          e.preventDefault();
+          seekRelative(e.shiftKey ? 1 / fps : FWD_SECONDS);
+          break;
+
+        case "ArrowUp":
+          e.preventDefault();
+          setVolume(v => {
+            const nv = Math.min(1, v + VOLUME_STEP);
+            if (typeof p.setVolume === "function") p.setVolume(nv);
+            return nv;
+          });
+          break;
+
+        case "ArrowDown":
+          e.preventDefault();
+          setVolume(v => {
+            const nv = Math.max(0, v - VOLUME_STEP);
+            if (typeof p.setVolume === "function") p.setVolume(nv);
+            return nv;
+          });
+          break;
+
+        case "m":
+        case "M":
+          e.preventDefault();
+          setMuted(m => {
+            const nm = !m;
+            if (typeof p.setVolume === "function") p.setVolume(nm ? 0 : volume);
+            return nm;
+          });
+          break;
+
+        case "f":
+        case "F":
+          e.preventDefault();
+          if (typeof p.requestFullscreen === "function") {
+            p.requestFullscreen();
+          } else {
+            document.fullscreenElement
+              ? document.exitFullscreen()
+              : document.documentElement.requestFullscreen();
+          }
+          break;
+
+        case "j":
+        case "J":
+          e.preventDefault();
+          // Toggle between normal and 2× reverse
+          p.playbackRate = p.playbackRate === -2 ? 1 : -2;
+          break;
+
+        case "l":
+        case "L":
+          e.preventDefault();
+          // Toggle between normal and 2× forward
+          p.playbackRate = p.playbackRate === 2 ? 1 : 2;
+          break;
+
+        case "/":
+        case "?":
+          e.preventDefault();
+          showHelp();
+          break;
+
+        default:
+          if (e.key >= "0" && e.key <= "9") {
+            e.preventDefault();
+            seekPercent(parseInt(e.key) / 10);
+          }
+          break;
+      }
+    }
+
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [ready, data, fps, durationInFrames, volume]);
+
+  // Expose seek API for external scripts
   React.useEffect(() => {
     if (!data) return;
     (window as any).__remotionSeekTo = (timeInSeconds: number) => {
@@ -157,11 +319,8 @@ function PlayerApp() {
     }, "Loading...");
   }
 
-  const fps = data.fps || 30;
   const width = data.width || 1080;
   const height = data.height || 1920;
-  const durationInSeconds = getDurationInSeconds(data, true) || 5;
-  const durationInFrames = Math.max(1, Math.ceil(durationInSeconds * fps));
 
   return React.createElement("div", {
     style: { width: "100%", height: "100%", background: "#000" },

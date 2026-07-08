@@ -60659,9 +60659,16 @@ function PlayerApp() {
   const [error49, setError] = React46.useState(null);
   const [data2, setData] = React46.useState(null);
   const [refreshKey, setRefreshKey] = React46.useState(0);
+  const [muted, setMuted] = React46.useState(false);
+  const [volume, setVolume] = React46.useState(1);
+  const seekAttemptedRef = React46.useRef(false);
+  const mountedRef = React46.useRef(true);
   const urlParams = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
   const autoPlay = urlParams.get("autoplay") === "true";
-  const startAt = parseFloat(urlParams.get("start") || "0") || 0;
+  const startAt = parseFloat(urlParams.get("start") || urlParams.get("t") || "0") || 0;
+  const fps = data2?.fps ?? 30;
+  const durationInSeconds = data2 ? getDurationInSeconds(data2, true) || 5 : 5;
+  const durationInFrames = Math.max(1, Math.ceil(durationInSeconds * fps));
   const loadData = React46.useCallback(() => {
     setReady(false);
     fetch("/api/video-data").then((r) => r.json()).then((json2) => {
@@ -60676,11 +60683,137 @@ function PlayerApp() {
       setRefreshKey((k2) => k2 + 1);
     };
     window.addEventListener("refresh-player", handler);
-    return () => window.removeEventListener("refresh-player", handler);
+    return () => {
+      mountedRef.current = false;
+      window.removeEventListener("refresh-player", handler);
+    };
   }, [loadData]);
   React46.useEffect(() => {
     if (refreshKey > 0) loadData();
   }, [refreshKey, loadData]);
+  React46.useEffect(() => {
+    if (!ready || !data2 || seekAttemptedRef.current) return;
+    if (startAt > 0 && playerRef.current) {
+      const timer = setTimeout(() => {
+        if (!mountedRef.current || !playerRef.current) return;
+        const frame = Math.round(startAt * fps);
+        playerRef.current.seekTo(frame);
+        seekAttemptedRef.current = true;
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+    seekAttemptedRef.current = true;
+  }, [ready, data2, startAt, fps]);
+  React46.useEffect(() => {
+    if (!ready || !playerRef.current) return;
+    const FWD_SECONDS = 5;
+    const BACK_SECONDS = 5;
+    const VOLUME_STEP = 0.1;
+    function seekRelative(deltaSec) {
+      const p2 = playerRef.current;
+      if (!p2) return;
+      const frame = p2.getCurrentFrame() + Math.round(deltaSec * fps);
+      p2.seekTo(Math.max(0, frame));
+    }
+    function seekPercent(pct) {
+      const p2 = playerRef.current;
+      if (!p2) return;
+      p2.seekTo(Math.round(pct * durationInFrames));
+    }
+    function showHelp() {
+      console.log(`%c\u{1F3AC} MarkCut Player Shortcuts
+\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
+  Space / K    Play / Pause
+  \u2190 / \u2192        Seek -${BACK_SECONDS}s / +${FWD_SECONDS}s
+  Shift+\u2190/\u2192    Seek -1 / +1 frame
+  J            Rewind 2\xD7
+  L            Forward 2\xD7
+  \u2191 / \u2193        Volume +${Math.round(VOLUME_STEP * 100)}% / -${Math.round(VOLUME_STEP * 100)}%
+  M            Mute toggle
+  F            Fullscreen toggle
+  0-9          Seek to 0%-90%
+  ?            Show this help`, "font-size:14px;");
+    }
+    function onKey(e) {
+      const tag = e.target.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      const p2 = playerRef.current;
+      if (!p2) return;
+      switch (e.key) {
+        case " ":
+        case "k":
+        case "K":
+          e.preventDefault();
+          p2.toggle();
+          break;
+        case "ArrowLeft":
+          e.preventDefault();
+          seekRelative(e.shiftKey ? -1 / fps : -BACK_SECONDS);
+          break;
+        case "ArrowRight":
+          e.preventDefault();
+          seekRelative(e.shiftKey ? 1 / fps : FWD_SECONDS);
+          break;
+        case "ArrowUp":
+          e.preventDefault();
+          setVolume((v2) => {
+            const nv = Math.min(1, v2 + VOLUME_STEP);
+            if (typeof p2.setVolume === "function") p2.setVolume(nv);
+            return nv;
+          });
+          break;
+        case "ArrowDown":
+          e.preventDefault();
+          setVolume((v2) => {
+            const nv = Math.max(0, v2 - VOLUME_STEP);
+            if (typeof p2.setVolume === "function") p2.setVolume(nv);
+            return nv;
+          });
+          break;
+        case "m":
+        case "M":
+          e.preventDefault();
+          setMuted((m2) => {
+            const nm = !m2;
+            if (typeof p2.setVolume === "function") p2.setVolume(nm ? 0 : volume);
+            return nm;
+          });
+          break;
+        case "f":
+        case "F":
+          e.preventDefault();
+          if (typeof p2.requestFullscreen === "function") {
+            p2.requestFullscreen();
+          } else {
+            document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+          }
+          break;
+        case "j":
+        case "J":
+          e.preventDefault();
+          p2.playbackRate = p2.playbackRate === -2 ? 1 : -2;
+          break;
+        case "l":
+        case "L":
+          e.preventDefault();
+          p2.playbackRate = p2.playbackRate === 2 ? 1 : 2;
+          break;
+        case "/":
+        case "?":
+          e.preventDefault();
+          showHelp();
+          break;
+        default:
+          if (e.key >= "0" && e.key <= "9") {
+            e.preventDefault();
+            seekPercent(parseInt(e.key) / 10);
+          }
+          break;
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [ready, data2, fps, durationInFrames, volume]);
   React46.useEffect(() => {
     if (!data2) return;
     window.__remotionSeekTo = (timeInSeconds) => {
@@ -60698,11 +60831,8 @@ function PlayerApp() {
       style: { color: "#888", padding: 40, fontFamily: "sans-serif" }
     }, "Loading...");
   }
-  const fps = data2.fps || 30;
   const width = data2.width || 1080;
   const height = data2.height || 1920;
-  const durationInSeconds = getDurationInSeconds(data2, true) || 5;
-  const durationInFrames = Math.max(1, Math.ceil(durationInSeconds * fps));
   return React46.createElement(
     "div",
     {
