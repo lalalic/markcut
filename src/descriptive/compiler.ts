@@ -42,8 +42,8 @@ export interface DescriptiveBaseNode {
    *  Compiles into Effect wrapper streams at compile time, so the descriptive layer
    *  doesn't need explicit `effect` parent nodes. */
   effects?: EffectSpec[];
-  /** Events that fire at specific frames, mutating registered component state. */
-  on?: EventSpec[];
+  /** Event that fires at a specific frame, mutating registered component state. */
+  on?: EventSpec;
 }
 
 
@@ -306,9 +306,9 @@ function normalizeEffectSpec(spec: EffectSpec): {
   return spec;
 }
 
-/** Extract `on` events from a descriptive node if present. */
-function pickOn(node: { on?: EventSpec[] }): { on?: EventSpec[] } {
-  if (Array.isArray(node.on) && node.on.length > 0) return { on: node.on };
+/** Extract `on` event from a descriptive node if present. */
+function pickOn(node: { on?: EventSpec }): { on?: EventSpec } {
+  if (node.on) return { on: node.on };
   return {};
 }
 

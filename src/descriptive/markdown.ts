@@ -59,12 +59,12 @@ function splitTokens(line: string): string[] {
       quote = !quote;
       continue;
     }
-    if (!quote && (ch === "{" || ch === "[")) {
+    if (!quote && (ch === "{" || ch === "[" || ch === "(")) {
       depth++;
       cur += ch;
       continue;
     }
-    if (!quote && (ch === "}" || ch === "]")) {
+    if (!quote && (ch === "}" || ch === "]" || ch === ")")) {
       depth = Math.max(0, depth - 1);
       cur += ch;
       continue;
@@ -143,6 +143,44 @@ function parseProps(raw: string): unknown {
       }
     }
   }
+}
+
+/**
+ * Parse an `on(when, code)` spec into an EventSpec object.
+ * Positional arguments: first is the when value, second is the state code.
+ * Example: on(start, slide1.current=1)
+ */
+function parseOnSpec(raw: string): { when: string; state: string } | undefined {
+  const s = raw.trim();
+  if (!s.startsWith("(") || !s.endsWith(")")) return undefined;
+  const body = s.slice(1, -1).trim();
+  if (!body) return undefined;
+
+  const parts: string[] = [];
+  let current = "";
+  let depth = 0;
+  let inQuote = false;
+
+  for (let i = 0; i < body.length; i++) {
+    const ch = body[i]!;
+    if (ch === '"') { inQuote = !inQuote; current += ch; continue; }
+    if (!inQuote) {
+      if (ch === "(") { depth++; current += ch; continue; }
+      if (ch === ")") { depth--; current += ch; continue; }
+      if (ch === "," && depth === 0) {
+        parts.push(current.trim());
+        current = "";
+        continue;
+      }
+    }
+    current += ch;
+  }
+  if (current.trim()) parts.push(current.trim());
+
+  if (parts.length >= 2) {
+    return { when: parts[0]!, state: parts.slice(1).join(",") };
+  }
+  return undefined;
 }
 
 /**
@@ -240,11 +278,28 @@ function parseKeyValueTokens(tokens: string[]): Record<string, unknown> {
 
       if (key === "waypoints") val = parseWaypoints(String(val));
       else if (key === "props" || key === "imports" || key === "components") val = parseProps(String(val));
-      else if (key === "spots" || key === "customKeyframes" || key === "on") val = parseProps(String(val));
+      else if (key === "spots" || key === "customKeyframes") val = parseProps(String(val));
+      else if (key === "on") val = parseOnSpec(String(val));
       else if (key === "effects") val = parseEffects(String(val));
       else if (key !== "instruction" && key !== "tts" && key !== "stt" && key !== "jsx" && key !== "prompt") {
         val = parseNumberMaybe(String(val));
       }
+      out[key] = val;
+      i++;
+      continue;
+    }
+
+    // Support key(value) pattern (no colon), e.g. on(start, slide1.current=1)
+    const funcMatch = token.match(/^(\w+)\(/);
+    if (funcMatch) {
+      const key = funcMatch[1]!;
+      const rawVal = token.slice(key.length);
+      let val: unknown = unquote(rawVal);
+
+      if (key === "on") val = parseOnSpec(rawVal);
+      else if (key === "effects") val = parseEffects(rawVal);
+      else val = parseNumberMaybe(rawVal);
+
       out[key] = val;
       i++;
       continue;

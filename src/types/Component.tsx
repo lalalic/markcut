@@ -3,7 +3,7 @@ import { Sequence, useVideoConfig } from "remotion";
 import { ComposeContext, useEventContext, useFrameEvents } from "../context/index";
 import JsxParser from "react-jsx-parser";
 import { useTweenBindings } from "../utils/tween";
-import type { Component } from "../schema/index";
+import type { Component, EventSpec } from "../schema/index";
 
 /** Find uppercase tag names in JSX that look like component references. */
 function findUnknownComponentTags(jsx: string, registered: Record<string, unknown> | undefined): string[] {
@@ -152,7 +152,7 @@ function EventAwareComponent({
   data: Record<string, unknown> | undefined;
   action: { start?: number; end?: number };
   durFrames: number;
-  on?: Component["on"];
+  on?: EventSpec;
 }) {
   // Fire events at the right frame for this node's timeline
   useFrameEvents(on, durFrames);

@@ -11,11 +11,11 @@ layout:series
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm'
 
-export function Slide({ current = 0, children, ...rest }) {
-  let idx = 0;
+export function Slide({ current = 1, children, ...rest }) {
+  let idx = 1;
   return <div className="slide"><ReactMarkdown components={{
     li: ({ children }) => {
-      const highlight = (current & (1 << idx++)) !== 0;
+      const highlight = idx === current; idx++;
       return <li className={highlight ? 'highlight' : ''}>{children}</li>;
     }
   }} remarkPlugins={[remarkGfm]} {...rest}>{children}</ReactMarkdown></div>;
@@ -145,11 +145,10 @@ layout:transitionSeries transition:fade(0.5)
   > Traditional programming: Rules + Data = Answers
   > Machine Learning: Answers + Data = Rules
   ~~~
-- parallel
-  - script "In machine learning, we typically split data into training, validation, and test sets. The training set is used for model learning, the validation set for tuning parameters, and the test set for evaluating final performance. This way, we ensure the model performs well not only on known data but also maintains accuracy on unseen data." 
-    on:[{when:start, state:"slide1.current=1"}]
-- script "The core goal of machine learning is to enable computers to extract useful information from data and make reasonable predictions or decisions when faced with new situations. This capability is widely applied across various fields, from image recognition to natural language processing, recommendation systems, and autonomous driving." 
-  on:[{when:start, state:"slide1.current=2"}]
+- script "In machine learning, we typically split data into training, validation, and test sets. The training set is used for model learning, the validation set for tuning parameters, and the test set for evaluating final performance. This way, we ensure the model performs well not only on known data but also maintains accuracy on unseen data." on(start, slide1.current=1)
+  
+
+- script "The core goal of machine learning is to enable computers to extract useful information from data and make reasonable predictions or decisions when faced with new situations. This capability is widely applied across various fields, from image recognition to natural language processing, recommendation systems, and autonomous driving." on(start, slide1.current=2)
 
 ### SupervisedLearning
 layout:parallel

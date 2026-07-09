@@ -17,6 +17,17 @@ A single root object describing a renderable video:
 
 When to use: always. Scenes are the default organizational unit. They render as folders but carry narrative metadata.
 
+| Field | Required | Type | Notes |
+|---|---|---|---|
+| `type` | yes | `"scene"` | |
+| `name` | yes | string | unique scene identifier |
+| `layout` | yes | `"series"\|"parallel"\|"transitionSeries"` | |
+| `children` | yes | node[] | must be non-empty |
+| `transition` | opt | `"fade"\|"slide"\|"wipe"\|"flip"\|"clockWipe"` | only for transitionSeries |
+| `transitionTime` | opt | number | seconds (default 0.5) |
+| `instruction`,`script`,`style` | opt | | metadata |
+| `on` | opt | `{ when, state }` | Event spec that fires at a specific frame |
+
 > **`scene` is a container.** It supports nesting: a scene can hold other scenes, containers, or leaves. Use nested scenes for chapters, acts, or grouped beats.
 
 Example of nested scenes:
@@ -49,6 +60,7 @@ When to use: any moving footage (.mp4, .mov, etc.).
 | `playbackRate` | opt | number | |
 | `width`,`height` | opt | number | default 1080×1920 |
 | `instruction`,`script`,`style` | opt | | metadata |
+| `on` | opt | `{ when, state }` | Event spec that fires at a specific frame |
 | `effects` | opt | `string[]` or `object[]` | **New** — apply animations directly: `["fadeIn"]` or `[{animation:"bounceIn",animationTimingFunction:"ease-out"}]` |
 
 ### `audio`
@@ -65,6 +77,7 @@ When to use: voiceover, BGM, SFX.
 | `loop` | opt | int | loop count >1 |
 | `foreground` | opt | bool | ducks parent video audio |
 | `start` | opt | number | parallel only |
+| `on` | opt | `{ when, state }` | Event spec that fires at a specific frame |
 | `effects` | opt | `string[]` or `object[]` | **New** — apply animations directly |
 
 ### `image`
@@ -78,6 +91,7 @@ When to use: photos, stills, title cards.
 | `duration` | yes | number | no intrinsic duration |
 | `fit` | opt | `"contain"\|"cover"\|"fill"` | default `contain` |
 | `start` | opt | number | parallel only |
+| `on` | opt | `{ when, state }` | Event spec that fires at a specific frame |
 
 ### `subtitle` (root-level overlay)
 
@@ -110,6 +124,8 @@ When to use: JSX expression rendered at runtime with frontmatter imports in scop
 | `type` | yes | `"component"` | |
 | `jsx` | yes | string | JSX usage expression, e.g. `"<BarChart data={...} />"` |
 | `duration` | yes | number |
+| `id` | opt | string | Required for event targeting — registers component in event context |
+| `on` | opt | `{ when, state }` | Event spec that fires at a specific frame |
 | `effects` | opt | `string[]` or `object[]` | **New** — apply animations directly |
 
 ### `rhythm`
@@ -253,6 +269,58 @@ Inline `jsx:` definitions in the imports array are also available as JSX tags in
 
 The markdown descriptive format supports the same `imports:` array in YAML frontmatter, plus ` ```jsx Name ` code fence blocks for inline definitions. See [Markdown Strict Descriptive](markdown-strict-descriptive.md#component) for details.
 
+## Events
+
+Fire a JavaScript expression at a specific frame to mutate a registered component's state. Useful for syncing UI state with narration beats.
+
+### Registering a component
+
+Add an `id` to a component node to register it in the global event context:
+
+```json
+{
+  "type": "component",
+  "jsx": "<Slide current={current}>{source}</Slide>",
+  "duration": 4,
+  "id": "slide1"
+}
+```
+
+The `id` becomes the variable name available in event expressions.
+
+### Event spec
+
+Any node can carry an `on` field with the following shape:
+
+| Field | Required | Type | Notes |
+|---|---|---|---|
+| `when` | yes | string | Frame selector: `"start"`, `"end"`, `"50%"`, `"2.5s"`, etc. |
+| `state` | yes | string | JavaScript expression evaluated with registered component proxies in scope |
+
+### Examples
+
+```json
+{
+  "type": "scene",
+  "children": [
+    {
+      "type": "audio",
+      "script": "Narration 1",
+      "duration": 3,
+      "on": { "when": "start", "state": "slide1.current=0" }
+    },
+    {
+      "type": "audio",
+      "script": "Narration 2",
+      "duration": 2,
+      "on": { "when": "start", "state": "slide1.current++" }
+    }
+  ]
+}
+```
+
+The expression is evaluated with all registered component IDs as scope variables. Each component variable is a Proxy whose property setter triggers a React re-render on the corresponding component node.
+
 ## Common Metadata Fields
 
 Available on every node:
@@ -265,6 +333,7 @@ Available on every node:
 | `style` | string | inline CSS (semicolon-separated); applied to the node's container div, e.g. `"border-radius:16px; opacity:0.9"` |
 | `visible` | bool | default `true`; set `false` to hide without removing |
 | `isBackground` | bool | when `true`, node loops to fill parent duration and does **not** contribute to container duration calculation — use for BGM, looping background imagery |
+| `on` | object `{ when, state }` | Event spec that fires a JS expression at a specific frame, mutating registered component state — see [Events](#events-1) section |
 
 > **`style` tip:** applies to the wrapping container, not the inner media element. Use for positioning, sizing, and opacity overrides.
 > **`isBackground` tip:** use for audio tracks, looping video overlays, or any element that should play across the full parent duration.
@@ -293,12 +362,14 @@ TTS, STT, TTI, and TTV are each configured via a **single CLI template string**.
 }
 ```
 
-**Per scene** — overrides root TTS:
+**Per scene** — narration via audio child with `script`:
 ```json
 {
   "type": "scene",
-  "script": "Hello world",
-  "tts": "edge-tts --voice \"zh-CN-XiaoxiaoNeural\" --text \"{input}\" --write-media \"{output}\""
+  "children": [
+    { "type": "audio", "script": "Hello world", "volume": 1 },
+    ...
+  ]
 }
 ```
 
@@ -410,6 +481,7 @@ Hexadecimal colors can be interpolated:
 - [ ] Every video/audio/image/map/component has duration or trim.
 - [ ] No `start` outside parallel.
 - [ ] No duplicate `id` within the same parent.
+- [ ] Event targets (`"id": "name"` on component) match the `"id"` used in `on.when` / `on.state` expressions.
 - [ ] All JSON is valid (no comments, no trailing commas).
 
 ## Example
@@ -421,14 +493,13 @@ Hexadecimal colors can be interpolated:
   "fps": 30,
   "layout": "series",
   "theme": "neon",
-  "script": "A short memory film",
   "children": [
     {
       "type": "scene",
       "title": "Hook",
       "layout": "parallel",
-      "script": "Set location and emotional tone",
       "children": [
+        { "type": "audio", "script": "A short memory film", "volume": 1 },
         { "type": "image", "src": "cover.jpg", "duration": 2 },
         { "type": "image", "src": "intro.jpg", "duration": 1.6, "start": 0.2 }
       ]
@@ -439,8 +510,8 @@ Hexadecimal colors can be interpolated:
       "layout": "transitionSeries",
       "transition": "fade",
       "transitionTime": 0.4,
-      "script": "Move through moments",
       "children": [
+        { "type": "audio", "script": "Set location and emotional tone", "volume": 1 },
         { "type": "video", "src": "clips/arrival.mp4", "startFrom": 0, "endAt": 3.5 },
         { "type": "video", "src": "clips/fire.mp4", "startFrom": 1, "endAt": 4 }
       ]

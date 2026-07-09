@@ -122,7 +122,7 @@ function normalizeEffectSpec(spec) {
   return spec;
 }
 function pickOn(node2) {
-  if (Array.isArray(node2.on) && node2.on.length > 0) return { on: node2.on };
+  if (node2.on) return { on: node2.on };
   return {};
 }
 function parseTransition(val) {
@@ -12424,12 +12424,12 @@ function splitTokens(line) {
       quote = !quote;
       continue;
     }
-    if (!quote && (ch === "{" || ch === "[")) {
+    if (!quote && (ch === "{" || ch === "[" || ch === "(")) {
       depth++;
       cur += ch;
       continue;
     }
-    if (!quote && (ch === "}" || ch === "]")) {
+    if (!quote && (ch === "}" || ch === "]" || ch === ")")) {
       depth = Math.max(0, depth - 1);
       cur += ch;
       continue;
@@ -12496,6 +12496,47 @@ function parseProps(raw) {
       }
     }
   }
+}
+function parseOnSpec(raw) {
+  const s = raw.trim();
+  if (!s.startsWith("(") || !s.endsWith(")")) return void 0;
+  const body = s.slice(1, -1).trim();
+  if (!body) return void 0;
+  const parts = [];
+  let current = "";
+  let depth = 0;
+  let inQuote = false;
+  for (let i = 0; i < body.length; i++) {
+    const ch = body[i];
+    if (ch === '"') {
+      inQuote = !inQuote;
+      current += ch;
+      continue;
+    }
+    if (!inQuote) {
+      if (ch === "(") {
+        depth++;
+        current += ch;
+        continue;
+      }
+      if (ch === ")") {
+        depth--;
+        current += ch;
+        continue;
+      }
+      if (ch === "," && depth === 0) {
+        parts.push(current.trim());
+        current = "";
+        continue;
+      }
+    }
+    current += ch;
+  }
+  if (current.trim()) parts.push(current.trim());
+  if (parts.length >= 2) {
+    return { when: parts[0], state: parts.slice(1).join(",") };
+  }
+  return void 0;
 }
 function parseEffects(raw) {
   const s = raw.trim();
@@ -12592,11 +12633,24 @@ function parseKeyValueTokens(tokens) {
       }
       if (key === "waypoints") val = parseWaypoints(String(val));
       else if (key === "props" || key === "imports" || key === "components") val = parseProps(String(val));
-      else if (key === "spots" || key === "customKeyframes" || key === "on") val = parseProps(String(val));
+      else if (key === "spots" || key === "customKeyframes") val = parseProps(String(val));
+      else if (key === "on") val = parseOnSpec(String(val));
       else if (key === "effects") val = parseEffects(String(val));
       else if (key !== "instruction" && key !== "tts" && key !== "stt" && key !== "jsx" && key !== "prompt") {
         val = parseNumberMaybe(String(val));
       }
+      out[key] = val;
+      i++;
+      continue;
+    }
+    const funcMatch = token.match(/^(\w+)\(/);
+    if (funcMatch) {
+      const key = funcMatch[1];
+      const rawVal = token.slice(key.length);
+      let val = unquote(rawVal);
+      if (key === "on") val = parseOnSpec(rawVal);
+      else if (key === "effects") val = parseEffects(rawVal);
+      else val = parseNumberMaybe(rawVal);
       out[key] = val;
       i++;
       continue;

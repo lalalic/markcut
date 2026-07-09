@@ -40,7 +40,7 @@ const BaseShape = {
   visible: z.boolean().default(true),
   isBackground: z.boolean().optional(),
   durationInSeconds: z.number().optional().describe("set by engine; do not edit by hand"),
-  on: z.array(eventSpec).optional().describe("events that fire at specific frames, mutating registered component state"),
+  on: eventSpec.optional().describe("event that fires at a specific frame, mutating registered component state"),
 };
 
 export const base = z.object(BaseShape);

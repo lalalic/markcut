@@ -28017,19 +28017,15 @@ function useFrameEvents(on, durationInFrames) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const { evaluate } = useEventContext();
-  const handledFramesRef = React8.useRef(/* @__PURE__ */ new Set());
+  const handledRef = React8.useRef(false);
   React8.useEffect(() => {
-    if (!on || on.length === 0 || durationInFrames <= 0) return;
-    for (const ev of on) {
-      const targetFrame = resolveWhenToFrame(ev.when, durationInFrames, fps);
-      if (frame === targetFrame && !handledFramesRef.current.has(frame)) {
-        handledFramesRef.current.add(frame);
-        evaluate(ev.state);
-      }
+    if (!on || durationInFrames <= 0) return;
+    const targetFrame = resolveWhenToFrame(on.when, durationInFrames, fps);
+    if (frame === targetFrame && !handledRef.current) {
+      handledRef.current = true;
+      evaluate(on.state);
     }
-    for (const f2 of handledFramesRef.current) {
-      if (f2 < frame) handledFramesRef.current.delete(f2);
-    }
+    if (frame > targetFrame) handledRef.current = false;
   }, [frame, on, durationInFrames, fps, evaluate]);
 }
 
@@ -59693,7 +59689,7 @@ var BaseShape = {
   visible: external_exports.boolean().default(true),
   isBackground: external_exports.boolean().optional(),
   durationInSeconds: external_exports.number().optional().describe("set by engine; do not edit by hand"),
-  on: external_exports.array(eventSpec).optional().describe("events that fire at specific frames, mutating registered component state")
+  on: eventSpec.optional().describe("event that fires at a specific frame, mutating registered component state")
 };
 var base = external_exports.object(BaseShape);
 var folder = base.extend({

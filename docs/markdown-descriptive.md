@@ -12,7 +12,7 @@ A markdown document compiled into a renderable scene tree.
 - Scenes via `##`/`###`/`####` headings
 - Leaf nodes via `- typeToken ...` bullets
 - Component registrations via `` ~~~js imports `` code fence (or inline JSX definitions)
-- Properties via indented code fences (`~~~<lang> <propName>`)
+- Properties via indented code fences (`~~~<lang> <propName>`); `~~~script` only valid on audio nodes
 
 ## Frontmatter
 
@@ -152,13 +152,14 @@ For compatibility, `import { Name } from "spec"` also works and produces the sam
 | `routeMarker` | emoji string e.g. `"🚗"` | map |
 | `title` | display title | scene |
 | `instruction` | visual intent / style / any prompt; NOT rendered | any |
-| `script` | narration/dialogue text; TTS source; NOT rendered directly | scene, series, parallel, transitionSeries |
+| `script` | narration/dialogue text; TTS source; NOT rendered directly | audio | Only on audio nodes — see Narration section below |
 | `tts` | CLI template string; per-scene TTS override (overrides root `tts`) | root, scene |
 | `metadata` | arbitrary metadata string | root |
 | `stylesheet` | global CSS string; selectors use `.className` on elements | root |
 | `style` | inline CSS applied to the node's container div e.g. `"border-radius:12px"` | any |
 | `visible` | bool default true; `false` hides without removing | any |
 | `isBackground` | bool; loops to fill parent duration; does NOT count toward container duration — use for BGM or looping bg imagery | any |
+| `on` | `on(when, state)` event spec; fires JS expression at a specific frame, mutating registered component state | any | See [Events](#events) section |
 | `id` | unique string within parent scope | any |
 
 ## Type Catalog
@@ -173,17 +174,13 @@ Syntax:
 
 ```md
 ## <title>
-layout:<x> [transition:<t> transitionTime:<n>] [script:".." tts:"edge-tts --voice \"en-US-GuyNeural\" --text \"{text}\" --write-media \"{output}\""] [instruction:..]
+layout:<x> [transition:<t> transitionTime:<n>] [instruction:..]
 - <children>
 ```
 
-Scene metadata (layout, instruction, script, transition) goes on the line(s) immediately below the heading, before any child bullets. This keeps the heading clean. `name` comes from the heading text (must be a single token — no spaces). For multi-word titles, use key-value `title:"Long Title"` on the metadata line. `title` optionally follows ` - ` in the heading (e.g. `## Chapter1 - The Beginning` splits to name=`Chapter1`, title=`The Beginning`).
+Scene metadata (layout, instruction, transition) goes on the line(s) immediately below the heading, before any child bullets. This keeps the heading clean. `name` comes from the heading text (must be a single token — no spaces). For multi-word titles, use key-value `title:"Long Title"` on the metadata line. `title` optionally follows ` - ` in the heading (e.g. `## Chapter1 - The Beginning` splits to name=`Chapter1`, title=`The Beginning`).
 
-Narration can be set in two ways:
-- **Scene metadata**: `script:"..."` on the scene's metadata line.
-- **Script type token**: `- script "..."` as a bullet item inside the scene (or inside a series/parallel container). Sets the parent node's script property for TTS generation.
-
-When scenes nest, the **innermost** scene's `script` wins; parent scenes with a nested `script` child are skipped to prevent overlapping narration. Container nodes (`series`/`parallel`/`transitionSeries`) with `script` also generate TTS audio.
+For narration, use the `- script "..."` audio alias as a child of the scene (see [Narration / TTS](#narration--tts) below).
 
 ### `image`
 
@@ -199,9 +196,42 @@ When: moving footage. Required: `src` + (`duration` or `endAt`).
 
 ### `audio`
 
-When: voiceover, BGM, SFX. Required: `src` + (`duration` or `endAt`).
+When: voiceover, BGM, SFX, TTS narration. Required: `src` + (`duration` or `endAt`).
 
 `- audio src:bgm.mp3 duration:6 volume:0.4 loop:2`
+
+### Narration / TTS
+
+Narration text is set via the `script` field on audio nodes. There are three ways to provide it:
+
+**1. Inline `script:` attribute on an audio node**
+
+```md
+- audio src:bg.mp3 duration:5 script:"Welcome to the course"
+```
+
+**2. Standalone `- script "..."` bullet (alias for audio)**
+
+This is a shorthand that creates an audio node with the `script` field. Supports all standard audio keys:
+
+```md
+- script "Welcome to the course"
+- script "Voiceover" volume:0.8 start:2 duration:5 foreground:true
+```
+
+**3. Code fence `~~~script` on an audio node**
+
+For longer text, use an indented code fence:
+
+```md
+- audio src:bg.mp3 duration:10
+  ~~~script
+  This is a longer narration
+  that spans multiple lines.
+  ~~~
+```
+
+All three patterns produce an `audio` node with a `script` field. The pipeline's TTS resolver (`resolveScripts`) picks up these nodes, generates speech audio files, and sets the `src` field to the output path. The `script` field is consumed by the resolver and is not present in the compiled stream tree.
 
 ### `subtitle` (root-level overlay)
 
@@ -307,7 +337,7 @@ The fence syntax is `~~~<lang> <propName>`. If `propName` is omitted, it default
 |---|---|---|
 | `~~~jsx jsx` or `~~~jsx` | `jsx` | Component JSX expression |
 | `~~~prompt prompt` | `prompt` | TTI/TTV generation prompt |
-| `~~~script script` | `script` | Narration text |
+| `~~~script script` or `~~~script` | `script` | Narration text on audio nodes |
 
 ### `rhythm`
 
@@ -343,6 +373,67 @@ When: external video JSON. Required: `src` + `duration`, or inline `children`.
 
 `- include src:./child.json duration:4`
 
+## Events
+
+Fire a JavaScript expression at a specific frame to mutate a registered component's state. Useful for syncing UI state with narration beats.
+
+### Registering a component for events
+
+Add an `id` attribute to a `component` node to register it in the global event context:
+
+```md
+- component id:slide1 duration:4 jsx:"<Slide current={current}>{source}</Slide>"
+```
+
+The `id` becomes the variable name available in event expressions.
+
+### Firing an event
+
+Use `on(when, state)` on any node (audio, video, image, component, scene, etc.):
+
+```md
+- script "Narration 1" on(start, slide1.current=0)
+- script "Narration 2" on(start, slide1.current++)
+```
+
+The `when` argument selects the target frame, and `state` is a JavaScript expression evaluated with all registered component proxies in scope.
+
+### Supported `when` values
+
+| Value | Fires at |
+|---|---|
+| `start` | Frame 0 (beginning of the node's timeline) |
+| `end` | Last frame (end of the node's duration) |
+| `50%` | 50% through the node's duration |
+| `2.5s` | 2.5 seconds into the node (multiplied by root `fps`) |
+
+Any percentage (`0%`–`100%`) or seconds value (`0s`, `1.5s`, `10s`) works.
+
+### `state` expression
+
+Any valid JavaScript expression — assign values, increment counters, toggle booleans:
+
+```md
+- script "Narration" on(start, slide1.current=0)
+- script "Beat2" on(start, slide1.current++)
+- script "Done" on(end, slide1.visible=false)
+```
+
+The expression is evaluated with all registered component IDs as scope variables. Each component variable is a Proxy whose property setter triggers a React re-render.
+
+### JSON form
+
+In the compiled stream tree, events are represented as an `on` field on any node:
+
+```json
+{
+  "type": "audio",
+  "src": "narration.mp3",
+  "duration": 3,
+  "on": { "when": "start", "state": "slide1.current=0" }
+}
+```
+
 ## Timing Rules
 
 1. `duration` authoritative for non-trimmed leaves.
@@ -356,7 +447,7 @@ When: external video JSON. Required: `src` + `duration`, or inline `children`.
 1. Root: `# video` + `width:<n> height:<n> fps:<n> layout:<mode>` on the next line.
 2. Frontmatter (optional): `---` block for root attrs + tts/stt pipeline config + `stylesheet`.
 3. Component registrations: `` ~~~js imports `` block for external components.
-4. Scenes via `##` with `layout:` + `script:` metadata on the line below.
+4. Scenes via `##` with `layout:` metadata on the line below.
 5. Leaves as `- type key:value ...` bullets indented under scenes.
 6. Long values (JSX, prompts, scripts) use indented `~~~<lang> <propName>` code fences.
 7. Verify each leaf has resolvable `duration`.
@@ -409,6 +500,7 @@ tween(#000, #FFF)             — color interpolation
 - [ ] Inline component definitions go inside `` ~~~js imports `` as `export function Name(...) { ... }`.
 - [ ] Scene names are single tokens (no spaces) — use `title:"..."` for multi-word titles.
 - [ ] Code fence properties are indented under their parent bullet.
+- [ ] Event targets (`id:name` on component) match the `id` used in `on(when, id.prop=value)` expressions.
 
 ## Validation with CLI
 
@@ -438,11 +530,13 @@ export function Greeting({ name }) {
 ~~~
 
 ## Hook
-layout:parallel script:"Set location and emotional tone"
+layout:parallel
+- script "Set location and emotional tone"
 - image src:cover.jpg duration:2
 
 ## Journey
-layout:transitionSeries transition:fade transitionTime:0.4 script:"Move through moments"
+layout:transitionSeries transition:fade transitionTime:0.4
+- script "Move through moments"
 - video src:clips/arrival.mp4 startFrom:0 endAt:3.5
 - video src:clips/fire.mp4 startFrom:1 endAt:4
 

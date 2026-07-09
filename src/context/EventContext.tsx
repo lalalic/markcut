@@ -139,35 +139,30 @@ export function resolveWhenToFrame(
 }
 
 /**
- * Hook that fires events at the correct frame.
+ * Hook that fires an event at the correct frame.
  *
- * @param on - Array of event specs from the stream node
- * @param durationInFrames - Duration of the node in frames (used to compute target frames)
+ * @param on - A single event spec from the stream node
+ * @param durationInFrames - Duration of the node in frames (used to compute target frame)
  */
 export function useFrameEvents(
-  on: EventSpec[] | undefined,
+  on: EventSpec | undefined,
   durationInFrames: number,
 ): void {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const { evaluate } = useEventContext();
-  const handledFramesRef = React.useRef<Set<number>>(new Set());
+  const handledRef = React.useRef(false);
 
   React.useEffect(() => {
-    if (!on || on.length === 0 || durationInFrames <= 0) return;
+    if (!on || durationInFrames <= 0) return;
 
-    for (const ev of on) {
-      const targetFrame = resolveWhenToFrame(ev.when, durationInFrames, fps);
-      if (frame === targetFrame && !handledFramesRef.current.has(frame)) {
-        handledFramesRef.current.add(frame);
-        evaluate(ev.state);
-      }
+    const targetFrame = resolveWhenToFrame(on.when, durationInFrames, fps);
+    if (frame === targetFrame && !handledRef.current) {
+      handledRef.current = true;
+      evaluate(on.state);
     }
 
-    // Clean up handled frames that are in the past so they can fire again
-    // if the component re-mounts. Keep only frames >= current.
-    for (const f of handledFramesRef.current) {
-      if (f < frame) handledFramesRef.current.delete(f);
-    }
+    // Reset so event can fire again if component re-mounts
+    if (frame > targetFrame) handledRef.current = false;
   }, [frame, on, durationInFrames, fps, evaluate]);
 }
