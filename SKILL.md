@@ -7,10 +7,7 @@ description: >-
 
 ## Stream Tree Specs
 
-Everything video is a **stream tree**. it support 2 formats, markdown and json. 
-- markdown: see [docs/markdown-descriptive.md](docs/markdown-descriptive.md) for full details.
-- json: see [docs/json-descriptive.md](docs/json-descriptive.md) for full details.
-
+Everything video is a **stream tree**. see [docs/markdown-descriptive.md](docs/markdown-descriptive.md) for full details.
 ---
 
 ## Video Design Best Practice (How-To)
@@ -45,76 +42,18 @@ npx markcut render <stream tree file> --aspect all  # MP4 output
 
 ---
 
-## Subtitle Overlay
-
-The engine supports a **root-level VTT subtitle overlay** with animated caption components.
-
-### Configuration
-
-```yaml
-# In markdown frontmatter
-subtitle:
-  src: captions.vtt
-  type: typewriter       # caption animation: bounce, fade, typewriter, colorful, glowing, neon, zoom, etc.
-  fontSize: 48
-  fontFamily: "Helvetica Neue"
-  fontStyle: bold
-```
-
-| Field | Required | Type | Notes |
-|---|---|---|---|
-| `src` | yes | string | VTT path/URL, inline VTT body, or plain text |
-| `type` | opt | string | caption animation component (default: plain static `Caption`) |
-| `fontSize` | opt | number\|string | default 56 |
-| `fontFamily` | opt | string | font family |
-| `fontStyle` | opt | string | `normal`, `italic`, `bold`, etc. |
-| `style` | opt | string | inline CSS for overlay container |
-
-Cue text supports **HTML tags** (`<span style="color:red">...</span>`). Each cue is rendered as a separate `<Sequence>` — inactive cues consume zero CPU.
-
-### Caption type reference
-
-| Value | Component | Effect |
-|---|---|---|
-| *(omit)* | `Caption` | Plain static text |
-| `bounce` | `BounceCaption` | Bouncing entrance |
-| `fade` | `FadeCaption` | Fade in |
-| `typewriter` | `TypewriterCaption` | Typewriter character reveal |
-| `colorful` | `ColorfulCaption` | Rainbow cycling colors |
-| `glowing` | `GlowingCaption` | Glow effect |
-| `neon` | `NeonCaption` | Neon sign |
-| `zoom` | `ZoomCaption` | Zoom in |
-| `explosive` | `ExplosiveCaption` | Burst effect |
-| `shake` | `ShakeCaption` | Shake effect |
-| `waving` | `WavingCaption` | Wavy text |
-| `rotating` | `RotatingCaption` | Rotation |
-
-## AI Media Generation (TTS / STT / TTI / TTV)
+## AI Media Generation (TTS / STT / TTI(text-to-image) / TTV(text-to-video))
 
 All four pipelines are configured via a **single CLI string** in frontmatter. The user/LLM embeds every tool-specific parameter directly in the string — only `{input}` and `{output}` are substituted by the engine.
 
-| Pipeline | Field | Default CLI | Prerequisite |
-|----------|-------|-------------|--------------|
-| **Text-to-Speech** | `tts` | `edge-tts --voice "en-US-GuyNeural" --text "{input}" --write-media "{output}"` | [`edge-tts`](https://github.com/rany2/edge-tts) (`pip install edge-tts`) |
-| **Speech-to-Text** | `stt` | `whisper "{input}" --output_format vtt --output_dir "{output}"` | [`openai-whisper`](https://github.com/openai/whisper) (`pip install openai-whisper`) |
-| **Text-to-Image** | `tti` | `pi --model agnes-2.0-flash --print "generate image: {input}" --output "{output}"` | [`pi` CLI](https://pi.dev) (`pip install pi-sdk`) |
-| **Text-to-Video** | `ttv` | `pi --model agnes-2.0-flash --print "generate video: {input}" --output "{output}"` | [`pi` CLI](https://pi.dev) (`pip install pi-sdk`) |
-
-Set any field in YAML frontmatter to override the default. Example:
+The default clis are same as below. You can override them in the frontmatter of your stream tree file.
 
 ```yaml
-tts: edge-tts --voice "zh-CN-XiaoxiaoNeural" --text "{input}" --write-media "{output}"
-stt: whisper "{input}" --model tiny --language zh --output_format vtt --output_dir "{output}"
+tts: uvx edge-tts --voice "en-US-GuyNeural" --text "{input}" --write-media "{output}"
+stt: uvx --from openai-whisper whisper "{input}" --output_format vtt --output_dir "{output}"
+tti: uvx --from mflux mflux-generate-flux2 --model flux2-klein-4b --steps 5 --prompt "{input}" --output "{output}"
+ttv: ##use tti cli to create an image then use ffmpeg to create a video showing the image 5s
 ```
-
-> **Important**: Only the three built-in variables listed above are substituted. All other parameters (voice, model, rate, size, style, etc.) must be written verbatim into the CLI string by the LLM at generation time.
-
-### Built-in Variables
-
-| Variable | Applies To | Description |
-|----------|-----------|-------------|
-| `{input}` | TTS, TTI, TTV | Input content: narration text (TTS), generation prompt (TTI, TTV), audio file path (STT) |
-| `{output}` | All | Output location: file path for TTS/TTI/TTV, directory for STT VTT files |
 
 ---
 
@@ -129,14 +68,9 @@ npx markcut <command> [options]
 | Command | Description |
 |---------|-------------|
 | `render <file>` | Render stream tree to MP4 |
-| `preview <file>` | Open Remotion Studio |
 | `preview <file> --label` | Label clips in a simplified stream tree |
 | `preview <file> --edit` | Live editing loop (auto-reload on file change) |
 | `verify <file>` | Validate descriptive file + check imports |
-| `verify <file> --cli` | Also check required CLI tools are installed |
-| `compile <file>` | Compile descriptive file to stream tree JSON (stdout) |
-| `resolve <file>` | Run async pipeline: TTS, STT, durations |
-
 ### Options
 
 | Flag | Values | Default |
@@ -145,7 +79,6 @@ npx markcut <command> [options]
 | `--output` | path | `out/video-{aspect}.mp4` |
 | `--port` | number | `3001` |
 | `--verbose` | flag | `false` (compact progress) |
-| `--cli` | flag | `false` (verify only) |
 | `--compile` | flag | `false` (resolve only) |
 | `--script-output-dir` | dir | TTS/STT output directory |
 | `--media-output-dir` | dir | TTI/TTV media output directory |
@@ -177,7 +110,6 @@ some common issues (photo or video can't be displayed, audio missing), take belo
 | Topic | File |
 |-------|------|
 | Markdown descriptive format (primary authoring format) | [docs/markdown-descriptive.md](docs/markdown-descriptive.md) |
-| JSON descriptive format (canonical IR) | [docs/json-descriptive.md](docs/json-descriptive.md) |
 | **Video Templates** — ready-to-use markdown for common scenarios | **[docs/templates/](docs/templates/)** |
 | ┣ Courseware / 课件 | [docs/templates/courseware.md](docs/templates/courseware.md) |
 | ┣ Product Ad / 产品广告 | [docs/templates/product-ad.md](docs/templates/product-ad.md) |
@@ -185,8 +117,6 @@ some common issues (photo or video can't be displayed, audio missing), take belo
 | ┣ Audiobook / 有声图书 | [docs/templates/audiobook.md](docs/templates/audiobook.md) |
 | ┣ Story Video / 故事视频 | [docs/templates/story-video.md](docs/templates/story-video.md) |
 | ┣ Travel Log / 旅行日志 | [docs/templates/travel-log.md](docs/templates/travel-log.md) |
-| Dynamic components (remote, custom, effects) | [docs/dynamic-components.md](docs/dynamic-components.md) |
 | Label system (browse, label, export labels.json) | [docs/label-mode.md](docs/label-mode.md) |
 | Player servers (label + edit mode) | [docs/edit-mode.md](docs/edit-mode.md) |
 | Template overview and TTI/TTV config | [docs/templates.md](docs/templates.md) |
-| Missing components & packages tracker | [docs/missing-components.md](docs/missing-components.md) |
