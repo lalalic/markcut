@@ -282,12 +282,12 @@ async function main() {
     process.exit(0);
   }
 
-/** Check if any node in the tree has a script field. */
+/** Check if any audio node in the tree has a script field (needs TTS). */
 function hasScript(root) {
   let found = false;
   function walk(nodes) {
     for (const n of nodes) {
-      if (n.script) { found = true; return; }
+      if (n.type === "audio" && n.script) { found = true; return; }
       if (n.children) walk(n.children);
     }
   }

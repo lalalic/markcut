@@ -524,21 +524,6 @@ Composition rules:
   - isBackground=true → node loops for the full duration of its parent, excluded from duration calc
   - transition can be: "fade"|"slide"|"wipe"|"flip"|"clockWipe"
 
-Built-in components (use type="component", componentName="X", props={...}):
-  - AnimatedHeadline({text, subtext?, split?"word"|"char"|"line", gradient?bool, glow?bool}) — word-by-word kinetic typography
-  - TypewriterText({text, speed?number}) — typing simulation
-  - GlitchReveal({text, intensity?number}) — glitch-in text effect
-  - DeviceMockup({device"browser"|"phone"|"tablet"|"laptop", src, title?, shadow?bool, angle?number}) — device frame
-  - CursorFlyover({screenshot, steps:[{region:{x,y,zoom},cursor:{x,y},annotation?,duration}]}) — cursor animation
-  - ComparisonSlider({before,after,matchPercent?number}) — before/after comparison
-  - StatCounter({value:number, suffix?string, label?string}) — animated counter
-  - ProgressBar({value:number, max?:number, label?string}) — animated progress
-  - GradientBackground({type"linear"|"radial"|"conic", animated?bool, noise?bool}) — gradient bg
-  - ParticleField({count:number, speed:number, color?string}) — particle system
-  - LightLeak({intensity?:0-1}) — cinematic light leak overlay
-  - SplitScreen({left?,right?,ratio?}) — side-by-side layout
-  - SpotlightReveal({size?:number, duration?:number}) — circular reveal
-
 Subtitle styling: style field supports CSS (e.g. "color:#fff;font-size:48px"). fontSize field for quick sizing. Supports HTML in src for rich text. For word-highlight karaoke: set className:"karaoke" on cue, or provide words[{text,start,end}] array.
 
 Themes: set root.theme = "cinematic"|"minimal"|"neon"|"corporate" or an inline theme JSON object. Default is "cinematic".

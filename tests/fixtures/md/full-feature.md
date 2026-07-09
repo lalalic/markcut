@@ -7,7 +7,8 @@ tts: edge-tts --voice "zh-CN-XiaoxiaoNeural" --text "{input}" --write-media "{ou
 # video
 layout:series instruction:"Full feature demo video" metadata:"v2.0-feature-test"
 ## OpeningHook
-layout:parallel instruction:"Start with animated headline and BGM" script:"Welcome to this demo video"
+layout:parallel instruction:"Start with animated headline and BGM"
+- script "Welcome to this demo video"
 - component duration:3 jsx:"<AnimatedHeadline text='Welcome!' gradient='#667eea→#764ba2' />"
 - audio src:bgm/intro.mp3 duration:3 volume:0.3 isBackground:true
 ## StatShowcase
@@ -19,7 +20,8 @@ layout:parallel
 layout:parallel
 - component duration:3 jsx:"<StatCounter value={99} label='Quality' suffix='%' />"
 ## MediaMontage
-layout:transitionSeries transition:fade transitionTime:0.5 script:"Here are some highlights"
+layout:transitionSeries transition:fade transitionTime:0.5
+- script "Here are some highlights"
 - image src:photos/highlight1.jpg duration:2 fit:cover
 - video src:clips/moment1.mp4 duration:3 volume:0.8
 - image src:photos/highlight2.jpg duration:2 fit:cover
@@ -33,7 +35,8 @@ layout:parallel
 - effect animation:flipInX duration:2 animationIterationCount:1
   - image src:cards/card3.png duration:1.5 fit:contain
 ## InteractiveMap
-layout:parallel script:"Our journey across the continent"
+layout:parallel
+- script "Our journey across the continent"
 - map duration:6 travelMode:DRIVING waypoints:[37.77,-122.41,"San Francisco";40.7128,-74.006,"New York City"] routeColor:"#FF6B6B" routeWeight:5 zoom:4 mapType:roadmap routeMarker:"🚗"
 - audio src:bgm/map-music.mp3 duration:6 volume:0.25 isBackground:true
 ## BeatSync
@@ -46,7 +49,8 @@ layout:parallel
   - image src:flash/f5.jpg
   - image src:flash/f6.jpg
 ## Closing
-layout:parallel script:"Thanks for watching! Don't forget to subscribe"
+layout:parallel
+- script "Thanks for watching! Don't forget to subscribe"
 - image src:photos/ending.jpg duration:4 fit:cover
 - component duration:4 jsx:"<Logo variant='white' />"
 

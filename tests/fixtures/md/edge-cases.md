@@ -9,8 +9,10 @@ layout:parallel
 - audio src:"bgm (copy).mp3" duration:3 volume:0.5
 ## QuotedScripts
 layout:parallel
-- image src:a.jpg duration:2 script:"Special chars: #hash, $dollar, %percent, &ampersand"
-- video src:b.mp4 duration:3 script:"Path with spaces: /Users/me/my video.mp4"
+- image src:a.jpg duration:2
+- script "Special chars: #hash, $dollar, %percent, &ampersand"
+- video src:b.mp4 duration:3
+- script "Path with spaces: /Users/me/my video.mp4"
 ## LongDuration
 layout:parallel
 - image src:long.jpg duration:60

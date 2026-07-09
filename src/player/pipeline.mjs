@@ -248,7 +248,6 @@ function compileLeaf(node2, ctx, parentKind) {
         "jsx",
         "id",
         "instruction",
-        "script",
         "style",
         "visible",
         "isBackground",
@@ -1251,29 +1250,20 @@ async function resolveScripts(root, options) {
   const cache = readCacheManifest(options.outputDir);
   let cacheDirty = false;
   const allScriptNodes = [];
-  walkDown(clone, (node2) => {
-    if (node2.type !== "scene" && node2.type !== "series" && node2.type !== "parallel" && node2.type !== "transitionSeries") return;
+  walkDown(clone, (node2, parent) => {
+    if (node2.type !== "audio") return;
     if (!node2.script || typeof node2.script !== "string") return;
-    const existing = node2.children ?? [];
-    if (existing.some((c) => c.type === "audio")) return;
-    const id = node2.id ?? node2.name ?? `node-${allScriptNodes.length}`;
-    allScriptNodes.push({ node: node2, id });
+    if (node2.src) return;
+    const id = node2.id ?? `audio-${allScriptNodes.length}`;
+    allScriptNodes.push({ node: node2, id, parent });
   });
-  function hasDescendantWithScript(node2) {
-    for (const child of node2.children ?? []) {
-      if ((child.type === "scene" || child.type === "series" || child.type === "parallel" || child.type === "transitionSeries") && child.script) return true;
-      if (hasDescendantWithScript(child)) return true;
-    }
-    return false;
+  if (allScriptNodes.length > 0) {
+    console.log(`  \u{1F50A} TTS: generating ${allScriptNodes.length} script${allScriptNodes.length > 1 ? "s" : ""}...`);
   }
-  const toProcess = allScriptNodes.filter(({ node: node2 }) => !hasDescendantWithScript(node2));
-  if (toProcess.length > 0) {
-    console.log(`  \u{1F50A} TTS: generating ${toProcess.length} script${toProcess.length > 1 ? "s" : ""}...`);
-  }
-  for (const { node: node2, id } of toProcess) {
+  for (const { node: node2, id, parent } of allScriptNodes) {
     const safeId = id.replace(/[^a-zA-Z0-9_-]/g, "_");
     const audioPath = join(options.outputDir, `${safeId}.mp3`);
-    const ttsCli = node2.tts ?? clone.tts ?? options.ttsCli ?? DEFAULT_TTS_CLI;
+    const ttsCli = parent?.tts ?? clone.tts ?? options.ttsCli ?? DEFAULT_TTS_CLI;
     const cacheKey = computeCacheKey({ script: node2.script, cli: ttsCli });
     const cached = checkCache(cache, `tts:${safeId}`, cacheKey);
     let generated;
@@ -1286,16 +1276,16 @@ async function resolveScripts(root, options) {
         updateCache(cache, `tts:${safeId}`, cacheKey, generated);
         cacheDirty = true;
       } else {
-        console.warn(`  \u26A0 TTS produced no audio for ${safeId}. Scene will have no narration. Check root.tts config.`);
+        console.warn(`  \u26A0 TTS produced no audio for ${safeId}. Audio will have no source. Check root.tts config.`);
       }
     }
     if (!generated) continue;
-    if (!node2.children) node2.children = [];
-    node2.children.push({ type: "audio", src: generated, volume: 1 });
+    node2.src = generated;
+    delete node2.script;
   }
   if (cacheDirty) writeCacheManifest(options.outputDir, cache);
-  if (toProcess.length > 0) {
-    console.log(`  \u2705 TTS: ${toProcess.length} script${toProcess.length > 1 ? "s" : ""} ready`);
+  if (allScriptNodes.length > 0) {
+    console.log(`  \u2705 TTS: ${allScriptNodes.length} script${allScriptNodes.length > 1 ? "s" : ""} ready`);
   }
   return clone;
 }
@@ -12580,7 +12570,7 @@ function parseKeyValueTokens(tokens) {
       else if (key === "props" || key === "imports" || key === "components") val = parseProps(String(val));
       else if (key === "spots" || key === "customKeyframes") val = parseProps(String(val));
       else if (key === "effects") val = parseEffects(String(val));
-      else if (key !== "instruction" && key !== "script" && key !== "tts" && key !== "stt" && key !== "jsx" && key !== "prompt") {
+      else if (key !== "instruction" && key !== "tts" && key !== "stt" && key !== "jsx" && key !== "prompt") {
         val = parseNumberMaybe(String(val));
       }
       out[key] = val;
@@ -12615,7 +12605,6 @@ function parseHeaderScene(line) {
     name: sceneName,
     title: sceneTitle,
     instruction: attrs.instruction ? String(attrs.instruction) : void 0,
-    script: attrs.script ? String(attrs.script) : void 0,
     layout: attrs.layout,
     transition: attrs.transition,
     transitionTime: attrs.transitionTime,
@@ -12635,7 +12624,8 @@ function parseNodeLine(content3) {
   let firstPositional;
   if (type) {
     const t0 = tokens[0];
-    if (t0 && t0.indexOf(":") === -1 && !LAYOUT_VALUES.has(t0) && !TRANSITION_VALUES.has(t0)) {
+    if (t0 && // Quoted tokens are always positional values (even if they contain ':')
+    (isQuoted(t0) || t0.indexOf(":") === -1) && !LAYOUT_VALUES.has(t0) && !TRANSITION_VALUES.has(t0)) {
       firstPositional = t0;
       tokens.shift();
     }
@@ -12648,7 +12638,6 @@ function parseNodeLine(content3) {
     const node2 = {
       type,
       instruction: attrs2.instruction,
-      script: attrs2.script,
       transition: attrs2.transition,
       transitionTime: attrs2.transitionTime,
       effects: attrs2.effects,
@@ -12662,7 +12651,6 @@ function parseNodeLine(content3) {
     const node2 = {
       type: "effect",
       instruction: attrs2.instruction,
-      script: attrs2.script,
       animation,
       animationTimingFunction: attrs2.animationTimingFunction,
       animationIterationCount: attrs2.animationIterationCount,
@@ -12687,7 +12675,6 @@ function parseNodeLine(content3) {
         duration: attrs.duration,
         start: attrs.start,
         instruction: attrs.instruction,
-        script: attrs.script,
         visible: attrs.visible,
         isBackground: attrs.isBackground,
         style: attrs.style,
@@ -12711,7 +12698,6 @@ function parseNodeLine(content3) {
         width: attrs.width,
         height: attrs.height,
         instruction: attrs.instruction,
-        script: attrs.script,
         visible: attrs.visible,
         isBackground: attrs.isBackground,
         style: attrs.style,
@@ -12749,7 +12735,6 @@ function parseNodeLine(content3) {
         duration: attrs.duration,
         start: attrs.start,
         instruction: attrs.instruction,
-        script: attrs.script,
         visible: attrs.visible,
         isBackground: attrs.isBackground,
         style: attrs.style,
@@ -12768,7 +12753,6 @@ function parseNodeLine(content3) {
         volume: attrs.volume,
         spots: attrs.spots,
         instruction: attrs.instruction,
-        script: attrs.script,
         visible: attrs.visible,
         isBackground: attrs.isBackground,
         style: attrs.style,
@@ -12785,7 +12769,6 @@ function parseNodeLine(content3) {
         start: attrs.start,
         volume: attrs.volume,
         instruction: attrs.instruction,
-        script: attrs.script,
         visible: attrs.visible,
         isBackground: attrs.isBackground,
         style: attrs.style,
@@ -12794,9 +12777,21 @@ function parseNodeLine(content3) {
       return node2;
     }
     case "script": {
-      const text3 = firstPositional ?? (attrs.script ? String(attrs.script) : void 0);
-      if (!text3) throw new Error("script requires text content");
-      return { type: "script", script: text3 };
+      const raw = firstPositional ?? (attrs.script ? String(attrs.script) : void 0);
+      if (!raw) throw new Error("script requires text content");
+      const text3 = isQuoted(raw) ? unquote(raw) : raw;
+      return {
+        type: "audio",
+        script: text3,
+        volume: attrs.volume ?? 1,
+        start: attrs.start,
+        duration: attrs.duration,
+        foreground: attrs.foreground,
+        isBackground: attrs.isBackground,
+        style: attrs.style,
+        visible: attrs.visible,
+        effects: attrs.effects
+      };
     }
     case "map": {
       const node2 = {
@@ -12812,7 +12807,6 @@ function parseNodeLine(content3) {
         center: attrs.center,
         mapType: attrs.mapType,
         instruction: attrs.instruction,
-        script: attrs.script,
         visible: attrs.visible,
         isBackground: attrs.isBackground,
         style: attrs.style,
@@ -12931,12 +12925,6 @@ function processMDASTListItem(item, parent, lines) {
   const text3 = rawTextAtNode(lines, firstPara);
   if (!text3.trim()) return;
   const node2 = parseNodeLine(text3);
-  if (node2.type === "script") {
-    if (node2.script) {
-      parent.script = node2.script;
-    }
-    return;
-  }
   pushChild(parent, node2);
   for (const child of children) {
     if (child === firstPara) continue;
@@ -12981,7 +12969,6 @@ function applySceneMetadata(scene, attrs) {
         scene.instruction = String(v);
         break;
       case "script":
-        scene.script = String(v);
         break;
       case "tts":
         scene.tts = v;
@@ -13011,7 +12998,6 @@ function applyRootAttrs(root, attrs) {
         root.transitionTime = Number(v);
         break;
       case "script":
-        root.script = String(v);
         break;
       case "instruction":
         root.instruction = String(v);

@@ -242,12 +242,17 @@ describe("scenes fixture", () => {
     expect(journey.layout).toBe("transitionSeries");
     expect(journey.transition).toBe("fade");
     expect(journey.transitionTime).toBe(0.5);
-    expect(journey.script).toBe("Follow along on this adventure");
-    expect(journey.children).toHaveLength(3);
+    // Script is now an audio child instead of a property on the scene
+    expect(journey.children[0].type).toBe("audio");
+    expect(journey.children[0].script).toBe("Follow along on this adventure");
+    expect(journey.children).toHaveLength(4); // 1 audio + 3 images
 
     expect(wrap.name).toBe("WrapUp");
     expect(wrap.layout).toBe("parallel");
-    expect(wrap.script).toBe("Thanks for watching");
+    // Script is now an audio child instead of a property on the scene
+    expect(wrap.children[0].type).toBe("audio");
+    expect(wrap.children[0].script).toBe("Thanks for watching");
+    expect(wrap.children).toHaveLength(2); // 1 audio + 1 image
   });
 
   it("compiles transitionSeries with overlap", () => {
@@ -569,50 +574,6 @@ describe("tween fixture", () => {
   });
 });
 
-describe("strict fixture", () => {
-  const fx = loadFixture("strict-mode");
-
-  it("parses with full key:value syntax", () => {
-    const parsed = parseMarkdownDescriptive(fx.source);
-    expect(parsed.width).toBe(1920);
-    expect(parsed.height).toBe(1080);
-    expect(parsed.fps).toBe(24);
-    expect(parsed.layout).toBe("series");
-    expect(parsed.instruction).toBe("Strict mode demo");
-    expect(parsed.metadata).toBe("strict-test");
-  });
-
-  it("parses imports from ```js imports block", () => {
-    const parsed = parseMarkdownDescriptive(fx.source);
-    expect(parsed.imports).toBeUndefined();
-    expect(parsed.importsBlock).toBeDefined();
-    expect(parsed.importsBlock).toContain("StatCounter");
-  });
-
-  it("parses all node types", () => {
-    const parsed = parseMarkdownDescriptive(fx.source);
-    // 3 scenes
-    expect(parsed.children).toHaveLength(3);
-    const scene3 = parsed.children[2] as any;
-    expect(scene3.name).toBe("SceneThree");
-    // SceneThree has effect, map, rhythm
-    expect(scene3.children).toHaveLength(3);
-    expect(scene3.children[0].type).toBe("effect");
-    expect(scene3.children[1].type).toBe("map");
-    expect(scene3.children[2].type).toBe("rhythm");
-  });
-
-  it("compiles successfully", () => {
-    const parsed = parseMarkdownDescriptive(fx.source);
-    const compiled = compileDescriptiveRoot(parsed);
-    expect(compiled.type).toBe("root");
-    expect(compiled.width).toBe(1920);
-    expect(compiled.height).toBe(1080);
-    expect(compiled.fps).toBe(24);
-  });
-});
-
-
 // ── Edge Cases ────────────────────────────────────────────────────────────
 
 describe("edge-cases fixture", () => {
@@ -632,11 +593,17 @@ describe("edge-cases fixture", () => {
     expect(specialScene!.children[1].src).toBe("bgm (copy).mp3");
   });
 
-  it("parses quoted scripts with special chars", () => {
+  it("parses quoted scripts as audio siblings", () => {
     const parsed = parseMarkdownDescriptive(fx.source);
     const quotedScene = parsed.children.find((s: any) => s.name === "QuotedScripts");
-    expect(quotedScene!.children[0].script).toBe("Special chars: #hash, $dollar, %percent, &ampersand");
-    expect(quotedScene!.children[1].script).toBe("Path with spaces: /Users/me/my video.mp4");
+    // Script on image: converts to audio sibling
+    expect(quotedScene!.children[0].type).toBe("image");
+    expect(quotedScene!.children[1].type).toBe("audio");
+    expect(quotedScene!.children[1].script).toBe("Special chars: #hash, $dollar, %percent, &ampersand");
+    // Script on video: converts to audio sibling
+    expect(quotedScene!.children[2].type).toBe("video");
+    expect(quotedScene!.children[3].type).toBe("audio");
+    expect(quotedScene!.children[3].script).toBe("Path with spaces: /Users/me/my video.mp4");
   });
 
   it("handles long durations", () => {

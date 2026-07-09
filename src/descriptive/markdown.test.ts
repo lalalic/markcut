@@ -17,7 +17,7 @@ describe("parseMarkdownDescriptive", () => {
   });
 
   it("reads scene metadata from lines below heading", () => {
-    const doc = `# video\nlayout:series\n## Hook\nlayout:parallel instruction:"Fast opener" script:"Set mood"\n- image src:cover.jpg duration:2`;
+    const doc = `# video\nlayout:series\n## Hook\nlayout:parallel instruction:"Fast opener"\n- image src:cover.jpg duration:2`;
     const parsed = parseMarkdownDescriptive(doc);
 
     const scene = parsed.children[0]! as any;
@@ -25,7 +25,6 @@ describe("parseMarkdownDescriptive", () => {
     expect(scene.name).toBe("Hook");
     expect(scene.layout).toBe("parallel");
     expect(scene.instruction).toBe("Fast opener");
-    expect(scene.script).toBe("Set mood");
     expect(scene.children[0]!!.type).toBe("image");
   });
 
@@ -82,7 +81,7 @@ describe("parseMarkdownDescriptive", () => {
   });
 
   it("accepts full-word keys and normalizes enum aliases in keyed values", () => {
-    const doc = `# video\nlayout:series width:1080 height:1920 fps:30\n## Intro\nlayout:parallel instruction:"desc" script:"narration"\n- image src:cover.jpg duration:2`;
+    const doc = `# video\nlayout:series width:1080 height:1920 fps:30\n## Intro\nlayout:parallel instruction:"desc"\n- image src:cover.jpg duration:2`;
     const parsed = parseMarkdownDescriptive(doc);
 
     expect(parsed.layout).toBe("series");
@@ -91,7 +90,6 @@ describe("parseMarkdownDescriptive", () => {
     const intro = parsed.children[0]! as any;
     expect(intro.layout).toBe("parallel");
     expect(intro.instruction).toBe("desc");
-    expect(intro.script).toBe("narration");
 
     const leaf = intro.children[0]!;
     expect(leaf.type).toBe("image");
@@ -300,11 +298,12 @@ layout:series
     const doc = `# video
 ## Scene
 layout:parallel
-- image src:a.jpg duration:2 script:"Special chars: spaces, #hash, &ampersand"`;
+- image src:a.jpg duration:2`;
     const parsed = parseMarkdownDescriptive(doc);
 
     const scene = parsed.children[0]! as any;
-    expect(scene.children[0]!!.script).toBe("Special chars: spaces, #hash, &ampersand");
+    expect(scene.children[0].type).toBe("image");
+    expect(scene.children[0].src).toBe("a.jpg");
   });
 
   it("handles empty input gracefully", () => {
@@ -342,11 +341,11 @@ layout:parallel
     const doc = `# video
 width:1080 height:1920 fps:30 layout:series
 ## Hook
-script:"Set the mood" instruction:"Visual opening" layout:parallel
+layout:parallel instruction:"Visual opening"
 - image src:cover.jpg duration:3
 - video src:clip.mp4 startFrom:1 endAt:4
 ## End
-script:"Wrap up" layout:parallel
+layout:parallel
 - image src:final.jpg duration:2`;
 
     const parsed = parseMarkdownDescriptive(doc);
@@ -361,7 +360,6 @@ script:"Wrap up" layout:parallel
     const hook = compiled.children[0]! as any;
     expect(hook.type).toBe("scene");
     expect(hook.children).toHaveLength(2);
-    expect((parsed.children[0]! as any).script).toBe("Set the mood");
 
     const end = compiled.children[1]! as any;
     expect(end.type).toBe("scene");
@@ -767,6 +765,102 @@ export function Badge({ label }) {
 - image src:a.jpg duration:1`;
       const parsed = parseMarkdownDescriptive(doc);
       // imports removed from component schema — now at root level
+    });
+  });
+
+  // ── Script / audio alias ─────────────────────────────────────────────
+
+  describe("script — audio alias", () => {
+    it("inline audio script:key on audio node", () => {
+      const doc = `# video
+## S
+layout:parallel
+- audio src:bg.mp3 duration:3 volume:0.5 script:"inline narration"`;
+      const parsed = parseMarkdownDescriptive(doc);
+      const node = (parsed.children[0] as any).children[0];
+      expect(node.type).toBe("audio");
+      expect(node.src).toBe("bg.mp3");
+      expect(node.script).toBe("inline narration");
+      expect(node.volume).toBe(0.5);
+      expect(node.duration).toBe(3);
+    });
+
+    it("standalone - script bullet creates audio node with script", () => {
+      const doc = `# video
+## S
+layout:parallel
+- script "standalone narration"`;
+      const parsed = parseMarkdownDescriptive(doc);
+      const node = (parsed.children[0] as any).children[0];
+      expect(node.type).toBe("audio");
+      expect(node.script).toBe("standalone narration");
+      expect(node.volume).toBe(1); // default
+    });
+
+    it("standalone - script bullet supports audio keys", () => {
+      const doc = `# video
+## S
+layout:parallel
+- script "narration" volume:0.3 start:2 duration:5 foreground:true isBackground:true`;
+      const parsed = parseMarkdownDescriptive(doc);
+      const node = (parsed.children[0] as any).children[0];
+      expect(node.type).toBe("audio");
+      expect(node.script).toBe("narration");
+      expect(node.volume).toBe(0.3);
+      expect(node.start).toBe(2);
+      expect(node.duration).toBe(5);
+      expect(node.foreground).toBe(true);
+      expect(node.isBackground).toBe(true);
+    });
+
+    it("code fence ~~~script sets script on audio node", () => {
+      const doc = `# video
+## S
+layout:parallel
+- audio src:bg.mp3 duration:3
+  ~~~script
+  code fence content
+  ~~~`;
+      const parsed = parseMarkdownDescriptive(doc);
+      const node = (parsed.children[0] as any).children[0];
+      expect(node.type).toBe("audio");
+      expect(node.src).toBe("bg.mp3");
+      expect(node.script).toBe("code fence content");
+    });
+
+    it("throws when standalone - script has no text", () => {
+      const doc = `# video
+## S
+layout:parallel
+- script`;
+      expect(() => parseMarkdownDescriptive(doc)).toThrow("script requires text content");
+    });
+
+    it("compiles script audio node through full pipeline", () => {
+      const doc = `# video
+## S
+layout:parallel
+- audio src:bg.mp3 duration:3 script:"tts text"`;
+      const parsed = parseMarkdownDescriptive(doc);
+      const compiled = compileDescriptiveRoot(parsed);
+      const child = (compiled.children[0] as any).children[0];
+      expect(child.type).toBe("audio");
+      expect(child.src).toBe("bg.mp3");
+      // script field is not in the compiled schema — it's consumed by resolveScripts
+      expect(child.script).toBeUndefined();
+    });
+
+    it("compiles standalone - script through full pipeline", () => {
+      const doc = `# video
+## S
+layout:parallel
+- script "tts text"`;
+      const parsed = parseMarkdownDescriptive(doc);
+      const compiled = compileDescriptiveRoot(parsed);
+      const child = (compiled.children[0] as any).children[0];
+      expect(child.type).toBe("audio");
+      // No src yet — resolveScripts will set it later from script field
+      expect(child.src).toBeUndefined();
     });
   });
 });

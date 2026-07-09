@@ -35,23 +35,24 @@ afterEach(() => {
 // ── resolveScripts (TTS) ───────────────────────────────────────────────────
 
 describe("resolveScripts", () => {
-  it("calls generateTTS for each scene with a script", async () => {
+  it("calls generateTTS for each audio node with script", async () => {
     (generateTTS as any).mockReturnValue(join(tmpDir, "hook.wav"));
 
     const root: DescriptiveRoot = {
       children: [{
-        type: "scene", name: "Hook", script: "Hello world",
-        layout: "parallel", children: [],
+        type: "scene", name: "Hook", layout: "parallel",
+        children: [{ type: "audio", id: "Hook", script: "Hello world", volume: 1 } as any],
       }],
     };
 
     const result = await resolveScripts(root, { outputDir: tmpDir });
 
-    // Should have an audio child attached
+    // Should have resolved src on the audio node, script removed
     const scene = result.children[0] as any;
     expect(scene.children).toHaveLength(1);
     expect(scene.children[0].type).toBe("audio");
     expect(scene.children[0].src).toBe(join(tmpDir, "hook.wav"));
+    expect(scene.children[0].script).toBeUndefined();
 
     // When no ttsCli override, falls back to DEFAULT_TTS_CLI
     expect(generateTTS).toHaveBeenCalledWith(
@@ -61,7 +62,7 @@ describe("resolveScripts", () => {
     );
   });
 
-  it("skips scenes without a script", async () => {
+  it("skips scenes without a script audio node", async () => {
     const root: DescriptiveRoot = {
       children: [{
         type: "scene", name: "Silent", layout: "parallel", children: [],
@@ -73,12 +74,11 @@ describe("resolveScripts", () => {
     expect(generateTTS).not.toHaveBeenCalled();
   });
 
-  it("skips scenes that already have an audio child", async () => {
+  it("skips audio nodes that already have src", async () => {
     const root: DescriptiveRoot = {
       children: [{
-        type: "scene", name: "Done", script: "Already have audio",
-        layout: "parallel",
-        children: [{ type: "audio", src: "existing.wav", volume: 1 } as any],
+        type: "scene", name: "Done", layout: "parallel",
+        children: [{ type: "audio", src: "existing.wav", script: "Already have audio", volume: 1 } as any],
       }],
     };
 
@@ -91,8 +91,8 @@ describe("resolveScripts", () => {
 
     const root: DescriptiveRoot = {
       children: [{
-        type: "scene", name: "Custom", script: "Text",
-        layout: "parallel", children: [],
+        type: "scene", name: "Custom", layout: "parallel",
+        children: [{ type: "audio", script: "Text", volume: 1 } as any],
       }],
     };
 
@@ -343,13 +343,14 @@ describe("resolveGeneratedMedia", () => {
 // ── Additional TTS tests ───────────────────────────────────────────────────
 
 describe("resolveScripts — additional", () => {
-  it("respects scene.tts override", async () => {
+  it("respects parent scene.tts override", async () => {
     (generateTTS as any).mockReturnValue(join(tmpDir, "scene.wav"));
 
     const root: DescriptiveRoot = {
       children: [{
-        type: "scene", name: "S", script: "text", tts: "scene-tts {input} --out {output}",
-        layout: "parallel", children: [],
+        type: "scene", name: "S", tts: "scene-tts {input} --out {output}",
+        layout: "parallel",
+        children: [{ type: "audio", script: "text", volume: 1 } as any],
       }],
     };
 
@@ -363,8 +364,8 @@ describe("resolveScripts — additional", () => {
     const root: DescriptiveRoot = {
       tts: "root-tts {input} --out {output}",
       children: [{
-        type: "scene", name: "S", script: "text",
-        layout: "parallel", children: [],
+        type: "scene", name: "S", layout: "parallel",
+        children: [{ type: "audio", script: "text", volume: 1 } as any],
       }],
     };
 
@@ -372,14 +373,15 @@ describe("resolveScripts — additional", () => {
     expect(generateTTS).toHaveBeenCalledWith("text", expect.any(String), "root-tts {input} --out {output}");
   });
 
-  it("scene.tts overrides root.tts", async () => {
+  it("parent scene.tts overrides root.tts", async () => {
     (generateTTS as any).mockReturnValue(join(tmpDir, "scene.wav"));
 
     const root: DescriptiveRoot = {
       tts: "root-tts {input}",
       children: [{
-        type: "scene", name: "S", script: "text", tts: "scene-tts {input} --out {output}",
-        layout: "parallel", children: [],
+        type: "scene", name: "S", tts: "scene-tts {input} --out {output}",
+        layout: "parallel",
+        children: [{ type: "audio", script: "text", volume: 1 } as any],
       }],
     };
 
@@ -398,8 +400,8 @@ describe("resolveScripts — additional", () => {
 
     const root: DescriptiveRoot = {
       children: [{
-        type: "scene", name: "Hook", script: "Hello world",
-        layout: "parallel", children: [],
+        type: "scene", name: "Hook", layout: "parallel",
+        children: [{ type: "audio", script: "Hello world", volume: 1 } as any],
       }],
     };
 
@@ -413,15 +415,15 @@ describe("resolveScripts — additional", () => {
     expect(scene.children).toHaveLength(1);
   });
 
-  it("processes multiple script nodes in the same tree", async () => {
+  it("processes multiple audio nodes with script in the same tree", async () => {
     (generateTTS as any)
       .mockReturnValueOnce(join(tmpDir, "a.wav"))
       .mockReturnValueOnce(join(tmpDir, "b.wav"));
 
     const root: DescriptiveRoot = {
       children: [
-        { type: "scene", name: "A", script: "First", layout: "parallel", children: [] },
-        { type: "scene", name: "B", script: "Second", layout: "parallel", children: [] },
+        { type: "scene", name: "A", layout: "parallel", children: [{ type: "audio", script: "First", volume: 1 } as any] },
+        { type: "scene", name: "B", layout: "parallel", children: [{ type: "audio", script: "Second", volume: 1 } as any] },
       ],
     };
 
@@ -431,31 +433,29 @@ describe("resolveScripts — additional", () => {
     expect(generateTTS).toHaveBeenCalledTimes(2);
   });
 
-  it("skips parent scene when child scene also has script (innermost wins)", async () => {
+  it("skips parent scene when child scene also has script audio (innermost wins)", async () => {
     (generateTTS as any).mockReturnValue(join(tmpDir, "child.wav"));
 
     const root: DescriptiveRoot = {
       children: [{
-        type: "scene", name: "Parent", script: "Parent text",
-        layout: "parallel",
-        children: [{
-          type: "scene", name: "Child", script: "Child text",
-          layout: "parallel", children: [],
-        }],
+        type: "scene", name: "Parent", layout: "parallel",
+        children: [
+          { type: "audio", script: "Parent text", volume: 1 } as any,
+          {
+            type: "scene", name: "Child", layout: "parallel",
+            children: [{ type: "audio", script: "Child text", volume: 1 } as any],
+          },
+        ],
       }],
     };
 
     const result = await resolveScripts(root, { outputDir: tmpDir });
-    // Parent should NOT have TTS audio (its children still include the child scene)
+    // Both parent and child audio nodes should be processed independently
     const parent = result.children[0] as any;
-    const child = parent.children[0] as any;
-    expect(parent.children).toHaveLength(1); // still has child scene
-    expect(parent.children.some((c: any) => c.type === "audio")).toBe(false); // but no audio
-    // Child should have TTS audio
-    expect(child.children).toHaveLength(1);
+    const child = parent.children[1] as any;
+    expect(parent.children[0].src).toBe(join(tmpDir, "child.wav"));
     expect(child.children[0].src).toBe(join(tmpDir, "child.wav"));
-    expect(generateTTS).toHaveBeenCalledTimes(1);
-    expect(generateTTS).toHaveBeenCalledWith("Child text", expect.any(String), expect.any(String));
+    expect(generateTTS).toHaveBeenCalledTimes(2);
   });
 
   it("skips node when generateTTS returns empty string", async () => {
@@ -463,14 +463,15 @@ describe("resolveScripts — additional", () => {
 
     const root: DescriptiveRoot = {
       children: [{
-        type: "scene", name: "S", script: "fail",
-        layout: "parallel", children: [],
+        type: "scene", name: "S", layout: "parallel",
+        children: [{ type: "audio", script: "fail", volume: 1 } as any],
       }],
     };
 
     const result = await resolveScripts(root, { outputDir: tmpDir });
-    // No audio child attached
-    expect((result.children[0] as any).children).toHaveLength(0);
+    // No src attached, script remains
+    expect((result.children[0] as any).children[0].script).toBe("fail");
+    expect((result.children[0] as any).children[0].src).toBeUndefined();
   });
 });
 

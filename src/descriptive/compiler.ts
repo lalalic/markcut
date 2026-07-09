@@ -32,7 +32,6 @@ export type EffectSpec = string | {
 export interface DescriptiveBaseNode {
   id?: string;
   instruction?: string;
-  script?: string;
   style?: string;
   visible?: boolean;
   isBackground?: boolean;
@@ -60,7 +59,9 @@ export interface DescriptiveVideo extends DescriptiveBaseNode {
 
 export interface DescriptiveAudio extends DescriptiveBaseNode {
   type: "audio";
-  src: string;
+  src?: string;
+  /** Narration text for TTS generation. When set without src, triggers TTS pipeline. */
+  script?: string;
   volume?: number;
   foreground?: boolean;
   startFrom?: number;
@@ -479,7 +480,7 @@ function compileLeaf(node: Exclude<DescriptiveNode, DescriptiveContainer | Descr
     case "component": {
       // Collect extra properties from descriptive node (e.g. `source` from ~~~md source fences)
       const KNOWN_COMPONENT_KEYS = new Set([
-        "type", "jsx", "id", "instruction", "script", "style", "visible",
+        "type", "jsx", "id", "instruction", "style", "visible",
         "isBackground", "duration", "start", "_resolvedRegistry",
       ]);
       const bindings: Record<string, string> = {};

@@ -155,16 +155,13 @@ export interface ResolveScriptOptions {
 }
 
 /**
- * Walk the descriptive tree and for each scene node with a `script` field:
- * 1. Generate TTS audio from script text → attach as audio child
+ * Walk the descriptive tree and for each audio node with a `script` field:
+ * 1. Generate TTS audio from script text → set as `src`
+ * 2. Remove the `script` field from the node
  *
- * Only `scene` nodes carry narration. When scenes nest, the **innermost**
- * scene's script wins — if a parent scene has `script` but any descendant
- * scene also has `script`, only the descendant is processed (the parent's
- * narration is skipped). This prevents overlapping narration.
- *
- * Leaf nodes (image/video/etc.) with `script` are ignored — they have no
- * `children` in the compiled stream tree.
+ * At this point in the pipeline, the parser has already converted all
+ * container-level `script` attributes into audio children. This function
+ * only needs to find those audio nodes and generate TTS for them.
  *
  * Subtitles are handled separately as a post-compile step that merges
  * per-clip VTTs (with absolute timing) into root.subtitle.src.
@@ -178,39 +175,27 @@ export async function resolveScripts(
   const cache = readCacheManifest(options.outputDir);
   let cacheDirty = false;
 
-  // First pass: collect all nodes (scenes + containers) that have script
-  const allScriptNodes: Array<{ node: any; id: string }> = [];
-  walkDown(clone as any, (node) => {
-    if (node.type !== "scene" && node.type !== "series" && node.type !== "parallel" && node.type !== "transitionSeries") return;
+  // Collect all audio nodes that have script text but no src yet
+  // Also store their parent scene for per-scene tts resolution
+  const allScriptNodes: Array<{ node: any; id: string; parent: any }> = [];
+  walkDown(clone as any, (node, parent) => {
+    if (node.type !== "audio") return;
     if (!node.script || typeof node.script !== "string") return;
-    const existing = (node.children ?? []) as DescriptiveNode[];
-    if (existing.some((c) => c.type === "audio")) return;
-    const id = node.id ?? node.name ?? `node-${allScriptNodes.length}`;
-    allScriptNodes.push({ node, id });
+    if (node.src) return; // already has real source
+    const id = node.id ?? `audio-${allScriptNodes.length}`;
+    allScriptNodes.push({ node, id, parent });
   });
 
-  // Second pass: filter out parent nodes where a descendant also has script
-  // (innermost wins — prevents overlapping narration)
-  function hasDescendantWithScript(node: any): boolean {
-    for (const child of node.children ?? []) {
-      if ((child.type === "scene" || child.type === "series" || child.type === "parallel" || child.type === "transitionSeries") && child.script) return true;
-      if (hasDescendantWithScript(child)) return true;
-    }
-    return false;
+  if (allScriptNodes.length > 0) {
+    console.log(`  🔊 TTS: generating ${allScriptNodes.length} script${allScriptNodes.length > 1 ? "s" : ""}...`);
   }
 
-  const toProcess = allScriptNodes.filter(({ node }) => !hasDescendantWithScript(node));
-
-  if (toProcess.length > 0) {
-    console.log(`  🔊 TTS: generating ${toProcess.length} script${toProcess.length > 1 ? "s" : ""}...`);
-  }
-
-  for (const { node, id } of toProcess) {
+  for (const { node, id, parent } of allScriptNodes) {
     const safeId = id.replace(/[^a-zA-Z0-9_-]/g, "_");
     const audioPath = join(options.outputDir, `${safeId}.mp3`);
 
-    // Resolve TTS config: scene-level overrides root-level overrides CLI defaults
-    const ttsCli = node.tts ?? clone.tts ?? options.ttsCli ?? DEFAULT_TTS_CLI;
+    // Resolve TTS config: parent scene tts > root tts > options ttsCli > default
+    const ttsCli = parent?.tts ?? clone.tts ?? options.ttsCli ?? DEFAULT_TTS_CLI;
 
     // Cache key: script + CLI string
     const cacheKey = computeCacheKey({ script: node.script, cli: ttsCli });
@@ -227,18 +212,19 @@ export async function resolveScripts(
         updateCache(cache, `tts:${safeId}`, cacheKey, generated);
         cacheDirty = true;
       } else {
-        console.warn(`  ⚠ TTS produced no audio for ${safeId}. Scene will have no narration. Check root.tts config.`);
+        console.warn(`  ⚠ TTS produced no audio for ${safeId}. Audio will have no source. Check root.tts config.`);
       }
     }
     if (!generated) continue;
 
-    if (!node.children) node.children = [];
-    node.children.push({ type: "audio", src: generated, volume: 1 });
+    // Set resolved src and remove script marker
+    node.src = generated;
+    delete node.script;
   }
 
   if (cacheDirty) writeCacheManifest(options.outputDir, cache);
-  if (toProcess.length > 0) {
-    console.log(`  ✅ TTS: ${toProcess.length} script${toProcess.length > 1 ? "s" : ""} ready`);
+  if (allScriptNodes.length > 0) {
+    console.log(`  ✅ TTS: ${allScriptNodes.length} script${allScriptNodes.length > 1 ? "s" : ""} ready`);
   }
   return clone;
 }

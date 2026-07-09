@@ -231,7 +231,7 @@ function parseKeyValueTokens(tokens: string[]): Record<string, unknown> {
       else if (key === "props" || key === "imports" || key === "components") val = parseProps(String(val));
       else if (key === "spots" || key === "customKeyframes") val = parseProps(String(val));
       else if (key === "effects") val = parseEffects(String(val));
-      else if (key !== "instruction" && key !== "script" && key !== "tts" && key !== "stt" && key !== "jsx" && key !== "prompt") {
+      else if (key !== "instruction" && key !== "tts" && key !== "stt" && key !== "jsx" && key !== "prompt") {
         val = parseNumberMaybe(String(val));
       }
       out[key] = val;
@@ -272,7 +272,6 @@ function parseHeaderScene(line: string): DescriptiveScene {
     name: sceneName,
     title: sceneTitle,
     instruction: attrs.instruction ? String(attrs.instruction) : undefined,
-    script: attrs.script ? String(attrs.script) : undefined,
     layout: attrs.layout as any,
     transition: attrs.transition as any,
     transitionTime: attrs.transitionTime as any,
@@ -299,7 +298,8 @@ function parseNodeLine(content: string): DescriptiveNode {
     const t0 = tokens[0];
     if (
       t0 &&
-      t0.indexOf(":") === -1 &&
+      // Quoted tokens are always positional values (even if they contain ':')
+      (isQuoted(t0) || t0.indexOf(":") === -1) &&
       !LAYOUT_VALUES.has(t0 as any) &&
       !TRANSITION_VALUES.has(t0 as any)
     ) {
@@ -318,7 +318,6 @@ function parseNodeLine(content: string): DescriptiveNode {
     const node: DescriptiveContainer = {
       type: type as any,
       instruction: attrs.instruction as any,
-      script: attrs.script as any,
       transition: attrs.transition as any,
       transitionTime: attrs.transitionTime as any,
       effects: attrs.effects as any,
@@ -335,7 +334,6 @@ function parseNodeLine(content: string): DescriptiveNode {
     const node: DescriptiveEffect = {
       type: "effect",
       instruction: attrs.instruction as any,
-      script: attrs.script as any,
       animation,
       animationTimingFunction: attrs.animationTimingFunction as any,
       animationIterationCount: attrs.animationIterationCount as any,
@@ -363,7 +361,6 @@ function parseNodeLine(content: string): DescriptiveNode {
         duration: attrs.duration as any,
         start: attrs.start as any,
         instruction: attrs.instruction as any,
-        script: attrs.script as any,
         visible: attrs.visible as any,
         isBackground: attrs.isBackground as any,
         style: attrs.style as any,
@@ -388,7 +385,6 @@ function parseNodeLine(content: string): DescriptiveNode {
         width: attrs.width as any,
         height: attrs.height as any,
         instruction: attrs.instruction as any,
-        script: attrs.script as any,
         visible: attrs.visible as any,
         isBackground: attrs.isBackground as any,
         style: attrs.style as any,
@@ -427,7 +423,6 @@ function parseNodeLine(content: string): DescriptiveNode {
         duration: attrs.duration as any,
         start: attrs.start as any,
         instruction: attrs.instruction as any,
-        script: attrs.script as any,
         visible: attrs.visible as any,
         isBackground: attrs.isBackground as any,
         style: attrs.style as any,
@@ -446,7 +441,6 @@ function parseNodeLine(content: string): DescriptiveNode {
         volume: attrs.volume as any,
         spots: attrs.spots as any,
         instruction: attrs.instruction as any,
-        script: attrs.script as any,
         visible: attrs.visible as any,
         isBackground: attrs.isBackground as any,
         style: attrs.style as any,
@@ -463,7 +457,6 @@ function parseNodeLine(content: string): DescriptiveNode {
         start: attrs.start as any,
         volume: attrs.volume as any,
         instruction: attrs.instruction as any,
-        script: attrs.script as any,
         visible: attrs.visible as any,
         isBackground: attrs.isBackground as any,
         style: attrs.style as any,
@@ -472,9 +465,24 @@ function parseNodeLine(content: string): DescriptiveNode {
       return node;
     }
     case "script": {
-      const text = firstPositional ?? (attrs.script ? String(attrs.script) : undefined);
-      if (!text) throw new Error("script requires text content");
-      return { type: "script", script: text } as any;
+      const raw = firstPositional ?? (attrs.script ? String(attrs.script) : undefined);
+      if (!raw) throw new Error("script requires text content");
+      // Unquote if needed (standalone `- script "..."` preserves quotes in the token)
+      const text = isQuoted(raw) ? unquote(raw) : raw;
+      // Script is an alias for audio — creates an audio node with TTS-needed marker.
+      // Supports standard audio keys: volume, start, duration, foreground, isBackground, style, etc.
+      return {
+        type: "audio",
+        script: text,
+        volume: (attrs.volume as number | undefined) ?? 1,
+        start: attrs.start as any,
+        duration: attrs.duration as any,
+        foreground: attrs.foreground as any,
+        isBackground: attrs.isBackground as any,
+        style: attrs.style as any,
+        visible: attrs.visible as any,
+        effects: attrs.effects as any,
+      } as any;
     }
     case "map": {
       const node: DescriptiveMap = {
@@ -490,7 +498,6 @@ function parseNodeLine(content: string): DescriptiveNode {
         center: attrs.center as any,
         mapType: attrs.mapType as any,
         instruction: attrs.instruction as any,
-        script: attrs.script as any,
         visible: attrs.visible as any,
         isBackground: attrs.isBackground as any,
         style: attrs.style as any,
@@ -639,15 +646,6 @@ function processMDASTListItem(item: any, parent: ParentNode, lines: string[]): v
   if (!text.trim()) return;
 
   const node = parseNodeLine(text);
-
-  // Handle script type: set parent.script instead of adding as child
-  if (node.type === "script") {
-    if ((node as any).script) {
-      (parent as any).script = (node as any).script;
-    }
-    return;
-  }
-
   pushChild(parent, node);
 
   // Process remaining children (code blocks as properties, extra paragraphs as properties, nested lists as sub-children)
@@ -679,6 +677,7 @@ function processMDASTListItem(item: any, parent: ParentNode, lines: string[]): v
       }
     }
   }
+
 }
 
 /** Apply key/value attrs to a scene node (subset of root attrs). */
@@ -704,7 +703,7 @@ function applySceneMetadata(scene: DescriptiveScene, attrs: Record<string, unkno
         scene.instruction = String(v);
         break;
       case "script":
-        scene.script = String(v);
+        // script key on scenes is no longer supported — ignored
         break;
       case "tts":
         scene.tts = v as any;
@@ -738,7 +737,7 @@ function applyRootAttrs(root: DescriptiveRoot, attrs: Record<string, unknown>): 
         root.transitionTime = Number(v);
         break;
       case "script":
-        (root as any).script = String(v);
+        // script key on root is no longer supported — ignored
         break;
       case "instruction":
         root.instruction = String(v);
