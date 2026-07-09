@@ -44798,7 +44798,7 @@ function SceneLeaf({ stream: stream2 }) {
       type: "scene",
       style: cssJS(stream2.style),
       className: `scene ${toClassName(stream2.name ?? "")}`,
-      children: /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(FolderLeaf, { stream: stream2 })
+      children: /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(Folder, { name: stream2.name ?? "", children: /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(FolderLeaf, { stream: stream2 }) })
     }
   ) });
 }

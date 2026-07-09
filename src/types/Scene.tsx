@@ -8,6 +8,7 @@
  * The engine treats it identically to a folder at render time.
  */
 import * as React from "react";
+import { Folder } from "remotion"
 import { ComposeContext, AudioContext } from "../context/index";
 import { cssJS, toClassName } from "../utils/index";
 import type { Scene as SceneStream } from "../schema/index";
@@ -30,7 +31,9 @@ export function SceneLeaf({ stream }: { stream: SceneStream }) {
         style={cssJS(stream.style) as React.CSSProperties}
         className={`scene ${toClassName(stream.name ?? "")}`}
       >
-        <FolderLeaf stream={stream as any} />
+        <Folder name={stream.name ?? ""}>
+          <FolderLeaf stream={stream as any} />
+        </Folder>
       </Container>
     </AudioContext.Provider>
   );
