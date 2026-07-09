@@ -5,7 +5,7 @@ function resolveVideoSrc(src: string): string {
   if (/^(https?:|data:|blob:|file:|\/)/.test(src)) return src;
   return staticFile(src);
 }
-import { ComposeContext, AudioContext } from "../context/index";
+import { ComposeContext, AudioContext, useFrameEvents } from "../context/index";
 import { toPlaybackRate, cssJS } from "../utils/index";
 import type { Video } from "../schema/index";
 import { FrameSyncStyle } from "./FrameSyncStyle";
@@ -13,6 +13,8 @@ import { FrameSyncStyle } from "./FrameSyncStyle";
 export function VideoLeaf({ stream }: { stream: Video }) {
   const { fps } = useVideoConfig();
   const audio = React.useContext(AudioContext);
+  const totalDur = stream.durationInSeconds ?? stream.actions[0]?.end ?? 1;
+  useFrameEvents(stream.on, Math.max(1, Math.floor(totalDur * fps)));
   if (!stream.src) return null;
   const resolvedSrc = resolveVideoSrc(stream.src);
 

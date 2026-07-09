@@ -115,10 +115,21 @@ function parseProps(raw: string): unknown {
   try {
     return JSON.parse(s);
   } catch {
-    // Try lenient parse: add quotes around unquoted keys
-    const normalized = s.replace(
+    // Lenient parse: add quotes around unquoted keys and string values.
+    // First pass: quote bare keys: {foo: → {"foo":
+    let normalized = s.replace(
       /([{,]\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:(?=\s*["{[]?)/g,
       '$1"$2":',
+    );
+    // Second pass: quote bare string values that aren't numbers, booleans, or null
+    // Matches :value followed by , } ] or end
+    normalized = normalized.replace(
+      /:\s*([a-zA-Z_$][a-zA-Z0-9_$.+-]*)\s*(?=[,}\]\s]|$)/g,
+      (match, value: string) => {
+        if (value === "true" || value === "false" || value === "null") return `: ${value}`;
+        if (/^[+-]?\d+(\.\d+)?$/.test(value)) return `: ${value}`;
+        return `: "${value}"`;
+      },
     );
     try {
       return JSON.parse(normalized);
@@ -229,7 +240,7 @@ function parseKeyValueTokens(tokens: string[]): Record<string, unknown> {
 
       if (key === "waypoints") val = parseWaypoints(String(val));
       else if (key === "props" || key === "imports" || key === "components") val = parseProps(String(val));
-      else if (key === "spots" || key === "customKeyframes") val = parseProps(String(val));
+      else if (key === "spots" || key === "customKeyframes" || key === "on") val = parseProps(String(val));
       else if (key === "effects") val = parseEffects(String(val));
       else if (key !== "instruction" && key !== "tts" && key !== "stt" && key !== "jsx" && key !== "prompt") {
         val = parseNumberMaybe(String(val));
@@ -269,12 +280,14 @@ function parseHeaderScene(line: string): DescriptiveScene {
 
   return {
     type: "scene",
+    id: attrs.id as any,
     name: sceneName,
     title: sceneTitle,
     instruction: attrs.instruction ? String(attrs.instruction) : undefined,
     layout: attrs.layout as any,
     transition: attrs.transition as any,
     transitionTime: attrs.transitionTime as any,
+    on: attrs.on as any,
     children: [],
   };
 }
@@ -317,10 +330,12 @@ function parseNodeLine(content: string): DescriptiveNode {
     const attrs = parseKeyValueTokens(tokens);
     const node: DescriptiveContainer = {
       type: type as any,
+      id: attrs.id as any,
       instruction: attrs.instruction as any,
       transition: attrs.transition as any,
       transitionTime: attrs.transitionTime as any,
       effects: attrs.effects as any,
+      on: attrs.on as any,
       children: [],
     };
     return node;
@@ -333,6 +348,7 @@ function parseNodeLine(content: string): DescriptiveNode {
     const animation = attrs.animation as string | undefined ?? firstPositional;
     const node: DescriptiveEffect = {
       type: "effect",
+      id: attrs.id as any,
       instruction: attrs.instruction as any,
       animation,
       animationTimingFunction: attrs.animationTimingFunction as any,
@@ -341,6 +357,7 @@ function parseNodeLine(content: string): DescriptiveNode {
       duration: attrs.duration as any,
       start: attrs.start as any,
       effects: attrs.effects as any,
+      on: attrs.on as any,
       children: [],
     };
     return node;
@@ -355,6 +372,7 @@ function parseNodeLine(content: string): DescriptiveNode {
       // src or prompt may be set later via indented property collection
       const node: DescriptiveImage = {
         type: "image",
+        id: attrs.id as any,
         src,
         prompt,
         fit: attrs.fit as any,
@@ -365,6 +383,7 @@ function parseNodeLine(content: string): DescriptiveNode {
         isBackground: attrs.isBackground as any,
         style: attrs.style as any,
         effects: attrs.effects as any,
+        on: attrs.on as any,
       };
       return node;
     }
@@ -374,6 +393,7 @@ function parseNodeLine(content: string): DescriptiveNode {
       // src or prompt may be set later via indented property collection
       const node: DescriptiveVideo = {
         type: "video",
+        id: attrs.id as any,
         src,
         prompt,
         duration: attrs.duration as any,
@@ -389,6 +409,7 @@ function parseNodeLine(content: string): DescriptiveNode {
         isBackground: attrs.isBackground as any,
         style: attrs.style as any,
         effects: attrs.effects as any,
+        on: attrs.on as any,
       };
       return node;
     }
@@ -397,6 +418,7 @@ function parseNodeLine(content: string): DescriptiveNode {
       if (!src) throw new Error("audio requires src");
       const node: DescriptiveAudio = {
         type: "audio",
+        id: attrs.id as any,
         src,
         duration: attrs.duration as any,
         start: attrs.start as any,
@@ -411,6 +433,7 @@ function parseNodeLine(content: string): DescriptiveNode {
         isBackground: attrs.isBackground as any,
         style: attrs.style as any,
         effects: attrs.effects as any,
+        on: attrs.on as any,
       };
       return node;
     }
@@ -419,6 +442,7 @@ function parseNodeLine(content: string): DescriptiveNode {
       // jsx may be set later via indented code fence property collection
       const node: DescriptiveComponent = {
         type: "component",
+        id: attrs.id as any,
         jsx,
         duration: attrs.duration as any,
         start: attrs.start as any,
@@ -427,6 +451,7 @@ function parseNodeLine(content: string): DescriptiveNode {
         isBackground: attrs.isBackground as any,
         style: attrs.style as any,
         effects: attrs.effects as any,
+        on: attrs.on as any,
       };
       return node;
     }
@@ -435,6 +460,7 @@ function parseNodeLine(content: string): DescriptiveNode {
       if (!src) throw new Error("rhythm requires src");
       const node: DescriptiveRhythm = {
         type: "rhythm",
+        id: attrs.id as any,
         src,
         duration: attrs.duration as any,
         start: attrs.start as any,
@@ -445,6 +471,7 @@ function parseNodeLine(content: string): DescriptiveNode {
         isBackground: attrs.isBackground as any,
         style: attrs.style as any,
         effects: attrs.effects as any,
+        on: attrs.on as any,
       };
       return node;
     }
@@ -452,6 +479,7 @@ function parseNodeLine(content: string): DescriptiveNode {
       const src = firstPositional ?? (attrs.src as string | undefined);
       const node: DescriptiveInclude = {
         type: "include",
+        id: attrs.id as any,
         src,
         duration: attrs.duration as any,
         start: attrs.start as any,
@@ -461,6 +489,7 @@ function parseNodeLine(content: string): DescriptiveNode {
         isBackground: attrs.isBackground as any,
         style: attrs.style as any,
         effects: attrs.effects as any,
+        on: attrs.on as any,
       };
       return node;
     }
@@ -473,6 +502,7 @@ function parseNodeLine(content: string): DescriptiveNode {
       // Supports standard audio keys: volume, start, duration, foreground, isBackground, style, etc.
       return {
         type: "audio",
+        id: attrs.id as any,
         script: text,
         volume: (attrs.volume as number | undefined) ?? 1,
         start: attrs.start as any,
@@ -482,11 +512,13 @@ function parseNodeLine(content: string): DescriptiveNode {
         style: attrs.style as any,
         visible: attrs.visible as any,
         effects: attrs.effects as any,
+        on: attrs.on as any,
       } as any;
     }
     case "map": {
       const node: DescriptiveMap = {
         type: "map",
+        id: attrs.id as any,
         waypoints: (attrs.waypoints as DescriptiveMapWaypoint[] | undefined) ?? [],
         duration: attrs.duration as any,
         start: attrs.start as any,
@@ -502,6 +534,7 @@ function parseNodeLine(content: string): DescriptiveNode {
         isBackground: attrs.isBackground as any,
         style: attrs.style as any,
         effects: attrs.effects as any,
+        on: attrs.on as any,
       };
       return node;
     }
@@ -707,6 +740,9 @@ function applySceneMetadata(scene: DescriptiveScene, attrs: Record<string, unkno
         break;
       case "tts":
         scene.tts = v as any;
+        break;
+      case "on":
+        scene.on = v as any;
         break;
     }
   }

@@ -1,6 +1,6 @@
 import * as React from "react";
 import { AbsoluteFill, continueRender, delayRender } from "remotion";
-import { ComposeContext, type ComposeContextValue } from "./context/index";
+import { ComposeContext, EventProvider, type ComposeContextValue } from "./context/index";
 
 import { FolderLeaf } from "./types/Folder";
 import { SubtitleOverlay } from "./types/Subtitle";
@@ -119,11 +119,13 @@ export function MarkCut({ root, compose, background = "#000" }: MarkCutProps) {
 
   return (
     <ComposeContext.Provider value={value}>
-      <AbsoluteFill style={{ background }}>
-        {parsed.stylesheet && <style>{parsed.stylesheet}</style>}
-        <FolderLeaf stream={parsed as any} />
-        {parsed.subtitle && <SubtitleOverlay subtitle={parsed.subtitle} />}
-      </AbsoluteFill>
+      <EventProvider>
+        <AbsoluteFill style={{ background }}>
+          {parsed.stylesheet && <style>{parsed.stylesheet}</style>}
+          <FolderLeaf stream={parsed as any} />
+          {parsed.subtitle && <SubtitleOverlay subtitle={parsed.subtitle} />}
+        </AbsoluteFill>
+      </EventProvider>
     </ComposeContext.Provider>
   );
 }

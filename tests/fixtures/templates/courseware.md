@@ -11,8 +11,14 @@ layout:series
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm'
 
-export function Slide(props) {
-  return <div className="slide"><ReactMarkdown remarkPlugins={[remarkGfm]} {...props}/></div>;
+export function Slide({ current = 0, children, ...rest }) {
+  let idx = 0;
+  return <div className="slide"><ReactMarkdown components={{
+    li: ({ children }) => {
+      const highlight = (current & (1 << idx++)) !== 0;
+      return <li className={highlight ? 'highlight' : ''}>{children}</li>;
+    }
+  }} remarkPlugins={[remarkGfm]} {...rest}>{children}</ReactMarkdown></div>;
 }
 ~~~
 ~~~css stylesheet
@@ -86,6 +92,13 @@ export function Slide(props) {
   color: #ffb703;
 }
 
+/* Highlighted list item for event-driven bullet reveal */
+.slide li.highlight {
+  color: red;
+  font-weight: 700;
+  text-shadow: 0 0 12px rgba(97, 218, 251, 0.4);
+}
+
 .slide table {
   width: 100%;
   border-collapse: collapse;
@@ -120,33 +133,23 @@ layout:parallel
   ~~~
 
 ### WhatIsML
-layout:series
+layout:transitionSeries transition:fade(0.5)
+- component id:slide1 isBackground:true jsx:"<Slide current={current}>{source}</Slide>"
+  ~~~md source
+  ## What is Machine Learning?
+
+  - 🤖 **Learning patterns from data** — No manual rules needed
+  - 📊 **Data-driven** — Automatically summarize patterns from samples
+  - 🔄 **Continuous improvement** — More data = Better performance
+
+  > Traditional programming: Rules + Data = Answers
+  > Machine Learning: Answers + Data = Rules
+  ~~~
 - parallel
-  - component isBackground:true jsx:"<Slide>{source}</Slide>"
-    ~~~md source
-    ## What is Machine Learning?
-
-    - 🤖 **Learning patterns from data** — **No manual rules needed**
-    - 📊 **Data-driven** — Automatically summarize patterns from samples
-    - 🔄 **Continuous improvement** — More data = Better performance
-
-    > Traditional programming: Rules + Data = Answers
-    > Machine Learning: Answers + Data = Rules
-    ~~~
-  - script "In machine learning, we typically split data into training, validation, and test sets. The training set is used for model learning, the validation set for tuning parameters, and the test set for evaluating final performance. This way, we ensure the model performs well not only on known data but also maintains accuracy on unseen data."
-- parallel
-  - component isBackground:true jsx:"<Slide>{source}</Slide>"
-    ~~~md source
-    ## What is Machine Learning?
-
-    - 🤖 **Learning patterns from data** — No manual rules needed
-    - 📊 **Data-driven** — **Automatically summarize patterns from samples**
-    - 🔄 **Continuous improvement** — **More data = Better performance**
-
-    > Traditional programming: Rules + Data = Answers
-    > Machine Learning: Answers + Data = Rules
-    ~~~
-  - script "The core goal of machine learning is to enable computers to extract useful information from data and make reasonable predictions or decisions when faced with new situations. This capability is widely applied across various fields, from image recognition to natural language processing, recommendation systems, and autonomous driving."
+  - script "In machine learning, we typically split data into training, validation, and test sets. The training set is used for model learning, the validation set for tuning parameters, and the test set for evaluating final performance. This way, we ensure the model performs well not only on known data but also maintains accuracy on unseen data." 
+    on:[{when:start, state:"slide1.current=1"}]
+- script "The core goal of machine learning is to enable computers to extract useful information from data and make reasonable predictions or decisions when faced with new situations. This capability is widely applied across various fields, from image recognition to natural language processing, recommendation systems, and autonomous driving." 
+  on:[{when:start, state:"slide1.current=2"}]
 
 ### SupervisedLearning
 layout:parallel

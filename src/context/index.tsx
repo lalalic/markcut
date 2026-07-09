@@ -1,5 +1,12 @@
 import * as React from "react";
 
+export {
+  EventProvider,
+  useEventContext,
+  useFrameEvents,
+  resolveWhenToFrame,
+} from "./EventContext";
+
 export interface ComposeContextValue {
   /**
    * Wrapper rendered around every leaf stream.

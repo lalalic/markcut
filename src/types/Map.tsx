@@ -20,6 +20,7 @@
  */
 import React from "react";
 import { Sequence, useCurrentFrame, useVideoConfig, delayRender, continueRender } from "remotion";
+import { useFrameEvents } from "../context/index";
 import {
   APIProvider, Map as GoogleMap, useMap, useMapsLibrary,
   AdvancedMarker, Pin,
@@ -34,6 +35,8 @@ const GM_API_KEY = "AIzaSyC6x4jghg5ZggV5VTThu9JE4DwX9NlbN9U";
 export function MapLeaf({ stream }: { stream: MapStream }) {
   const { fps } = useVideoConfig();
   const waypoints = stream.waypoints ?? [];
+  const totalDur = stream.durationInSeconds ?? stream.actions[0]?.end ?? 1;
+  useFrameEvents(stream.on, Math.max(1, Math.floor(totalDur * fps)));
   if (waypoints.length === 0) return null;
 
   return (

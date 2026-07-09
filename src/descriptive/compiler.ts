@@ -2,6 +2,7 @@ import type {
   Audio,
   Component,
   Effect,
+  EventSpec,
   Folder,
   Image,
   Include,
@@ -41,6 +42,8 @@ export interface DescriptiveBaseNode {
    *  Compiles into Effect wrapper streams at compile time, so the descriptive layer
    *  doesn't need explicit `effect` parent nodes. */
   effects?: EffectSpec[];
+  /** Events that fire at specific frames, mutating registered component state. */
+  on?: EventSpec[];
 }
 
 
@@ -303,6 +306,12 @@ function normalizeEffectSpec(spec: EffectSpec): {
   return spec;
 }
 
+/** Extract `on` events from a descriptive node if present. */
+function pickOn(node: { on?: EventSpec[] }): { on?: EventSpec[] } {
+  if (Array.isArray(node.on) && node.on.length > 0) return { on: node.on };
+  return {};
+}
+
 /** Supported transition names for the compiled schema. */
 const VALID_TRANSITIONS = new Set(["fade", "slide", "wipe", "flip", "clockWipe"]);
 
@@ -409,6 +418,7 @@ function wrapWithEffects(
         end: effEnd,
       }],
       visible: true,
+      ...pickOn(node),
     } as Effect;
   }
 
@@ -427,6 +437,7 @@ function compileLeaf(node: Exclude<DescriptiveNode, DescriptiveContainer | Descr
     visible: node.visible ?? true,
     isBackground: node.isBackground,
     durationInSeconds: end,
+    ...pickOn(node),
   };
 
   const action = {
@@ -482,6 +493,7 @@ function compileLeaf(node: Exclude<DescriptiveNode, DescriptiveContainer | Descr
       const KNOWN_COMPONENT_KEYS = new Set([
         "type", "jsx", "id", "instruction", "style", "visible",
         "isBackground", "duration", "start", "_resolvedRegistry",
+        "on",
       ]);
       const bindings: Record<string, string> = {};
       for (const key of Object.keys(node)) {
@@ -573,13 +585,17 @@ function aggregateDuration(
 ): number {
   if (kind === "parallel") {
     let max = 0;
-    for (const child of children) max = Math.max(max, child.duration);
+    for (const child of children) {
+      if ((child.stream as any).isBackground) continue;
+      max = Math.max(max, child.duration);
+    }
     return max;
   }
 
   let total = 0;
   const overlap = kind === "transitionSeries" ? (transitionTime ?? 0.5) : 0;
   for (let i = 0; i < children.length; i++) {
+    if ((children[i]!.stream as any).isBackground) continue;
     total += children[i]!.duration;
     if (i > 0 && overlap > 0) total -= overlap;
   }
@@ -630,6 +646,7 @@ function compileScene(
     isBackground: node.isBackground,
     children: sceneChildren,
     durationInSeconds: end,
+    ...pickOn(node),
   };
 
   return { stream, duration: end };
@@ -676,6 +693,7 @@ function compileInclude(
       },
     ],
     durationInSeconds: end,
+    ...pickOn(node),
   };
 
   return { stream, duration: end };
@@ -717,6 +735,7 @@ function compileEffect(
       },
     ],
     durationInSeconds: end,
+    ...pickOn(node),
   };
 
   return { stream, duration: end };
@@ -789,6 +808,7 @@ function compileRhythm(
       },
     ],
     durationInSeconds: end,
+    ...pickOn(node),
   };
 
   return { stream, duration: end };
@@ -815,6 +835,7 @@ function compileContainer(node: DescriptiveContainer, ctx: CompileContext, paren
     transitionTime: node.type === "transitionSeries" ? resolved.time : 0.5,
     children: children.map((c) => c.stream),
     durationInSeconds: duration,
+    ...pickOn(node),
   };
 
   return { stream, duration };

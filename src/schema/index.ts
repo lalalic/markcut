@@ -26,6 +26,12 @@ export const action = z.object({
 });
 export type Action = z.infer<typeof action>;
 
+export const eventSpec = z.object({
+  when: z.string().describe("'start' | 'end' | '50%' | '2.5s'"),
+  state: z.string().describe("JS expression evaluated with registered components in scope"),
+});
+export type EventSpec = z.infer<typeof eventSpec>;
+
 const BaseShape = {
   id: z.string().default(() => uid()),
   instruction: z.string().optional().describe("visual intent or style guide for this node (not rendered)"),
@@ -34,6 +40,7 @@ const BaseShape = {
   visible: z.boolean().default(true),
   isBackground: z.boolean().optional(),
   durationInSeconds: z.number().optional().describe("set by engine; do not edit by hand"),
+  on: z.array(eventSpec).optional().describe("events that fire at specific frames, mutating registered component state"),
 };
 
 export const base = z.object(BaseShape);
@@ -126,7 +133,7 @@ export type Image = z.infer<typeof image>;
 export const component = base.extend({
   type: z.literal("component").default("component"),
   jsx: z.string().describe("usage JSX expression compiled at runtime; tag names resolved from imports"),
-  data: z.record(z.string(), z.string()).optional().describe("extra variables (e.g. from ~~~md source code fences) available in JSX scope"),
+  data: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).optional().describe("extra variables (e.g. from ~~~md source code fences) available in JSX scope"),
   actions: z.array(action).min(1).default(() => [action.parse({})]),
 });
 export type Component = z.infer<typeof component>;

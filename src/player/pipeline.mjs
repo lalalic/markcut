@@ -121,6 +121,10 @@ function normalizeEffectSpec(spec) {
   }
   return spec;
 }
+function pickOn(node2) {
+  if (Array.isArray(node2.on) && node2.on.length > 0) return { on: node2.on };
+  return {};
+}
 function parseTransition(val) {
   if (!val) return { name: void 0, time: void 0 };
   const parenMatch = val.match(/^(\w+)\((\d+(?:\.\d+)?)\)$/);
@@ -181,7 +185,8 @@ function wrapWithEffects(node2, result, parentKind) {
         start: effStart,
         end: effEnd
       }],
-      visible: true
+      visible: true,
+      ...pickOn(node2)
     };
   }
   return { stream: currentStream, duration: result.duration };
@@ -196,7 +201,8 @@ function compileLeaf(node2, ctx, parentKind) {
     style: node2.style,
     visible: node2.visible ?? true,
     isBackground: node2.isBackground,
-    durationInSeconds: end
+    durationInSeconds: end,
+    ...pickOn(node2)
   };
   const action = {
     id: uid(),
@@ -253,7 +259,8 @@ function compileLeaf(node2, ctx, parentKind) {
         "isBackground",
         "duration",
         "start",
-        "_resolvedRegistry"
+        "_resolvedRegistry",
+        "on"
       ]);
       const bindings = {};
       for (const key of Object.keys(node2)) {
@@ -328,12 +335,16 @@ function compileChildren(children, ctx, parentKind) {
 function aggregateDuration(children, kind, transitionTime) {
   if (kind === "parallel") {
     let max = 0;
-    for (const child of children) max = Math.max(max, child.duration);
+    for (const child of children) {
+      if (child.stream.isBackground) continue;
+      max = Math.max(max, child.duration);
+    }
     return max;
   }
   let total = 0;
   const overlap = kind === "transitionSeries" ? transitionTime ?? 0.5 : 0;
   for (let i = 0; i < children.length; i++) {
+    if (children[i].stream.isBackground) continue;
     total += children[i].duration;
     if (i > 0 && overlap > 0) total -= overlap;
   }
@@ -371,7 +382,8 @@ function compileScene(node2, ctx, parentKind) {
     visible: node2.visible ?? true,
     isBackground: node2.isBackground,
     children: sceneChildren,
-    durationInSeconds: end
+    durationInSeconds: end,
+    ...pickOn(node2)
   };
   return { stream, duration: end };
 }
@@ -407,7 +419,8 @@ function compileInclude(node2, ctx, parentKind) {
         end
       }
     ],
-    durationInSeconds: end
+    durationInSeconds: end,
+    ...pickOn(node2)
   };
   return { stream, duration: end };
 }
@@ -439,7 +452,8 @@ function compileEffect(node2, ctx, parentKind) {
         end
       }
     ],
-    durationInSeconds: end
+    durationInSeconds: end,
+    ...pickOn(node2)
   };
   return { stream, duration: end };
 }
@@ -481,7 +495,8 @@ function compileRhythm(node2, ctx, parentKind) {
         volume: node2.volume
       }
     ],
-    durationInSeconds: end
+    durationInSeconds: end,
+    ...pickOn(node2)
   };
   return { stream, duration: end };
 }
@@ -501,7 +516,8 @@ function compileContainer(node2, ctx, parentKind) {
     transition: node2.type === "transitionSeries" ? resolved.name : void 0,
     transitionTime: node2.type === "transitionSeries" ? resolved.time : 0.5,
     children: children.map((c) => c.stream),
-    durationInSeconds: duration
+    durationInSeconds: duration,
+    ...pickOn(node2)
   };
   return { stream, duration };
 }
@@ -12457,9 +12473,17 @@ function parseProps(raw) {
   try {
     return JSON.parse(s);
   } catch {
-    const normalized = s.replace(
+    let normalized = s.replace(
       /([{,]\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:(?=\s*["{[]?)/g,
       '$1"$2":'
+    );
+    normalized = normalized.replace(
+      /:\s*([a-zA-Z_$][a-zA-Z0-9_$.+-]*)\s*(?=[,}\]\s]|$)/g,
+      (match, value2) => {
+        if (value2 === "true" || value2 === "false" || value2 === "null") return `: ${value2}`;
+        if (/^[+-]?\d+(\.\d+)?$/.test(value2)) return `: ${value2}`;
+        return `: "${value2}"`;
+      }
     );
     try {
       return JSON.parse(normalized);
@@ -12568,7 +12592,7 @@ function parseKeyValueTokens(tokens) {
       }
       if (key === "waypoints") val = parseWaypoints(String(val));
       else if (key === "props" || key === "imports" || key === "components") val = parseProps(String(val));
-      else if (key === "spots" || key === "customKeyframes") val = parseProps(String(val));
+      else if (key === "spots" || key === "customKeyframes" || key === "on") val = parseProps(String(val));
       else if (key === "effects") val = parseEffects(String(val));
       else if (key !== "instruction" && key !== "tts" && key !== "stt" && key !== "jsx" && key !== "prompt") {
         val = parseNumberMaybe(String(val));
@@ -12602,12 +12626,14 @@ function parseHeaderScene(line) {
   sceneTitle = sceneTitle || (attrs.title ? String(attrs.title) : void 0);
   return {
     type: "scene",
+    id: attrs.id,
     name: sceneName,
     title: sceneTitle,
     instruction: attrs.instruction ? String(attrs.instruction) : void 0,
     layout: attrs.layout,
     transition: attrs.transition,
     transitionTime: attrs.transitionTime,
+    on: attrs.on,
     children: []
   };
 }
@@ -12637,10 +12663,12 @@ function parseNodeLine(content3) {
     const attrs2 = parseKeyValueTokens(tokens);
     const node2 = {
       type,
+      id: attrs2.id,
       instruction: attrs2.instruction,
       transition: attrs2.transition,
       transitionTime: attrs2.transitionTime,
       effects: attrs2.effects,
+      on: attrs2.on,
       children: []
     };
     return node2;
@@ -12650,6 +12678,7 @@ function parseNodeLine(content3) {
     const animation = attrs2.animation ?? firstPositional;
     const node2 = {
       type: "effect",
+      id: attrs2.id,
       instruction: attrs2.instruction,
       animation,
       animationTimingFunction: attrs2.animationTimingFunction,
@@ -12658,6 +12687,7 @@ function parseNodeLine(content3) {
       duration: attrs2.duration,
       start: attrs2.start,
       effects: attrs2.effects,
+      on: attrs2.on,
       children: []
     };
     return node2;
@@ -12669,6 +12699,7 @@ function parseNodeLine(content3) {
       const prompt = attrs.prompt;
       const node2 = {
         type: "image",
+        id: attrs.id,
         src,
         prompt,
         fit: attrs.fit,
@@ -12678,7 +12709,8 @@ function parseNodeLine(content3) {
         visible: attrs.visible,
         isBackground: attrs.isBackground,
         style: attrs.style,
-        effects: attrs.effects
+        effects: attrs.effects,
+        on: attrs.on
       };
       return node2;
     }
@@ -12687,6 +12719,7 @@ function parseNodeLine(content3) {
       const prompt = attrs.prompt;
       const node2 = {
         type: "video",
+        id: attrs.id,
         src,
         prompt,
         duration: attrs.duration,
@@ -12701,7 +12734,8 @@ function parseNodeLine(content3) {
         visible: attrs.visible,
         isBackground: attrs.isBackground,
         style: attrs.style,
-        effects: attrs.effects
+        effects: attrs.effects,
+        on: attrs.on
       };
       return node2;
     }
@@ -12710,6 +12744,7 @@ function parseNodeLine(content3) {
       if (!src) throw new Error("audio requires src");
       const node2 = {
         type: "audio",
+        id: attrs.id,
         src,
         duration: attrs.duration,
         start: attrs.start,
@@ -12723,7 +12758,8 @@ function parseNodeLine(content3) {
         visible: attrs.visible,
         isBackground: attrs.isBackground,
         style: attrs.style,
-        effects: attrs.effects
+        effects: attrs.effects,
+        on: attrs.on
       };
       return node2;
     }
@@ -12731,6 +12767,7 @@ function parseNodeLine(content3) {
       const jsx = attrs.jsx;
       const node2 = {
         type: "component",
+        id: attrs.id,
         jsx,
         duration: attrs.duration,
         start: attrs.start,
@@ -12738,7 +12775,8 @@ function parseNodeLine(content3) {
         visible: attrs.visible,
         isBackground: attrs.isBackground,
         style: attrs.style,
-        effects: attrs.effects
+        effects: attrs.effects,
+        on: attrs.on
       };
       return node2;
     }
@@ -12747,6 +12785,7 @@ function parseNodeLine(content3) {
       if (!src) throw new Error("rhythm requires src");
       const node2 = {
         type: "rhythm",
+        id: attrs.id,
         src,
         duration: attrs.duration,
         start: attrs.start,
@@ -12756,7 +12795,8 @@ function parseNodeLine(content3) {
         visible: attrs.visible,
         isBackground: attrs.isBackground,
         style: attrs.style,
-        effects: attrs.effects
+        effects: attrs.effects,
+        on: attrs.on
       };
       return node2;
     }
@@ -12764,6 +12804,7 @@ function parseNodeLine(content3) {
       const src = firstPositional ?? attrs.src;
       const node2 = {
         type: "include",
+        id: attrs.id,
         src,
         duration: attrs.duration,
         start: attrs.start,
@@ -12772,7 +12813,8 @@ function parseNodeLine(content3) {
         visible: attrs.visible,
         isBackground: attrs.isBackground,
         style: attrs.style,
-        effects: attrs.effects
+        effects: attrs.effects,
+        on: attrs.on
       };
       return node2;
     }
@@ -12782,6 +12824,7 @@ function parseNodeLine(content3) {
       const text3 = isQuoted(raw) ? unquote(raw) : raw;
       return {
         type: "audio",
+        id: attrs.id,
         script: text3,
         volume: attrs.volume ?? 1,
         start: attrs.start,
@@ -12790,12 +12833,14 @@ function parseNodeLine(content3) {
         isBackground: attrs.isBackground,
         style: attrs.style,
         visible: attrs.visible,
-        effects: attrs.effects
+        effects: attrs.effects,
+        on: attrs.on
       };
     }
     case "map": {
       const node2 = {
         type: "map",
+        id: attrs.id,
         waypoints: attrs.waypoints ?? [],
         duration: attrs.duration,
         start: attrs.start,
@@ -12810,7 +12855,8 @@ function parseNodeLine(content3) {
         visible: attrs.visible,
         isBackground: attrs.isBackground,
         style: attrs.style,
-        effects: attrs.effects
+        effects: attrs.effects,
+        on: attrs.on
       };
       return node2;
     }
@@ -12972,6 +13018,9 @@ function applySceneMetadata(scene, attrs) {
         break;
       case "tts":
         scene.tts = v;
+        break;
+      case "on":
+        scene.on = v;
         break;
     }
   }

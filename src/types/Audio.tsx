@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Sequence, Audio as RemotionAudio, useRemotionEnvironment, useVideoConfig, staticFile } from "remotion";
-import { AudioContext } from "../context/index";
+import { AudioContext, useFrameEvents } from "../context/index";
 import { toPlaybackRate } from "../utils/index";
 import type { Audio } from "../schema/index";
 
@@ -13,6 +13,8 @@ export function AudioLeaf({ stream }: { stream: Audio }) {
   const { fps } = useVideoConfig();
   const environment = useRemotionEnvironment();
   const ctx = React.useContext(AudioContext);
+  const totalDur = stream.durationInSeconds ?? stream.actions[0]?.end ?? 1;
+  useFrameEvents(stream.on, Math.max(1, Math.floor(totalDur * fps)));
   if (!stream.src) return null;
   if (environment.isStudio) return null;
 

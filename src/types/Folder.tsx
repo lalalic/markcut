@@ -7,7 +7,7 @@ import { wipe } from "@remotion/transitions/wipe";
 import { flip } from "@remotion/transitions/flip";
 import { clockWipe } from "@remotion/transitions/clock-wipe";
 
-import { ComposeContext, AudioContext } from "../context/index";
+import { ComposeContext, AudioContext, useFrameEvents } from "../context/index";
 import { cssJS, toClassName } from "../utils/index";
 import type { Folder as FolderStream, Stream } from "../schema/index";
 
@@ -49,6 +49,8 @@ export function FolderLeaf({ stream }: { stream: FolderStream }) {
   const { fps, width, height } = useVideoConfig();
   const { Container } = React.useContext(ComposeContext);
   const parentAudio = React.useContext(AudioContext);
+  const totalDur = stream.durationInSeconds ?? 1;
+  useFrameEvents(stream.on, Math.max(1, Math.floor(totalDur * fps)));
 
   const isSeries = !!stream.isSeries;
   const transition = stream.transition;
@@ -75,7 +77,12 @@ export function FolderLeaf({ stream }: { stream: FolderStream }) {
 
   const visibleChildren = (stream.children as Stream[]).filter((c) => c.visible !== false);
 
-  const sequences = visibleChildren
+  // Background children are rendered outside the series (parallel overlays),
+  // so TransitionSeries doesn't reject the <Loop> wrapper.
+  const bgChildren = visibleChildren.filter((c) => c.isBackground);
+  const seriesChildren = isSeries ? visibleChildren.filter((c) => !c.isBackground) : visibleChildren;
+
+  const sequences = seriesChildren
     .map((child) => {
       const dur = child.durationInSeconds ?? 0;
       const durFrames = Math.max(1, Math.floor(dur * fps));
@@ -86,7 +93,34 @@ export function FolderLeaf({ stream }: { stream: FolderStream }) {
         : child.type === "effect"
           ? <EffectWrapper stream={child as any}><FolderLeaf stream={child as any} /></EffectWrapper>
           : React.createElement(FolderLeaf, { stream: child as FolderStream });
-      const wrapped = (
+      return (
+        <SequenceWrap key={child.id} durationInFrames={durFrames} layout="none">
+          <Container
+            id={child.id}
+            type={child.type}
+            style={cssJS(child.style) as React.CSSProperties}
+            className={`${child.type} ${toClassName(child.id ?? "")}`}
+          >
+            {childContent}
+          </Container>
+        </SequenceWrap>
+      );
+    })
+    .filter(Boolean);
+
+  // Background children: rendered as parallel loops outside the series
+  const bgContent = bgChildren.length > 0 && (
+    <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
+      {bgChildren.map((child) => {
+        const dur = child.durationInSeconds ?? 0;
+        const durFrames = Math.max(1, Math.floor(dur * fps));
+        const isLeaf = child.type !== "folder" && child.type !== "root" && child.type !== "effect";
+        const childContent = isLeaf
+          ? React.createElement(Leaves[child.type] ?? (() => null), { stream: child })
+          : child.type === "effect"
+            ? <EffectWrapper stream={child as any}><FolderLeaf stream={child as any} /></EffectWrapper>
+            : React.createElement(FolderLeaf, { stream: child as FolderStream });
+        const wrapped = (
           <Container
             id={child.id}
             type={child.type}
@@ -96,25 +130,15 @@ export function FolderLeaf({ stream }: { stream: FolderStream }) {
             {childContent}
           </Container>
         );
-
-      const seq = (
-        <SequenceWrap key={child.id} durationInFrames={durFrames} layout="none">
-          {wrapped}
-        </SequenceWrap>
-      );
-
-      if (child.isBackground && stream.durationInSeconds) {
-        const times = Math.max(1, Math.ceil((stream.durationInSeconds * fps) / durFrames));
+        const times = Math.max(1, Math.ceil((stream.durationInSeconds! * fps) / durFrames));
         return (
           <Loop key={child.id} durationInFrames={durFrames} times={times} showInTimeline={false}>
             {wrapped}
           </Loop>
         );
-      }
-
-      return seq;
-    })
-    .filter(Boolean);
+      })}
+    </div>
+  );
 
   // interleave transitions
   if (isSeries && transEl) {
@@ -142,6 +166,7 @@ export function FolderLeaf({ stream }: { stream: FolderStream }) {
         className={`${orientation} ${stream.type}`.trim()}
       >
         {isSeries ? <TypedSeries>{sequences}</TypedSeries> : sequences}
+        {bgContent}
       </Container>
     </AudioContext.Provider>
   );

@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Sequence, Img, useVideoConfig, staticFile } from "remotion";
 import { cssJS } from "../utils/index";
+import { useFrameEvents } from "../context/index";
 import type { Image } from "../schema/index";
 import { FrameSyncStyle } from "./FrameSyncStyle";
 
@@ -11,6 +12,8 @@ function resolveImageSrc(src: string): string {
 
 export function ImageLeaf({ stream }: { stream: Image }) {
   const { fps } = useVideoConfig();
+  const totalDur = stream.durationInSeconds ?? stream.actions[0]?.end ?? 1;
+  useFrameEvents(stream.on, Math.max(1, Math.floor(totalDur * fps)));
   if (!stream.src) return null;
   const resolvedSrc = resolveImageSrc(stream.src);
 

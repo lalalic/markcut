@@ -10,6 +10,7 @@
  */
 import * as React from "react";
 import { Sequence, Audio as RemotionAudio, useRemotionEnvironment, useVideoConfig, staticFile } from "remotion";
+import { useFrameEvents } from "../context/index";
 import type { Rhythm } from "../schema/index";
 
 function resolveAudioSrc(src: string): string {
@@ -20,6 +21,8 @@ function resolveAudioSrc(src: string): string {
 export function RhythmLeaf({ stream }: { stream: Rhythm }) {
   const { fps } = useVideoConfig();
   const environment = useRemotionEnvironment();
+  const totalDur = stream.durationInSeconds ?? stream.actions[0]?.end ?? 1;
+  useFrameEvents(stream.on, Math.max(1, Math.floor(totalDur * fps)));
 
   if (!stream.src || environment.isStudio) return null;
 

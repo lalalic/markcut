@@ -10,6 +10,7 @@
 import * as React from "react";
 import { useCurrentFrame, useVideoConfig } from "remotion";
 import { cssJS } from "../utils/index";
+import { useFrameEvents } from "../context/index";
 import { resolveAnimation, interpolateKeyframes } from "./keyframes";
 import type { Effect as EffectStream } from "../schema/index";
 
@@ -22,6 +23,8 @@ export function EffectWrapper({
 }) {
   const frame = useCurrentFrame();
   const { fps, width, height } = useVideoConfig();
+  const totalDur = stream.durationInSeconds ?? stream.actions[0]?.end ?? 1;
+  useFrameEvents(stream.on, Math.max(1, Math.floor(totalDur * fps)));
 
   const actions = stream.actions ?? [];
 

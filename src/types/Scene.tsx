@@ -9,7 +9,7 @@
  */
 import * as React from "react";
 import { Folder } from "remotion"
-import { ComposeContext, AudioContext } from "../context/index";
+import { ComposeContext, AudioContext, useFrameEvents } from "../context/index";
 import { cssJS, toClassName } from "../utils/index";
 import type { Scene as SceneStream } from "../schema/index";
 import { FolderLeaf } from "./Folder";
@@ -17,6 +17,8 @@ import { FolderLeaf } from "./Folder";
 export function SceneLeaf({ stream }: { stream: SceneStream }) {
   const { Container } = React.useContext(ComposeContext);
   const parentAudio = React.useContext(AudioContext);
+  const totalDur = stream.durationInSeconds ?? 1;
+  useFrameEvents(stream.on, Math.max(1, Math.floor(totalDur * 30)));
 
   const audioCtx = React.useMemo(
     () => ({ id: stream.id, parent: parentAudio }),

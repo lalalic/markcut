@@ -778,7 +778,7 @@ var require_scheduler = __commonJS({
 var require_react_dom_production = __commonJS({
   "node_modules/react-dom/cjs/react-dom.production.js"(exports) {
     "use strict";
-    var React47 = require_react();
+    var React48 = require_react();
     function formatProdErrorMessage(code) {
       var url2 = "https://react.dev/errors/" + code;
       if (1 < arguments.length) {
@@ -818,7 +818,7 @@ var require_react_dom_production = __commonJS({
         implementation
       };
     }
-    var ReactSharedInternals = React47.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
+    var ReactSharedInternals = React48.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
     function getCrossOriginStringAs(as, input) {
       if ("font" === as) return "";
       if ("string" === typeof input)
@@ -954,7 +954,7 @@ var require_react_dom_client_production = __commonJS({
   "node_modules/react-dom/cjs/react-dom-client.production.js"(exports) {
     "use strict";
     var Scheduler = require_scheduler();
-    var React47 = require_react();
+    var React48 = require_react();
     var ReactDOM2 = require_react_dom();
     function formatProdErrorMessage(code) {
       var url2 = "https://react.dev/errors/" + code;
@@ -1145,7 +1145,7 @@ var require_react_dom_client_production = __commonJS({
       return null;
     }
     var isArrayImpl = Array.isArray;
-    var ReactSharedInternals = React47.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
+    var ReactSharedInternals = React48.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
     var ReactDOMSharedInternals = ReactDOM2.__DOM_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
     var sharedNotPendingObject = {
       pending: false,
@@ -12591,7 +12591,7 @@ var require_react_dom_client_production = __commonJS({
         0 === i3 && attemptExplicitHydrationTarget(target);
       }
     };
-    var isomorphicReactPackageVersion$jscomp$inline_1840 = React47.version;
+    var isomorphicReactPackageVersion$jscomp$inline_1840 = React48.version;
     if ("19.2.5" !== isomorphicReactPackageVersion$jscomp$inline_1840)
       throw Error(
         formatProdErrorMessage(
@@ -12794,7 +12794,7 @@ var require_fast_deep_equal = __commonJS({
 });
 
 // src/player/browser.tsx
-var React46 = __toESM(require_react(), 1);
+var React47 = __toESM(require_react(), 1);
 var import_client = __toESM(require_client(), 1);
 var ReactDOM = __toESM(require_react_dom(), 1);
 
@@ -27936,30 +27936,124 @@ var forward2 = import_react110.forwardRef;
 var Thumbnail = forward2(ThumbnailFn);
 
 // src/entry.tsx
-var React45 = __toESM(require_react(), 1);
+var React46 = __toESM(require_react(), 1);
 
 // src/context/index.tsx
+var React9 = __toESM(require_react(), 1);
+
+// src/context/EventContext.tsx
 var React8 = __toESM(require_react(), 1);
 var import_jsx_runtime56 = __toESM(require_jsx_runtime(), 1);
-var DefaultContainer = ({ children, style: style2 }) => /* @__PURE__ */ (0, import_jsx_runtime56.jsx)("div", { style: { position: "absolute", inset: 0, ...style2 }, children });
-var ComposeContext = React8.createContext({
+var EventContext = React8.createContext(null);
+function createComponentProxy(target, setState) {
+  return new Proxy(target, {
+    set(obj, prop, value) {
+      obj[prop] = value;
+      setState({ [prop]: value });
+      return true;
+    },
+    get(obj, prop) {
+      if (typeof prop === "string" && prop in obj) return obj[prop];
+      return void 0;
+    }
+  });
+}
+function EventProvider({ children }) {
+  const registryRef = React8.useRef(/* @__PURE__ */ new Map());
+  const register = React8.useCallback(
+    (id, setState) => {
+      const target = {};
+      const proxy = createComponentProxy(target, setState);
+      registryRef.current.set(id, { proxy, setState });
+    },
+    []
+  );
+  const unregister = React8.useCallback((id) => {
+    registryRef.current.delete(id);
+  }, []);
+  const evaluate = React8.useCallback((code) => {
+    const scope = {};
+    for (const [id, reg] of registryRef.current) {
+      scope[id] = reg.proxy;
+    }
+    const keys = Object.keys(scope);
+    const vals = Object.values(scope);
+    try {
+      const fn = new Function(...keys, code);
+      fn(...vals);
+      console.info(`Event evaluation succeeded: "${code}"`);
+    } catch (err) {
+      console.warn(`Event evaluation failed: "${code}"`, err);
+    }
+  }, []);
+  const value = React8.useMemo(
+    () => ({ register, unregister, evaluate }),
+    [register, unregister, evaluate]
+  );
+  return /* @__PURE__ */ (0, import_jsx_runtime56.jsx)(EventContext.Provider, { value, children });
+}
+function useEventContext() {
+  const ctx = React8.useContext(EventContext);
+  if (!ctx) {
+    throw new Error("useEventContext must be used within an EventProvider");
+  }
+  return ctx;
+}
+function resolveWhenToFrame(when, durationInFrames, fps) {
+  if (when === "start") return 0;
+  if (when === "end") return durationInFrames;
+  const pct = /^(\d+(?:\.\d+)?)%$/.exec(when);
+  if (pct) {
+    return Math.floor(Number(pct[1]) / 100 * durationInFrames);
+  }
+  const sec = /^(\d+(?:\.\d+)?)s$/.exec(when);
+  if (sec) {
+    return Math.floor(Number(sec[1]) * fps);
+  }
+  console.warn(`Unknown when format: "${when}", defaulting to start`);
+  return 0;
+}
+function useFrameEvents(on, durationInFrames) {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const { evaluate } = useEventContext();
+  const handledFramesRef = React8.useRef(/* @__PURE__ */ new Set());
+  React8.useEffect(() => {
+    if (!on || on.length === 0 || durationInFrames <= 0) return;
+    for (const ev of on) {
+      const targetFrame = resolveWhenToFrame(ev.when, durationInFrames, fps);
+      if (frame === targetFrame && !handledFramesRef.current.has(frame)) {
+        handledFramesRef.current.add(frame);
+        evaluate(ev.state);
+      }
+    }
+    for (const f2 of handledFramesRef.current) {
+      if (f2 < frame) handledFramesRef.current.delete(f2);
+    }
+  }, [frame, on, durationInFrames, fps, evaluate]);
+}
+
+// src/context/index.tsx
+var import_jsx_runtime57 = __toESM(require_jsx_runtime(), 1);
+var DefaultContainer = ({ children, style: style2 }) => /* @__PURE__ */ (0, import_jsx_runtime57.jsx)("div", { style: { position: "absolute", inset: 0, ...style2 }, children });
+var ComposeContext = React9.createContext({
   Container: DefaultContainer
 });
-var AudioContext2 = React8.createContext(null);
+var AudioContext2 = React9.createContext(null);
 
 // src/types/Folder.tsx
-var React43 = __toESM(require_react(), 1);
+var React44 = __toESM(require_react(), 1);
 
 // node_modules/@remotion/transitions/dist/esm/index.mjs
 var import_react113 = __toESM(require_react(), 1);
-var import_jsx_runtime57 = __toESM(require_jsx_runtime(), 1);
-var import_react114 = __toESM(require_react(), 1);
 var import_jsx_runtime58 = __toESM(require_jsx_runtime(), 1);
+var import_react114 = __toESM(require_react(), 1);
+var import_jsx_runtime59 = __toESM(require_jsx_runtime(), 1);
 var import_react115 = __toESM(require_react(), 1);
 var import_react116 = __toESM(require_react(), 1);
-var import_jsx_runtime59 = __toESM(require_jsx_runtime(), 1);
-var import_react117 = __toESM(require_react(), 1);
 var import_jsx_runtime60 = __toESM(require_jsx_runtime(), 1);
+var import_react117 = __toESM(require_react(), 1);
+var import_jsx_runtime61 = __toESM(require_jsx_runtime(), 1);
 var import_react118 = __toESM(require_react(), 1);
 var epsilon = 0.01;
 var SlidePresentation = ({
@@ -28023,7 +28117,7 @@ var SlidePresentation = ({
       ...presentationDirection === "entering" ? enterStyle : exitStyle
     };
   }, [directionStyle, enterStyle, exitStyle, presentationDirection]);
-  return /* @__PURE__ */ (0, import_jsx_runtime57.jsx)(AbsoluteFill, {
+  return /* @__PURE__ */ (0, import_jsx_runtime58.jsx)(AbsoluteFill, {
     style: style2,
     children
   });
@@ -28172,8 +28266,8 @@ var HtmlInCanvasPresentation = ({
   if (passThrough) {
     return children;
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime58.jsx)(AbsoluteFill, {
-    children: /* @__PURE__ */ (0, import_jsx_runtime58.jsx)("canvas", {
+  return /* @__PURE__ */ (0, import_jsx_runtime59.jsx)(AbsoluteFill, {
+    children: /* @__PURE__ */ (0, import_jsx_runtime59.jsx)("canvas", {
       ref: canvasRef,
       style: canvasSubtreeStyle,
       children
@@ -28184,7 +28278,7 @@ var makeHtmlInCanvasPresentation = (shader) => {
   const CompWithShader = (props) => {
     const { passedProps, ...otherProps } = props;
     const { effects, ...restPassedProps } = props.passedProps;
-    return /* @__PURE__ */ (0, import_jsx_runtime58.jsx)(HtmlInCanvasPresentation, {
+    return /* @__PURE__ */ (0, import_jsx_runtime59.jsx)(HtmlInCanvasPresentation, {
       shader,
       passedProps: restPassedProps,
       effects,
@@ -29011,7 +29105,7 @@ var WrapInEnteringProgressContext = ({ presentationProgress, children }) => {
       enteringProgress: presentationProgress
     };
   }, [presentationProgress]);
-  return /* @__PURE__ */ (0, import_jsx_runtime59.jsx)(EnteringContext.Provider, {
+  return /* @__PURE__ */ (0, import_jsx_runtime60.jsx)(EnteringContext.Provider, {
     value,
     children
   });
@@ -29022,7 +29116,7 @@ var WrapInExitingProgressContext = ({ presentationProgress, children }) => {
       exitingProgress: presentationProgress
     };
   }, [presentationProgress]);
-  return /* @__PURE__ */ (0, import_jsx_runtime59.jsx)(ExitingContext.Provider, {
+  return /* @__PURE__ */ (0, import_jsx_runtime60.jsx)(ExitingContext.Provider, {
     value,
     children
   });
@@ -29045,7 +29139,7 @@ var SeriesOverlay = () => {
   return null;
 };
 var SeriesSequence2 = ({ children }) => {
-  return /* @__PURE__ */ (0, import_jsx_runtime60.jsx)(import_jsx_runtime60.Fragment, {
+  return /* @__PURE__ */ (0, import_jsx_runtime61.jsx)(import_jsx_runtime61.Fragment, {
     children
   });
 };
@@ -29233,13 +29327,13 @@ var TransitionSeriesChildren = ({
         const prevPresentation = prev.props.presentation ?? slide();
         const UppercaseNextPresentation = nextPresentation.component;
         const UppercasePrevPresentation = prevPresentation.component;
-        return /* @__PURE__ */ (0, import_jsx_runtime60.jsx)(Sequence, {
+        return /* @__PURE__ */ (0, import_jsx_runtime61.jsx)(Sequence, {
           from: actualStartFrame,
           durationInFrames: durationInFramesProp,
           ...passedProps,
           name: passedProps.name || "<TS.Sequence>",
           _remotionInternalDocumentationLink: passedProps.name ? void 0 : "https://www.remotion.dev/docs/transitions/transitionseries",
-          children: /* @__PURE__ */ (0, import_jsx_runtime60.jsx)(UppercaseNextPresentation, {
+          children: /* @__PURE__ */ (0, import_jsx_runtime61.jsx)(UppercaseNextPresentation, {
             passedProps: nextPresentation.props ?? {},
             presentationDirection: "exiting",
             presentationProgress: nextProgress,
@@ -29251,9 +29345,9 @@ var TransitionSeriesChildren = ({
               throw new Error("Should not call when exiting");
             },
             bothEnteringAndExiting: true,
-            children: /* @__PURE__ */ (0, import_jsx_runtime60.jsx)(WrapInExitingProgressContext, {
+            children: /* @__PURE__ */ (0, import_jsx_runtime61.jsx)(WrapInExitingProgressContext, {
               presentationProgress: nextProgress,
-              children: /* @__PURE__ */ (0, import_jsx_runtime60.jsx)(UppercasePrevPresentation, {
+              children: /* @__PURE__ */ (0, import_jsx_runtime61.jsx)(UppercasePrevPresentation, {
                 passedProps: prevPresentation.props ?? {},
                 presentationDirection: "entering",
                 presentationProgress: prevProgress,
@@ -29267,7 +29361,7 @@ var TransitionSeriesChildren = ({
                   onNextElementImage(null, null, null, i3 - 1);
                 },
                 bothEnteringAndExiting: true,
-                children: /* @__PURE__ */ (0, import_jsx_runtime60.jsx)(WrapInEnteringProgressContext, {
+                children: /* @__PURE__ */ (0, import_jsx_runtime61.jsx)(WrapInEnteringProgressContext, {
                   presentationProgress: prevProgress,
                   children: child
                 })
@@ -29279,13 +29373,13 @@ var TransitionSeriesChildren = ({
       if (prevProgress !== null && prev) {
         const prevPresentation = prev.props.presentation ?? slide();
         const UppercasePrevPresentation = prevPresentation.component;
-        return /* @__PURE__ */ (0, import_jsx_runtime60.jsx)(Sequence, {
+        return /* @__PURE__ */ (0, import_jsx_runtime61.jsx)(Sequence, {
           from: actualStartFrame,
           durationInFrames: durationInFramesProp,
           ...passedProps,
           name: passedProps.name || "<TS.Sequence>",
           _remotionInternalDocumentationLink: passedProps.name ? void 0 : "https://www.remotion.dev/docs/transitions/transitionseries",
-          children: /* @__PURE__ */ (0, import_jsx_runtime60.jsx)(UppercasePrevPresentation, {
+          children: /* @__PURE__ */ (0, import_jsx_runtime61.jsx)(UppercasePrevPresentation, {
             passedProps: prevPresentation.props ?? {},
             presentationDirection: "entering",
             presentationProgress: prevProgress,
@@ -29295,7 +29389,7 @@ var TransitionSeriesChildren = ({
               onNextElementImage(null, null, null, i3 - 1);
             },
             bothEnteringAndExiting: false,
-            children: /* @__PURE__ */ (0, import_jsx_runtime60.jsx)(WrapInEnteringProgressContext, {
+            children: /* @__PURE__ */ (0, import_jsx_runtime61.jsx)(WrapInEnteringProgressContext, {
               presentationProgress: prevProgress,
               children: child
             })
@@ -29305,13 +29399,13 @@ var TransitionSeriesChildren = ({
       if (nextProgress !== null && next) {
         const nextPresentation = next.props.presentation ?? slide();
         const UppercaseNextPresentation = nextPresentation.component;
-        return /* @__PURE__ */ (0, import_jsx_runtime60.jsx)(Sequence, {
+        return /* @__PURE__ */ (0, import_jsx_runtime61.jsx)(Sequence, {
           from: actualStartFrame,
           durationInFrames: durationInFramesProp,
           ...passedProps,
           name: passedProps.name || "<TS.Sequence>",
           _remotionInternalDocumentationLink: passedProps.name ? void 0 : "https://www.remotion.dev/docs/transitions/transitionseries",
-          children: /* @__PURE__ */ (0, import_jsx_runtime60.jsx)(UppercaseNextPresentation, {
+          children: /* @__PURE__ */ (0, import_jsx_runtime61.jsx)(UppercaseNextPresentation, {
             passedProps: nextPresentation.props ?? {},
             presentationDirection: "exiting",
             presentationProgress: nextProgress,
@@ -29321,14 +29415,14 @@ var TransitionSeriesChildren = ({
               onPrevElementImage(null, null, null, i3 + 1);
             },
             bothEnteringAndExiting: false,
-            children: /* @__PURE__ */ (0, import_jsx_runtime60.jsx)(WrapInExitingProgressContext, {
+            children: /* @__PURE__ */ (0, import_jsx_runtime61.jsx)(WrapInExitingProgressContext, {
               presentationProgress: nextProgress,
               children: child
             })
           })
         }, i3);
       }
-      return /* @__PURE__ */ (0, import_jsx_runtime60.jsx)(Sequence, {
+      return /* @__PURE__ */ (0, import_jsx_runtime61.jsx)(Sequence, {
         from: actualStartFrame,
         durationInFrames: durationInFramesProp,
         ...passedProps,
@@ -29339,7 +29433,7 @@ var TransitionSeriesChildren = ({
     });
     const overlayElements = overlayRenders.map((overlayInfo) => {
       const info2 = overlayInfo;
-      return /* @__PURE__ */ (0, import_jsx_runtime60.jsx)(Sequence, {
+      return /* @__PURE__ */ (0, import_jsx_runtime61.jsx)(Sequence, {
         from: Math.round(info2.overlayFrom),
         durationInFrames: info2.durationInFrames,
         name: "<TS.Overlay>",
@@ -29351,7 +29445,7 @@ var TransitionSeriesChildren = ({
     });
     return [...mainChildren || [], ...overlayElements];
   }, [flattedChildren, fps, frame, onPrevElementImage, onNextElementImage]);
-  return /* @__PURE__ */ (0, import_jsx_runtime60.jsx)(import_jsx_runtime60.Fragment, {
+  return /* @__PURE__ */ (0, import_jsx_runtime61.jsx)(import_jsx_runtime61.Fragment, {
     children: childrenValue
   });
 };
@@ -29361,12 +29455,12 @@ var TransitionSeries = ({ children, name, layout: passedLayout, ...otherProps })
   if (NoReactInternals.ENABLE_V5_BREAKING_CHANGES && layout !== "absolute-fill") {
     throw new TypeError(`The "layout" prop of <TransitionSeries /> is not supported anymore in v5. TransitionSeries' must be absolutely positioned.`);
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime60.jsx)(Sequence, {
+  return /* @__PURE__ */ (0, import_jsx_runtime61.jsx)(Sequence, {
     name: displayName,
     layout,
     _remotionInternalDocumentationLink: name === void 0 ? "https://www.remotion.dev/docs/transitions/transitionseries" : void 0,
     ...otherProps,
-    children: /* @__PURE__ */ (0, import_jsx_runtime60.jsx)(TransitionSeriesChildren, {
+    children: /* @__PURE__ */ (0, import_jsx_runtime61.jsx)(TransitionSeriesChildren, {
       children
     })
   });
@@ -29380,7 +29474,7 @@ Internals.addSequenceStackTraces(SeriesOverlay);
 
 // node_modules/@remotion/transitions/dist/esm/fade.mjs
 var import_react119 = __toESM(require_react(), 1);
-var import_jsx_runtime61 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime62 = __toESM(require_jsx_runtime(), 1);
 var FadePresentation = ({ children, presentationDirection, presentationProgress, passedProps }) => {
   const isEntering = presentationDirection === "entering";
   const style2 = (0, import_react119.useMemo)(() => {
@@ -29396,7 +29490,7 @@ var FadePresentation = ({ children, presentationDirection, presentationProgress,
     presentationDirection,
     presentationProgress
   ]);
-  return /* @__PURE__ */ (0, import_jsx_runtime61.jsx)(AbsoluteFill, {
+  return /* @__PURE__ */ (0, import_jsx_runtime62.jsx)(AbsoluteFill, {
     style: style2,
     children
   });
@@ -29410,7 +29504,7 @@ var fade = (props) => {
 
 // node_modules/@remotion/transitions/dist/esm/slide.mjs
 var import_react120 = __toESM(require_react(), 1);
-var import_jsx_runtime62 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime63 = __toESM(require_jsx_runtime(), 1);
 var epsilon2 = 0.01;
 var SlidePresentation2 = ({
   children,
@@ -29473,7 +29567,7 @@ var SlidePresentation2 = ({
       ...presentationDirection === "entering" ? enterStyle : exitStyle
     };
   }, [directionStyle, enterStyle, exitStyle, presentationDirection]);
-  return /* @__PURE__ */ (0, import_jsx_runtime62.jsx)(AbsoluteFill, {
+  return /* @__PURE__ */ (0, import_jsx_runtime63.jsx)(AbsoluteFill, {
     style: style2,
     children
   });
@@ -29487,7 +29581,7 @@ var slide2 = (props) => {
 
 // node_modules/@remotion/transitions/dist/esm/wipe.mjs
 var import_react121 = __toESM(require_react(), 1);
-var import_jsx_runtime63 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime64 = __toESM(require_jsx_runtime(), 1);
 var makePolygonIn = (progress, direction) => {
   const p2 = progress * 100;
   switch (direction) {
@@ -29561,9 +29655,9 @@ var WipePresentation = ({
   const outerStyle = (0, import_react121.useMemo)(() => {
     return presentationDirection === "entering" ? outerEnterStyle : outerExitStyle;
   }, [outerEnterStyle, outerExitStyle, presentationDirection]);
-  return /* @__PURE__ */ (0, import_jsx_runtime63.jsx)(AbsoluteFill, {
+  return /* @__PURE__ */ (0, import_jsx_runtime64.jsx)(AbsoluteFill, {
     style: outerStyle,
-    children: /* @__PURE__ */ (0, import_jsx_runtime63.jsx)(AbsoluteFill, {
+    children: /* @__PURE__ */ (0, import_jsx_runtime64.jsx)(AbsoluteFill, {
       style: style2,
       children
     })
@@ -29578,7 +29672,7 @@ var wipe = (props) => {
 
 // node_modules/@remotion/transitions/dist/esm/flip.mjs
 var import_react122 = __toESM(require_react(), 1);
-var import_jsx_runtime64 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime65 = __toESM(require_jsx_runtime(), 1);
 var Flip = ({
   children,
   presentationDirection,
@@ -29619,9 +29713,9 @@ var Flip = ({
       ...presentationDirection === "entering" ? outerEnterStyle : outerExitStyle
     };
   }, [outerEnterStyle, outerExitStyle, perspective, presentationDirection]);
-  return /* @__PURE__ */ (0, import_jsx_runtime64.jsx)(AbsoluteFill, {
+  return /* @__PURE__ */ (0, import_jsx_runtime65.jsx)(AbsoluteFill, {
     style: outer,
-    children: /* @__PURE__ */ (0, import_jsx_runtime64.jsx)(AbsoluteFill, {
+    children: /* @__PURE__ */ (0, import_jsx_runtime65.jsx)(AbsoluteFill, {
       style: style2,
       children
     })
@@ -30041,7 +30135,6 @@ var translatePath = (path, x2, y2) => {
 // node_modules/@remotion/shapes/dist/esm/index.mjs
 var import_react123 = __toESM(require_react(), 1);
 var import_react_dom2 = __toESM(require_react_dom(), 1);
-var import_jsx_runtime65 = __toESM(require_jsx_runtime(), 1);
 var import_jsx_runtime66 = __toESM(require_jsx_runtime(), 1);
 var import_jsx_runtime67 = __toESM(require_jsx_runtime(), 1);
 var import_jsx_runtime68 = __toESM(require_jsx_runtime(), 1);
@@ -30051,6 +30144,7 @@ var import_jsx_runtime71 = __toESM(require_jsx_runtime(), 1);
 var import_jsx_runtime72 = __toESM(require_jsx_runtime(), 1);
 var import_jsx_runtime73 = __toESM(require_jsx_runtime(), 1);
 var import_jsx_runtime74 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime75 = __toESM(require_jsx_runtime(), 1);
 var getCoord = ({
   counterClockwise,
   actualProgress,
@@ -30159,7 +30253,7 @@ var makePie = ({
 
 // node_modules/@remotion/transitions/dist/esm/clock-wipe.mjs
 var import_react124 = __toESM(require_react(), 1);
-var import_jsx_runtime75 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime76 = __toESM(require_jsx_runtime(), 1);
 var ClockWipePresentation = ({ children, presentationDirection, presentationProgress, passedProps }) => {
   const finishedRadius = Math.sqrt(passedProps.width ** 2 + passedProps.height ** 2) / 2;
   const { path } = makePie({
@@ -30187,9 +30281,9 @@ var ClockWipePresentation = ({ children, presentationDirection, presentationProg
     passedProps.outerExitStyle,
     presentationDirection
   ]);
-  return /* @__PURE__ */ (0, import_jsx_runtime75.jsx)(AbsoluteFill, {
+  return /* @__PURE__ */ (0, import_jsx_runtime76.jsx)(AbsoluteFill, {
     style: outerStyle,
-    children: /* @__PURE__ */ (0, import_jsx_runtime75.jsx)(AbsoluteFill, {
+    children: /* @__PURE__ */ (0, import_jsx_runtime76.jsx)(AbsoluteFill, {
       style: style2,
       children
     })
@@ -30304,11 +30398,11 @@ function parseVTT(src) {
 }
 
 // src/types/Video.tsx
-var React16 = __toESM(require_react(), 1);
+var React18 = __toESM(require_react(), 1);
 
 // src/types/FrameSyncStyle.tsx
-var React15 = __toESM(require_react(), 1);
-var import_jsx_runtime76 = __toESM(require_jsx_runtime(), 1);
+var React16 = __toESM(require_react(), 1);
+var import_jsx_runtime77 = __toESM(require_jsx_runtime(), 1);
 function FrameSyncStyle({
   style: style2,
   children
@@ -30316,7 +30410,7 @@ function FrameSyncStyle({
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const hasAnimation = "animation" in style2;
-  const mergedStyle = React15.useMemo(() => {
+  const mergedStyle = React16.useMemo(() => {
     if (!hasAnimation) return style2;
     const currentTime = frame / fps;
     return {
@@ -30325,7 +30419,7 @@ function FrameSyncStyle({
       animationDelay: `-${currentTime}s`
     };
   }, [style2, hasAnimation, frame, fps]);
-  return /* @__PURE__ */ (0, import_jsx_runtime76.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime77.jsx)(
     "div",
     {
       style: {
@@ -30340,17 +30434,19 @@ function FrameSyncStyle({
 }
 
 // src/types/Video.tsx
-var import_jsx_runtime77 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime78 = __toESM(require_jsx_runtime(), 1);
 function resolveVideoSrc(src) {
   if (/^(https?:|data:|blob:|file:|\/)/.test(src)) return src;
   return staticFile(src);
 }
 function VideoLeaf({ stream: stream2 }) {
   const { fps } = useVideoConfig();
-  const audio2 = React16.useContext(AudioContext2);
+  const audio2 = React18.useContext(AudioContext2);
+  const totalDur = stream2.durationInSeconds ?? stream2.actions[0]?.end ?? 1;
+  useFrameEvents(stream2.on, Math.max(1, Math.floor(totalDur * fps)));
   if (!stream2.src) return null;
   const resolvedSrc = resolveVideoSrc(stream2.src);
-  return /* @__PURE__ */ (0, import_jsx_runtime77.jsx)(import_jsx_runtime77.Fragment, { children: stream2.actions.map((a2) => {
+  return /* @__PURE__ */ (0, import_jsx_runtime78.jsx)(import_jsx_runtime78.Fragment, { children: stream2.actions.map((a2) => {
     const start = a2.start ?? 0;
     const end = a2.end ?? start + 1;
     const startFrom = a2.startFrom ?? 0;
@@ -30359,14 +30455,14 @@ function VideoLeaf({ stream: stream2 }) {
     const playbackRate = a2.loop ? 1 : Math.min(1, toPlaybackRate((endAt - startFrom) / (end - start)));
     const actionStyle = cssJS(a2.style);
     const hasAnimation = "animation" in actionStyle;
-    return /* @__PURE__ */ (0, import_jsx_runtime77.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime78.jsx)(
       Sequence,
       {
         durationInFrames: Math.max(1, Math.floor(fps * (end - start))),
         from: Math.floor(fps * start),
         layout: "none",
         showInTimeline: false,
-        children: hasAnimation ? /* @__PURE__ */ (0, import_jsx_runtime77.jsx)(FrameSyncStyle, { style: actionStyle, children: /* @__PURE__ */ (0, import_jsx_runtime77.jsx)(
+        children: hasAnimation ? /* @__PURE__ */ (0, import_jsx_runtime78.jsx)(FrameSyncStyle, { style: actionStyle, children: /* @__PURE__ */ (0, import_jsx_runtime78.jsx)(
           OffthreadVideo,
           {
             src: resolvedSrc,
@@ -30378,7 +30474,7 @@ function VideoLeaf({ stream: stream2 }) {
             showInTimeline: false,
             style: { width: "100%", height: "100%" }
           }
-        ) }) : /* @__PURE__ */ (0, import_jsx_runtime77.jsx)(
+        ) }) : /* @__PURE__ */ (0, import_jsx_runtime78.jsx)(
           OffthreadVideo,
           {
             src: resolvedSrc,
@@ -30398,8 +30494,8 @@ function VideoLeaf({ stream: stream2 }) {
 }
 
 // src/types/Audio.tsx
-var React18 = __toESM(require_react(), 1);
-var import_jsx_runtime78 = __toESM(require_jsx_runtime(), 1);
+var React19 = __toESM(require_react(), 1);
+var import_jsx_runtime79 = __toESM(require_jsx_runtime(), 1);
 function resolveAudioSrc(src) {
   if (/^(https?:|data:|blob:|file:|\/)/.test(src)) return src;
   return staticFile(src);
@@ -30407,18 +30503,20 @@ function resolveAudioSrc(src) {
 function AudioLeaf({ stream: stream2 }) {
   const { fps } = useVideoConfig();
   const environment = useRemotionEnvironment();
-  const ctx = React18.useContext(AudioContext2);
+  const ctx = React19.useContext(AudioContext2);
+  const totalDur = stream2.durationInSeconds ?? stream2.actions[0]?.end ?? 1;
+  useFrameEvents(stream2.on, Math.max(1, Math.floor(totalDur * fps)));
   if (!stream2.src) return null;
   if (environment.isStudio) return null;
   const resolvedSrc = resolveAudioSrc(stream2.src);
-  return /* @__PURE__ */ (0, import_jsx_runtime78.jsx)(import_jsx_runtime78.Fragment, { children: stream2.actions.map((a2) => {
+  return /* @__PURE__ */ (0, import_jsx_runtime79.jsx)(import_jsx_runtime79.Fragment, { children: stream2.actions.map((a2) => {
     const start = a2.start ?? 0;
     const end = a2.end ?? start + 1;
     const startFrom = a2.startFrom ?? 0;
     const endAt = a2.endAt ?? stream2.durationInSeconds ?? end - start;
     const volume = a2.volume ?? stream2.volume ?? 1;
     const playbackRate = a2.loop ? 1 : toPlaybackRate((endAt - startFrom) / (end - start));
-    return /* @__PURE__ */ (0, import_jsx_runtime78.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime79.jsx)(
       Sequence,
       {
         name: stream2.src ?? "audio",
@@ -30426,7 +30524,7 @@ function AudioLeaf({ stream: stream2 }) {
         from: Math.floor(fps * start),
         layout: "none",
         showInTimeline: false,
-        children: /* @__PURE__ */ (0, import_jsx_runtime78.jsx)(
+        children: /* @__PURE__ */ (0, import_jsx_runtime79.jsx)(
           Audio,
           {
             src: resolvedSrc,
@@ -30446,25 +30544,27 @@ function AudioLeaf({ stream: stream2 }) {
 }
 
 // src/types/Image.tsx
-var import_jsx_runtime79 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime80 = __toESM(require_jsx_runtime(), 1);
 function resolveImageSrc(src) {
   if (/^(https?:|data:|blob:|file:|\/)/.test(src)) return src;
   return staticFile(src);
 }
 function ImageLeaf({ stream: stream2 }) {
   const { fps } = useVideoConfig();
+  const totalDur = stream2.durationInSeconds ?? stream2.actions[0]?.end ?? 1;
+  useFrameEvents(stream2.on, Math.max(1, Math.floor(totalDur * fps)));
   if (!stream2.src) return null;
   const resolvedSrc = resolveImageSrc(stream2.src);
-  return /* @__PURE__ */ (0, import_jsx_runtime79.jsx)(import_jsx_runtime79.Fragment, { children: stream2.actions.map((a2) => {
+  return /* @__PURE__ */ (0, import_jsx_runtime80.jsx)(import_jsx_runtime80.Fragment, { children: stream2.actions.map((a2) => {
     const start = a2.start ?? 0;
     const end = a2.end ?? start + 1;
-    return /* @__PURE__ */ (0, import_jsx_runtime79.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime80.jsx)(
       Sequence,
       {
         durationInFrames: Math.max(1, Math.floor(fps * (end - start))),
         from: Math.floor(fps * start),
         layout: "none",
-        children: /* @__PURE__ */ (0, import_jsx_runtime79.jsx)(FrameSyncStyle, { style: cssJS(a2.style), children: /* @__PURE__ */ (0, import_jsx_runtime79.jsx)(
+        children: /* @__PURE__ */ (0, import_jsx_runtime80.jsx)(FrameSyncStyle, { style: cssJS(a2.style), children: /* @__PURE__ */ (0, import_jsx_runtime80.jsx)(
           Img,
           {
             src: resolvedSrc,
@@ -30486,7 +30586,7 @@ function ImageLeaf({ stream: stream2 }) {
 }
 
 // src/types/Component.tsx
-var React26 = __toESM(require_react(), 1);
+var React27 = __toESM(require_react(), 1);
 
 // node_modules/react-jsx-parser/dist/react-jsx-parser.min.js
 var import_react125 = __toESM(require_react());
@@ -41859,7 +41959,7 @@ __publicField(JsxParser, "defaultProps", {
 var source_default = JsxParser;
 
 // src/utils/tween.ts
-var React25 = __toESM(require_react(), 1);
+var React26 = __toESM(require_react(), 1);
 var EASING_MAP = {
   linear: void 0,
   ease: Easing.ease,
@@ -41883,13 +41983,13 @@ function lerp(a2, b3, t) {
 function useTweenBindings(action2) {
   const frame = useCurrentFrame();
   const actionDurationFrames = Math.max(1, Math.floor(((action2.end ?? 1) - (action2.start ?? 0)) * 30));
-  const cacheRef = React25.useRef(/* @__PURE__ */ new Map());
-  const prevFrameRef = React25.useRef(frame);
+  const cacheRef = React26.useRef(/* @__PURE__ */ new Map());
+  const prevFrameRef = React26.useRef(frame);
   if (prevFrameRef.current !== frame) {
     cacheRef.current = /* @__PURE__ */ new Map();
     prevFrameRef.current = frame;
   }
-  const tween = React25.useCallback(
+  const tween = React26.useCallback(
     (from, to, easing) => {
       const key = `${from},${to},${easing || "linear"}`;
       const cached2 = cacheRef.current.get(key);
@@ -41929,7 +42029,7 @@ function useTweenBindings(action2) {
 }
 
 // src/types/Component.tsx
-var import_jsx_runtime80 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime81 = __toESM(require_jsx_runtime(), 1);
 function findUnknownComponentTags(jsx68, registered) {
   const tags = /* @__PURE__ */ new Set();
   const re = /<\s*\/?\s*([A-Z][a-zA-Z0-9]*)/g;
@@ -41947,10 +42047,10 @@ function TweenedJsxParser({
   action: action2
 }) {
   const tweenBindings = useTweenBindings(action2);
-  const unknownTags = React26.useMemo(() => findUnknownComponentTags(jsx68, components), [jsx68, components]);
-  const [jsxError, setJsxError] = React26.useState(null);
-  return /* @__PURE__ */ (0, import_jsx_runtime80.jsxs)(import_jsx_runtime80.Fragment, { children: [
-    unknownTags.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime80.jsxs)("div", { style: {
+  const unknownTags = React27.useMemo(() => findUnknownComponentTags(jsx68, components), [jsx68, components]);
+  const [jsxError, setJsxError] = React27.useState(null);
+  return /* @__PURE__ */ (0, import_jsx_runtime81.jsxs)(import_jsx_runtime81.Fragment, { children: [
+    unknownTags.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime81.jsxs)("div", { style: {
       position: "absolute",
       top: 0,
       left: 0,
@@ -41970,8 +42070,8 @@ function TweenedJsxParser({
       unknownTags.join(", "),
       components ? ` (${Object.keys(components).length} registered)` : " (0 registered)"
     ] }),
-    jsxError && /* @__PURE__ */ (0, import_jsx_runtime80.jsx)("div", { style: { color: "red", padding: 20, fontSize: "larger" }, children: jsxError }),
-    /* @__PURE__ */ (0, import_jsx_runtime80.jsx)(
+    jsxError && /* @__PURE__ */ (0, import_jsx_runtime81.jsx)("div", { style: { color: "red", padding: 20, fontSize: "larger" }, children: jsxError }),
+    /* @__PURE__ */ (0, import_jsx_runtime81.jsx)(
       source_default,
       {
         style: { width: "100%", height: "100%" },
@@ -41984,32 +42084,49 @@ function TweenedJsxParser({
           console.warn({ jsx: jsx68, error: error49.message });
           setJsxError(error49.message);
         },
-        renderError: ({ error: error49 }) => /* @__PURE__ */ (0, import_jsx_runtime80.jsx)("div", { style: { color: "red", padding: 20, fontSize: "larger" }, children: error49 })
+        renderError: ({ error: error49 }) => /* @__PURE__ */ (0, import_jsx_runtime81.jsx)("div", { style: { color: "red", padding: 20, fontSize: "larger" }, children: error49 })
       }
     )
   ] });
 }
 function ComponentLeaf({ stream: stream2 }) {
   const { fps } = useVideoConfig();
-  const { components } = React26.useContext(ComposeContext);
-  const bindings = React26.useMemo(() => ({ ...components, ...stream2.data }), [stream2.data, components]);
+  const { components } = React27.useContext(ComposeContext);
+  const eventCtx = useEventContext();
+  const [eventState, setEventState] = React27.useState({});
+  React27.useLayoutEffect(() => {
+    if (stream2.id) {
+      eventCtx.register(
+        stream2.id,
+        (partial2) => setEventState((prev) => ({ ...prev, ...partial2 }))
+      );
+      return () => eventCtx.unregister(stream2.id);
+    }
+  }, [stream2.id, eventCtx]);
+  const bindings = React27.useMemo(
+    () => ({ ...components, ...stream2.data, ...eventState }),
+    [stream2.data, components, eventState]
+  );
   if (!stream2.jsx) return null;
-  return /* @__PURE__ */ (0, import_jsx_runtime80.jsx)(import_jsx_runtime80.Fragment, { children: stream2.actions.map((a2) => {
+  return /* @__PURE__ */ (0, import_jsx_runtime81.jsx)(import_jsx_runtime81.Fragment, { children: stream2.actions.map((a2) => {
     const start = a2.start ?? 0;
     const end = a2.end ?? start + 1;
-    return /* @__PURE__ */ (0, import_jsx_runtime80.jsx)(
+    const durFrames = Math.max(1, Math.floor(fps * (end - start)));
+    return /* @__PURE__ */ (0, import_jsx_runtime81.jsx)(
       Sequence,
       {
-        durationInFrames: Math.max(1, Math.floor(fps * (end - start))),
+        durationInFrames: durFrames,
         from: Math.floor(fps * start),
         layout: "none",
-        children: /* @__PURE__ */ (0, import_jsx_runtime80.jsx)(
-          TweenedJsxParser,
+        children: /* @__PURE__ */ (0, import_jsx_runtime81.jsx)(
+          EventAwareComponent,
           {
             jsx: stream2.jsx,
             components,
             data: bindings,
-            action: a2
+            action: a2,
+            durFrames,
+            on: stream2.on
           }
         )
       },
@@ -42017,9 +42134,28 @@ function ComponentLeaf({ stream: stream2 }) {
     );
   }) });
 }
+function EventAwareComponent({
+  jsx: jsx68,
+  components,
+  data: data2,
+  action: action2,
+  durFrames,
+  on
+}) {
+  useFrameEvents(on, durFrames);
+  return /* @__PURE__ */ (0, import_jsx_runtime81.jsx)(
+    TweenedJsxParser,
+    {
+      jsx: jsx68,
+      components,
+      data: data2,
+      action: action2
+    }
+  );
+}
 
 // src/types/Rhythm.tsx
-var import_jsx_runtime81 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime82 = __toESM(require_jsx_runtime(), 1);
 function resolveAudioSrc2(src) {
   if (/^(https?:|data:|blob:|file:|\/)/.test(src)) return src;
   return staticFile(src);
@@ -42027,13 +42163,15 @@ function resolveAudioSrc2(src) {
 function RhythmLeaf({ stream: stream2 }) {
   const { fps } = useVideoConfig();
   const environment = useRemotionEnvironment();
+  const totalDur = stream2.durationInSeconds ?? stream2.actions[0]?.end ?? 1;
+  useFrameEvents(stream2.on, Math.max(1, Math.floor(totalDur * fps)));
   if (!stream2.src || environment.isStudio) return null;
   const resolvedSrc = resolveAudioSrc2(stream2.src);
-  return /* @__PURE__ */ (0, import_jsx_runtime81.jsx)(import_jsx_runtime81.Fragment, { children: stream2.actions.map((a2) => {
+  return /* @__PURE__ */ (0, import_jsx_runtime82.jsx)(import_jsx_runtime82.Fragment, { children: stream2.actions.map((a2) => {
     const start = a2.start ?? 0;
     const end = a2.end ?? start + 1;
     const volume = a2.volume ?? stream2.volume ?? 1;
-    return /* @__PURE__ */ (0, import_jsx_runtime81.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime82.jsx)(
       Sequence,
       {
         name: stream2.src ?? "rhythm",
@@ -42041,7 +42179,7 @@ function RhythmLeaf({ stream: stream2 }) {
         from: Math.floor(fps * start),
         layout: "none",
         showInTimeline: false,
-        children: /* @__PURE__ */ (0, import_jsx_runtime81.jsx)(
+        children: /* @__PURE__ */ (0, import_jsx_runtime82.jsx)(
           Audio,
           {
             src: resolvedSrc,
@@ -42061,7 +42199,7 @@ function RhythmLeaf({ stream: stream2 }) {
 var import_react127 = __toESM(require_react(), 1);
 
 // node_modules/@vis.gl/react-google-maps/dist/index.modern.mjs
-var React27 = __toESM(require_react(), 1);
+var React30 = __toESM(require_react(), 1);
 var import_react126 = __toESM(require_react(), 1);
 var import_react_dom3 = __toESM(require_react_dom(), 1);
 var import_fast_deep_equal = __toESM(require_fast_deep_equal(), 1);
@@ -43005,8 +43143,8 @@ function useMapsLibrary(name) {
   return (ctx === null || ctx === void 0 ? void 0 : ctx.loadedLibraries[name]) || null;
 }
 var _a;
-var { useLayoutEffect: useLayoutEffect15, useRef: useRef31 } = React27;
-var useBeforeEffect = (_a = React27.useInsertionEffect) !== null && _a !== void 0 ? _a : useLayoutEffect15;
+var { useLayoutEffect: useLayoutEffect16, useRef: useRef31 } = React30;
+var useBeforeEffect = (_a = React30.useInsertionEffect) !== null && _a !== void 0 ? _a : useLayoutEffect16;
 function forbiddenInRender() {
   throw new Error("useEffectEvent: invalid call during rendering.");
 }
@@ -44380,13 +44518,15 @@ var Rectangle = (0, import_react126.forwardRef)((props, ref2) => {
 Rectangle.displayName = "Rectangle";
 
 // src/types/Map.tsx
-var import_jsx_runtime82 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime83 = __toESM(require_jsx_runtime(), 1);
 var GM_API_KEY = "AIzaSyC6x4jghg5ZggV5VTThu9JE4DwX9NlbN9U";
 function MapLeaf({ stream: stream2 }) {
   const { fps } = useVideoConfig();
   const waypoints = stream2.waypoints ?? [];
+  const totalDur = stream2.durationInSeconds ?? stream2.actions[0]?.end ?? 1;
+  useFrameEvents(stream2.on, Math.max(1, Math.floor(totalDur * fps)));
   if (waypoints.length === 0) return null;
-  return /* @__PURE__ */ (0, import_jsx_runtime82.jsx)(import_jsx_runtime82.Fragment, { children: stream2.actions?.map((a2, i3) => {
+  return /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(import_jsx_runtime83.Fragment, { children: stream2.actions?.map((a2, i3) => {
     const start = a2.start ?? 0;
     const end = a2.end ?? start + 1;
     const durFrames = Math.max(1, Math.floor(fps * (end - start)));
@@ -44395,13 +44535,13 @@ function MapLeaf({ stream: stream2 }) {
     const mapType = stream2.mapType ?? "roadmap";
     const travelMode = stream2.travelMode ?? "DRIVING";
     const markerEmoji = stream2.routeMarker ?? "\u{1F697}";
-    return /* @__PURE__ */ (0, import_jsx_runtime82.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(
       Sequence,
       {
         durationInFrames: durFrames,
         from: Math.floor(fps * start),
         layout: "none",
-        children: /* @__PURE__ */ (0, import_jsx_runtime82.jsx)(APIProvider, { apiKey: GM_API_KEY, children: /* @__PURE__ */ (0, import_jsx_runtime82.jsx)(
+        children: /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(APIProvider, { apiKey: GM_API_KEY, children: /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(
           Map2,
           {
             mapId: String(stream2.id ?? i3),
@@ -44413,7 +44553,7 @@ function MapLeaf({ stream: stream2 }) {
               zoomControl: false
             },
             style: { width: "100%", height: "100%", position: "absolute" },
-            children: /* @__PURE__ */ (0, import_jsx_runtime82.jsx)(
+            children: /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(
               RouteWithMarker,
               {
                 waypoints,
@@ -44468,8 +44608,8 @@ function RouteWithMarker({
     setRouteIndex((prev) => prev);
   }, [routeIndex]);
   const position = useAnimatedPosition({ leg, actionDuration, waypoints });
-  return /* @__PURE__ */ (0, import_jsx_runtime82.jsxs)(import_jsx_runtime82.Fragment, { children: [
-    waypoints.map((wp, i3) => /* @__PURE__ */ (0, import_jsx_runtime82.jsx)(AdvancedMarker, { position: wp, children: wp.label ? /* @__PURE__ */ (0, import_jsx_runtime82.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime83.jsxs)(import_jsx_runtime83.Fragment, { children: [
+    waypoints.map((wp, i3) => /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(AdvancedMarker, { position: wp, children: wp.label ? /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(
       "div",
       {
         style: {
@@ -44486,7 +44626,7 @@ function RouteWithMarker({
         children: wp.label
       }
     ) : null }, i3)),
-    position ? /* @__PURE__ */ (0, import_jsx_runtime82.jsx)(AdvancedMarker, { position, children: /* @__PURE__ */ (0, import_jsx_runtime82.jsx)(Pin, { glyphText: markerEmoji, scale: 4 }) }) : null
+    position ? /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(AdvancedMarker, { position, children: /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(Pin, { glyphText: markerEmoji, scale: 4 }) }) : null
   ] });
 }
 function useAnimatedPosition({
@@ -44550,8 +44690,8 @@ function getCurrentStep(leg, currentInSecond) {
 }
 
 // src/types/Include.tsx
-var React35 = __toESM(require_react(), 1);
-var import_jsx_runtime83 = __toESM(require_jsx_runtime(), 1);
+var React39 = __toESM(require_react(), 1);
+var import_jsx_runtime84 = __toESM(require_jsx_runtime(), 1);
 var ASPECT_DIMS = {
   "16x9": { width: 1920, height: 1080 },
   "9x16": { width: 1080, height: 1920 },
@@ -44570,15 +44710,17 @@ function resolveIncludeSrc(src) {
 }
 function IncludeLeaf({ stream: stream2 }) {
   const { fps: parentFps, width: parentWidth, height: parentHeight } = useVideoConfig();
-  const { Container } = React35.useContext(ComposeContext);
-  const parentAudio = React35.useContext(AudioContext2);
+  const { Container } = React39.useContext(ComposeContext);
+  const parentAudio = React39.useContext(AudioContext2);
+  const totalDur = stream2.durationInSeconds ?? stream2.actions[0]?.end ?? 1;
+  useFrameEvents(stream2.on, Math.max(1, Math.floor(totalDur * parentFps)));
   if (!stream2.actions?.length) return null;
-  const [externalData, setExternalData] = React35.useState(null);
-  const [loadError, setLoadError] = React35.useState(null);
-  const [handle] = React35.useState(
+  const [externalData, setExternalData] = React39.useState(null);
+  const [loadError, setLoadError] = React39.useState(null);
+  const [handle] = React39.useState(
     () => stream2.src ? delayRender(`Loading include: ${stream2.src}`) : null
   );
-  React35.useEffect(() => {
+  React39.useEffect(() => {
     if (!stream2.src || !handle) return;
     let active = true;
     const url2 = resolveIncludeSrc(stream2.src);
@@ -44602,19 +44744,19 @@ function IncludeLeaf({ stream: stream2 }) {
       active = false;
     };
   }, [stream2.src, handle]);
-  React35.useMemo(() => {
+  React39.useMemo(() => {
     if (!stream2.src) {
       getDurationInSeconds(stream2, true);
     }
   }, [stream2, stream2.src]);
-  const audioCtx = React35.useMemo(
+  const audioCtx = React39.useMemo(
     () => ({ id: stream2.id, foreground: true, parent: parentAudio }),
     [stream2.id, parentAudio]
   );
-  const renderExternalContent = React35.useCallback(() => {
+  const renderExternalContent = React39.useCallback(() => {
     if (!externalData) return null;
     if (loadError) {
-      return /* @__PURE__ */ (0, import_jsx_runtime83.jsxs)("div", { style: { color: "#ff4444", fontSize: 24, padding: 40 }, children: [
+      return /* @__PURE__ */ (0, import_jsx_runtime84.jsxs)("div", { style: { color: "#ff4444", fontSize: 24, padding: 40 }, children: [
         "\u26A0 Include load error: ",
         loadError
       ] });
@@ -44624,19 +44766,19 @@ function IncludeLeaf({ stream: stream2 }) {
       const vjFps = vj.meta.fps ?? parentFps;
       const aspectKey = vj.meta.aspects?.[0] ?? "16x9";
       const dims = ASPECT_DIMS[aspectKey] ?? { width: parentWidth, height: parentHeight };
-      return /* @__PURE__ */ (0, import_jsx_runtime83.jsxs)(AbsoluteFill, { style: { backgroundColor: "#0a0a0a", width: dims.width, height: dims.height }, children: [
-        vj.bgm && /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(Audio, { src: vj.bgm.src, volume: vj.bgm.baseVolume }),
+      return /* @__PURE__ */ (0, import_jsx_runtime84.jsxs)(AbsoluteFill, { style: { backgroundColor: "#0a0a0a", width: dims.width, height: dims.height }, children: [
+        vj.bgm && /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(Audio, { src: vj.bgm.src, volume: vj.bgm.baseVolume }),
         vj.scenes.map((scene2) => {
           const startFrame = Math.round((scene2.start ?? 0) * vjFps);
           const durFrames = Math.round((scene2.duration ?? 1) * vjFps);
-          return /* @__PURE__ */ (0, import_jsx_runtime83.jsxs)(
+          return /* @__PURE__ */ (0, import_jsx_runtime84.jsxs)(
             Sequence,
             {
               from: startFrame,
               durationInFrames: durFrames,
               name: `${scene2.id}:${scene2.component}`,
               children: [
-                /* @__PURE__ */ (0, import_jsx_runtime83.jsxs)(
+                /* @__PURE__ */ (0, import_jsx_runtime84.jsxs)(
                   AbsoluteFill,
                   {
                     style: {
@@ -44647,7 +44789,7 @@ function IncludeLeaf({ stream: stream2 }) {
                       padding: 60
                     },
                     children: [
-                      /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(
+                      /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(
                         "div",
                         {
                           style: {
@@ -44661,7 +44803,7 @@ function IncludeLeaf({ stream: stream2 }) {
                           children: scene2.props?.headline ?? scene2.id
                         }
                       ),
-                      scene2.props?.subhead && /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(
+                      scene2.props?.subhead && /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(
                         "div",
                         {
                           style: {
@@ -44676,7 +44818,7 @@ function IncludeLeaf({ stream: stream2 }) {
                     ]
                   }
                 ),
-                scene2.voiceover?.audio && /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(Audio, { src: scene2.voiceover.audio, volume: 1 })
+                scene2.voiceover?.audio && /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(Audio, { src: scene2.voiceover.audio, volume: 1 })
               ]
             },
             scene2.id
@@ -44691,7 +44833,7 @@ function IncludeLeaf({ stream: stream2 }) {
       height: streamTree.height ?? parentHeight,
       fps: streamTree.fps ?? parentFps
     };
-    return /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(
       "div",
       {
         style: {
@@ -44700,7 +44842,7 @@ function IncludeLeaf({ stream: stream2 }) {
           overflow: "hidden",
           position: "relative"
         },
-        children: /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(FolderLeaf, { stream: merged })
+        children: /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(FolderLeaf, { stream: merged })
       }
     );
   }, [externalData, loadError, parentFps, parentWidth, parentHeight]);
@@ -44710,14 +44852,14 @@ function IncludeLeaf({ stream: stream2 }) {
     const dur = Math.max(0.1, end - start);
     const durFrames = Math.max(1, Math.floor(parentFps * dur));
     if (!stream2.src && stream2.children?.length) {
-      return /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(
+      return /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(
         Sequence,
         {
           durationInFrames: durFrames,
           from: Math.floor(parentFps * start),
           layout: "none",
           showInTimeline: false,
-          children: /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(
+          children: /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(
             Container,
             {
               id: stream2.id,
@@ -44730,21 +44872,21 @@ function IncludeLeaf({ stream: stream2 }) {
                 position: "relative"
               },
               className: `include ${toClassName(stream2.id ?? "")}`,
-              children: /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(FolderLeaf, { stream: stream2 })
+              children: /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(FolderLeaf, { stream: stream2 })
             }
           )
         },
         a2.id
       );
     }
-    return /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(
       Sequence,
       {
         durationInFrames: durFrames,
         from: Math.floor(parentFps * start),
         layout: "none",
         showInTimeline: false,
-        children: externalData || loadError ? /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(
+        children: externalData || loadError ? /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(
           "div",
           {
             style: {
@@ -44755,7 +44897,7 @@ function IncludeLeaf({ stream: stream2 }) {
             },
             children: renderExternalContent()
           }
-        ) : /* @__PURE__ */ (0, import_jsx_runtime83.jsxs)(
+        ) : /* @__PURE__ */ (0, import_jsx_runtime84.jsxs)(
           "div",
           {
             style: {
@@ -44778,33 +44920,35 @@ function IncludeLeaf({ stream: stream2 }) {
       a2.id
     );
   };
-  return /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(AudioContext2.Provider, { value: audioCtx, children: stream2.actions.map(renderAction) });
+  return /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(AudioContext2.Provider, { value: audioCtx, children: stream2.actions.map(renderAction) });
 }
 
 // src/types/Scene.tsx
-var React39 = __toESM(require_react(), 1);
-var import_jsx_runtime84 = __toESM(require_jsx_runtime(), 1);
+var React41 = __toESM(require_react(), 1);
+var import_jsx_runtime85 = __toESM(require_jsx_runtime(), 1);
 function SceneLeaf({ stream: stream2 }) {
-  const { Container } = React39.useContext(ComposeContext);
-  const parentAudio = React39.useContext(AudioContext2);
-  const audioCtx = React39.useMemo(
+  const { Container } = React41.useContext(ComposeContext);
+  const parentAudio = React41.useContext(AudioContext2);
+  const totalDur = stream2.durationInSeconds ?? 1;
+  useFrameEvents(stream2.on, Math.max(1, Math.floor(totalDur * 30)));
+  const audioCtx = React41.useMemo(
     () => ({ id: stream2.id, parent: parentAudio }),
     [stream2.id, parentAudio]
   );
-  return /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(AudioContext2.Provider, { value: audioCtx, children: /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime85.jsx)(AudioContext2.Provider, { value: audioCtx, children: /* @__PURE__ */ (0, import_jsx_runtime85.jsx)(
     Container,
     {
       id: stream2.id,
       type: "scene",
       style: cssJS(stream2.style),
       className: `scene ${toClassName(stream2.name ?? "")}`,
-      children: /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(Folder, { name: stream2.name ?? "", children: /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(FolderLeaf, { stream: stream2 }) })
+      children: /* @__PURE__ */ (0, import_jsx_runtime85.jsx)(Folder, { name: stream2.name ?? "", children: /* @__PURE__ */ (0, import_jsx_runtime85.jsx)(FolderLeaf, { stream: stream2 }) })
     }
   ) });
 }
 
 // src/types/Effect.tsx
-var React41 = __toESM(require_react(), 1);
+var React43 = __toESM(require_react(), 1);
 
 // src/types/keyframes.ts
 function parseKeyframeData(data2) {
@@ -45190,15 +45334,17 @@ var builtinAnimations = {
 };
 
 // src/types/Effect.tsx
-var import_jsx_runtime85 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime86 = __toESM(require_jsx_runtime(), 1);
 function EffectWrapper({
   stream: stream2,
   children
 }) {
   const frame = useCurrentFrame();
   const { fps, width, height } = useVideoConfig();
+  const totalDur = stream2.durationInSeconds ?? stream2.actions[0]?.end ?? 1;
+  useFrameEvents(stream2.on, Math.max(1, Math.floor(totalDur * fps)));
   const actions = stream2.actions ?? [];
-  const styles = React41.useMemo(() => {
+  const styles = React43.useMemo(() => {
     const result = [];
     for (const action2 of actions) {
       const start = Math.ceil(action2.start * fps);
@@ -45236,8 +45382,8 @@ function EffectWrapper({
     }
     return result;
   }, [frame, fps, actions, stream2.animation, stream2.animationTimingFunction, stream2.animationIterationCount, stream2.customKeyframes]);
-  if (styles.length === 0) return /* @__PURE__ */ (0, import_jsx_runtime85.jsx)(import_jsx_runtime85.Fragment, { children });
-  return /* @__PURE__ */ (0, import_jsx_runtime85.jsx)(
+  if (styles.length === 0) return /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(import_jsx_runtime86.Fragment, { children });
+  return /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(
     "div",
     {
       style: Object.assign({ width, height, position: "absolute", inset: 0 }, ...styles),
@@ -45248,7 +45394,7 @@ function EffectWrapper({
 }
 
 // src/types/Folder.tsx
-var import_jsx_runtime86 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime87 = __toESM(require_jsx_runtime(), 1);
 var Leaves = {
   video: VideoLeaf,
   audio: AudioLeaf,
@@ -45266,26 +45412,28 @@ var TransitionPresets = {
   flip,
   clockWipe
 };
-var NotSeries = ({ children }) => /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(import_jsx_runtime86.Fragment, { children });
-NotSeries.Sequence = ({ children }) => /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(import_jsx_runtime86.Fragment, { children });
+var NotSeries = ({ children }) => /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(import_jsx_runtime87.Fragment, { children });
+NotSeries.Sequence = ({ children }) => /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(import_jsx_runtime87.Fragment, { children });
 function FolderLeaf({ stream: stream2 }) {
   const { fps, width, height } = useVideoConfig();
-  const { Container } = React43.useContext(ComposeContext);
-  const parentAudio = React43.useContext(AudioContext2);
+  const { Container } = React44.useContext(ComposeContext);
+  const parentAudio = React44.useContext(AudioContext2);
+  const totalDur = stream2.durationInSeconds ?? 1;
+  useFrameEvents(stream2.on, Math.max(1, Math.floor(totalDur * fps)));
   const isSeries = !!stream2.isSeries;
   const transition = stream2.transition;
   const transitionTime = stream2.transitionTime ?? 0.5;
   const isRoot = stream2.id === "root";
-  const TypedSeries = React43.useMemo(() => {
+  const TypedSeries = React44.useMemo(() => {
     if (!isSeries) return NotSeries;
     return transition ? TransitionSeries : Series;
   }, [isSeries, transition]);
-  const transEl = React43.useMemo(() => {
+  const transEl = React44.useMemo(() => {
     if (!isSeries || !transition) return null;
     const presentation = TransitionPresets[transition]?.(
       transition === "clockWipe" ? { width, height } : void 0
     );
-    return /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(
       TransitionSeries.Transition,
       {
         presentation,
@@ -45294,13 +45442,31 @@ function FolderLeaf({ stream: stream2 }) {
     );
   }, [isSeries, transition, transitionTime, fps, width, height]);
   const visibleChildren = stream2.children.filter((c3) => c3.visible !== false);
-  const sequences = visibleChildren.map((child) => {
+  const bgChildren = visibleChildren.filter((c3) => c3.isBackground);
+  const seriesChildren = isSeries ? visibleChildren.filter((c3) => !c3.isBackground) : visibleChildren;
+  const sequences = seriesChildren.map((child) => {
     const dur = child.durationInSeconds ?? 0;
     const durFrames = Math.max(1, Math.floor(dur * fps));
     const SequenceWrap = TypedSeries.Sequence ?? Sequence;
     const isLeaf = child.type !== "folder" && child.type !== "root" && child.type !== "effect";
-    const childContent = isLeaf ? React43.createElement(Leaves[child.type] ?? (() => null), { stream: child }) : child.type === "effect" ? /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(EffectWrapper, { stream: child, children: /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(FolderLeaf, { stream: child }) }) : React43.createElement(FolderLeaf, { stream: child });
-    const wrapped = /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(
+    const childContent = isLeaf ? React44.createElement(Leaves[child.type] ?? (() => null), { stream: child }) : child.type === "effect" ? /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(EffectWrapper, { stream: child, children: /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(FolderLeaf, { stream: child }) }) : React44.createElement(FolderLeaf, { stream: child });
+    return /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(SequenceWrap, { durationInFrames: durFrames, layout: "none", children: /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(
+      Container,
+      {
+        id: child.id,
+        type: child.type,
+        style: cssJS(child.style),
+        className: `${child.type} ${toClassName(child.id ?? "")}`,
+        children: childContent
+      }
+    ) }, child.id);
+  }).filter(Boolean);
+  const bgContent = bgChildren.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime87.jsx)("div", { style: { position: "absolute", inset: 0, pointerEvents: "none" }, children: bgChildren.map((child) => {
+    const dur = child.durationInSeconds ?? 0;
+    const durFrames = Math.max(1, Math.floor(dur * fps));
+    const isLeaf = child.type !== "folder" && child.type !== "root" && child.type !== "effect";
+    const childContent = isLeaf ? React44.createElement(Leaves[child.type] ?? (() => null), { stream: child }) : child.type === "effect" ? /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(EffectWrapper, { stream: child, children: /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(FolderLeaf, { stream: child }) }) : React44.createElement(FolderLeaf, { stream: child });
+    const wrapped = /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(
       Container,
       {
         id: child.id,
@@ -45310,39 +45476,38 @@ function FolderLeaf({ stream: stream2 }) {
         children: childContent
       }
     );
-    const seq = /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(SequenceWrap, { durationInFrames: durFrames, layout: "none", children: wrapped }, child.id);
-    if (child.isBackground && stream2.durationInSeconds) {
-      const times = Math.max(1, Math.ceil(stream2.durationInSeconds * fps / durFrames));
-      return /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(Loop, { durationInFrames: durFrames, times, showInTimeline: false, children: wrapped }, child.id);
-    }
-    return seq;
-  }).filter(Boolean);
+    const times = Math.max(1, Math.ceil(stream2.durationInSeconds * fps / durFrames));
+    return /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(Loop, { durationInFrames: durFrames, times, showInTimeline: false, children: wrapped }, child.id);
+  }) });
   if (isSeries && transEl) {
     for (let i3 = 1; i3 < sequences.length; i3 += 2) {
-      sequences.splice(i3, 0, React43.cloneElement(transEl, { key: `t${i3}` }));
+      sequences.splice(i3, 0, React44.cloneElement(transEl, { key: `t${i3}` }));
     }
   }
-  const audioCtx = React43.useMemo(
+  const audioCtx = React44.useMemo(
     () => stream2.type !== "folder" ? { id: stream2.id, parent: parentAudio } : parentAudio,
     [stream2.id, stream2.type, parentAudio]
   );
   if (visibleChildren.length === 0 || stream2.visible === false) return null;
   const containerStyle3 = cssJS(stream2.style);
   const orientation = isRoot ? width > height ? "landscape" : "portrait" : "";
-  return /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(AudioContext2.Provider, { value: audioCtx, children: /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(AudioContext2.Provider, { value: audioCtx, children: /* @__PURE__ */ (0, import_jsx_runtime87.jsxs)(
     Container,
     {
       id: stream2.id,
       type: stream2.type,
       style: containerStyle3,
       className: `${orientation} ${stream2.type}`.trim(),
-      children: isSeries ? /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(TypedSeries, { children: sequences }) : sequences
+      children: [
+        isSeries ? /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(TypedSeries, { children: sequences }) : sequences,
+        bgContent
+      ]
     }
   ) });
 }
 
 // src/types/Subtitle.tsx
-var React44 = __toESM(require_react(), 1);
+var React45 = __toESM(require_react(), 1);
 
 // node_modules/remotion-subtitle/dist/index.esm.js
 var index_esm_exports = {};
@@ -45594,7 +45759,7 @@ var P = function(t) {
 };
 
 // src/types/Subtitle.tsx
-var import_jsx_runtime87 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime88 = __toESM(require_jsx_runtime(), 1);
 var { SubtitleSequence: _SubtitleSeq, ...CaptionComponents } = index_esm_exports;
 function resolveSubtitleSrc(src) {
   if (src.startsWith("http://") || src.startsWith("https://") || src.startsWith("data:") || src.startsWith("/")) {
@@ -45627,7 +45792,7 @@ function resolveCaption(type) {
   return CaptionComponents[key] ?? CaptionComponents.Caption;
 }
 function supportHtml(text) {
-  const el = { .../* @__PURE__ */ (0, import_jsx_runtime87.jsx)("span", { dangerouslySetInnerHTML: { __html: text } }) };
+  const el = { .../* @__PURE__ */ (0, import_jsx_runtime88.jsx)("span", { dangerouslySetInnerHTML: { __html: text } }) };
   Object.assign(el, {
     length: text.length,
     slice(start, end) {
@@ -45651,7 +45816,7 @@ function supportHtml(text) {
           counter++;
         }
       }
-      return /* @__PURE__ */ (0, import_jsx_runtime87.jsx)("span", { dangerouslySetInnerHTML: { __html: chars.join("") } });
+      return /* @__PURE__ */ (0, import_jsx_runtime88.jsx)("span", { dangerouslySetInnerHTML: { __html: chars.join("") } });
     },
     split(separator, limit) {
       const stripped = text.replace(/<.*?>/g, "");
@@ -45668,8 +45833,8 @@ function CueFrame({
 }) {
   const durationInFrames = Math.max(1, Math.floor((cue.endAt - cue.startFrom) * fps));
   const from = Math.floor(cue.startFrom * fps);
-  const captionText = React44.useMemo(() => supportHtml(cue.text), [cue.text]);
-  const textStyle = React44.useMemo(
+  const captionText = React45.useMemo(() => supportHtml(cue.text), [cue.text]);
+  const textStyle = React45.useMemo(
     () => ({
       ...DEFAULT_TEXT_STYLE,
       fontSize: subtitle.fontSize ?? DEFAULT_TEXT_STYLE.fontSize,
@@ -45678,16 +45843,16 @@ function CueFrame({
     }),
     [subtitle.fontSize, subtitle.fontFamily, subtitle.fontStyle]
   );
-  return /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(Sequence, { layout: "none", durationInFrames, from, children: /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(CaptionComponent, { text: captionText, style: textStyle }) });
+  return /* @__PURE__ */ (0, import_jsx_runtime88.jsx)(Sequence, { layout: "none", durationInFrames, from, children: /* @__PURE__ */ (0, import_jsx_runtime88.jsx)(CaptionComponent, { text: captionText, style: textStyle }) });
 }
 function SubtitleOverlay({ subtitle }) {
   const { fps } = useVideoConfig();
-  const [cues, setCues] = React44.useState(null);
-  const CaptionComponent = React44.useMemo(
+  const [cues, setCues] = React45.useState(null);
+  const CaptionComponent = React45.useMemo(
     () => resolveCaption(subtitle.type),
     [subtitle.type]
   );
-  React44.useEffect(() => {
+  React45.useEffect(() => {
     const { src } = subtitle;
     if (src.includes("-->")) {
       setCues(parseVTT(src));
@@ -45724,7 +45889,7 @@ function SubtitleOverlay({ subtitle }) {
   }, [subtitle.src]);
   if (!cues) return null;
   const boxCss = subtitle.style ? cssJS(subtitle.style) : {};
-  return /* @__PURE__ */ (0, import_jsx_runtime87.jsx)("div", { className: `${subtitle.type || "default"} subtitle-overlay`, style: { ...DEFAULT_BOX_STYLE, ...boxCss }, children: cues.map((cue, i3) => /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime88.jsx)("div", { className: `${subtitle.type || "default"} subtitle-overlay`, style: { ...DEFAULT_BOX_STYLE, ...boxCss }, children: cues.map((cue, i3) => /* @__PURE__ */ (0, import_jsx_runtime88.jsx)(
     CueFrame,
     {
       cue,
@@ -59516,6 +59681,10 @@ var action = external_exports.object({
   style: external_exports.string().optional().describe("inline css"),
   volume: external_exports.number().min(0).max(1).optional()
 });
+var eventSpec = external_exports.object({
+  when: external_exports.string().describe("'start' | 'end' | '50%' | '2.5s'"),
+  state: external_exports.string().describe("JS expression evaluated with registered components in scope")
+});
 var BaseShape = {
   id: external_exports.string().default(() => uid()),
   instruction: external_exports.string().optional().describe("visual intent or style guide for this node (not rendered)"),
@@ -59523,7 +59692,8 @@ var BaseShape = {
   style: external_exports.string().optional().describe("inline css"),
   visible: external_exports.boolean().default(true),
   isBackground: external_exports.boolean().optional(),
-  durationInSeconds: external_exports.number().optional().describe("set by engine; do not edit by hand")
+  durationInSeconds: external_exports.number().optional().describe("set by engine; do not edit by hand"),
+  on: external_exports.array(eventSpec).optional().describe("events that fire at specific frames, mutating registered component state")
 };
 var base = external_exports.object(BaseShape);
 var folder = base.extend({
@@ -59592,7 +59762,7 @@ var image = base.extend({
 var component = base.extend({
   type: external_exports.literal("component").default("component"),
   jsx: external_exports.string().describe("usage JSX expression compiled at runtime; tag names resolved from imports"),
-  data: external_exports.record(external_exports.string(), external_exports.string()).optional().describe("extra variables (e.g. from ~~~md source code fences) available in JSX scope"),
+  data: external_exports.record(external_exports.string(), external_exports.union([external_exports.string(), external_exports.number(), external_exports.boolean()])).optional().describe("extra variables (e.g. from ~~~md source code fences) available in JSX scope"),
   actions: external_exports.array(action).min(1).default(() => [action.parse({})])
 });
 var effect = base.extend({
@@ -60513,12 +60683,12 @@ var DEFAULT_DUMP_OPTIONS = {
 };
 
 // src/entry.tsx
-var import_jsx_runtime88 = __toESM(require_jsx_runtime(), 1);
-var DefaultContainer2 = ({ children, style: style2, className: className2 }) => /* @__PURE__ */ (0, import_jsx_runtime88.jsx)("div", { className: className2, style: { position: "absolute", inset: 0, ...style2 }, children });
+var import_jsx_runtime89 = __toESM(require_jsx_runtime(), 1);
+var DefaultContainer2 = ({ children, style: style2, className: className2 }) => /* @__PURE__ */ (0, import_jsx_runtime89.jsx)("div", { className: className2, style: { position: "absolute", inset: 0, ...style2 }, children });
 function useComponentRegistry(imports) {
-  const [registry2, setRegistry] = React45.useState(null);
-  const handleRef = React45.useRef(null);
-  React45.useEffect(() => {
+  const [registry2, setRegistry] = React46.useState(null);
+  const handleRef = React46.useRef(null);
+  React46.useEffect(() => {
     if (!imports) {
       setRegistry(null);
       return;
@@ -60555,7 +60725,7 @@ function useComponentRegistry(imports) {
   return registry2;
 }
 function MarkCut({ root: root2, compose, background = "#000" }) {
-  const parsed = React45.useMemo(() => {
+  const parsed = React46.useMemo(() => {
     if (!root2) {
       return {
         id: "root",
@@ -60572,8 +60742,8 @@ function MarkCut({ root: root2, compose, background = "#000" }) {
     return root.parse(root2);
   }, [root2]);
   const registry2 = useComponentRegistry(parsed.imports);
-  React45.useMemo(() => getDurationInSeconds(parsed, true), [parsed]);
-  const value = React45.useMemo(
+  React46.useMemo(() => getDurationInSeconds(parsed, true), [parsed]);
+  const value = React46.useMemo(
     () => ({
       Container: compose?.Container ?? DefaultContainer2,
       onError: compose?.onError,
@@ -60581,17 +60751,17 @@ function MarkCut({ root: root2, compose, background = "#000" }) {
     }),
     [compose, registry2]
   );
-  return /* @__PURE__ */ (0, import_jsx_runtime88.jsx)(ComposeContext.Provider, { value, children: /* @__PURE__ */ (0, import_jsx_runtime88.jsxs)(AbsoluteFill, { style: { background }, children: [
-    parsed.stylesheet && /* @__PURE__ */ (0, import_jsx_runtime88.jsx)("style", { children: parsed.stylesheet }),
-    /* @__PURE__ */ (0, import_jsx_runtime88.jsx)(FolderLeaf, { stream: parsed }),
-    parsed.subtitle && /* @__PURE__ */ (0, import_jsx_runtime88.jsx)(SubtitleOverlay, { subtitle: parsed.subtitle })
-  ] }) });
+  return /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(ComposeContext.Provider, { value, children: /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(EventProvider, { children: /* @__PURE__ */ (0, import_jsx_runtime89.jsxs)(AbsoluteFill, { style: { background }, children: [
+    parsed.stylesheet && /* @__PURE__ */ (0, import_jsx_runtime89.jsx)("style", { children: parsed.stylesheet }),
+    /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(FolderLeaf, { stream: parsed }),
+    parsed.subtitle && /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(SubtitleOverlay, { subtitle: parsed.subtitle })
+  ] }) }) });
 }
 
 // src/player/browser.tsx
 if (typeof window !== "undefined") {
   globalThis.__remotionShared = {
-    "react": React46,
+    "react": React47,
     "react-dom": ReactDOM,
     "remotion": esm_exports,
     "@remotion/player": { Player }
@@ -60654,22 +60824,22 @@ if (typeof window !== "undefined") {
   }
 }
 function PlayerApp() {
-  const playerRef = React46.useRef(null);
-  const [ready, setReady] = React46.useState(false);
-  const [error49, setError] = React46.useState(null);
-  const [data2, setData] = React46.useState(null);
-  const [refreshKey, setRefreshKey] = React46.useState(0);
-  const [muted, setMuted] = React46.useState(false);
-  const [volume, setVolume] = React46.useState(1);
-  const seekAttemptedRef = React46.useRef(false);
-  const mountedRef = React46.useRef(true);
+  const playerRef = React47.useRef(null);
+  const [ready, setReady] = React47.useState(false);
+  const [error49, setError] = React47.useState(null);
+  const [data2, setData] = React47.useState(null);
+  const [refreshKey, setRefreshKey] = React47.useState(0);
+  const [muted, setMuted] = React47.useState(false);
+  const [volume, setVolume] = React47.useState(1);
+  const seekAttemptedRef = React47.useRef(false);
+  const mountedRef = React47.useRef(true);
   const urlParams = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
   const autoPlay = urlParams.get("autoplay") === "true";
   const startAt = parseFloat(urlParams.get("start") || urlParams.get("t") || "0") || 0;
   const fps = data2?.fps ?? 30;
   const durationInSeconds = data2 ? getDurationInSeconds(data2, true) || 5 : 5;
   const durationInFrames = Math.max(1, Math.ceil(durationInSeconds * fps));
-  const loadData = React46.useCallback(() => {
+  const loadData = React47.useCallback(() => {
     setReady(false);
     fetch("/api/video-data").then((r) => r.json()).then((json2) => {
       const root2 = json2.root || json2;
@@ -60677,7 +60847,7 @@ function PlayerApp() {
       setReady(true);
     }).catch((e) => setError(e.message));
   }, []);
-  React46.useEffect(() => {
+  React47.useEffect(() => {
     loadData();
     const handler = () => {
       setRefreshKey((k2) => k2 + 1);
@@ -60688,10 +60858,10 @@ function PlayerApp() {
       window.removeEventListener("refresh-player", handler);
     };
   }, [loadData]);
-  React46.useEffect(() => {
+  React47.useEffect(() => {
     if (refreshKey > 0) loadData();
   }, [refreshKey, loadData]);
-  React46.useEffect(() => {
+  React47.useEffect(() => {
     if (!ready || !data2 || seekAttemptedRef.current) return;
     if (startAt > 0 && playerRef.current) {
       const timer = setTimeout(() => {
@@ -60704,7 +60874,7 @@ function PlayerApp() {
     }
     seekAttemptedRef.current = true;
   }, [ready, data2, startAt, fps]);
-  React46.useEffect(() => {
+  React47.useEffect(() => {
     if (!ready || !playerRef.current) return;
     const FWD_SECONDS = 5;
     const BACK_SECONDS = 5;
@@ -60814,7 +60984,7 @@ function PlayerApp() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [ready, data2, fps, durationInFrames, volume]);
-  React46.useEffect(() => {
+  React47.useEffect(() => {
     if (!data2) return;
     window.__remotionSeekTo = (timeInSeconds) => {
       const frame = Math.round(timeInSeconds * fps);
@@ -60822,23 +60992,23 @@ function PlayerApp() {
     };
   });
   if (error49) {
-    return React46.createElement("div", {
+    return React47.createElement("div", {
       style: { color: "red", padding: 40, fontFamily: "sans-serif" }
     }, "Error: " + error49);
   }
   if (!ready) {
-    return React46.createElement("div", {
+    return React47.createElement("div", {
       style: { color: "#888", padding: 40, fontFamily: "sans-serif" }
     }, "Loading...");
   }
   const width = data2.width || 1080;
   const height = data2.height || 1920;
-  return React46.createElement(
+  return React47.createElement(
     "div",
     {
       style: { width: "100%", height: "100%", background: "#000" }
     },
-    React46.createElement(Player, {
+    React47.createElement(Player, {
       ref: playerRef,
       component: MarkCut,
       inputProps: {
@@ -60862,7 +61032,7 @@ function PlayerApp() {
 var container2 = document.getElementById("root");
 if (container2) {
   const root2 = (0, import_client.createRoot)(container2);
-  root2.render(React46.createElement(PlayerApp));
+  root2.render(React47.createElement(PlayerApp));
 }
 /*! Bundled license information:
 

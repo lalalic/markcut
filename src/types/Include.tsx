@@ -1,6 +1,6 @@
 import * as React from "react";
 import { AbsoluteFill, Sequence, useVideoConfig, delayRender, continueRender, staticFile, Audio } from "remotion";
-import { ComposeContext, AudioContext } from "../context/index";
+import { ComposeContext, AudioContext, useFrameEvents } from "../context/index";
 import { cssJS, toClassName, getDurationInSeconds, type DurationStream } from "../utils/index";
 import type { Include as IncludeStream, Root } from "../schema/index";
 import { FolderLeaf } from "./Folder";
@@ -62,6 +62,8 @@ export function IncludeLeaf({ stream }: { stream: IncludeStream }) {
   const { fps: parentFps, width: parentWidth, height: parentHeight } = useVideoConfig();
   const { Container } = React.useContext(ComposeContext);
   const parentAudio = React.useContext(AudioContext);
+  const totalDur = stream.durationInSeconds ?? stream.actions[0]?.end ?? 1;
+  useFrameEvents(stream.on, Math.max(1, Math.floor(totalDur * parentFps)));
 
   if (!stream.actions?.length) return null;
 
