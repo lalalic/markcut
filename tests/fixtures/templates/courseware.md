@@ -152,7 +152,7 @@ layout:parallel
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm'
 
-export function Slide({ current = 1, children }) {
+export function Slide({ current = 0, children }) {
   let idx = 1;
   return (
     <div className="slide">
