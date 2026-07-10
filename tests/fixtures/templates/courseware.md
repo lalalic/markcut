@@ -4,114 +4,11 @@ description: A beginner's course on artificial intelligence
 width: 1920 
 height: 1080 
 fps: 30 
+subtitle:
+  fontSize: 20px
 ---
 # video
 layout:series
-~~~js imports
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm'
-
-export function Slide({ current = 1, children, ...rest }) {
-  let idx = 1;
-  return <div className="slide"><ReactMarkdown components={{
-    li: ({ children }) => {
-      const highlight = idx === current; idx++;
-      return <li className={highlight ? 'highlight' : ''}>{children}</li>;
-    }
-  }} remarkPlugins={[remarkGfm]} {...rest}>{children}</ReactMarkdown></div>;
-}
-~~~
-~~~css stylesheet
-/* Container sizing for a perfect 16:9 widescreen presentation slide */
-.slide {
-  width: 80%;
-  height: 80%;
-  margin: auto;
-  color: #f5f5f7;
-  padding: 40px;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: flex-start;
-  font-family: 'Helvetica Neue', Arial, sans-serif;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-/* Typography rules optimized for visibility from a distance */
-.slide h1 {
-  font-size: 2.8rem;
-  color: #61dafb;
-  margin-top: 0;
-  margin-bottom: 20px;
-  line-height: 1.2;
-}
-
-.slide h2 {
-  font-size: 2rem;
-  color: #a8dadc;
-  margin-top: 0;
-  margin-bottom: 15px;
-}
-
-.slide p {
-  font-size: 1.3rem;
-  line-height: 1.6;
-  color: #e0e0e6;
-  margin-bottom: 15px;
-}
-
-/* List styling specific to presentation bullet points */
-.slide ul, .slide ol {
-  margin-left: 25px;
-  margin-bottom: 20px;
-}
-
-.slide li {
-  font-size: 1.3rem;
-  line-height: 1.8;
-  margin-bottom: 8px;
-  color: #e0e0e6;
-}
-
-/* Code block handling inside slides */
-.slide pre {
-  background-color: #2d2d34;
-  padding: 15px;
-  border-radius: 6px;
-  width: 100%;
-  box-sizing: border-box;
-  overflow-x: auto;
-}
-
-.slide code {
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 1.1rem;
-  color: #ffb703;
-}
-
-/* Highlighted list item for event-driven bullet reveal */
-.slide li.highlight {
-  color: red;
-  font-weight: 700;
-  text-shadow: 0 0 12px rgba(97, 218, 251, 0.4);
-}
-
-.slide table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-bottom: 20px;
-}
-
-.slide th, .slide td {
-  border: 1px solid #444;
-  padding: 10px;
-  text-align: left;
-}
-
-~~~
 
 ## Hook
 - video 
@@ -252,3 +149,108 @@ layout:parallel
   - Q&A
   - Thanks
   ~~~
+
+~~~js imports
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm'
+
+export function Slide({ current = 1, children }) {
+  let idx = 1;
+  return (
+    <div className="slide">
+      <ReactMarkdown remarkPlugins={[remarkGfm]}
+        components={{
+          li: ({ children }) => {
+            const highlight = idx === current; idx++;
+            return <li className={highlight ? 'highlight' : ''}>{children}</li>;
+          }
+        }}>{children}</ReactMarkdown>
+    </div>
+  )
+}
+~~~
+~~~css stylesheet
+/* Container sizing for a perfect 16:9 widescreen presentation slide */
+.slide {
+  color: #f5f5f7;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  font-size: 30px;
+
+  /* Typography rules optimized for visibility from a distance */
+  h1 {
+    font-size: 2.8em;
+    color: #61dafb;
+    margin-top: 0;
+    margin-bottom: 20px;
+    line-height: 1.2;
+  }
+
+  h2 {
+    font-size: 2em;
+    color: #a8dadc;
+    margin-top: 0;
+    margin-bottom: 15px;
+  }
+
+  p {
+    font-size: 1.3em;
+    line-height: 1.6;
+    color: #e0e0e6;
+    margin-bottom: 15px;
+  }
+
+  /* List styling specific to presentation bullet points */
+  ul, ol {
+    margin-left: 25px;
+    margin-bottom: 20px;
+  }
+
+  li {
+    font-size: 1.3em;
+    line-height: 1.8;
+    margin-bottom: 10px;
+    color: #e0e0e6;
+    list-style-type: none; /* Remove default bullets for custom styling */
+
+    /* Highlighted list item for event-driven bullet reveal */
+    &.highlight {
+      color: red;
+      font-weight: 700;
+    }
+  }
+
+  /* Code block handling inside slides */
+  pre {
+    background-color: #2d2d34;
+    padding: 15px;
+    border-radius: 6px;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-x: auto;
+  }
+
+  code {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 1.1em;
+    color: #ffb703;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+
+      th, td {
+        border: 1px solid #444;
+        padding: 10px;
+        text-align: left;
+      }
+  }
+}
+
+~~~

@@ -5,19 +5,6 @@ import JsxParser from "react-jsx-parser";
 import { useTweenBindings } from "../utils/tween";
 import type { Component, EventSpec } from "../schema/index";
 
-/** Find uppercase tag names in JSX that look like component references. */
-function findUnknownComponentTags(jsx: string, registered: Record<string, unknown> | undefined): string[] {
-  const tags = new Set<string>();
-  // Match <TagName or <TagName attr or </TagName>
-  const re = /<\s*\/?\s*([A-Z][a-zA-Z0-9]*)/g;
-  let m;
-  while ((m = re.exec(jsx)) !== null) {
-    const tag = m[1]!;
-    if (!registered?.[tag]) tags.add(tag);
-  }
-  return [...tags].sort();
-}
-
 /**
  * Wraps JsxParser with tween bindings for the current action.
  * Must be a separate component so useTweenBindings follows Rules of Hooks.
@@ -34,36 +21,16 @@ function TweenedJsxParser({
   action: { start?: number; end?: number };
 }) {
   const tweenBindings = useTweenBindings(action);
-  const unknownTags = React.useMemo(() => findUnknownComponentTags(jsx, components), [jsx, components]);
-  const [jsxError, setJsxError] = React.useState<string | null>(null);
 
   return (
     <>
-      {unknownTags.length > 0 && (
-        <div style={{
-          position: "absolute", top: 0, left: 0, right: 0,
-          background: "rgba(255, 200, 0, 0.85)", color: "#000",
-          padding: "6px 12px", fontSize: 12, fontFamily: "monospace",
-          zIndex: 100, whiteSpace: "pre-wrap", wordBreak: "break-all",
-        }}>
-          ⚠ Missing component{unknownTags.length > 1 ? "s" : ""}: {unknownTags.join(", ")}
-          {components ? ` (${Object.keys(components).length} registered)` : " (0 registered)"}
-        </div>
-      )}
-      {jsxError && (
-        <div style={{ color: "red", padding: 20, fontSize: "larger" }}>{jsxError}</div>
-      )}
       <JsxParser
-        style={{ width: "100%", height: "100%" }}
-        components={components}
-        bindings={{ ...data, ...tweenBindings }}
+        components={components as any}
+        bindings={React.useMemo(() => ({ ...data, ...tweenBindings }), [data, tweenBindings])}
         jsx={jsx}
+        renderInWrapper={false}
         blacklistedAttrs={[]}
         disableKeyGeneration={true}
-        onError={error => {
-    console.warn({jsx, error: error.message});
-    setJsxError(error.message);
-  }}
         renderError={({ error }) => <div style={{ color: "red", padding: 20, fontSize: "larger" }}>{error}</div>}
       />
     </>

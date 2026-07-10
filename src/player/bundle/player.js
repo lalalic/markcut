@@ -42026,16 +42026,6 @@ function useTweenBindings(action2) {
 
 // src/types/Component.tsx
 var import_jsx_runtime81 = __toESM(require_jsx_runtime(), 1);
-function findUnknownComponentTags(jsx68, registered) {
-  const tags = /* @__PURE__ */ new Set();
-  const re = /<\s*\/?\s*([A-Z][a-zA-Z0-9]*)/g;
-  let m2;
-  while ((m2 = re.exec(jsx68)) !== null) {
-    const tag = m2[1];
-    if (!registered?.[tag]) tags.add(tag);
-  }
-  return [...tags].sort();
-}
 function TweenedJsxParser({
   jsx: jsx68,
   components,
@@ -42043,47 +42033,18 @@ function TweenedJsxParser({
   action: action2
 }) {
   const tweenBindings = useTweenBindings(action2);
-  const unknownTags = React27.useMemo(() => findUnknownComponentTags(jsx68, components), [jsx68, components]);
-  const [jsxError, setJsxError] = React27.useState(null);
-  return /* @__PURE__ */ (0, import_jsx_runtime81.jsxs)(import_jsx_runtime81.Fragment, { children: [
-    unknownTags.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime81.jsxs)("div", { style: {
-      position: "absolute",
-      top: 0,
-      left: 0,
-      right: 0,
-      background: "rgba(255, 200, 0, 0.85)",
-      color: "#000",
-      padding: "6px 12px",
-      fontSize: 12,
-      fontFamily: "monospace",
-      zIndex: 100,
-      whiteSpace: "pre-wrap",
-      wordBreak: "break-all"
-    }, children: [
-      "\u26A0 Missing component",
-      unknownTags.length > 1 ? "s" : "",
-      ": ",
-      unknownTags.join(", "),
-      components ? ` (${Object.keys(components).length} registered)` : " (0 registered)"
-    ] }),
-    jsxError && /* @__PURE__ */ (0, import_jsx_runtime81.jsx)("div", { style: { color: "red", padding: 20, fontSize: "larger" }, children: jsxError }),
-    /* @__PURE__ */ (0, import_jsx_runtime81.jsx)(
-      source_default,
-      {
-        style: { width: "100%", height: "100%" },
-        components,
-        bindings: { ...data2, ...tweenBindings },
-        jsx: jsx68,
-        blacklistedAttrs: [],
-        disableKeyGeneration: true,
-        onError: (error49) => {
-          console.warn({ jsx: jsx68, error: error49.message });
-          setJsxError(error49.message);
-        },
-        renderError: ({ error: error49 }) => /* @__PURE__ */ (0, import_jsx_runtime81.jsx)("div", { style: { color: "red", padding: 20, fontSize: "larger" }, children: error49 })
-      }
-    )
-  ] });
+  return /* @__PURE__ */ (0, import_jsx_runtime81.jsx)(import_jsx_runtime81.Fragment, { children: /* @__PURE__ */ (0, import_jsx_runtime81.jsx)(
+    source_default,
+    {
+      components,
+      bindings: React27.useMemo(() => ({ ...data2, ...tweenBindings }), [data2, tweenBindings]),
+      jsx: jsx68,
+      renderInWrapper: false,
+      blacklistedAttrs: [],
+      disableKeyGeneration: true,
+      renderError: ({ error: error49 }) => /* @__PURE__ */ (0, import_jsx_runtime81.jsx)("div", { style: { color: "red", padding: 20, fontSize: "larger" }, children: error49 })
+    }
+  ) });
 }
 function ComponentLeaf({ stream: stream2 }) {
   const { fps } = useVideoConfig();
