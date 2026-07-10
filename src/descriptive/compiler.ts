@@ -487,8 +487,7 @@ function compileLeaf(node: Exclude<DescriptiveNode, DescriptiveContainer | Descr
       // Collect extra properties from descriptive node (e.g. `source` from ~~~md source fences)
       const KNOWN_COMPONENT_KEYS = new Set([
         "type", "jsx", "id", "instruction", "style", "visible",
-        "isBackground", "duration", "start", "_resolvedRegistry",
-        "on",
+        "isBackground", "duration", "start", "on",
       ]);
       const bindings: Record<string, string> = {};
       for (const key of Object.keys(node)) {
@@ -996,55 +995,12 @@ function resolveComponentSources(root: DescriptiveRoot): Map<string, ResolvedImp
   for (const entry of entries) {
     if (!entry.name) continue;
     const resolved: ResolvedImport = { exports: entry.exports };
-    if (entry.from) {
-      resolved.src = entry.from.trim();
-    }
-    if (entry.jsx) {
-      resolved.definitionJsx = entry.jsx;
-    }
+    if (entry.from) resolved.src = entry.from.trim();
+    if (entry.jsx) resolved.definitionJsx = entry.jsx;
     registry.set(entry.name, resolved);
   }
-  if (registry.size === 0) return registry;
-
-  const visit = (node: DescriptiveNode): void => {
-    if (node.type === "component") {
-      (node as any)._resolvedRegistry = registry;
-    }
-    const children = (node as { children?: DescriptiveNode[] }).children;
-    if (Array.isArray(children)) {
-      for (const c of children) visit(c);
-    }
-  };
-  for (const c of root.children) visit(c);
   return registry;
 }
-
-/** Known HTML/SVG tag names — uppercase first char means component reference. */
-const KNOWN_HTML_TAGS = new Set([
-  "A", "Abbr", "Address", "Area", "Article", "Aside", "Audio",
-  "B", "Base", "Bdi", "Bdo", "Blockquote", "Body", "Br", "Button",
-  "Canvas", "Caption", "Cite", "Code", "Col", "Colgroup", "Data", "Datalist",
-  "Dd", "Del", "Details", "Dfn", "Dialog", "Div", "Dl", "Dt", "Em", "Embed",
-  "Fieldset", "Figcaption", "Figure", "Footer", "Form", "H1", "H2", "H3",
-  "H4", "H5", "H6", "Head", "Header", "Hgroup", "Hr", "Html", "I", "Iframe",
-  "Img", "Input", "Ins", "Kbd", "Label", "Legend", "Li", "Link", "Main",
-  "Map", "Mark", "Menu", "Meta", "Meter", "Nav", "Noscript", "Object", "Ol",
-  "Optgroup", "Option", "Output", "P", "Picture", "Pre", "Progress", "Q",
-  "Rp", "Rt", "Ruby", "S", "Samp", "Script", "Section", "Select", "Slot",
-  "Small", "Source", "Span", "Strong", "Style", "Sub", "Summary", "Sup",
-  "Table", "Tbody", "Td", "Template", "Textarea", "Tfoot", "Th", "Thead",
-  "Time", "Title", "Tr", "Track", "U", "Ul", "Var", "Video", "Wbr",
-  // SVG
-  "Svg", "Circle", "ClipPath", "Defs", "Ellipse", "FeBlend", "FeColorMatrix",
-  "FeComponentTransfer", "FeComposite", "FeConvolveMatrix", "FeDiffuseLighting",
-  "FeDisplacementMap", "FeDistantLight", "FeDropShadow", "FeFlood", "FeFuncA",
-  "FeFuncB", "FeFuncG", "FeFuncR", "FeGaussianBlur", "FeImage", "FeMerge",
-  "FeMergeNode", "FeMorphology", "FeOffset", "FePointLight", "FeSpecularLighting",
-  "FeSpotLight", "FeTile", "FeTurbulence", "Filter", "ForeignObject", "G",
-  "Image", "Line", "LinearGradient", "Marker", "Mask", "Path", "Pattern",
-  "Polygon", "Polyline", "RadialGradient", "Rect", "Stop", "Text",
-  "TextPath", "Tspan", "Use", "View",
-]);
 
 /**
  * Walk the descriptive tree and warn about JSX component tags
@@ -1061,7 +1017,9 @@ function warnUnregisteredComponents(root: DescriptiveRoot, registry: Map<string,
       tagRe.lastIndex = 0;
       while ((m = tagRe.exec(node.jsx)) !== null) {
         const tag = m[1]!;
-        if (!registeredNames.has(tag) && !KNOWN_HTML_TAGS.has(tag)) {
+        // Only warn for uppercase tags (component references)
+        // Lowercase tags are HTML/SVG built-ins.
+        if (!registeredNames.has(tag)) {
           found.add(tag);
         }
       }
