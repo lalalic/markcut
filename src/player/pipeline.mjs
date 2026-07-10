@@ -12637,7 +12637,12 @@ function parseKeyValueTokens(tokens) {
       else if (key === "on") val = parseOnSpec(String(val));
       else if (key === "effects") val = parseEffects(String(val));
       else if (key !== "instruction" && key !== "tts" && key !== "stt" && key !== "jsx" && key !== "prompt") {
-        val = parseNumberMaybe(String(val));
+        const strVal = String(val);
+        if (strVal.startsWith("{") || strVal.startsWith("[")) {
+          val = parseProps(strVal);
+        } else {
+          val = parseNumberMaybe(strVal);
+        }
       }
       out[key] = val;
       i++;

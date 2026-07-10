@@ -4,11 +4,9 @@ description: A beginner's course on artificial intelligence
 width: 1920 
 height: 1080 
 fps: 30 
-subtitle:
-  fontSize: 20px
 ---
 # video
-layout:series
+layout:series subtitle:{fontSize:"20px"}
 
 ## Hook
 - video 
