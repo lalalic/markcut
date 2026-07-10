@@ -330,12 +330,9 @@ export function parseMarkdownDescriptive(markdown: string): DescriptiveRoot {
   for (const node of (mdast as any).children) {
     switch (node.type) {
       case "yaml": {
-        try {
-          const data = yaml.load(node.value) as Record<string, unknown>;
-          if (data) applyRootAttrs(root, data);
-        } catch {
-          // Ignore invalid YAML
-        }
+        // Frontmatter is metadata only — does not affect video config.
+        // Video configuration (width, height, fps, layout, tts, etc.)
+        // comes from the root key-value line after `# video`.
         break;
       }
       case "heading": {

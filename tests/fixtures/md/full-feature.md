@@ -1,11 +1,7 @@
 ---
-width: 1080
-height: 1920
-fps: 30
-tts: edge-tts --voice "zh-CN-XiaoxiaoNeural" --text "{input}" --write-media "{output}"
 ---
 # video
-layout:series instruction:"Full feature demo video" metadata:"v2.0-feature-test"
+width:1080 height:1920 fps:30 layout:series instruction:"Full feature demo video" metadata:"v2.0-feature-test" tts:"edge-tts --voice 'zh-CN-XiaoxiaoNeural' --text '{input}' --write-media '{output}'"
 ## OpeningHook
 layout:parallel instruction:"Start with animated headline and BGM"
 - script "Welcome to this demo video"

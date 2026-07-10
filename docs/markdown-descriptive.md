@@ -6,7 +6,7 @@ Complete reference for LLM-driven video generation. The parser uses **remark** (
 
 A markdown document compiled into a renderable scene tree.
 
-- Top heading `# video`
+- Top heading `# <name>` (heading text ignored, just marks document root; `# video`, `# sub-video`, `# anything` all work)
 - Optional YAML frontmatter block `---\n...\n---\n` at the very top
 - Root config line: `width:<n> height:<n> fps:<n> layout:<mode>` (key:value pairs on the line after `# video`)
 - Scenes via `##`/`###`/`####` headings
@@ -14,40 +14,61 @@ A markdown document compiled into a renderable scene tree.
 - Component registrations via `` ~~~js imports `` code fence (or inline JSX definitions)
 - Properties via indented code fences (`~~~<lang> <propName>`); `~~~script` only valid on audio nodes
 
-## Frontmatter
+## Frontmatter (metadata only)
 
-A YAML block at the top of the document, delimited by `---`. Supports root configuration, pipeline config (tts/stt/tti/ttv), and metadata.
+A YAML block at the top of the document, delimited by `---`. Frontmatter is
+**metadata only** — it does NOT affect video configuration. All video config
+(width, height, fps, layout, tts, stt, stylesheet, etc.) comes from the
+**root config line** (key:value pairs on the line after `# video`).
 
 ```yaml
 ---
-width: 1080
-height: 1920
-fps: 30
-title: My Video
-description: A demo video
-tts: edge-tts --voice "zh-CN-YunxiNeural" --text "{input}" --write-media "{output}"
-stt: whisper --model "base" --language "zh" "{input}" --output_format vtt --output_dir "{output}"
-tti: pi --model agnes-2.0-flash --print \"generate image: {input}\" --output \"{output}\"
-ttv: pi --model agnes-2.0-flash --print "generate video: {input}" --output "{output}"
-stylesheet: |
-  .slide h1 { color: #667eea; font-size: 64px; }
-  .slide li  { font-size: 32px; }
+title: My Campaign
+description: Q4 product launch
 ---
 ```
 
-Supported root keys: `width`, `height`, `fps`, `tts`, `stt`, `tti`, `ttv`, `title`, `description`, `stylesheet`, `subtitle`.
+## Root Config Line
 
-### Subtitle
+The line after `# video` contains all video configuration as space-separated
+`key:value` pairs:
 
-Configure a global VTT caption overlay via the `subtitle` frontmatter key. Supports an object with `src`, `type`, `fontSize`, `fontFamily`, `fontStyle`, and `style`:
+```markdown
+# video
+width:1920 height:1080 fps:30 layout:series tts:"edge-tts --voice 'en-US-GuyNeural' --text '{input}' --write-media '{output}'" stylesheet:".bg { background: #000; }" subtitle:captions.vtt
+```
 
-```yaml
-subtitle:
-  src: captions.vtt
-  type: Typewriter
-  fontSize: 48
-  fontFamily: "Helvetica Neue"
-  fontStyle: bold
+Supported keys: `width`, `height`, `fps`, `layout`, `tts`, `stt`, `tti`, `ttv`,
+`transition`, `transitionTime`, `instruction`, `metadata`, `stylesheet`, `subtitle`.
+
+Values containing spaces must be quoted with double or single quotes.
+
+### Subtitle on the config line
+
+```markdown
+# video
+width:640 height:480 subtitle:captions.vtt
+```
+
+Currently only `src` (a VTT file path) is supported via the config line.
+
+## Template Variables
+
+`${width}`, `${height}`, `${fps}`, and `${variant}` can be used in `src`,
+`prompt`, and `stylesheet` values. They are resolved at compile time using
+the root config values.
+
+```markdown
+# video
+width:1920 height:1080
+```
+
+- `src:photo_${width}x${height}.jpg` → `photo_1920x1080.jpg`
+- `prompt:"generate an image at ${width}x${height}"` → `generate an image at 1920x1080`
+- `stylesheet:".hero { width: ${width}px; }"` → `.hero { width: 1920px; }`
+
+> Template variables are NOT resolved in root config keys, jsx, script, style,
+> or other string fields — only in `src`, `prompt`, and `stylesheet`.
   style: "color: yellow;"
 ```
 

@@ -14,7 +14,7 @@ import type {
   SubtitleOverlay,
   Video,
 } from "../schema/index";
-import { uid } from "../utils/index";
+import { uid, walkDown } from "../utils/index";
 
 export interface CompileOptions {
   defaults?: Partial<Record<"image" | "video" | "audio" | "component" | "rhythm" | "include" | "map", number>>;
@@ -184,6 +184,68 @@ export interface DescriptiveRoot {
   /** Raw imports block source (from \`\`\`imports code fence). Parsed by parseImportsBlock. */
   importsBlock?: string;
   children: DescriptiveNode[];
+}
+
+// ── Template variable resolution ─────────────────────────────────────────
+
+export interface TemplateContext {
+  width: number;
+  height: number;
+  fps: number;
+  /** Variant name (e.g. "video", "zh", "portrait"). Defaults to "video". */
+  variant: string;
+}
+
+/**
+ * Resolve `${var}` placeholders in string values using the template context.
+ * Supports: width, height, fps, variant.
+ * Non-recursive — one pass, nested placeholders not supported.
+ */
+export function resolveTemplateVars(value: string, ctx: TemplateContext): string {
+  return value.replace(/\$\{(\w+)\}/g, (_, name: string) => {
+    switch (name) {
+      case "width": return String(ctx.width);
+      case "height": return String(ctx.height);
+      case "fps": return String(ctx.fps);
+      case "variant": return ctx.variant;
+      default: return `\${${name}}`; // leave unresolved
+    }
+  });
+}
+
+/**
+ * Walk the descriptive tree and resolve `${var}` placeholders in select
+ * content fields only: `src`, `prompt`, and `stylesheet`.
+ *
+ * Root config keys (width, height, fps, layout, tts, etc.) and other
+ * string fields (jsx, script, style, etc.) are NOT resolved — they are
+ * authored directly or configured by the engine.
+ *
+ * Called before compilation so each variant gets resolved values.
+ */
+export function resolveAllTemplateVars(
+  root: DescriptiveRoot,
+  ctx: TemplateContext,
+): DescriptiveRoot {
+  const clone: DescriptiveRoot = JSON.parse(JSON.stringify(root));
+
+  // Resolve stylesheet at root level
+  if (typeof clone.stylesheet === "string") {
+    clone.stylesheet = resolveTemplateVars(clone.stylesheet, ctx);
+  }
+
+  // Resolve src + prompt on leaf nodes only
+  walkDown(clone as any, (node) => {
+    const n = node as any;
+    if (typeof n.src === "string") {
+      n.src = resolveTemplateVars(n.src, ctx);
+    }
+    if (typeof n.prompt === "string") {
+      n.prompt = resolveTemplateVars(n.prompt, ctx);
+    }
+  });
+
+  return clone;
 }
 
 interface CompileContext {

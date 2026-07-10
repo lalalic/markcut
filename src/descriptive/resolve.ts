@@ -24,7 +24,7 @@ import {
 } from "../render/cli-tools";
 import { walkDown } from "../utils";
 import type { DescriptiveNode, DescriptiveRoot } from "./compiler";
-import { compileDescriptiveRoot, parseImportsBlock, extractDependencySpecs } from "./compiler";
+import { compileDescriptiveRoot, parseImportsBlock, extractDependencySpecs, resolveTemplateVars } from "./compiler";
 import { parseMarkdownDescriptive } from "./markdown";
 
 // ── Content-hash cache for expensive operations (TTS, STT) ────────────────
@@ -114,6 +114,113 @@ function probeDuration(src: string, baseDir?: string): number | null {
 function resolveSrc(src: string, baseDir?: string): string {
   if (/^(https?:|file:|\/)/.test(src)) return src;
   return resolvePath(baseDir ?? process.cwd(), src);
+}
+
+/**
+ * Common display resolutions for best-match fallback, ordered by popularity.
+ * Used when a pattern-based src (e.g. photo_${width}x${height}.jpg) doesn't
+ * have an exact file match — the resolver tries nearby resolutions and picks
+ * the one with the closest aspect ratio.
+ */
+const COMMON_RESOLUTIONS: Array<{ width: number; height: number }> = [
+  { width: 1920, height: 1080 },  // 16:9
+  { width: 1080, height: 1920 },  // 9:16
+  { width: 1080, height: 1080 },  // 1:1
+  { width: 3840, height: 2160 },  // 4K 16:9
+  { width: 2560, height: 1440 },  // 2K 16:9
+  { width: 1280, height: 720 },   // HD 16:9
+  { width: 640, height: 480 },    // 4:3
+];
+
+/**
+ * Resolve a potentially pattern-based media src to the best matching file.
+ *
+ * If `src` doesn't contain pattern placeholders, returns `resolveSrc(src, baseDir)`.
+ *
+ * If `src` contains placeholders (resolved via `width`/`height`), it:
+ * 1. Generates the exact-dimension path
+ * 2. If the exact file doesn't exist, tries COMMON_RESOLUTIONS sorted by
+ *    closest aspect-ratio match
+ * 3. Falls back to the exact-dimension path if nothing matches
+ *
+ * This allows authors to write:
+ *   image src:photo_${width}x${height}.jpg
+ * And have the resolver pick photo_1920x1080.jpg for landscape or
+ * photo_1080x1920.jpg for portrait, with fallback to nearby resolutions.
+ */
+export function resolveMediaSrc(
+  src: string,
+  targetWidth: number,
+  targetHeight: number,
+  baseDir?: string,
+): string {
+  // If no pattern, direct resolve
+  if (!src.includes("${")) {
+    return resolveSrc(src, baseDir);
+  }
+
+  // Build template context from targets
+  const ctx = { width: targetWidth, height: targetHeight, fps: 30, variant: "video" };
+
+  // Exact match: resolve placeholders to exact target dimensions
+  const exactPath = resolveTemplateVars(src, ctx);
+  const exactAbs = resolveSrc(exactPath, baseDir);
+  if (existsSync(exactAbs)) {
+    return exactAbs;
+  }
+
+  // Best-match fallback: try common resolutions sorted by closest aspect ratio
+  const targetRatio = targetWidth / targetHeight;
+  const scored = COMMON_RESOLUTIONS.map((r) => {
+    const ratio = r.width / r.height;
+    const score = Math.abs(ratio - targetRatio);
+    return { ...r, score };
+  }).sort((a, b) => a.score - b.score);
+
+  for (const res of scored) {
+    const candidate = resolveTemplateVars(src, { width: res.width, height: res.height, fps: 30, variant: "video" });
+    const candidateAbs = resolveSrc(candidate, baseDir);
+    if (existsSync(candidateAbs)) {
+      console.log(`  📐 Media src matched: ${candidate} (${res.width}x${res.height}) for target ${targetWidth}x${targetHeight}`);
+      return candidateAbs;
+    }
+  }
+
+  // No fallback matched — return the exact path (will 404 gracefully)
+  console.warn(`  ⚠ No matching media file for "${src}" at ${targetWidth}x${targetHeight}`);
+  return exactAbs;
+}
+
+/**
+ * Walk the descriptive tree and resolve pattern-based src fields using
+ * best-match resolution. Should be called after resolveAllTemplateVars
+ * so that `${width}`/`${height}` are replaced with actual values first.
+ */
+export async function resolveMediaSrcs(
+  root: DescriptiveRoot,
+  options: ResolveMediaOptions = {},
+): Promise<DescriptiveRoot> {
+  const clone: DescriptiveRoot = JSON.parse(JSON.stringify(root));
+  const baseDir = options.baseDir;
+  const targetWidth = clone.width ?? 1080;
+  const targetHeight = clone.height ?? 1920;
+
+  walkDown(clone as any, (node) => {
+    const n = node as any;
+    if (n.src && typeof n.src === "string" && n.src.includes("${")) {
+      n.src = resolveMediaSrc(n.src, targetWidth, targetHeight, baseDir);
+    }
+    if (n.prompt && typeof n.prompt === "string" && n.prompt.includes("${")) {
+      n.prompt = resolveTemplateVars(n.prompt, {
+        width: targetWidth,
+        height: targetHeight,
+        fps: clone.fps ?? 30,
+        variant: "video",
+      });
+    }
+  });
+
+  return clone;
 }
 
 /**
@@ -664,10 +771,12 @@ export async function resolveIncludes(
 /**
  * Run all pre-pass resolvers in the correct order:
  * 0. Resolve includes (pre-compile referenced .md files to JSON)
- * 1. Generated media (TTI/TTV) — resolve image/video prompts to actual files
- * 2. Media duration probing
- * 3. Script → TTS (audio only) — uses root.tts / scene.tts / CLI options
- * 4. Post-compile: STT → VTT (subtitle) — uses root.stt / CLI options
+ * 1. Resolve template variables (${width}, ${height}, etc. in src/prompt)
+ * 2. Best-match media src resolution (pattern-based src → closest existing file)
+ * 3. Generated media (TTI/TTV) — resolve image/video prompts to actual files
+ * 4. Media duration probing
+ * 5. Script → TTS (audio only) — uses root.tts / scene.tts / CLI options
+ * 6. Post-compile: STT → VTT (subtitle) — uses root.stt / CLI options
  *
  * Step 0 runs first so that sub-video durations are known before duration
  * probing of the parent tree.
@@ -679,10 +788,24 @@ export async function resolveAll(
   let result = root;
 
   // Step 0: Resolve includes (pre-compile referenced .md files to JSON with accurate durations)
-  // This must run first so sub-video durations inform the parent tree's layout.
   result = await resolveIncludes(result, options);
 
-  // Step 1: Generate images/videos from prompts before probing durations
+  // Step 1: Resolve template variables (${width}, ${height}, ${fps}) in all string fields.
+  // Uses root's current width/height/fps. This happens before media resolution
+  // so that pattern-based src/prompt values are resolved with actual dimensions.
+  const { resolveAllTemplateVars } = await import("./compiler");
+  result = resolveAllTemplateVars(result, {
+    width: result.width ?? 1080,
+    height: result.height ?? 1920,
+    fps: result.fps ?? 30,
+    variant: "video",
+  });
+
+  // Step 2: Best-match media src resolution — for pattern-based src values
+  // (e.g. photo_${width}x${height}.jpg), find the closest existing file.
+  result = await resolveMediaSrcs(result, { baseDir: options.baseDir });
+
+  // Step 3: Generate images/videos from prompts before probing durations
   if (options.mediaOutputDir) {
     result = await resolveGeneratedMedia(result, {
       outputDir: options.mediaOutputDir,
@@ -691,13 +814,13 @@ export async function resolveAll(
     });
   }
 
-  // Step 2: Media duration probing
+  // Step 4: Media duration probing
   result = await resolveMediaDurations(result, {
     baseDir: options.baseDir,
     skip: options.skip,
   });
 
-  // Step 3: Script → TTS
+  // Step 5: Script → TTS
   if (options.scriptOutputDir) {
     result = await resolveScripts(result, {
       outputDir: options.scriptOutputDir,

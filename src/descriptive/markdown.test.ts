@@ -365,19 +365,21 @@ layout:parallel
   });
 
   describe("frontmatter", () => {
-    it("parses scalar frontmatter keys into root attrs", () => {
+    it("frontmatter does not affect root config", () => {
       const doc = `---
 width: 1080
 height: 1920
 fps: 30
 ---
 # video
+width:640 height:480 fps:24 layout:series
 ## Scene
 - image src:a.jpg duration:1`;
       const parsed = parseMarkdownDescriptive(doc);
-      expect(parsed.width).toBe(1080);
-      expect(parsed.height).toBe(1920);
-      expect(parsed.fps).toBe(30);
+      // Frontmatter is metadata only — root config comes from key-value line
+      expect(parsed.width).toBe(640);
+      expect(parsed.height).toBe(480);
+      expect(parsed.fps).toBe(24);
     });
 
     it("parses imports from ~~~js imports block with multiple imports", () => {

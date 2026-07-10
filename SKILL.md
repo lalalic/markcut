@@ -91,17 +91,53 @@ npx markcut render <stream tree file> --aspect all  # MP4 output
 
 ---
 
+## Template Variables
+
+`${width}`, `${height}`, `${fps}`, `${variant}` can be used in `src`,
+`prompt`, and `stylesheet` values. They resolve to the root config values.
+
+```markdown
+# video
+width:1920 height:1080
+## Scene
+- image src:photo_${width}x${height}.jpg
+- component jsx:"<h1>${width}</h1>"    ← NOT resolved (jsx excluded)
+```
+
+> Only `src`, `prompt`, and `stylesheet` support template variables.
+> Root config keys, jsx, script, style, etc. do not.
+
+## Frontmatter
+
+The YAML `---` block is **metadata only**. It does NOT affect video config.
+All configuration comes from the root config line after `# video`:
+
+```markdown
+---
+title: My Campaign
+---
+# video
+width:640 height:480 fps:30 layout:series tts:"edge-tts --voice '...' --text '{input}' --write-media '{output}'"
+```
+
 ## AI Media Generation (TTS / STT / TTI(text-to-image) / TTV(text-to-video))
 
-All four pipelines are configured via a **single CLI string** in frontmatter. The user/LLM embeds every tool-specific parameter directly in the string — only `{input}` and `{output}` are substituted by the engine.
+All four pipelines are configured via a **single CLI string** on the root config line. The user/LLM embeds every tool-specific parameter directly in the string — only `{input}` and `{output}` are substituted by the engine.
 
-The default clis are same as below. You can override them in the frontmatter of your stream tree file.
+Default CLI templates (used when not overridden on the root config line):
 
-```yaml
-tts: uvx edge-tts --voice "en-US-GuyNeural" --text "{input}" --write-media "{output}"
-stt: uvx --from openai-whisper whisper "{input}" --output_format vtt --output_dir "{output}"
-tti: uvx --from mflux mflux-generate-flux2 --model flux2-klein-4b --steps 5 --prompt "{input}" --output "{output}"
-ttv: ##use tti cli to create an image then use ffmpeg to create a video showing the image 5s
+| Config | Default |
+|--------|---------|
+| `tts` | `uvx edge-tts --voice "en-US-GuyNeural" --text "{input}" --write-media "{output}"` |
+| `stt` | `uvx --from openai-whisper whisper "{input}" --output_format vtt --output_dir "{output}"` |
+| `tti` | `uvx --from mflux mflux-generate-flux2 --model flux2-klein-4b --steps 5 --prompt "{input}" --output "{output}"` |
+| `ttv` | (uses TTI to create an image, then ffmpeg to loop it for 5s) |
+
+Override on the root config line:
+
+```markdown
+# video
+width:1920 height:1080 tts:"uvx edge-tts --voice 'zh-CN-YunxiNeural' --text '{input}' --write-media '{output}'"
 ```
 
 ---

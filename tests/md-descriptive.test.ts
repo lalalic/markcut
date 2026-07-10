@@ -271,7 +271,7 @@ describe("scenes fixture", () => {
 describe("frontmatter fixture", () => {
   const fx = loadFixture("frontmatter");
 
-  it("parses frontmatter root attrs", () => {
+  it("parses root attrs from config line (not frontmatter)", () => {
     const parsed = parseMarkdownDescriptive(fx.source);
     expect(parsed.width).toBe(640);
     expect(parsed.height).toBe(480);
@@ -288,7 +288,7 @@ describe("frontmatter fixture", () => {
     expect(parsed.importsBlock).toContain("InlineBadge");
   });
 
-  it("parses frontmatter tts config", () => {
+  it("parses tts config from root config line", () => {
     const parsed = parseMarkdownDescriptive(fx.source);
     expect(parsed.tts).toBeDefined();
     expect(parsed.tts).toContain("edge-tts");
@@ -296,7 +296,7 @@ describe("frontmatter fixture", () => {
     expect(parsed.tts).toContain("{output}");
   });
 
-  it("parses frontmatter stt config", () => {
+  it("parses stt config from root config line", () => {
     const parsed = parseMarkdownDescriptive(fx.source);
     expect(parsed.stt).toBeDefined();
     expect(parsed.stt).toContain("whisper");
@@ -315,32 +315,17 @@ describe("frontmatter fixture", () => {
   });
 });
 
-describe("subtitle frontmatter fixture", () => {
-  const src = `---
-width: 640
-height: 480
-fps: 30
-subtitle:
-  src: captions.vtt
-  type: typewriter
-  fontSize: 48
-  fontFamily: "Helvetica Neue"
-  fontStyle: bold
----
-# video
-layout:series
+describe("subtitle from root config line", () => {
+  const src = `# video
+width:640 height:480 fps:30 layout:series subtitle:captions.vtt
 ## Scene
 - image src:bg.jpg duration:3
 `;
 
-  it("parses subtitle from frontmatter as object", () => {
+  it("parses subtitle from root config line", () => {
     const parsed = parseMarkdownDescriptive(src);
     expect(parsed.subtitle).toBeDefined();
     expect(parsed.subtitle!.src).toBe("captions.vtt");
-    expect(parsed.subtitle!.type).toBe("typewriter");
-    expect(parsed.subtitle!.fontSize).toBe(48);
-    expect(parsed.subtitle!.fontFamily).toBe("Helvetica Neue");
-    expect(parsed.subtitle!.fontStyle).toBe("bold");
   });
 
   it("compiles subtitle into root stream tree", () => {
@@ -348,26 +333,6 @@ layout:series
     const compiled = compileDescriptiveRoot(parsed);
     expect(compiled.subtitle).toBeDefined();
     expect(compiled.subtitle!.src).toBe("captions.vtt");
-    expect(compiled.subtitle!.type).toBe("typewriter");
-    expect(compiled.subtitle!.fontSize).toBe(48);
-  });
-
-  it("parses subtitle as plain string (src only)", () => {
-    const simpleSrc = `---
-width: 640
-height: 480
-fps: 30
-subtitle: subtitles.vtt
----
-# video
-layout:series
-## Scene
-- image src:bg.jpg duration:3
-`;
-    const parsed = parseMarkdownDescriptive(simpleSrc);
-    expect(parsed.subtitle).toBeDefined();
-    expect(parsed.subtitle!.src).toBe("subtitles.vtt");
-    expect(parsed.subtitle!.type).toBeUndefined();
   });
 });
 

@@ -1,12 +1,8 @@
 ---
-width: 640
-height: 480
-fps: 30
-tts: edge-tts --voice "en-US-GuyNeural" --text "{input}" --write-media "{output}"
-stt: whisper "{input}" --output_format vtt --output_dir "{output}" --model whisper-1 --language zh
+# (frontmatter is metadata only — video config comes from root key-value line)
 ---
 # video
-layout:series
+width:640 height:480 fps:30 layout:series tts:"edge-tts --voice 'en-US-GuyNeural' --text '{input}' --write-media '{output}'" stt:"whisper '{input}' --output_format vtt --output_dir '{output}' --model whisper-1 --language zh"
 ## Demo
 layout:parallel
 - component duration:2 jsx:"<StatCounter value={42} label='Test' />"
