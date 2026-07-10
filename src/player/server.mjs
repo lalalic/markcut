@@ -73,10 +73,7 @@ function extractImportEntries(raw) {
     try {
       const parsed = JSON.parse(raw);
       const root = parsed.root || parsed;
-      if (root.imports && Array.isArray(root.imports)) {
-        entries = root.imports;
-        extraSpecs = entries.filter(e => e.from).map(e => e.from);
-      } else if (root.importsBlock) {
+      if (root.importsBlock) {
         rawSource = root.importsBlock;
         entries = parseImportsBlock(root.importsBlock);
         extraSpecs = extractDependencySpecs(root.importsBlock);

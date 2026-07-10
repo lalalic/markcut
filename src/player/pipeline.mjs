@@ -66,9 +66,6 @@ function isScene(node2) {
 function isInclude(node2) {
   return node2.type === "include";
 }
-function isEffect(node2) {
-  return node2.type === "effect";
-}
 function isMap(node2) {
   return node2.type === "map";
 }
@@ -100,6 +97,14 @@ function deriveLeafDuration(node2, ctx) {
 }
 function normalizeEffectSpec(spec) {
   if (typeof spec === "string") {
+    const trimmed = spec.trim();
+    if (trimmed.startsWith("{")) {
+      try {
+        return JSON.parse(trimmed);
+      } catch {
+        return { animation: trimmed };
+      }
+    }
     const parenIdx = spec.indexOf("(");
     if (parenIdx === -1) {
       return { animation: spec };
@@ -317,8 +322,6 @@ function compileChildren(children, ctx, parentKind) {
       result = compileScene(child, ctx, parentKind);
     } else if (isInclude(child)) {
       result = compileInclude(child, ctx, parentKind);
-    } else if (isEffect(child)) {
-      result = compileEffect(child, ctx, parentKind);
     } else if (isRhythm(child)) {
       result = compileRhythm(child, ctx, parentKind);
     } else if (isMap(child)) {
@@ -326,9 +329,7 @@ function compileChildren(children, ctx, parentKind) {
     } else {
       result = compileLeaf(child, ctx, parentKind);
     }
-    if (!isEffect(child)) {
-      result = wrapWithEffects(child, result, parentKind);
-    }
+    result = wrapWithEffects(child, result, parentKind);
     return result;
   });
 }
@@ -424,39 +425,6 @@ function compileInclude(node2, ctx, parentKind) {
   };
   return { stream, duration: end };
 }
-function compileEffect(node2, ctx, parentKind) {
-  const id = node2.id ?? uid();
-  ensureUniqueIds(node2.children, id);
-  const children = compileChildren(node2.children, ctx, "parallel");
-  const childrenDuration = aggregateDuration(children, "parallel");
-  let duration = node2.duration ?? 0;
-  if (!duration) duration = childrenDuration;
-  if (!duration) duration = ctx.defaults.effect;
-  const start = parentKind === "parallel" ? Math.max(0, node2.start ?? 0) : 0;
-  const end = start + duration;
-  const stream = {
-    id,
-    type: "effect",
-    style: node2.style,
-    visible: node2.visible ?? true,
-    isBackground: node2.isBackground,
-    animation: node2.animation,
-    animationTimingFunction: node2.animationTimingFunction,
-    animationIterationCount: node2.animationIterationCount ?? 1,
-    customKeyframes: node2.customKeyframes,
-    children: children.map((c) => c.stream),
-    actions: [
-      {
-        id: uid(),
-        start,
-        end
-      }
-    ],
-    durationInSeconds: end,
-    ...pickOn(node2)
-  };
-  return { stream, duration: end };
-}
 function compileRhythm(node2, ctx, parentKind) {
   const id = node2.id ?? uid();
   const spots = node2.spots ?? [];
@@ -471,7 +439,7 @@ function compileRhythm(node2, ctx, parentKind) {
       const beatEnd = i < spots.length - 1 ? spots[i + 1] : beatStart + avgGap2;
       const beatDur = Math.max(0.1, beatEnd - beatStart);
       const childWithTiming = { ...children[i], start: beatStart, duration: beatDur };
-      const compiled = isContainer(childWithTiming) ? compileContainer(childWithTiming, ctx, "parallel") : isScene(childWithTiming) ? compileScene(childWithTiming, ctx, "parallel") : isInclude(childWithTiming) ? compileInclude(childWithTiming, ctx, "parallel") : isEffect(childWithTiming) ? compileEffect(childWithTiming, ctx, "parallel") : isRhythm(childWithTiming) ? compileRhythm(childWithTiming, ctx, "parallel") : compileLeaf(childWithTiming, ctx, "parallel");
+      const compiled = isContainer(childWithTiming) ? compileContainer(childWithTiming, ctx, "parallel") : isScene(childWithTiming) ? compileScene(childWithTiming, ctx, "parallel") : isInclude(childWithTiming) ? compileInclude(childWithTiming, ctx, "parallel") : isRhythm(childWithTiming) ? compileRhythm(childWithTiming, ctx, "parallel") : compileLeaf(childWithTiming, ctx, "parallel");
       compiledChildren.push(compiled.stream);
     }
   }
@@ -639,11 +607,9 @@ function extractDependencySpecs(source) {
 }
 function resolveComponentSources(root) {
   const registry = /* @__PURE__ */ new Map();
-  let entries = root.imports;
-  if (root.importsBlock) {
-    entries = parseImportsBlock(root.importsBlock);
-  }
-  if (!entries || !entries.length) return registry;
+  if (!root.importsBlock) return registry;
+  const entries = parseImportsBlock(root.importsBlock);
+  if (!entries.length) return registry;
   for (const entry of entries) {
     if (!entry.name) continue;
     const resolved = { exports: entry.exports };
@@ -12389,23 +12355,38 @@ var DEFAULT_DUMP_OPTIONS = {
   }
 };
 
-// src/descriptive/markdown.ts
-var LAYOUT_VALUES = /* @__PURE__ */ new Set(["series", "parallel", "transitionSeries", "transition"]);
-var TRANSITION_VALUES = /* @__PURE__ */ new Set(["fade", "slide", "wipe", "flip", "clockWipe"]);
-var TYPE_TOKENS = {
-  image: "image",
-  video: "video",
-  audio: "audio",
-  component: "component",
-  rhythm: "rhythm",
-  include: "include",
-  effect: "effect",
-  map: "map",
-  script: "script",
-  series: "series",
-  parallel: "parallel",
-  transitionSeries: "transitionSeries"
+// src/descriptive/dsl.ts
+var LAYOUT_VALUES = /* @__PURE__ */ new Set([
+  "series",
+  "parallel",
+  "transitionSeries",
+  "transition"
+]);
+var TRANSITION_VALUES = /* @__PURE__ */ new Set([
+  "fade",
+  "slide",
+  "wipe",
+  "flip",
+  "clockWipe"
+]);
+var DslError = class extends Error {
+  constructor(message, context) {
+    const parts = [message];
+    if (context?.line) parts.push(`at line ${context.line}`);
+    if (context?.token) parts.push(`near "${context.token}"`);
+    const head = parts.join(" ");
+    const src = context?.lineText ? `
+  | ${context.lineText}` : "";
+    super(src ? `${head}
+${src}` : head);
+    this.context = context;
+    this.name = "DslError";
+  }
+  context;
 };
+function fail(message, ctx) {
+  throw new DslError(message, ctx);
+}
 function isQuoted(token) {
   return token.length >= 2 && token.startsWith('"') && token.endsWith('"');
 }
@@ -12479,7 +12460,7 @@ function parseProps(raw) {
     );
     normalized = normalized.replace(
       /:\s*([a-zA-Z_$][a-zA-Z0-9_$.+-]*)\s*(?=[,}\]\s]|$)/g,
-      (match, value2) => {
+      (_match, value2) => {
         if (value2 === "true" || value2 === "false" || value2 === "null") return `: ${value2}`;
         if (/^[+-]?\d+(\.\d+)?$/.test(value2)) return `: ${value2}`;
         return `: "${value2}"`;
@@ -12589,7 +12570,15 @@ function parseEffects(raw) {
   if (trimmed) results.push(trimmed);
   return results;
 }
-function parseKeyValueTokens(tokens) {
+var RAW_STRING_KEYS = /* @__PURE__ */ new Set(["instruction", "tts", "stt", "jsx", "prompt"]);
+var OBJECT_KEYS = /* @__PURE__ */ new Set([
+  "props",
+  "imports",
+  "components",
+  "spots",
+  "customKeyframes"
+]);
+function parseKeyValueTokens(tokens, ctx) {
   const out = {};
   let i = 0;
   while (i < tokens.length) {
@@ -12608,35 +12597,30 @@ function parseKeyValueTokens(tokens) {
       let val = unquote(rawVal);
       if (key === "layout") {
         const s = String(val);
-        if (LAYOUT_VALUES.has(s)) {
-          val = s;
-        } else {
-          throw new Error(`invalid layout value: ${s}`);
-        }
+        if (!LAYOUT_VALUES.has(s))
+          fail(`invalid layout value: ${s}`, { ...ctx, token });
+        val = s;
       }
       if (key === "transition") {
         const s = String(val);
         const parenMatch = s.match(/^(\w+)\((\d+(?:\.\d+)?)\)$/);
         if (parenMatch) {
           const [, name, timeStr] = parenMatch;
-          if (!TRANSITION_VALUES.has(name)) {
-            throw new Error(`invalid transition value: ${name}`);
-          }
+          if (!TRANSITION_VALUES.has(name))
+            fail(`invalid transition value: ${name}`, { ...ctx, token });
           out["transition"] = name;
           out["transitionTime"] = Number(timeStr);
           i++;
           continue;
         }
-        if (!TRANSITION_VALUES.has(s)) {
-          throw new Error(`invalid transition value: ${s}`);
-        }
+        if (!TRANSITION_VALUES.has(s))
+          fail(`invalid transition value: ${s}`, { ...ctx, token });
       }
       if (key === "waypoints") val = parseWaypoints(String(val));
-      else if (key === "props" || key === "imports" || key === "components") val = parseProps(String(val));
-      else if (key === "spots" || key === "customKeyframes") val = parseProps(String(val));
+      else if (OBJECT_KEYS.has(key)) val = parseProps(String(val));
       else if (key === "on") val = parseOnSpec(String(val));
       else if (key === "effects") val = parseEffects(String(val));
-      else if (key !== "instruction" && key !== "tts" && key !== "stt" && key !== "jsx" && key !== "prompt") {
+      else if (!RAW_STRING_KEYS.has(key)) {
         const strVal = String(val);
         if (strVal.startsWith("{") || strVal.startsWith("[")) {
           val = parseProps(strVal);
@@ -12648,27 +12632,30 @@ function parseKeyValueTokens(tokens) {
       i++;
       continue;
     }
-    const funcMatch = token.match(/^(\w+)\(/);
-    if (funcMatch) {
-      const key = funcMatch[1];
-      const rawVal = token.slice(key.length);
-      let val = unquote(rawVal);
-      if (key === "on") val = parseOnSpec(rawVal);
-      else if (key === "effects") val = parseEffects(rawVal);
-      else val = parseNumberMaybe(rawVal);
-      out[key] = val;
-      i++;
-      continue;
-    }
-    throw new Error(`unrecognized token: ${token}`);
+    fail(`unrecognized token: ${token}`, { ...ctx, token });
   }
   return out;
 }
-function parseHeaderScene(line) {
+
+// src/descriptive/markdown.ts
+var TYPE_TOKENS = {
+  image: "image",
+  video: "video",
+  audio: "audio",
+  component: "component",
+  rhythm: "rhythm",
+  include: "include",
+  map: "map",
+  script: "script",
+  series: "series",
+  parallel: "parallel",
+  transitionSeries: "transitionSeries"
+};
+function parseHeaderScene(line, lineNum) {
   const text3 = line.replace(/^#+\s*/, "").trim();
   const tokens = splitTokens(text3);
   const nameToken = tokens.shift();
-  const attrs = parseKeyValueTokens(tokens);
+  const attrs = parseKeyValueTokens(tokens, lineNum ? { line: lineNum, lineText: line } : void 0);
   let sceneName;
   let sceneTitle;
   if (nameToken) {
@@ -12700,9 +12687,10 @@ function pushChild(parent, child) {
   if (!parent.children) parent.children = [];
   parent.children.push(child);
 }
-function parseNodeLine(content3) {
+function parseNodeLine(content3, lineNum) {
+  const ctx = lineNum ? { line: lineNum, lineText: content3 } : void 0;
   const tokens = splitTokens(content3);
-  if (tokens.length === 0) throw new Error("empty node line");
+  if (tokens.length === 0) throw new DslError("empty node line", ctx);
   let typeToken = tokens[0];
   let type = TYPE_TOKENS[typeToken];
   if (type) tokens.shift();
@@ -12716,10 +12704,10 @@ function parseNodeLine(content3) {
     }
   }
   if (!type) {
-    throw new Error(`missing or unknown node type: ${typeToken}`);
+    throw new DslError(`missing or unknown node type: ${typeToken}`, { ...ctx, token: typeToken });
   }
   if (type === "series" || type === "parallel" || type === "transitionSeries") {
-    const attrs2 = parseKeyValueTokens(tokens);
+    const attrs2 = parseKeyValueTokens(tokens, ctx);
     const node2 = {
       type,
       id: attrs2.id,
@@ -12732,26 +12720,7 @@ function parseNodeLine(content3) {
     };
     return node2;
   }
-  if (type === "effect") {
-    const attrs2 = parseKeyValueTokens(tokens);
-    const animation = attrs2.animation ?? firstPositional;
-    const node2 = {
-      type: "effect",
-      id: attrs2.id,
-      instruction: attrs2.instruction,
-      animation,
-      animationTimingFunction: attrs2.animationTimingFunction,
-      animationIterationCount: attrs2.animationIterationCount,
-      customKeyframes: attrs2.customKeyframes,
-      duration: attrs2.duration,
-      start: attrs2.start,
-      effects: attrs2.effects,
-      on: attrs2.on,
-      children: []
-    };
-    return node2;
-  }
-  const attrs = parseKeyValueTokens(tokens);
+  const attrs = parseKeyValueTokens(tokens, ctx);
   switch (type) {
     case "image": {
       const src = firstPositional ?? attrs.src;
@@ -12800,7 +12769,7 @@ function parseNodeLine(content3) {
     }
     case "audio": {
       const src = firstPositional ?? attrs.src;
-      if (!src) throw new Error("audio requires src");
+      if (!src) throw new DslError("audio requires src", ctx);
       const node2 = {
         type: "audio",
         id: attrs.id,
@@ -12841,7 +12810,7 @@ function parseNodeLine(content3) {
     }
     case "rhythm": {
       const src = firstPositional ?? attrs.src;
-      if (!src) throw new Error("rhythm requires src");
+      if (!src) throw new DslError("rhythm requires src", ctx);
       const node2 = {
         type: "rhythm",
         id: attrs.id,
@@ -12879,7 +12848,7 @@ function parseNodeLine(content3) {
     }
     case "script": {
       const raw = firstPositional ?? (attrs.script ? String(attrs.script) : void 0);
-      if (!raw) throw new Error("script requires text content");
+      if (!raw) throw new DslError("script requires text content", ctx);
       const text3 = isQuoted(raw) ? unquote(raw) : raw;
       return {
         type: "audio",
@@ -12920,7 +12889,7 @@ function parseNodeLine(content3) {
       return node2;
     }
     default:
-      throw new Error(`unsupported node type: ${type}`);
+      throw new DslError(`unsupported node type: ${type}`, { ...ctx, token: type });
   }
 }
 function parseMarkdownDescriptive(markdown) {
@@ -12948,7 +12917,7 @@ function parseMarkdownDescriptive(markdown) {
         } else {
           const lineText = rawTextAtNode(lines, node2);
           const headingContent = lineText.replace(/^#+\s*/, "");
-          const scene = parseHeaderScene(headingContent);
+          const scene = parseHeaderScene(headingContent, node2.position?.start?.line);
           while (sceneStack.length && sceneStack[sceneStack.length - 1].level >= node2.depth) {
             sceneStack.pop();
           }
@@ -12968,7 +12937,10 @@ function parseMarkdownDescriptive(markdown) {
         const text3 = rawTextAtNode(lines, node2);
         if (!text3.trim()) break;
         const tokens = splitTokens(text3);
-        const attrs = parseKeyValueTokens(tokens);
+        const attrs = parseKeyValueTokens(
+          tokens,
+          node2.position?.start?.line ? { line: node2.position.start.line, lineText: text3 } : void 0
+        );
         if (inSceneMetadata && currentScene) {
           applySceneMetadata(currentScene, attrs);
         } else {
@@ -13029,7 +13001,7 @@ function processMDASTListItem(item, parent, lines) {
   if (!firstPara) return;
   const text3 = rawTextAtNode(lines, firstPara);
   if (!text3.trim()) return;
-  const node2 = parseNodeLine(text3);
+  const node2 = parseNodeLine(text3, firstPara.position?.start?.line);
   pushChild(parent, node2);
   for (const child of children) {
     if (child === firstPara) continue;
@@ -13040,7 +13012,10 @@ function processMDASTListItem(item, parent, lines) {
       const extraText = rawTextAtNode(lines, child);
       if (extraText.trim()) {
         const tokens = splitTokens(extraText);
-        const attrs = parseKeyValueTokens(tokens);
+        const attrs = parseKeyValueTokens(
+          tokens,
+          child.position?.start?.line ? { line: child.position.start.line, lineText: extraText } : void 0
+        );
         Object.assign(node2, attrs);
       }
     } else if (child.type === "list") {
@@ -13072,11 +13047,6 @@ function applySceneMetadata(scene, attrs) {
         break;
       case "instruction":
         scene.instruction = String(v);
-        break;
-      case "script":
-        break;
-      case "tts":
-        scene.tts = v;
         break;
       case "on":
         scene.on = v;

@@ -68,7 +68,7 @@ describe("parseMarkdownDescriptive", () => {
   });
 
   it("accepts full-word type tokens", () => {
-    const doc = `# video\nlayout:series\n## Intro\nlayout:parallel\n- image src:cover.jpg duration:2\n- video src:clip.mp4 startFrom:1 endAt:3\n- audio src:bgm.mp3 duration:3 volume:0.5\n- component duration:2 jsx:"<AnimatedHeadline />"\n- effect animation:fadeIn\n  - image src:card.jpg duration:1\n- map duration:2 waypoints:[37.77,-122.41,\"SF\";34.05,-118.24,\"LA\"]`;
+    const doc = `# video\nlayout:series\n## Intro\nlayout:parallel\n- image src:cover.jpg duration:2\n- video src:clip.mp4 startFrom:1 endAt:3\n- audio src:bgm.mp3 duration:3 volume:0.5\n- component duration:2 jsx:"<AnimatedHeadline />"\n- image src:card.jpg duration:1 effects:[fadeIn]\n- map duration:2 waypoints:[37.77,-122.41,"SF";34.05,-118.24,"LA"]`;
     const parsed = parseMarkdownDescriptive(doc);
 
     const scene = parsed.children[0]! as any;
@@ -76,7 +76,8 @@ describe("parseMarkdownDescriptive", () => {
     expect(scene.children[1]!!.type).toBe("video");
     expect(scene.children[2]!!.type).toBe("audio");
     expect(scene.children[3]!!.type).toBe("component");
-    expect(scene.children[4]!!.type).toBe("effect");
+    expect(scene.children[4]!!.type).toBe("image");
+    expect(scene.children[4]!!.effects).toEqual(["fadeIn"]);
     expect(scene.children[5]!!.type).toBe("map");
   });
 
@@ -159,19 +160,16 @@ layout:series
     expect(c.duration).toBe(3);
   });
 
-  it("parses effect node with animation", () => {
+  it("parses effects:[...] on leaf nodes", () => {
     const doc = `# video
 ## Scene
-- effect fadeIn
-  - image src:card.jpg duration:1`;
-    const parsed = parseMarkdownDescriptive(doc, );
+- image src:card.jpg duration:1 effects:[fadeIn]`;
+    const parsed = parseMarkdownDescriptive(doc);
 
     const scene = parsed.children[0]! as any;
-    const fx = scene.children[0]!!;
-    expect(fx.type).toBe("effect");
-    expect(fx.animation).toBe("fadeIn");
-    expect(fx.children).toHaveLength(1);
-    expect(fx.children[0]!.type).toBe("image");
+    const img = scene.children[0]!!;
+    expect(img.type).toBe("image");
+    expect(img.effects).toEqual(["fadeIn"]);
   });
 
   it("parses effects:[fadeIn] on leaf nodes", () => {

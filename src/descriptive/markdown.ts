@@ -2,7 +2,6 @@ import type {
   DescriptiveAudio,
   DescriptiveComponent,
   DescriptiveContainer,
-  DescriptiveEffect,
   DescriptiveImage,
   DescriptiveInclude,
   DescriptiveMap,
@@ -17,11 +16,22 @@ import { unified } from "unified";
 import remarkParse from "remark-parse";
 import remarkFrontmatter from "remark-frontmatter";
 import * as yaml from "js-yaml";
+import {
+  DslError,
+  LAYOUT_VALUES,
+  TRANSITION_VALUES,
+  isQuoted,
+  unquote,
+  splitTokens,
+  parseKeyValueTokens,
+} from "./dsl";
+import type { ParseContext } from "./dsl";
 
-type ParentNode = DescriptiveRoot | DescriptiveScene | DescriptiveContainer | DescriptiveEffect | DescriptiveInclude;
+type ParentNode = DescriptiveRoot | DescriptiveScene | DescriptiveContainer | DescriptiveInclude;
 
-const LAYOUT_VALUES = new Set(["series", "parallel", "transitionSeries", "transition"] as const);
-const TRANSITION_VALUES = new Set(["fade", "slide", "wipe", "flip", "clockWipe"] as const);
+/** Re-export so existing deep imports keep working. */
+export { DslError };
+export type { ParseContext };
 
 const TYPE_TOKENS: Record<string, string> = {
   image: "image",
@@ -30,7 +40,6 @@ const TYPE_TOKENS: Record<string, string> = {
   component: "component",
   rhythm: "rhythm",
   include: "include",
-  effect: "effect",
   map: "map",
   script: "script",
   series: "series",
@@ -38,290 +47,11 @@ const TYPE_TOKENS: Record<string, string> = {
   transitionSeries: "transitionSeries",
 };
 
-function isQuoted(token: string): boolean {
-  return token.length >= 2 && token.startsWith('"') && token.endsWith('"');
-}
-
-function unquote(token: string): string {
-  return isQuoted(token) ? token.slice(1, -1) : token;
-}
-
-function splitTokens(line: string): string[] {
-  const out: string[] = [];
-  let cur = "";
-  let quote = false;
-  let depth = 0;
-
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i]!;
-    if (ch === '"') {
-      cur += ch;
-      quote = !quote;
-      continue;
-    }
-    if (!quote && (ch === "{" || ch === "[" || ch === "(")) {
-      depth++;
-      cur += ch;
-      continue;
-    }
-    if (!quote && (ch === "}" || ch === "]" || ch === ")")) {
-      depth = Math.max(0, depth - 1);
-      cur += ch;
-      continue;
-    }
-    if (!quote && depth === 0 && /\s/.test(ch)) {
-      if (cur) {
-        out.push(cur);
-        cur = "";
-      }
-      continue;
-    }
-    cur += ch;
-  }
-  if (cur) out.push(cur);
-  return out;
-}
-
-function parseNumberMaybe(v: string): number | string | boolean {
-  if (v === "true") return true;
-  if (v === "false") return false;
-  const n = Number(v);
-  return Number.isFinite(n) ? n : v;
-}
-
-function parseWaypoints(raw: string): DescriptiveMapWaypoint[] {
-  const s = raw.trim();
-  if (!s.startsWith("[") || !s.endsWith("]")) return [];
-  const body = s.slice(1, -1).trim();
-  if (!body) return [];
-  return body.split(";").map((part) => {
-    const bits = splitTokens(part.replace(/,/g, " "));
-    const lat = Number(bits[0] ?? 0);
-    const lng = Number(bits[1] ?? 0);
-    const labelRaw = bits[2];
-    const label = labelRaw ? unquote(labelRaw) : undefined;
-    return { lat, lng, label };
-  });
-}
-
-/**
- * Parse a JSON-like props/imports string into an object or array.
- * Handles unquoted keys and single-quoted strings.
- */
-function parseProps(raw: string): unknown {
-  const s = raw.trim();
-  if (!s.startsWith("{") && !s.startsWith("[")) return {};
-  if (!s.endsWith("}") && !s.endsWith("]")) return {};
-  try {
-    return JSON.parse(s);
-  } catch {
-    // Lenient parse: add quotes around unquoted keys and string values.
-    // First pass: quote bare keys: {foo: → {"foo":
-    let normalized = s.replace(
-      /([{,]\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:(?=\s*["{[]?)/g,
-      '$1"$2":',
-    );
-    // Second pass: quote bare string values that aren't numbers, booleans, or null
-    // Matches :value followed by , } ] or end
-    normalized = normalized.replace(
-      /:\s*([a-zA-Z_$][a-zA-Z0-9_$.+-]*)\s*(?=[,}\]\s]|$)/g,
-      (match, value: string) => {
-        if (value === "true" || value === "false" || value === "null") return `: ${value}`;
-        if (/^[+-]?\d+(\.\d+)?$/.test(value)) return `: ${value}`;
-        return `: "${value}"`;
-      },
-    );
-    try {
-      return JSON.parse(normalized);
-    } catch {
-      // Last resort: eval (safe since this is a CLI tool)
-      try {
-        const result = (0, eval)("(" + s + ")");
-        return typeof result === "object" && result !== null ? result : {};
-      } catch {
-        return {};
-      }
-    }
-  }
-}
-
-/**
- * Parse an `on(when, code)` spec into an EventSpec object.
- * Positional arguments: first is the when value, second is the state code.
- * Example: on(start, slide1.current=1)
- */
-function parseOnSpec(raw: string): { when: string; state: string } | undefined {
-  const s = raw.trim();
-  if (!s.startsWith("(") || !s.endsWith(")")) return undefined;
-  const body = s.slice(1, -1).trim();
-  if (!body) return undefined;
-
-  const parts: string[] = [];
-  let current = "";
-  let depth = 0;
-  let inQuote = false;
-
-  for (let i = 0; i < body.length; i++) {
-    const ch = body[i]!;
-    if (ch === '"') { inQuote = !inQuote; current += ch; continue; }
-    if (!inQuote) {
-      if (ch === "(") { depth++; current += ch; continue; }
-      if (ch === ")") { depth--; current += ch; continue; }
-      if (ch === "," && depth === 0) {
-        parts.push(current.trim());
-        current = "";
-        continue;
-      }
-    }
-    current += ch;
-  }
-  if (current.trim()) parts.push(current.trim());
-
-  if (parts.length >= 2) {
-    return { when: parts[0]!, state: parts.slice(1).join(",") };
-  }
-  return undefined;
-}
-
-/**
- * Parse a markdown `effects=[...]` value into an array of EffectSpec strings.
- *
- * Supports:
- *   effects=[fadeIn]
- *   effects=[fadeIn, bounceIn]
- *   effects=[fadeIn(timingFunction:ease-out iterationCount:2)]
- *
- * Each element is kept as a string — the compiler's normalizeEffectSpec handles
- * parsing the paren-based params.
- */
-function parseEffects(raw: string): string[] {
-  const s = raw.trim();
-  if (!s.startsWith("[") || !s.endsWith("]")) return [];
-  const body = s.slice(1, -1).trim();
-  if (!body) return [];
-
-  const results: string[] = [];
-  let current = "";
-  let depth = 0;      // brackets
-  let parenDepth = 0; // parens for params
-  let inQuote = false;
-
-  for (let i = 0; i < body.length; i++) {
-    const ch = body[i]!;
-    if (ch === '"') { inQuote = !inQuote; current += ch; continue; }
-    if (!inQuote) {
-      if (ch === "[" || ch === "{") { depth++; current += ch; continue; }
-      if (ch === "]" || ch === "}") { depth = Math.max(0, depth - 1); current += ch; continue; }
-      if (ch === "(") { parenDepth++; current += ch; continue; }
-      if (ch === ")") { parenDepth = Math.max(0, parenDepth - 1); current += ch; continue; }
-      if (ch === "," && depth === 0 && parenDepth === 0) {
-        const trimmed = current.trim();
-        if (trimmed) results.push(trimmed);
-        current = "";
-        continue;
-      }
-    }
-    current += ch;
-  }
-  const trimmed = current.trim();
-  if (trimmed) results.push(trimmed);
-
-  return results;
-}
-
-function parseKeyValueTokens(tokens: string[]): Record<string, unknown> {
-  const out: Record<string, unknown> = {};
-  let i = 0;
-
-  while (i < tokens.length) {
-    const token = tokens[i]!;
-    const idx = token.indexOf(":");
-    if (idx > 0) {
-      const key = token.slice(0, idx);
-      let rawVal = token.slice(idx + 1);
-      // If value after colon is empty, peek at next quoted token
-      if (!rawVal && i + 1 < tokens.length) {
-        const next = tokens[i + 1]!;
-        if (isQuoted(next)) {
-          rawVal = next;
-          i++; // consume the next token
-        }
-      }
-      let val: unknown = unquote(rawVal);
-
-      if (key === "layout") {
-        const s = String(val);
-        if (LAYOUT_VALUES.has(s as any)) {
-          val = s;
-        } else {
-          throw new Error(`invalid layout value: ${s}`);
-        }
-      }
-      if (key === "transition") {
-        const s = String(val);
-        // Support "name(time)" format e.g. "fade(0.5)" to merge transition + transitionTime
-        const parenMatch = s.match(/^(\w+)\((\d+(?:\.\d+)?)\)$/);
-        if (parenMatch) {
-          const [, name, timeStr] = parenMatch;
-          if (!TRANSITION_VALUES.has(name as any)) {
-            throw new Error(`invalid transition value: ${name}`);
-          }
-          out["transition"] = name;
-          out["transitionTime"] = Number(timeStr);
-          i++;
-          continue;
-        }
-        if (!TRANSITION_VALUES.has(s as any)) {
-          throw new Error(`invalid transition value: ${s}`);
-        }
-      }
-
-      if (key === "waypoints") val = parseWaypoints(String(val));
-      else if (key === "props" || key === "imports" || key === "components") val = parseProps(String(val));
-      else if (key === "spots" || key === "customKeyframes") val = parseProps(String(val));
-      else if (key === "on") val = parseOnSpec(String(val));
-      else if (key === "effects") val = parseEffects(String(val));
-      else if (key !== "instruction" && key !== "tts" && key !== "stt" && key !== "jsx" && key !== "prompt") {
-        const strVal = String(val);
-        // If the value looks like an inline JSON object/array, parse it as props
-        if (strVal.startsWith("{") || strVal.startsWith("[")) {
-          val = parseProps(strVal);
-        } else {
-          val = parseNumberMaybe(strVal);
-        }
-      }
-      out[key] = val;
-      i++;
-      continue;
-    }
-
-    // Support key(value) pattern (no colon), e.g. on(start, slide1.current=1)
-    const funcMatch = token.match(/^(\w+)\(/);
-    if (funcMatch) {
-      const key = funcMatch[1]!;
-      const rawVal = token.slice(key.length);
-      let val: unknown = unquote(rawVal);
-
-      if (key === "on") val = parseOnSpec(rawVal);
-      else if (key === "effects") val = parseEffects(rawVal);
-      else val = parseNumberMaybe(rawVal);
-
-      out[key] = val;
-      i++;
-      continue;
-    }
-
-    throw new Error(`unrecognized token: ${token}`);
-  }
-
-  return out;
-}
-
-function parseHeaderScene(line: string): DescriptiveScene {
+function parseHeaderScene(line: string, lineNum?: number): DescriptiveScene {
   const text = line.replace(/^#+\s*/, "").trim();
   const tokens = splitTokens(text);
   const nameToken = tokens.shift();
-  const attrs = parseKeyValueTokens(tokens);
+  const attrs = parseKeyValueTokens(tokens, lineNum ? { line: lineNum, lineText: line } : undefined);
 
   // Scene name from heading text (first token), title from " - " separator
   let sceneName: string | undefined;
@@ -358,9 +88,10 @@ function pushChild(parent: ParentNode, child: DescriptiveNode): void {
   parent.children.push(child);
 }
 
-function parseNodeLine(content: string): DescriptiveNode {
+function parseNodeLine(content: string, lineNum?: number): DescriptiveNode {
+  const ctx: ParseContext | undefined = lineNum ? { line: lineNum, lineText: content } : undefined;
   const tokens = splitTokens(content);
-  if (tokens.length === 0) throw new Error("empty node line");
+  if (tokens.length === 0) throw new DslError("empty node line", ctx);
 
   let typeToken = tokens[0]!;
   let type = TYPE_TOKENS[typeToken];
@@ -383,12 +114,12 @@ function parseNodeLine(content: string): DescriptiveNode {
   }
 
   if (!type) {
-    throw new Error(`missing or unknown node type: ${typeToken}`);
+    throw new DslError(`missing or unknown node type: ${typeToken}`, { ...ctx, token: typeToken });
   }
 
   // Container bullets
   if (type === "series" || type === "parallel" || type === "transitionSeries") {
-    const attrs = parseKeyValueTokens(tokens);
+    const attrs = parseKeyValueTokens(tokens, ctx);
     const node: DescriptiveContainer = {
       type: type as any,
       id: attrs.id as any,
@@ -402,29 +133,7 @@ function parseNodeLine(content: string): DescriptiveNode {
     return node;
   }
 
-  // Effect can be container-like.
-  if (type === "effect") {
-    const attrs = parseKeyValueTokens(tokens);
-    // Compat: first positional token is the animation name
-    const animation = attrs.animation as string | undefined ?? firstPositional;
-    const node: DescriptiveEffect = {
-      type: "effect",
-      id: attrs.id as any,
-      instruction: attrs.instruction as any,
-      animation,
-      animationTimingFunction: attrs.animationTimingFunction as any,
-      animationIterationCount: attrs.animationIterationCount as any,
-      customKeyframes: attrs.customKeyframes as any,
-      duration: attrs.duration as any,
-      start: attrs.start as any,
-      effects: attrs.effects as any,
-      on: attrs.on as any,
-      children: [],
-    };
-    return node;
-  }
-
-  const attrs = parseKeyValueTokens(tokens);
+  const attrs = parseKeyValueTokens(tokens, ctx);
 
   switch (type) {
     case "image": {
@@ -476,7 +185,7 @@ function parseNodeLine(content: string): DescriptiveNode {
     }
     case "audio": {
       const src = firstPositional ?? (attrs.src as string | undefined);
-      if (!src) throw new Error("audio requires src");
+      if (!src) throw new DslError("audio requires src", ctx);
       const node: DescriptiveAudio = {
         type: "audio",
         id: attrs.id as any,
@@ -518,7 +227,7 @@ function parseNodeLine(content: string): DescriptiveNode {
     }
     case "rhythm": {
       const src = firstPositional ?? (attrs.src as string | undefined);
-      if (!src) throw new Error("rhythm requires src");
+      if (!src) throw new DslError("rhythm requires src", ctx);
       const node: DescriptiveRhythm = {
         type: "rhythm",
         id: attrs.id as any,
@@ -556,7 +265,7 @@ function parseNodeLine(content: string): DescriptiveNode {
     }
     case "script": {
       const raw = firstPositional ?? (attrs.script ? String(attrs.script) : undefined);
-      if (!raw) throw new Error("script requires text content");
+      if (!raw) throw new DslError("script requires text content", ctx);
       // Unquote if needed (standalone `- script "..."` preserves quotes in the token)
       const text = isQuoted(raw) ? unquote(raw) : raw;
       // Script is an alias for audio — creates an audio node with TTS-needed marker.
@@ -600,7 +309,7 @@ function parseNodeLine(content: string): DescriptiveNode {
       return node;
     }
     default:
-      throw new Error(`unsupported node type: ${type}`);
+      throw new DslError(`unsupported node type: ${type}`, { ...ctx, token: type });
   }
 }
 
@@ -638,7 +347,7 @@ export function parseMarkdownDescriptive(markdown: string): DescriptiveRoot {
           // Extract heading text from the raw source line (skip '##' prefix)
           const lineText = rawTextAtNode(lines, node);
           const headingContent = lineText.replace(/^#+\s*/, "");
-          const scene = parseHeaderScene(headingContent);
+          const scene = parseHeaderScene(headingContent, node.position?.start?.line);
 
           while (sceneStack.length && sceneStack[sceneStack.length - 1]!.level >= node.depth) {
             sceneStack.pop();
@@ -660,7 +369,10 @@ export function parseMarkdownDescriptive(markdown: string): DescriptiveRoot {
         if (!text.trim()) break;
 
         const tokens = splitTokens(text);
-        const attrs = parseKeyValueTokens(tokens);
+        const attrs = parseKeyValueTokens(
+          tokens,
+          node.position?.start?.line ? { line: node.position.start.line, lineText: text } : undefined,
+        );
 
         if (inSceneMetadata && currentScene) {
           applySceneMetadata(currentScene, attrs);
@@ -739,7 +451,7 @@ function processMDASTListItem(item: any, parent: ParentNode, lines: string[]): v
   const text = rawTextAtNode(lines, firstPara);
   if (!text.trim()) return;
 
-  const node = parseNodeLine(text);
+  const node = parseNodeLine(text, firstPara.position?.start?.line);
   pushChild(parent, node);
 
   // Process remaining children (code blocks as properties, extra paragraphs as properties, nested lists as sub-children)
@@ -753,7 +465,10 @@ function processMDASTListItem(item: any, parent: ParentNode, lines: string[]): v
       const extraText = rawTextAtNode(lines, child);
       if (extraText.trim()) {
         const tokens = splitTokens(extraText);
-        const attrs = parseKeyValueTokens(tokens);
+        const attrs = parseKeyValueTokens(
+          tokens,
+          child.position?.start?.line ? { line: child.position.start.line, lineText: extraText } : undefined,
+        );
         Object.assign(node, attrs);
       }
     } else if (child.type === "list") {
@@ -795,12 +510,6 @@ function applySceneMetadata(scene: DescriptiveScene, attrs: Record<string, unkno
         break;
       case "instruction":
         scene.instruction = String(v);
-        break;
-      case "script":
-        // script key on scenes is no longer supported — ignored
-        break;
-      case "tts":
-        scene.tts = v as any;
         break;
       case "on":
         scene.on = v as any;

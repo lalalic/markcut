@@ -335,13 +335,9 @@ function hasScript(root) {
 
       // ── Check 1: JSX components referenced in imports ──────────────────
       const importedNames = new Set(
-        (descriptive.imports ?? [])
-          .map((e) => e.name)
-          .concat(
-            descriptive.importsBlock
-              ? parseImportsBlock(descriptive.importsBlock).map((e) => e.name)
-              : [],
-          ),
+        descriptive.importsBlock
+          ? parseImportsBlock(descriptive.importsBlock).map((e) => e.name)
+          : [],
       );
 
       function walk(nodes) {

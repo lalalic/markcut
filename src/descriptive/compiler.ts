@@ -17,7 +17,7 @@ import type {
 import { uid } from "../utils/index";
 
 export interface CompileOptions {
-  defaults?: Partial<Record<"image" | "video" | "audio" | "component" | "rhythm" | "include" | "map" | "effect", number>>;
+  defaults?: Partial<Record<"image" | "video" | "audio" | "component" | "rhythm" | "include" | "map", number>>;
 }
 
 /** A single effect spec — either a bare animation name or an object with options. */
@@ -122,19 +122,9 @@ export interface DescriptiveScene extends DescriptiveBaseNode {
   type: "scene";
   name?: string;
   title?: string;
-  tts?: string;
   layout?: "series" | "parallel" | "transitionSeries";
   transition?: string;
   transitionTime?: number;
-  children: DescriptiveNode[];
-}
-
-export interface DescriptiveEffect extends DescriptiveBaseNode {
-  type: "effect";
-  animation?: string;
-  animationTimingFunction?: "linear" | "ease" | "ease-in" | "ease-out" | "ease-in-out";
-  animationIterationCount?: number;
-  customKeyframes?: Record<string, Record<string, string>>;
   children: DescriptiveNode[];
 }
 
@@ -172,7 +162,6 @@ export type DescriptiveNode =
   | DescriptiveRhythm
   | DescriptiveInclude
   | DescriptiveScene
-  | DescriptiveEffect
   | DescriptiveMap
   | DescriptiveContainer;
 
@@ -193,8 +182,8 @@ export interface DescriptiveRoot {
   transitionTime?: number;
   /** Global subtitle overlay. src = VTT file with absolute timestamps. Set by resolveScripts pipeline. */
   subtitle?: SubtitleOverlay;
-  /** Frontmatter imports: array of named component registrations. */
-  imports?: ImportEntry[];
+  /** @deprecated Unused — use importsBlock instead. DescriptiveRoot-level imports are no longer supported. */
+  imports?: never;
   /** Raw imports block source (from \`\`\`imports code fence). Parsed by parseImportsBlock. */
   importsBlock?: string;
   children: DescriptiveNode[];
@@ -219,10 +208,6 @@ function isScene(node: DescriptiveNode): node is DescriptiveScene {
 
 function isInclude(node: DescriptiveNode): node is DescriptiveInclude {
   return node.type === "include";
-}
-
-function isEffect(node: DescriptiveNode): node is DescriptiveEffect {
-  return node.type === "effect";
 }
 
 function isMap(node: DescriptiveNode): node is DescriptiveMap {
@@ -280,6 +265,16 @@ function normalizeEffectSpec(spec: EffectSpec): {
   customKeyframes?: Record<string, Record<string, string>>;
 } {
   if (typeof spec === "string") {
+    const trimmed = spec.trim();
+    // Inline JSON object form: supports customKeyframes and other properties
+    // e.g. effects:[{animation:"custom", customKeyframes:{...}}]
+    if (trimmed.startsWith("{")) {
+      try {
+        return JSON.parse(trimmed);
+      } catch {
+        return { animation: trimmed };
+      }
+    }
     // Parse optional positional params in parentheses.
     // Syntax: fadeIn  |  fadeIn(1)  |  fadeIn(1,ease-in)  |  fadeIn(1, ease-in, 1)
     // Order: (duration, timingFunction, iterationCount)
@@ -425,7 +420,7 @@ function wrapWithEffects(
   return { stream: currentStream, duration: result.duration };
 }
 
-function compileLeaf(node: Exclude<DescriptiveNode, DescriptiveContainer | DescriptiveScene | DescriptiveInclude | DescriptiveEffect>, ctx: CompileContext, parentKind: "series" | "parallel" | "transitionSeries"): CompileResult {
+function compileLeaf(node: Exclude<DescriptiveNode, DescriptiveContainer | DescriptiveScene | DescriptiveInclude>, ctx: CompileContext, parentKind: "series" | "parallel" | "transitionSeries"): CompileResult {
   const id = node.id ?? uid();
   const start = parentKind === "parallel" ? Math.max(0, node.start ?? 0) : 0;
   const duration = deriveLeafDuration(node, ctx);
@@ -559,8 +554,6 @@ function compileChildren(
         result = compileScene(child, ctx, parentKind);
       } else if (isInclude(child)) {
         result = compileInclude(child, ctx, parentKind);
-      } else if (isEffect(child)) {
-        result = compileEffect(child, ctx, parentKind);
       } else if (isRhythm(child)) {
         result = compileRhythm(child, ctx, parentKind);
       } else if (isMap(child)) {
@@ -569,11 +562,7 @@ function compileChildren(
         result = compileLeaf(child, ctx, parentKind);
       }
       // Apply direct effects on any node (descriptive-layer shorthand).
-      // Effect wrapper nodes (type: "effect") already handle their own effects
-      // via compileEffect, so skip them to avoid double-wrapping.
-      if (!isEffect(child)) {
-        result = wrapWithEffects(child, result, parentKind);
-      }
+      result = wrapWithEffects(child, result, parentKind);
       return result;
     });
 }
@@ -699,48 +688,6 @@ function compileInclude(
   return { stream, duration: end };
 }
 
-function compileEffect(
-  node: DescriptiveEffect,
-  ctx: CompileContext,
-  parentKind: "series" | "parallel" | "transitionSeries",
-): CompileResult {
-  const id = node.id ?? uid();
-  ensureUniqueIds(node.children, id);
-  const children = compileChildren(node.children, ctx, "parallel");
-  const childrenDuration = aggregateDuration(children, "parallel");
-
-  let duration = node.duration ?? 0;
-  if (!duration) duration = childrenDuration;
-  if (!duration) duration = ctx.defaults.effect;
-
-  const start = parentKind === "parallel" ? Math.max(0, node.start ?? 0) : 0;
-  const end = start + duration;
-
-  const stream: Effect = {
-    id,
-    type: "effect",
-    style: node.style,
-    visible: node.visible ?? true,
-    isBackground: node.isBackground,
-    animation: node.animation,
-    animationTimingFunction: node.animationTimingFunction,
-    animationIterationCount: node.animationIterationCount ?? 1,
-    customKeyframes: node.customKeyframes,
-    children: children.map((c) => c.stream),
-    actions: [
-      {
-        id: uid(),
-        start,
-        end,
-      },
-    ],
-    durationInSeconds: end,
-    ...pickOn(node),
-  };
-
-  return { stream, duration: end };
-}
-
 function compileRhythm(
   node: DescriptiveRhythm,
   ctx: CompileContext,
@@ -777,9 +724,7 @@ function compileRhythm(
           ? compileScene(childWithTiming, ctx, "parallel")
           : isInclude(childWithTiming)
             ? compileInclude(childWithTiming, ctx, "parallel")
-            : isEffect(childWithTiming)
-              ? compileEffect(childWithTiming, ctx, "parallel")
-              : isRhythm(childWithTiming)
+            : isRhythm(childWithTiming)
                 ? compileRhythm(childWithTiming, ctx, "parallel")
                 : compileLeaf(childWithTiming, ctx, "parallel");
       compiledChildren.push(compiled.stream);
@@ -1044,12 +989,9 @@ export function extractDependencySpecs(source: string): string[] {
 function resolveComponentSources(root: DescriptiveRoot): Map<string, ResolvedImport> {
   const registry = new Map<string, ResolvedImport>();
 
-  // If importsBlock is present, parse it into ImportEntry[] (overrides frontmatter imports)
-  let entries = root.imports;
-  if (root.importsBlock) {
-    entries = parseImportsBlock(root.importsBlock);
-  }
-  if (!entries || !entries.length) return registry;
+  if (!root.importsBlock) return registry;
+  const entries = parseImportsBlock(root.importsBlock);
+  if (!entries.length) return registry;
 
   for (const entry of entries) {
     if (!entry.name) continue;

@@ -159,7 +159,7 @@ For compatibility, `import { Name } from "spec"` also works and produces the sam
 | `style` | inline CSS applied to the node's container div e.g. `"border-radius:12px"` | any |
 | `visible` | bool default true; `false` hides without removing | any |
 | `isBackground` | bool; loops to fill parent duration; does NOT count toward container duration — use for BGM or looping bg imagery | any |
-| `on` | `on(when, state)` event spec; fires JS expression at a specific frame, mutating registered component state | any | See [Events](#events) section |
+| `on` | `on:(when, state)` event spec; fires JS expression at a specific frame, mutating registered component state | any | See [Events](#events) section |
 | `id` | unique string within parent scope | any |
 
 ## Type Catalog
@@ -389,11 +389,11 @@ The `id` becomes the variable name available in event expressions.
 
 ### Firing an event
 
-Use `on(when, state)` on any node (audio, video, image, component, scene, etc.):
+Use `on:(when, state)` on any node (audio, video, image, component, scene, etc.):
 
 ```md
-- script "Narration 1" on(start, slide1.current=0)
-- script "Narration 2" on(start, slide1.current++)
+- script "Narration 1" on:(start, slide1.current=0)
+- script "Narration 2" on:(start, slide1.current++)
 ```
 
 The `when` argument selects the target frame, and `state` is a JavaScript expression evaluated with all registered component proxies in scope.
@@ -414,9 +414,9 @@ Any percentage (`0%`–`100%`) or seconds value (`0s`, `1.5s`, `10s`) works.
 Any valid JavaScript expression — assign values, increment counters, toggle booleans:
 
 ```md
-- script "Narration" on(start, slide1.current=0)
-- script "Beat2" on(start, slide1.current++)
-- script "Done" on(end, slide1.visible=false)
+- script "Narration" on:(start, slide1.current=0)
+- script "Beat2" on:(start, slide1.current++)
+- script "Done" on:(end, slide1.visible=false)
 ```
 
 The expression is evaluated with all registered component IDs as scope variables. Each component variable is a Proxy whose property setter triggers a React re-render.
@@ -500,7 +500,7 @@ tween(#000, #FFF)             — color interpolation
 - [ ] Inline component definitions go inside `` ~~~js imports `` as `export function Name(...) { ... }`.
 - [ ] Scene names are single tokens (no spaces) — use `title:"..."` for multi-word titles.
 - [ ] Code fence properties are indented under their parent bullet.
-- [ ] Event targets (`id:name` on component) match the `id` used in `on(when, id.prop=value)` expressions.
+- [ ] Event targets (`id:name` on component) match the `id` used in `on:(when, id.prop=value)` expressions.
 
 ## Validation with CLI
 

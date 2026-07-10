@@ -11,10 +11,8 @@ layout:parallel
 - component duration:2 jsx:"<div style={{color:'red'}}>Inline</div>"
 ## Effects
 layout:parallel
-- effect animation:fadeIn duration:3
-  - image src:card.jpg duration:2 fit:cover
-- effect animation:bounceIn animationTimingFunction:ease-out animationIterationCount:2
-  - image src:badge.png duration:1
+- image src:card.jpg duration:2 fit:cover effects:[fadeIn(3)]
+- image src:badge.png duration:1 effects:[bounceIn(,ease-out,2)]
 ## Rhythm
 layout:parallel
 - rhythm src:beat.mp3 spots:[0.5,1.2,1.9,2.8] volume:0.8

@@ -28,12 +28,9 @@ layout:transitionSeries transition:fade transitionTime:0.5
 - video src:clips/moment2.mp4 startFrom:0.5 endAt:4.5 volume:0.9
 ## AnimatedEffects
 layout:parallel
-- effect animation:fadeInUp duration:2
-  - image src:cards/card1.png duration:1.5 fit:contain
-- effect animation:zoomIn duration:2 animationTimingFunction:ease-out
-  - image src:cards/card2.png duration:1.5 fit:contain
-- effect animation:flipInX duration:2 animationIterationCount:1
-  - image src:cards/card3.png duration:1.5 fit:contain
+- image src:cards/card1.png duration:1.5 fit:contain effects:[fadeInUp(2)]
+- image src:cards/card2.png duration:1.5 fit:contain effects:[zoomIn(2,ease-out)]
+- image src:cards/card3.png duration:1.5 fit:contain effects:[flipInX(2,,1)]
 ## InteractiveMap
 layout:parallel
 - script "Our journey across the continent"

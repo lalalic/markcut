@@ -102,16 +102,13 @@ export function Hello({ name }) {
     expect(entries[4].jsx).toContain("export function Hello");
   });
 
-  it("importsBlock overrides frontmatter imports when both present", () => {
-    // importsBlock should take precedence
+  it("resolves components from importsBlock", () => {
     const compiled = compileDescriptiveRoot({
       layout: "series",
-      imports: [{ name: "OldComp", from: "npm:old" }],
       importsBlock: `export { PieChart } from "npm:recharts"`,
       children: [{ type: "component", jsx: "<PieChart />", duration: 1 }],
     });
     const c = compiled.children[0] as any;
-    // Per-node imports are no longer populated — components come from root.imports
     expect(c.imports).toBeUndefined();
   });
 });
@@ -283,17 +280,16 @@ describe("compileDescriptiveRoot", () => {
     expect(includeInline.actions[0].end).toBe(3);
   });
 
-  it("covers remaining types: effect and map", () => {
+  it("covers remaining types: effect (via effects:[]) and map", () => {
     const compiled = compileDescriptiveRoot({
       layout: "parallel",
       children: [
         {
-          id: "fx",
-          type: "effect",
-          animation: "fadeIn",
-          children: [
-            { id: "fx-img", type: "image", src: "fx.jpg", duration: 2 },
-          ],
+          id: "fx-img",
+          type: "image",
+          src: "fx.jpg",
+          duration: 2,
+          effects: ["fadeIn"],
         },
         {
           id: "map-1",
@@ -309,7 +305,8 @@ describe("compileDescriptiveRoot", () => {
       ],
     });
 
-    const effect = compiled.children.find((c: any) => c.id === "fx") as any;
+    // effects:[] on image compiles into Effect wrapper stream
+    const effect = compiled.children[0] as any;
     expect(effect.type).toBe("effect");
     expect(effect.actions[0].start).toBe(0);
     expect(effect.actions[0].end).toBe(2);
@@ -436,23 +433,21 @@ describe("compileDescriptiveRoot", () => {
     expect(inner.children[0].type).toBe("image");
   });
 
-  it("uses existing effect wrapper (type:effect) and ignores effects on it", () => {
-    // Explicit effect wrapper nodes should still work unchanged
+  it("compiles effects:[] on image into Effect wrapper stream", () => {
     const compiled = compileDescriptiveRoot({
       layout: "series",
       children: [
         {
-          id: "fx-wrap",
-          type: "effect",
-          animation: "fadeIn",
-          duration: 3,
-          children: [
-            { id: "inner", type: "image", src: "inner.jpg", duration: 2 },
-          ],
+          id: "inner",
+          type: "image",
+          src: "inner.jpg",
+          duration: 2,
+          effects: ["fadeIn"],
         },
       ],
     });
 
+    // effects:[fadeIn] on image compiles into Effect wrapper
     const fx = compiled.children[0] as any;
     expect(fx.type).toBe("effect");
     expect(fx.animation).toBe("fadeIn");
@@ -843,18 +838,16 @@ describe("compileDescriptiveRoot", () => {
     expect(inc.actions[0].end).toBe(3);
   });
 
-  it("compiles effect wrapping children", () => {
+  it("compiles effects:[] with named params (duration, timingFunction, iterationCount)", () => {
     const compiled = compileDescriptiveRoot({
       layout: "series",
       children: [
         {
-          id: "fx-wrap",
-          type: "effect",
-          animation: "fadeIn",
-          duration: 3,
-          children: [
-            { id: "inner", type: "image", src: "inner.jpg", duration: 2 },
-          ],
+          id: "inner",
+          type: "image",
+          src: "inner.jpg",
+          duration: 2,
+          effects: [{ animation: "fadeIn", duration: 3 }],
         },
       ],
     });

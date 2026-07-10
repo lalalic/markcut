@@ -184,10 +184,12 @@ describe("all-nodes fixture", () => {
     const parsed = parseMarkdownDescriptive(fx.source);
     const fxScene = parsed.children[2] as any;
     const e1 = fxScene.children[0];
-    expect(e1.type).toBe("effect");
-    expect(e1.animation).toBe("fadeIn");
-    expect(e1.children).toHaveLength(1);
-    expect(e1.children[0].type).toBe("image");
+    expect(e1.type).toBe("image");
+    expect(e1.effects).toEqual(["fadeIn(3)"]);
+
+    const e2 = fxScene.children[1];
+    expect(e2.type).toBe("image");
+    expect(e2.effects).toEqual(["bounceIn(,ease-out,2)"]);
   });
 
   it("parses rhythm with spots", () => {
@@ -453,30 +455,56 @@ describe("nested-scenes fixture", () => {
 describe("effects fixture", () => {
   const fx = loadFixture("effects");
 
-  it("parses various effect types", () => {
+  it("parses effects as arrays on leaf nodes", () => {
     const parsed = parseMarkdownDescriptive(fx.source);
     expect(parsed.children).toHaveLength(4);
 
     const fades = parsed.children[0] as any;
-    expect(fades.children[0].animation).toBe("fadeIn");
-    expect(fades.children[1].animation).toBe("fadeOut");
+    expect(fades.children[0].effects).toEqual(["fadeIn(3)"]);
+    expect(fades.children[1].effects).toEqual(["fadeOut(3)"]);
+    expect(fades.children[0].type).toBe("image");
+    expect(fades.children[1].type).toBe("image");
 
     const slides = parsed.children[1] as any;
-    expect(slides.children[0].animation).toBe("slideInLeft");
-    expect(slides.children[1].animation).toBe("slideInRight");
+    expect(slides.children[0].effects).toEqual(["slideInLeft(3)"]);
+    expect(slides.children[1].effects).toEqual(["slideInRight(3)"]);
 
     const attention = parsed.children[2] as any;
-    expect(attention.children[0].animation).toBe("bounceIn");
-    expect(attention.children[0].animationTimingFunction).toBe("ease-out");
-    expect(attention.children[0].animationIterationCount).toBe(2);
-    expect(attention.children[1].animation).toBe("pulse");
-    expect(attention.children[1].animationTimingFunction).toBe("ease-in-out");
+    expect(attention.children[0].effects).toEqual(["bounceIn(,ease-out,2)"]);
+    expect(attention.children[1].effects).toEqual(["pulse(,ease-in-out)"]);
   });
 
-  it("parses custom keyframes", () => {
+  it("compiles effects into Effect wrapper streams", () => {
     const parsed = parseMarkdownDescriptive(fx.source);
-    const custom = parsed.children[3] as any;
-    const e = custom.children[0];
+    const compiled = compileDescriptiveRoot(parsed);
+
+    // Fades: two images with fadeIn/fadeOut — each is an Effect wrapper
+    const fadesScene = compiled.children[0] as any;
+    expect(fadesScene.children[0].type).toBe("effect");
+    expect(fadesScene.children[0].animation).toBe("fadeIn");
+    expect(fadesScene.children[1].type).toBe("effect");
+    expect(fadesScene.children[1].animation).toBe("fadeOut");
+
+    // Slides: slideInLeft / slideInRight
+    const slidesScene = compiled.children[1] as any;
+    expect(slidesScene.children[0].animation).toBe("slideInLeft");
+    expect(slidesScene.children[1].animation).toBe("slideInRight");
+
+    // Attention: bounceIn + ease-out + 2 iterations
+    const attnScene = compiled.children[2] as any;
+    expect(attnScene.children[0].animation).toBe("bounceIn");
+    expect(attnScene.children[0].animationTimingFunction).toBe("ease-out");
+    expect(attnScene.children[0].animationIterationCount).toBe(2);
+    expect(attnScene.children[1].animation).toBe("pulse");
+    expect(attnScene.children[1].animationTimingFunction).toBe("ease-in-out");
+  });
+
+  it("compiles custom keyframes via JSON object effects syntax", () => {
+    const parsed = parseMarkdownDescriptive(fx.source);
+    const compiled = compileDescriptiveRoot(parsed);
+    const customScene = compiled.children[3] as any;
+    const e = customScene.children[0]; // Effect wrapper
+    expect(e.type).toBe("effect");
     expect(e.animation).toBe("custom");
     expect(e.customKeyframes).toBeDefined();
     expect(e.customKeyframes["0"]).toBeDefined();
