@@ -558,35 +558,20 @@ function parseImportsBlock(source) {
     }
     const funcExport = /^export(?:\s+default)?\s+function\s+(\w+)\s*\(/.exec(line);
     if (funcExport) {
-      const name = funcExport[1];
-      const bodyLines = [line];
+      entries.push({ name: funcExport[1] });
       let braceDepth = (line.match(/{/g) || []).length - (line.match(/}/g) || []).length;
       i++;
       while (i < lines.length && braceDepth > 0) {
         const bl = lines[i];
-        bodyLines.push(bl);
         braceDepth += (bl.match(/{/g) || []).length;
         braceDepth -= (bl.match(/}/g) || []).length;
         i++;
       }
-      const usedImports = importedNames.size > 0 ? extractImportLines(source, name) : "";
-      entries.push({ name, jsx: usedImports + bodyLines.join("\n") });
       continue;
     }
     i++;
   }
   return entries;
-}
-function extractImportLines(source, functionName) {
-  const lines = [];
-  for (const line of source.split("\n")) {
-    const trimmed = line.trim();
-    if (/^import\s+["'`]/.test(trimmed) && !/^import\s+[\w{]/.test(trimmed)) continue;
-    if (/^import\s/.test(trimmed)) {
-      lines.push(trimmed.replace(/from\s+["'`]npm:([^"'`]+)["'`]/g, 'from "$1"'));
-    }
-  }
-  return lines.length > 0 ? lines.join("\n") + "\n" : "";
 }
 function extractDependencySpecs(source) {
   const specs = [];
@@ -605,25 +590,11 @@ function extractDependencySpecs(source) {
   return specs;
 }
 function resolveComponentSources(root) {
-  const registry = /* @__PURE__ */ new Map();
-  if (!root.importsBlock) return registry;
+  if (!root.importsBlock) return /* @__PURE__ */ new Set();
   const entries = parseImportsBlock(root.importsBlock);
-  if (!entries.length) return registry;
-  for (const entry of entries) {
-    if (!entry.name) continue;
-    const resolved = { exports: entry.exports };
-    if (entry.from) {
-      resolved.src = entry.from.trim();
-    }
-    if (entry.jsx) {
-      resolved.definitionJsx = entry.jsx;
-    }
-    registry.set(entry.name, resolved);
-  }
-  return registry;
+  return new Set(entries.map((e) => e.name).filter(Boolean));
 }
-function warnUnregisteredComponents(root, registry) {
-  const registeredNames = new Set(registry.keys());
+function warnUnregisteredComponents(root, registeredNames) {
   const tagRe = /<\s*\/?\s*([A-Z][a-zA-Z0-9]*)/g;
   const visit = (node2) => {
     if (node2.type === "component" && node2.jsx) {
@@ -696,7 +667,6 @@ var init_compiler = __esm({
       effect: 2
     };
     VALID_TRANSITIONS = /* @__PURE__ */ new Set(["fade", "slide", "wipe", "flip", "clockWipe"]);
-    ]);
   }
 });
 

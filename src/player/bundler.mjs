@@ -126,10 +126,9 @@ export async function bundleFromEntries(entries, extraSpecs = [], rawSource = nu
 
   // Separate npm imports from inline function definitions
   const npmDeps = [];
-  const inlineFuncs = [];
 
+  // Strip npm: prefixes from the raw source so esbuild can resolve them
   if (hasRaw) {
-    // Strip npm: prefixes from the raw source so esbuild can resolve them
     rawSource = rawSource.replace(/from\s+["'`]npm:([^"'`]+)["'`]/g, 'from "$1"');
 
     // Extract deps from raw source using the same pattern as extractDependencySpecs
@@ -151,9 +150,8 @@ export async function bundleFromEntries(entries, extraSpecs = [], rawSource = nu
         const { pkgName, importSpecifier } = parseNpmSpec(entry.from);
         const exportName = entry.exports || "default";
         npmDeps.push({ name: entry.name, pkgName, importSpecifier, exportName });
-      } else if (entry.jsx) {
-        inlineFuncs.push({ name: entry.name, source: entry.jsx });
       }
+      // entry.name-only entries (inline function defs) are handled by rawSource — no separate inline file needed
     }
   }
 
@@ -167,33 +165,12 @@ export async function bundleFromEntries(entries, extraSpecs = [], rawSource = nu
     }
   }
 
-  // Extract dependencies from inline function sources.
-  for (const inline of inlineFuncs) {
-    const re = /from\s+["'`](npm:)?([^"'`\s]+)["'`]/g;
-    let m;
-    while ((m = re.exec(inline.source)) !== null) {
-      const { pkgName, importSpecifier } = parseNpmSpec(m[2]);
-      if (pkgName.startsWith(".") || /^https?:/.test(pkgName)) continue;
-      if (!existingPkgs.has(pkgName)) {
-        existingPkgs.add(pkgName);
-        npmDeps.push({ name: importSpecifier, pkgName, importSpecifier, exportName: null });
-      }
-    }
-  }
-
-  if (npmDeps.length === 0 && inlineFuncs.length === 0 && !hasRaw) return { url: null, exports: [] };
+  if (npmDeps.length === 0 && !hasRaw) return { url: null, exports: [] };
 
   // Create a stable hash from sorted inputs
-  const sortedDeps = [...npmDeps].sort((a, b) => a.name.localeCompare(b.name));
-  const sortedFuncs = [...inlineFuncs].sort((a, b) => a.name.localeCompare(b.name));
-  const all = [...sortedDeps, ...sortedFuncs];
   const hashInput = hasRaw
     ? rawSource
-    : all.map(e => {
-        const kind = e.source ? "inline:" : "npm:";
-        const detail = e.source || e.importSpecifier + "+" + e.exportName;
-        return e.name + "=" + kind + detail;
-      }).join(",");
+    : sortedDeps.map(d => d.name + "=npm:" + d.importSpecifier + "+" + d.exportName).join(",");
   const hash = createHash("md5").update(hashInput).digest("hex").slice(0, 8);
 
   if (BUNDLED.has(hash)) return BUNDLED.get(hash);
@@ -208,37 +185,10 @@ export async function bundleFromEntries(entries, extraSpecs = [], rawSource = nu
   }
   writeFileSync(join(dir, "package.json"), JSON.stringify(pkgJson, null, 2));
 
-  // Build index.js / index.jsx
-  let lines;
-  let entryFile = "index.js";
-  if (hasRaw) {
-    // Use raw source directly as the entry — preserves console.log, imports, exports, everything
-    // Name it .jsx so esbuild enables JSX parsing automatically
-    entryFile = "index.jsx";
-    lines = [rawSource];
-  } else {
-    lines = [];
-    for (const inline of inlineFuncs) {
-      writeFileSync(join(dir, inline.name + ".jsx"), inline.source + "\n");
-      lines.push("export { " + inline.name + " } from \"./" + inline.name + '.jsx";');
-    }
-    for (const dep of npmDeps) {
-      if (dep.exportName === null) {
-        lines.push('import "' + dep.importSpecifier + '";');
-        continue;
-      }
-      if (dep.exportName === "default") {
-        lines.push(
-          'import * as __' + dep.name + ' from "' + dep.importSpecifier + '";' +
-          '\nconst ' + dep.name + ' = __' + dep.name + '.default ?? __' + dep.name + '.' + dep.name +
-          ' ?? Object.values(__' + dep.name + ').find(v => typeof v === "function" || v?.$$typeof);' +
-          '\nexport { ' + dep.name + ' };'
-        );
-      } else {
-        lines.push('export { ' + dep.exportName + ' as ' + dep.name + ' } from "' + dep.importSpecifier + '";');
-      }
-    }
-  }
+  // Build index.jsx — always use rawSource (the original imports block content)
+  // Name it .jsx so esbuild enables JSX parsing automatically
+  const lines = hasRaw ? [rawSource] : [];
+  const entryFile = "index.jsx";
   writeFileSync(join(dir, entryFile), lines.join("\n\n") + "\n");
 
   // npm install (skip if node_modules already exists)
@@ -305,7 +255,7 @@ export async function bundleFromEntries(entries, extraSpecs = [], rawSource = nu
       }
     }
   } else {
-    exportNames = all.filter(e => e.exportName !== null).map(e => e.name);
+    exportNames = (entries || []).map(e => e.name).filter(Boolean);
   }
 
   const result = {

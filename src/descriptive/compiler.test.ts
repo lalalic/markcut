@@ -24,7 +24,6 @@ describe("parseImportsBlock", () => {
     const entries = parseImportsBlock(`export function Hello({ name }) {\n  return <div>Hello {name}</div>;\n}`);
     expect(entries).toHaveLength(1);
     expect(entries[0].name).toBe("Hello");
-    expect(entries[0].jsx).toContain("export function Hello");
     expect(entries[0].from).toBeUndefined();
   });
 
@@ -32,7 +31,6 @@ describe("parseImportsBlock", () => {
     const entries = parseImportsBlock(`export default function Greeting({ text }) {\n  return <h1>{text}</h1>;\n}`);
     expect(entries).toHaveLength(1);
     expect(entries[0].name).toBe("Greeting");
-    expect(entries[0].jsx).toContain("export default function Greeting");
   });
 
   it("handles mixed block with re-exports and inline functions", () => {
@@ -45,7 +43,6 @@ export function Hello() {
     expect(entries[0]).toEqual({ name: "PieChart", from: "npm:recharts", exports: "PieChart" });
     expect(entries[1]).toEqual({ name: "StatCounter", from: "npm:stat-counter", exports: "StatCounter" });
     expect(entries[2].name).toBe("Hello");
-    expect(entries[2].jsx).toContain("export function Hello");
   });
 
   it("returns empty array for empty input", () => {
@@ -99,7 +96,6 @@ export function Hello({ name }) {
     expect(entries[2]).toEqual({ name: "LineChart", from: "npm:recharts", exports: "LineChart" });
     expect(entries[3]).toEqual({ name: "Counter", from: "npm:stat-counter", exports: "StatCounter" });
     expect(entries[4].name).toBe("Hello");
-    expect(entries[4].jsx).toContain("export function Hello");
   });
 
   it("resolves components from importsBlock", () => {
@@ -1048,10 +1044,7 @@ export function Hello() { return null; }`);
 }`);
     expect(entries).toHaveLength(1);
     expect(entries[0].name).toBe("Card");
-    expect(entries[0].jsx).toContain("export function Card");
-    expect(entries[0].jsx).toContain("padding: 10");
-    expect(entries[0].jsx).toContain("margin: 5");
-    expect(entries[0].jsx).toContain("{children}");
+    expect(entries[0].from).toBeUndefined();
   });
 
   it("handles default import with as alias followed by bare re-export", () => {

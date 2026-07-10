@@ -88,8 +88,9 @@ export interface DescriptiveComponent extends DescriptiveBaseNode {
   jsx: string;
 }
 
-/** Single entry in the frontmatter `imports:` array.
- *  Defines where a component comes from and how to load it. */
+/** Parsed component registration entry from a `~~~js imports` block.
+ *  Remote imports have `from`; inline function defs only have `name`.
+ *  The actual source text is preserved in the original importsBlock string. */
 export interface ImportEntry {
   /** Component name (used as JSX tag and lookup key). */
   name: string;
@@ -97,10 +98,6 @@ export interface ImportEntry {
   from?: string;
   /** Named export to pick from the module (default: "default"). */
   exports?: string;
-  /** Inline JSX component definition source (alternative to `from`).
-   *  e.g. "export default ({text}) => <span>{text}</span>" */
-  jsx?: string;
-
 }
 
 export interface DescriptiveRhythm extends DescriptiveBaseNode {
@@ -786,24 +783,6 @@ function compileContainer(node: DescriptiveContainer, ctx: CompileContext, paren
 }
 
 // ── Frontmatter imports resolver ──────────────────────────────────────────
-//
-// Resolves `root.imports` (ImportEntry[]) and attaches the registry to every
-// component node so `compileLeaf` can build the runtime `imports` map.
-//
-// Each ImportEntry can have:
-//   - `from:`  — source spec (npm:/git:/github:/https:/path) → resolved to URL
-//   - `jsx:`   — inline JSX component definition source
-//   - `exports:` — named export to pick (default: "default")
-
-/** Resolved import data carried through to compilation. */
-interface ResolvedImport {
-  /** Resolved URL from `from:` spec. */
-  src?: string;
-  /** Inline component definition JSX source (from imports entry `jsx:`). */
-  definitionJsx?: string;
-  /** Named export to pick from the module. */
-  exports?: string;
-}
 
 /**
  * Parse an \`\`\`imports code block into ImportEntry[].
@@ -907,25 +886,19 @@ export function parseImportsBlock(source: string): ImportEntry[] {
     }
 
     // export function Name(...) { ... }  or  export default function Name(...) { ... }
+    // Only the name is extracted for validation — the raw source is used by the bundler.
     const funcExport = /^export(?:\s+default)?\s+function\s+(\w+)\s*\(/.exec(line);
     if (funcExport) {
-      const name = funcExport[1]!;
-      const bodyLines: string[] = [line];
+      entries.push({ name: funcExport[1]! });
+      // Skip the function body (braces tracked)
       let braceDepth = (line.match(/{/g) || []).length - (line.match(/}/g) || []).length;
       i++;
       while (i < lines.length && braceDepth > 0) {
         const bl = lines[i]!;
-        bodyLines.push(bl);
         braceDepth += (bl.match(/{/g) || []).length;
         braceDepth -= (bl.match(/}/g) || []).length;
         i++;
       }
-      // Prepend relevant import statements above the function so the bundled
-      // module has access to imported names (e.g. ReactMarkdown from react-markdown)
-      const usedImports = importedNames.size > 0
-        ? extractImportLines(source, name)
-        : "";
-      entries.push({ name, jsx: usedImports + bodyLines.join("\n") });
       continue;
     }
 
@@ -933,28 +906,6 @@ export function parseImportsBlock(source: string): ImportEntry[] {
   }
 
   return entries;
-}
-
-/**
- * Extract import lines from the source that are likely used by the given export function.
- * Finds `import` statements and returns them as a string to prepend to the function body.
- * Strips `npm:` prefix from package specifiers for esbuild compatibility.
- *
- * Skips bare side-effect imports (`import "spec"`) since they don't bring any names
- * into scope and are already handled as bare imports in the generated index.js bundle.
- */
-function extractImportLines(source: string, functionName: string): string {
-  const lines: string[] = [];
-  for (const line of source.split("\n")) {
-    const trimmed = line.trim();
-    // Skip bare side-effect imports — they don't bind names and are handled by the bundler
-    if (/^import\s+["'`]/.test(trimmed) && !/^import\s+[\w{]/.test(trimmed)) continue;
-    if (/^import\s/.test(trimmed)) {
-      // Strip npm: prefix from package specifiers (e.g. 'npm:react-markdown' → 'react-markdown')
-      lines.push(trimmed.replace(/from\s+["'`]npm:([^"'`]+)["'`]/g, 'from "$1"'));
-    }
-  }
-  return lines.length > 0 ? lines.join("\n") + "\n" : "";
 }
 
 /**
@@ -985,29 +936,17 @@ export function extractDependencySpecs(source: string): string[] {
   }
   return specs;
 }
-function resolveComponentSources(root: DescriptiveRoot): Map<string, ResolvedImport> {
-  const registry = new Map<string, ResolvedImport>();
-
-  if (!root.importsBlock) return registry;
+function resolveComponentSources(root: DescriptiveRoot): Set<string> {
+  if (!root.importsBlock) return new Set();
   const entries = parseImportsBlock(root.importsBlock);
-  if (!entries.length) return registry;
-
-  for (const entry of entries) {
-    if (!entry.name) continue;
-    const resolved: ResolvedImport = { exports: entry.exports };
-    if (entry.from) resolved.src = entry.from.trim();
-    if (entry.jsx) resolved.definitionJsx = entry.jsx;
-    registry.set(entry.name, resolved);
-  }
-  return registry;
+  return new Set(entries.map((e) => e.name).filter(Boolean));
 }
 
 /**
  * Walk the descriptive tree and warn about JSX component tags
  * that aren't registered in the imports registry.
  */
-function warnUnregisteredComponents(root: DescriptiveRoot, registry: Map<string, unknown>): void {
-  const registeredNames = new Set(registry.keys());
+function warnUnregisteredComponents(root: DescriptiveRoot, registeredNames: Set<string>): void {
 
   const tagRe = /<\s*\/?\s*([A-Z][a-zA-Z0-9]*)/g;
   const visit = (node: DescriptiveNode): void => {
