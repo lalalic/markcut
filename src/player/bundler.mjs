@@ -118,9 +118,11 @@ function getSharedExternals() {
  * @param {string[]} [extraSpecs]  — additional dependency specs from import statements (e.g. ["react", "npm:lodash"])
  * @param {string} [rawSource]  — optional raw imports block source. If provided, used as the bundle entry
  *   instead of rebuilding from entries. Entries/extraSpecs are still used for dependency resolution.
+ * @param {string} [cacheDir]  — optional cache directory for component bundles. Defaults to public/.component-cache.
  * @returns {Promise<{url:string|null, exports:string[]}>}
  */
-export async function bundleFromEntries(entries, extraSpecs = [], rawSource = null) {
+export async function bundleFromEntries(entries, extraSpecs = [], rawSource = null, cacheDir = null) {
+  const CACHE_DIR = cacheDir || join(ROOT, "public", ".component-cache");
   const hasEntries = entries && entries.length > 0;
   const hasRaw = rawSource && rawSource.trim();
 

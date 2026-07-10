@@ -8,6 +8,55 @@ description: >-
 ## Stream Tree Specs
 
 Everything video is a **stream tree**. see [docs/markdown-descriptive.md](docs/markdown-descriptive.md) for full details.
+
+## .markcut/ Directory Layout
+
+When you run `preview` or `render`, all generated artifacts live under `.markcut/` next to the source file:
+
+```
+.markcut/
+  generated/                    ← shared, content-addressed
+    tts/                        ← TTS audio (content-hash filenames)
+    media/                      ← TTI/TTV media (content-hash filenames)
+    includes/                   ← compiled sub-video JSON (content-hash)
+  <basename>/                   ← per-source-file artifacts
+    components/                 ← component bundles (per-file: imports differ)
+```
+
+- `generated/` — shared artifacts using content-hash filenames, so identical scripts/prompts across different source files reuse the same cached file
+- `<basename>/components/` — per-file component bundles; each source file has its own `imports` block, so bundles live under its basename
+- The server serves `.markcut/` as a document root, so components at `.markcut/slides/components/abc.js` are served as `/slides/components/abc.js`
+
+## Include (Sub-Video Embedding)
+
+The `include` node embeds an external `.md` file as a sub-video. The pipeline fully resolves it recursively:
+
+1. **`resolveIncludes()`** (step 0 of `resolveAll`): reads the referenced `.md`, parses it, resolves its own includes/TTS/media, compiles to a stream tree, writes the compiled JSON to `.markcut/generated/includes/<hash>.json`
+2. **`resolveIncludeImports()`** (server post-compile): if the sub-video has a ` ```js imports ``` ` block, bundles its components independently and writes the bundle URL into the compiled JSON
+3. **`IncludeLeaf`** (render): loads the compiled JSON, dynamically imports the sub-video's component bundle, creates a nested `ComposeContext` with the sub-video's registry merged, and renders via `FolderLeaf`
+
+The sub-video's own components are isolated from the parent's — naming conflicts are resolved by "sub-video wins" priority.
+
+```markdown
+# video
+## Main
+- component duration:3 jsx:"<MainTitle />"
+## Embedded
+- include src:./sub-video.md
+## End
+- component duration:2 jsx:"<Outro />"
+```
+
+```markdown
+# sub-video
+- component duration:3 jsx:"<SubSlide scene='1' />"
+
+```js imports
+export function SubSlide({ scene }) {
+  return <div style={{background:'#667eea', ...}}>Scene {scene}</div>;
+}
+```
+```
 ---
 
 ## Video Design Best Practice (How-To)
@@ -80,8 +129,10 @@ npx markcut <command> [options]
 | `--port` | number | `3001` |
 | `--verbose` | flag | `false` (compact progress) |
 | `--compile` | flag | `false` (resolve only) |
-| `--script-output-dir` | dir | TTS/STT output directory |
-| `--media-output-dir` | dir | TTI/TTV media output directory |
+| `--script-output-dir` | dir | `.markcut/generated/tts/` |
+| `--media-output-dir` | dir | `.markcut/generated/media/` |
+
+> Default output dirs auto-resolve to `.markcut/<basename>/<type>/` relative to the source file. You only need `--script-output-dir` / `--media-output-dir` to override.
 
 ### Edit Mode for Agents
 

@@ -249,17 +249,36 @@ async function main() {
       const filePath = resolve(args.file);
       const raw = readFileSync(filePath, "utf-8");
 
+      // Helper: all generated artifacts live under .markcut/generated/
+      // using content-addressed filenames, so multiple .md files in the
+      // same folder share cached files without collisions.
+      function generatedDir(filePath, sub) {
+        return join(dirname(filePath), ".markcut", "generated", sub);
+      }
+
       if (filePath.endsWith(".md")) {
         // Markdown → resolve (TTS/STT) + compile → stream tree
         const { resolveAndCompileMarkdown } = await import("../player/pipeline.mjs");
-        streamTree = await resolveAndCompileMarkdown(raw, { baseDir: dirname(filePath) });
+        const fileDir = dirname(filePath);
+        streamTree = await resolveAndCompileMarkdown(raw, {
+          baseDir: fileDir,
+          scriptOutputDir: generatedDir(filePath, "tts"),
+          mediaOutputDir: generatedDir(filePath, "media"),
+          includeOutputDir: generatedDir(filePath, "includes"),
+        });
       } else {
         const parsed = JSON.parse(raw);
         const root = parsed.root ?? parsed;
         // Check if descriptive JSON
         const { isDescriptiveRoot, resolveAndCompile } = await import("../player/pipeline.mjs");
         if (isDescriptiveRoot(root)) {
-          streamTree = await resolveAndCompile(root, { baseDir: dirname(filePath) });
+          const fileDir = dirname(filePath);
+          streamTree = await resolveAndCompile(root, {
+            baseDir: fileDir,
+            scriptOutputDir: generatedDir(filePath, "tts"),
+            mediaOutputDir: generatedDir(filePath, "media"),
+            includeOutputDir: generatedDir(filePath, "includes"),
+          });
         } else {
           streamTree = root;
         }

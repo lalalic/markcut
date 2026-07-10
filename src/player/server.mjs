@@ -39,9 +39,21 @@ let labels = [];
 // ─── Edit history for context ─────────────────────────────────────────────
 let editHistory = [];
 
-// ─── TTS/STT output directory (relative to video.json) ────────────────────
-const TTS_OUTPUT_DIR = join(dirname(VIDEO_JSON), "assets", "tts");
-const MEDIA_OUTPUT_DIR = join(dirname(VIDEO_JSON), "assets", "media");
+// ─── .markcut/ directory layout ────────────────────────────────────────────
+//   .markcut/                     ← server document root
+//     generated/                  ← shared, content-addressed artifacts
+//       tts/                      ← TTS audio (content-hash filenames)
+//       media/                    ← TTI/TTV media (content-hash filenames)
+//       includes/                 ← compiled sub-video JSON (content-hash)
+//     <basename>/                 ← per-source-file artifacts
+//       components/               ← component bundles (per-file: imports differ)
+const MARKCUT_BASE = join(dirname(VIDEO_JSON), ".markcut");
+const MARKCUT_DIR = join(MARKCUT_BASE, "generated");
+const BASENAME = VIDEO_JSON.split("/").pop().replace(/\.[^.]+$/, "");
+const TTS_OUTPUT_DIR = join(MARKCUT_DIR, "tts");
+const MEDIA_OUTPUT_DIR = join(MARKCUT_DIR, "media");
+const INCLUDE_CACHE_DIR = join(MARKCUT_DIR, "includes");
+const COMPONENT_CACHE_DIR = join(MARKCUT_BASE, BASENAME, "components");
 const WHISPER_BIN = process.env.WHISPER_BIN || "/Users/lir/Library/Python/3.9/bin/whisper";
 
 // ─── extractScenes imported from ./server-shared.mjs ────────────────────
@@ -105,6 +117,7 @@ async function loadCompiledRoot() {
       baseDir: dirname(VIDEO_JSON),
       scriptOutputDir: TTS_OUTPUT_DIR,
       mediaOutputDir: MEDIA_OUTPUT_DIR,
+      includeOutputDir: INCLUDE_CACHE_DIR,
       whisperBin: existsSync(WHISPER_BIN) ? WHISPER_BIN : undefined,
     });
   } else {
@@ -117,6 +130,7 @@ async function loadCompiledRoot() {
         baseDir: dirname(VIDEO_JSON),
         scriptOutputDir: TTS_OUTPUT_DIR,
         mediaOutputDir: MEDIA_OUTPUT_DIR,
+        includeOutputDir: INCLUDE_CACHE_DIR,
         whisperBin: existsSync(WHISPER_BIN) ? WHISPER_BIN : undefined,
       });
     } else {
@@ -124,11 +138,14 @@ async function loadCompiledRoot() {
     }
   }
 
+  // ── Post-compile: resolve per-subvideo component imports ─────────────
+  await resolveIncludeImports(compiled);
+
   // Bundle component imports — sets compiled.imports to the bundle URL
   const shouldBundle = (importEntries && importEntries.length > 0) || (rawSource && rawSource.trim());
   if (shouldBundle) {
     try {
-      const bundle = await bundleFromEntries(importEntries || [], extraSpecs, rawSource);
+      const bundle = await bundleFromEntries(importEntries || [], extraSpecs, rawSource, COMPONENT_CACHE_DIR);
       if (bundle.url) {
         compiled.imports = bundle.url;
         console.log(`  ✅ Components: ${bundle.exports.join(", ")}`);
@@ -141,6 +158,80 @@ async function loadCompiledRoot() {
 
   compiledRootCache = compiled;
   return compiled;
+}
+
+/**
+ * Walk the compiled tree for include nodes. For each include with a `.meta.json`
+ * companion file (created by resolveIncludes in the pipeline), bundle the
+ * sub-video's component imports and write the bundle URL into the compiled JSON.
+ *
+ * Sub-video component bundles are stored under .markcut/<sub-source-name>/components/
+ * (per-file), and served from .markcut/ as the document root.
+ *
+ * This runs AFTER resolveAndCompile so the server can bundle per-subvideo
+ * component registrations independently.
+ */
+async function resolveIncludeImports(root) {
+  const includes = [];
+
+  function walk(node) {
+    if (!node || typeof node !== "object") return;
+    if (node.type === "include" && node.src) {
+      includes.push(node);
+    }
+    if (Array.isArray(node.children)) {
+      for (const child of node.children) walk(child);
+    }
+  }
+  walk(root);
+
+  for (const inc of includes) {
+    // Check for companion meta file
+    const metaPath = inc.src.replace(/\.json$/, ".meta.json");
+    if (!existsSync(metaPath)) continue;
+
+    let meta;
+    try {
+      meta = JSON.parse(readFileSync(metaPath, "utf-8"));
+    } catch {
+      continue;
+    }
+
+    const { importEntries, extraSpecs, rawSource, sourceName } = meta;
+    if (!importEntries || importEntries.length === 0) continue;
+
+    // Use the sub-video's basename for its component directory
+    const subComponentDir = sourceName
+      ? join(MARKCUT_BASE, sourceName, "components")
+      : COMPONENT_CACHE_DIR;
+
+    try {
+      console.log(`  🔗 Sub-video includes: bundling ${importEntries.length} component(s) from "${inc.src}"`);
+      const bundle = await bundleFromEntries(importEntries, extraSpecs || [], rawSource, subComponentDir);
+      if (bundle.url) {
+        // bundle.url: /Users/.../.markcut/<sub-basename>/components/abc123.js
+        // server root: .markcut/ → serves as /<sub-basename>/components/abc123.js
+        let bundleUrl = bundle.url;
+        if (bundleUrl.startsWith(MARKCUT_BASE)) {
+          bundleUrl = bundleUrl.replace(MARKCUT_BASE, "");
+        }
+        if (!bundleUrl.startsWith("/")) bundleUrl = "/" + bundleUrl;
+
+        // Update the compiled JSON file with the bundle URL
+        const compiledPath = inc.src;
+        const compiledData = JSON.parse(readFileSync(compiledPath, "utf-8"));
+        if (compiledData.root) {
+          compiledData.root.imports = bundleUrl;
+        } else {
+          compiledData.imports = bundleUrl;
+        }
+        writeFileSync(compiledPath, JSON.stringify(compiledData, null, 2), "utf-8");
+        console.log(`  ✅ Sub-video components: ${bundle.exports.join(", ")}`);
+      }
+    } catch (e) {
+      console.error(`  ⚠️  Sub-video component bundling failed for "${inc.src}":`, e.message);
+    }
+  }
 }
 
 // ─── Initial scene info ──────────────────────────────────────────────────
@@ -201,11 +292,14 @@ function resolveAsset(urlPath) {
   if (urlPath === "/player.js") return join(ROOT, "src", "player", "bundle", "player.js");
   // Absolute filesystem path — serve directly
   if (urlPath.startsWith("/") && existsSync(urlPath)) return urlPath;
-  // Serve from ROOT/public, ROOT, or relative to the video.json directory
+  // Serve from ROOT/public, ROOT, .markcut/, .markcut/generated/,
+  // or relative to the video.json directory
   const jsonDir = dirname(VIDEO_JSON);
   const candidates = [
     join(ROOT, "public", urlPath),
     join(ROOT, urlPath),
+    join(MARKCUT_BASE, urlPath),
+    join(MARKCUT_DIR, urlPath),
     join(jsonDir, urlPath),
   ];
   for (const c of candidates) {
@@ -593,7 +687,9 @@ IMPORTANT: Read the full existing JSON file before editing. Only edit the JSON f
         // for the browser (import() needs a URL the server can serve).
         const rootOut = { ...root };
         if (typeof rootOut.imports === "string" && rootOut.imports.startsWith("/")) {
-          const rel = rootOut.imports.replace(ROOT + "/public", "");
+          // bundle.url: /Users/.../.markcut/<basename>/components/abc123.js
+          // server root: .markcut/ → serves as /<basename>/components/abc123.js
+          const rel = rootOut.imports.replace(MARKCUT_BASE, "");
           rootOut.imports = rel.startsWith("/") ? rel : "/" + rel;
         }
         res.writeHead(200, { "Content-Type": "application/json" });

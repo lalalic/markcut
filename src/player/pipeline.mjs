@@ -4,9 +4,6 @@ var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
 var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __esm = (fn, res) => function __init() {
-  return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
-};
 var __commonJS = (cb, mod) => function __require() {
   return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
 };
@@ -31,6 +28,195 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
+// node_modules/extend/index.js
+var require_extend = __commonJS({
+  "node_modules/extend/index.js"(exports, module) {
+    "use strict";
+    var hasOwn = Object.prototype.hasOwnProperty;
+    var toStr = Object.prototype.toString;
+    var defineProperty = Object.defineProperty;
+    var gOPD = Object.getOwnPropertyDescriptor;
+    var isArray = function isArray2(arr) {
+      if (typeof Array.isArray === "function") {
+        return Array.isArray(arr);
+      }
+      return toStr.call(arr) === "[object Array]";
+    };
+    var isPlainObject3 = function isPlainObject4(obj) {
+      if (!obj || toStr.call(obj) !== "[object Object]") {
+        return false;
+      }
+      var hasOwnConstructor = hasOwn.call(obj, "constructor");
+      var hasIsPrototypeOf = obj.constructor && obj.constructor.prototype && hasOwn.call(obj.constructor.prototype, "isPrototypeOf");
+      if (obj.constructor && !hasOwnConstructor && !hasIsPrototypeOf) {
+        return false;
+      }
+      var key;
+      for (key in obj) {
+      }
+      return typeof key === "undefined" || hasOwn.call(obj, key);
+    };
+    var setProperty = function setProperty2(target, options) {
+      if (defineProperty && options.name === "__proto__") {
+        defineProperty(target, options.name, {
+          enumerable: true,
+          configurable: true,
+          value: options.newValue,
+          writable: true
+        });
+      } else {
+        target[options.name] = options.newValue;
+      }
+    };
+    var getProperty = function getProperty2(obj, name) {
+      if (name === "__proto__") {
+        if (!hasOwn.call(obj, name)) {
+          return void 0;
+        } else if (gOPD) {
+          return gOPD(obj, name).value;
+        }
+      }
+      return obj[name];
+    };
+    module.exports = function extend2() {
+      var options, name, src, copy, copyIsArray, clone;
+      var target = arguments[0];
+      var i = 1;
+      var length = arguments.length;
+      var deep = false;
+      if (typeof target === "boolean") {
+        deep = target;
+        target = arguments[1] || {};
+        i = 2;
+      }
+      if (target == null || typeof target !== "object" && typeof target !== "function") {
+        target = {};
+      }
+      for (; i < length; ++i) {
+        options = arguments[i];
+        if (options != null) {
+          for (name in options) {
+            src = getProperty(target, name);
+            copy = getProperty(options, name);
+            if (target !== copy) {
+              if (deep && copy && (isPlainObject3(copy) || (copyIsArray = isArray(copy)))) {
+                if (copyIsArray) {
+                  copyIsArray = false;
+                  clone = src && isArray(src) ? src : [];
+                } else {
+                  clone = src && isPlainObject3(src) ? src : {};
+                }
+                setProperty(target, { name, newValue: extend2(deep, clone, copy) });
+              } else if (typeof copy !== "undefined") {
+                setProperty(target, { name, newValue: copy });
+              }
+            }
+          }
+        }
+      }
+      return target;
+    };
+  }
+});
+
+// node_modules/format/format.js
+var require_format = __commonJS({
+  "node_modules/format/format.js"(exports, module) {
+    (function() {
+      var namespace;
+      if (typeof module !== "undefined") {
+        namespace = module.exports = format;
+      } else {
+        namespace = (function() {
+          return this || (1, eval)("this");
+        })();
+      }
+      namespace.format = format;
+      namespace.vsprintf = vsprintf;
+      if (typeof console !== "undefined" && typeof console.log === "function") {
+        namespace.printf = printf;
+      }
+      function printf() {
+        console.log(format.apply(null, arguments));
+      }
+      function vsprintf(fmt, replacements) {
+        return format.apply(null, [fmt].concat(replacements));
+      }
+      function format(fmt) {
+        var argIndex = 1, args = [].slice.call(arguments), i = 0, n = fmt.length, result = "", c, escaped = false, arg, tmp, leadingZero = false, precision, nextArg = function() {
+          return args[argIndex++];
+        }, slurpNumber = function() {
+          var digits = "";
+          while (/\d/.test(fmt[i])) {
+            digits += fmt[i++];
+            c = fmt[i];
+          }
+          return digits.length > 0 ? parseInt(digits) : null;
+        };
+        for (; i < n; ++i) {
+          c = fmt[i];
+          if (escaped) {
+            escaped = false;
+            if (c == ".") {
+              leadingZero = false;
+              c = fmt[++i];
+            } else if (c == "0" && fmt[i + 1] == ".") {
+              leadingZero = true;
+              i += 2;
+              c = fmt[i];
+            } else {
+              leadingZero = true;
+            }
+            precision = slurpNumber();
+            switch (c) {
+              case "b":
+                result += parseInt(nextArg(), 10).toString(2);
+                break;
+              case "c":
+                arg = nextArg();
+                if (typeof arg === "string" || arg instanceof String)
+                  result += arg;
+                else
+                  result += String.fromCharCode(parseInt(arg, 10));
+                break;
+              case "d":
+                result += parseInt(nextArg(), 10);
+                break;
+              case "f":
+                tmp = String(parseFloat(nextArg()).toFixed(precision || 6));
+                result += leadingZero ? tmp : tmp.replace(/^0/, "");
+                break;
+              case "j":
+                result += JSON.stringify(nextArg());
+                break;
+              case "o":
+                result += "0" + parseInt(nextArg(), 10).toString(8);
+                break;
+              case "s":
+                result += nextArg();
+                break;
+              case "x":
+                result += "0x" + parseInt(nextArg(), 10).toString(16);
+                break;
+              case "X":
+                result += "0x" + parseInt(nextArg(), 10).toString(16).toUpperCase();
+                break;
+              default:
+                result += c;
+                break;
+            }
+          } else if (c === "%") {
+            escaped = true;
+          } else {
+            result += c;
+          }
+        }
+        return result;
+      }
+    })();
+  }
+});
+
 // src/utils/index.ts
 function uid() {
   return Math.random().toString(36).slice(2, 10);
@@ -42,21 +228,8 @@ function walkDown(node2, visit, parent = null, depth = 0) {
     for (const c of node2.children) walkDown(c, visit, node2, depth + 1);
   }
 }
-var init_utils = __esm({
-  "src/utils/index.ts"() {
-    "use strict";
-  }
-});
 
 // src/descriptive/compiler.ts
-var compiler_exports = {};
-__export(compiler_exports, {
-  compileDescriptiveRoot: () => compileDescriptiveRoot,
-  extractDependencySpecs: () => extractDependencySpecs,
-  parseImportsBlock: () => parseImportsBlock,
-  parseTransition: () => parseTransition,
-  resolveTransition: () => resolveTransition
-});
 function isContainer(node2) {
   return node2.type === "series" || node2.type === "parallel" || node2.type === "transitionSeries";
 }
@@ -72,6 +245,16 @@ function isMap(node2) {
 function isRhythm(node2) {
   return node2.type === "rhythm";
 }
+var DEFAULTS = {
+  image: 3,
+  video: 3,
+  audio: 3,
+  component: 2,
+  rhythm: 4,
+  include: 3,
+  map: 4,
+  effect: 2
+};
 function ensureUniqueIds(children, scopeId) {
   const seen = /* @__PURE__ */ new Set();
   for (const child of children) {
@@ -130,6 +313,7 @@ function pickOn(node2) {
   if (node2.on) return { on: node2.on };
   return {};
 }
+var VALID_TRANSITIONS = /* @__PURE__ */ new Set(["fade", "slide", "wipe", "flip", "clockWipe"]);
 function parseTransition(val) {
   if (!val) return { name: void 0, time: void 0 };
   const parenMatch = val.match(/^(\w+)\((\d+(?:\.\d+)?)\)$/);
@@ -651,222 +835,12 @@ function compileDescriptiveRoot(input, options = {}) {
   };
   return compiled;
 }
-var DEFAULTS, VALID_TRANSITIONS;
-var init_compiler = __esm({
-  "src/descriptive/compiler.ts"() {
-    "use strict";
-    init_utils();
-    DEFAULTS = {
-      image: 3,
-      video: 3,
-      audio: 3,
-      component: 2,
-      rhythm: 4,
-      include: 3,
-      map: 4,
-      effect: 2
-    };
-    VALID_TRANSITIONS = /* @__PURE__ */ new Set(["fade", "slide", "wipe", "flip", "clockWipe"]);
-  }
-});
-
-// node_modules/extend/index.js
-var require_extend = __commonJS({
-  "node_modules/extend/index.js"(exports, module) {
-    "use strict";
-    var hasOwn = Object.prototype.hasOwnProperty;
-    var toStr = Object.prototype.toString;
-    var defineProperty = Object.defineProperty;
-    var gOPD = Object.getOwnPropertyDescriptor;
-    var isArray = function isArray2(arr) {
-      if (typeof Array.isArray === "function") {
-        return Array.isArray(arr);
-      }
-      return toStr.call(arr) === "[object Array]";
-    };
-    var isPlainObject3 = function isPlainObject4(obj) {
-      if (!obj || toStr.call(obj) !== "[object Object]") {
-        return false;
-      }
-      var hasOwnConstructor = hasOwn.call(obj, "constructor");
-      var hasIsPrototypeOf = obj.constructor && obj.constructor.prototype && hasOwn.call(obj.constructor.prototype, "isPrototypeOf");
-      if (obj.constructor && !hasOwnConstructor && !hasIsPrototypeOf) {
-        return false;
-      }
-      var key;
-      for (key in obj) {
-      }
-      return typeof key === "undefined" || hasOwn.call(obj, key);
-    };
-    var setProperty = function setProperty2(target, options) {
-      if (defineProperty && options.name === "__proto__") {
-        defineProperty(target, options.name, {
-          enumerable: true,
-          configurable: true,
-          value: options.newValue,
-          writable: true
-        });
-      } else {
-        target[options.name] = options.newValue;
-      }
-    };
-    var getProperty = function getProperty2(obj, name) {
-      if (name === "__proto__") {
-        if (!hasOwn.call(obj, name)) {
-          return void 0;
-        } else if (gOPD) {
-          return gOPD(obj, name).value;
-        }
-      }
-      return obj[name];
-    };
-    module.exports = function extend2() {
-      var options, name, src, copy, copyIsArray, clone;
-      var target = arguments[0];
-      var i = 1;
-      var length = arguments.length;
-      var deep = false;
-      if (typeof target === "boolean") {
-        deep = target;
-        target = arguments[1] || {};
-        i = 2;
-      }
-      if (target == null || typeof target !== "object" && typeof target !== "function") {
-        target = {};
-      }
-      for (; i < length; ++i) {
-        options = arguments[i];
-        if (options != null) {
-          for (name in options) {
-            src = getProperty(target, name);
-            copy = getProperty(options, name);
-            if (target !== copy) {
-              if (deep && copy && (isPlainObject3(copy) || (copyIsArray = isArray(copy)))) {
-                if (copyIsArray) {
-                  copyIsArray = false;
-                  clone = src && isArray(src) ? src : [];
-                } else {
-                  clone = src && isPlainObject3(src) ? src : {};
-                }
-                setProperty(target, { name, newValue: extend2(deep, clone, copy) });
-              } else if (typeof copy !== "undefined") {
-                setProperty(target, { name, newValue: copy });
-              }
-            }
-          }
-        }
-      }
-      return target;
-    };
-  }
-});
-
-// node_modules/format/format.js
-var require_format = __commonJS({
-  "node_modules/format/format.js"(exports, module) {
-    (function() {
-      var namespace;
-      if (typeof module !== "undefined") {
-        namespace = module.exports = format;
-      } else {
-        namespace = (function() {
-          return this || (1, eval)("this");
-        })();
-      }
-      namespace.format = format;
-      namespace.vsprintf = vsprintf;
-      if (typeof console !== "undefined" && typeof console.log === "function") {
-        namespace.printf = printf;
-      }
-      function printf() {
-        console.log(format.apply(null, arguments));
-      }
-      function vsprintf(fmt, replacements) {
-        return format.apply(null, [fmt].concat(replacements));
-      }
-      function format(fmt) {
-        var argIndex = 1, args = [].slice.call(arguments), i = 0, n = fmt.length, result = "", c, escaped = false, arg, tmp, leadingZero = false, precision, nextArg = function() {
-          return args[argIndex++];
-        }, slurpNumber = function() {
-          var digits = "";
-          while (/\d/.test(fmt[i])) {
-            digits += fmt[i++];
-            c = fmt[i];
-          }
-          return digits.length > 0 ? parseInt(digits) : null;
-        };
-        for (; i < n; ++i) {
-          c = fmt[i];
-          if (escaped) {
-            escaped = false;
-            if (c == ".") {
-              leadingZero = false;
-              c = fmt[++i];
-            } else if (c == "0" && fmt[i + 1] == ".") {
-              leadingZero = true;
-              i += 2;
-              c = fmt[i];
-            } else {
-              leadingZero = true;
-            }
-            precision = slurpNumber();
-            switch (c) {
-              case "b":
-                result += parseInt(nextArg(), 10).toString(2);
-                break;
-              case "c":
-                arg = nextArg();
-                if (typeof arg === "string" || arg instanceof String)
-                  result += arg;
-                else
-                  result += String.fromCharCode(parseInt(arg, 10));
-                break;
-              case "d":
-                result += parseInt(nextArg(), 10);
-                break;
-              case "f":
-                tmp = String(parseFloat(nextArg()).toFixed(precision || 6));
-                result += leadingZero ? tmp : tmp.replace(/^0/, "");
-                break;
-              case "j":
-                result += JSON.stringify(nextArg());
-                break;
-              case "o":
-                result += "0" + parseInt(nextArg(), 10).toString(8);
-                break;
-              case "s":
-                result += nextArg();
-                break;
-              case "x":
-                result += "0x" + parseInt(nextArg(), 10).toString(16);
-                break;
-              case "X":
-                result += "0x" + parseInt(nextArg(), 10).toString(16).toUpperCase();
-                break;
-              default:
-                result += c;
-                break;
-            }
-          } else if (c === "%") {
-            escaped = true;
-          } else {
-            result += c;
-          }
-        }
-        return result;
-      }
-    })();
-  }
-});
-
-// src/player/pipeline.ts
-init_compiler();
 
 // src/descriptive/resolve.ts
 import { execSync as execSync2 } from "node:child_process";
 import { existsSync as existsSync2, mkdirSync as mkdirSync2, readFileSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { join, resolve as resolvePath } from "node:path";
+import { join, dirname as dirname2, resolve as resolvePath, relative } from "node:path";
 
 // src/render/cli-tools.ts
 import { execSync, exec } from "node:child_process";
@@ -952,315 +926,6 @@ function generateTTV(prompt, outputPath, cli, ttiCmd) {
     return "";
   }
   return existsSync(outputPath) ? outputPath : "";
-}
-
-// src/descriptive/resolve.ts
-init_utils();
-function computeCacheKey(parts) {
-  const json = JSON.stringify(parts);
-  return createHash("sha1").update(json).digest("hex").slice(0, 12);
-}
-function readCacheManifest(outputDir) {
-  const manifestPath = join(outputDir, ".cache.json");
-  try {
-    return JSON.parse(readFileSync(manifestPath, "utf-8"));
-  } catch {
-    return {};
-  }
-}
-function writeCacheManifest(outputDir, manifest) {
-  const manifestPath = join(outputDir, ".cache.json");
-  try {
-    writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), "utf-8");
-  } catch {
-  }
-}
-function checkCache(manifest, key, cacheKey) {
-  const entry = manifest[key];
-  if (entry?.hash === cacheKey && entry.output && existsSync2(entry.output)) {
-    return entry.output;
-  }
-  return null;
-}
-function updateCache(manifest, key, cacheKey, output) {
-  manifest[key] = { hash: cacheKey, output };
-}
-function probeDuration(src, baseDir) {
-  const absPath = resolveSrc(src, baseDir);
-  try {
-    const out = execSync2(
-      `ffprobe -v error -show_entries format=duration -of csv=p=0 "${absPath}"`,
-      { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"], timeout: 1e4 }
-    ).trim();
-    const d = parseFloat(out);
-    return Number.isFinite(d) && d > 0 ? d : null;
-  } catch {
-    return null;
-  }
-}
-function resolveSrc(src, baseDir) {
-  if (/^(https?:|file:|\/)/.test(src)) return src;
-  return resolvePath(baseDir ?? process.cwd(), src);
-}
-async function resolveMediaDurations(root, options = {}) {
-  const clone = JSON.parse(JSON.stringify(root));
-  const baseDir = options.baseDir;
-  walkDown(clone, (node2) => {
-    const n = node2;
-    if (n.type !== "video" && n.type !== "audio") return;
-    if (typeof n.duration === "number" && n.duration > 0) return;
-    if (typeof n.endAt === "number") return;
-    if (!n.src) return;
-    if (options.skip?.test(n.src)) return;
-    const probed = probeDuration(n.src, baseDir);
-    if (probed != null) {
-      n.duration = probed;
-      if (n.startFrom == null) n.startFrom = 0;
-      if (n.endAt == null) n.endAt = probed;
-    }
-  });
-  return clone;
-}
-async function resolveScripts(root, options) {
-  const clone = JSON.parse(JSON.stringify(root));
-  mkdirSync2(options.outputDir, { recursive: true });
-  const cache = readCacheManifest(options.outputDir);
-  let cacheDirty = false;
-  const allScriptNodes = [];
-  walkDown(clone, (node2, parent) => {
-    if (node2.type !== "audio") return;
-    if (!node2.script || typeof node2.script !== "string") return;
-    if (node2.src) return;
-    const id = node2.id ?? `audio-${allScriptNodes.length}`;
-    allScriptNodes.push({ node: node2, id, parent });
-  });
-  if (allScriptNodes.length > 0) {
-    console.log(`  \u{1F50A} TTS: generating ${allScriptNodes.length} script${allScriptNodes.length > 1 ? "s" : ""}...`);
-  }
-  for (const { node: node2, id, parent } of allScriptNodes) {
-    const safeId = id.replace(/[^a-zA-Z0-9_-]/g, "_");
-    const audioPath = join(options.outputDir, `${safeId}.mp3`);
-    const ttsCli = parent?.tts ?? clone.tts ?? options.ttsCli ?? DEFAULT_TTS_CLI;
-    const cacheKey = computeCacheKey({ script: node2.script, cli: ttsCli });
-    const cached = checkCache(cache, `tts:${safeId}`, cacheKey);
-    let generated;
-    if (cached) {
-      generated = cached;
-      console.log(`  \u2713 TTS: ${safeId} (cached)`);
-    } else {
-      generated = generateTTS(node2.script, audioPath, ttsCli);
-      if (generated) {
-        updateCache(cache, `tts:${safeId}`, cacheKey, generated);
-        cacheDirty = true;
-      } else {
-        console.warn(`  \u26A0 TTS produced no audio for ${safeId}. Audio will have no source. Check root.tts config.`);
-      }
-    }
-    if (!generated) continue;
-    node2.src = generated;
-    delete node2.script;
-  }
-  if (cacheDirty) writeCacheManifest(options.outputDir, cache);
-  if (allScriptNodes.length > 0) {
-    console.log(`  \u2705 TTS: ${allScriptNodes.length} script${allScriptNodes.length > 1 ? "s" : ""} ready`);
-  }
-  return clone;
-}
-async function resolveSubtitles(root, options) {
-  const clone = JSON.parse(JSON.stringify(root));
-  const sttCli = clone.stt ?? options.sttCli ?? DEFAULT_STT_CLI;
-  if (!sttCli) return clone;
-  mkdirSync2(options.outputDir, { recursive: true });
-  const cache = readCacheManifest(options.outputDir);
-  let cacheDirty = false;
-  const clips = [];
-  function walkSiblings(nodes, parentOffset, parentIsSeries, parentTransition, parentTransitionTime) {
-    let seriesOffset = parentOffset;
-    for (const node2 of nodes) {
-      const nodeStart = parentIsSeries ? seriesOffset : parentOffset;
-      const actionStart = node2.actions?.[0]?.start ?? 0;
-      const effectiveOffset = nodeStart + actionStart;
-      if (node2.type === "audio" && node2.src) {
-        clips.push({ audioSrc: node2.src, offset: effectiveOffset });
-      }
-      if (node2.children && node2.children.length > 0) {
-        let childIsSeries = false;
-        let childTransition = void 0;
-        let childTransitionTime = 0.5;
-        if (node2.type === "folder") {
-          childIsSeries = node2.isSeries ?? false;
-          childTransition = node2.transition;
-          childTransitionTime = node2.transitionTime ?? 0.5;
-        } else if (node2.type === "scene") {
-          if (node2.children.length === 1 && node2.children[0].type === "folder" && node2.children[0].isSeries) {
-            childIsSeries = true;
-            childTransition = node2.children[0].transition;
-            childTransitionTime = node2.children[0].transitionTime ?? 0.5;
-          }
-        }
-        walkSiblings(node2.children, effectiveOffset, childIsSeries, childTransition, childTransitionTime);
-      }
-      if (parentIsSeries && node2.durationInSeconds) {
-        const overlap = parentTransition ? parentTransitionTime ?? 0.5 : 0;
-        seriesOffset += node2.durationInSeconds - overlap;
-      }
-    }
-  }
-  const treeToWalk = options.compiled ?? clone;
-  walkSiblings(
-    treeToWalk.children ?? [],
-    0,
-    treeToWalk.isSeries ?? false,
-    treeToWalk.transition,
-    treeToWalk.transitionTime
-  );
-  const mergedLines = ["WEBVTT", ""];
-  let cueIndex = 1;
-  let sttFailedCount = 0;
-  for (const { audioSrc, offset } of clips) {
-    const audioHash = existsSync2(audioSrc) ? createHash("sha1").update(readFileSync(audioSrc)).digest("hex").slice(0, 12) : audioSrc;
-    const sttCacheKey = computeCacheKey({ audioHash, cli: sttCli });
-    const sttKey = `stt:${audioSrc.split("/").pop()}`;
-    const clipName = audioSrc.split("/").pop();
-    let vttPath = null;
-    const cachedVtt = checkCache(cache, sttKey, sttCacheKey);
-    if (cachedVtt) {
-      vttPath = cachedVtt;
-    } else {
-      try {
-        await generateSTT(audioSrc, options.outputDir, sttCli);
-        const base = audioSrc.replace(/\.wav$/, "").replace(/\.mp3$/, "");
-        const name = base.split("/").pop();
-        const candidate = join(options.outputDir, `${name}.vtt`);
-        if (existsSync2(candidate)) {
-          vttPath = candidate;
-          updateCache(cache, sttKey, sttCacheKey, vttPath);
-          cacheDirty = true;
-        }
-      } catch {
-        console.warn(`  \u26A0 STT failed for ${clipName}. Install whisper (pip install openai-whisper) or set root.stt.`);
-        sttFailedCount++;
-      }
-    }
-    if (!vttPath || !existsSync2(vttPath)) continue;
-    const vttText = readFileSync(vttPath, "utf-8");
-    const blocks = vttText.replace(/\r\n/g, "\n").split(/\n\n+/);
-    for (const block of blocks) {
-      const lines = block.split("\n").filter(Boolean);
-      const tline = lines.find((l) => l.includes("-->"));
-      if (!tline) continue;
-      const [a, z] = tline.split("-->").map((s) => s.trim());
-      if (!a || !z) continue;
-      const toSec = (ts) => {
-        const parts = ts.split(":").map(Number);
-        if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
-        return parts[0] * 60 + parts[1];
-      };
-      const formatSec = (s) => {
-        const h = Math.floor(s / 3600);
-        const m = Math.floor(s % 3600 / 60);
-        const sec = (s % 60).toFixed(3).padStart(6, "0");
-        return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${sec}`;
-      };
-      const text3 = lines.slice(lines.indexOf(tline) + 1).join("\n").trim();
-      mergedLines.push(String(cueIndex++));
-      mergedLines.push(`${formatSec(toSec(a) + offset)} --> ${formatSec(toSec(z) + offset)}`);
-      mergedLines.push(text3, "");
-    }
-  }
-  if (clips.length > 0) {
-    const transcribed = clips.length - sttFailedCount;
-    if (transcribed > 0 || sttFailedCount > 0) {
-      console.log(`  \u{1F4DD} STT: ${transcribed} transcribed${sttFailedCount > 0 ? `, ${sttFailedCount} failed` : ""}`);
-    }
-  }
-  if (cueIndex > 1) {
-    const mergedPath = join(options.outputDir, "subtitles.vtt");
-    writeFileSync(mergedPath, mergedLines.join("\n"), "utf-8");
-    clone.subtitle = { ...clone.subtitle ?? {}, src: mergedPath };
-    console.log(`  \u2705 STT: subtitles ready (${cueIndex - 1} cues)`);
-  }
-  if (cacheDirty) writeCacheManifest(options.outputDir, cache);
-  return clone;
-}
-async function resolveGeneratedMedia(root, options) {
-  const clone = JSON.parse(JSON.stringify(root));
-  mkdirSync2(options.outputDir, { recursive: true });
-  const cache = readCacheManifest(options.outputDir);
-  let cacheDirty = false;
-  const genNodes = [];
-  walkDown(clone, (node2) => {
-    if (node2.type !== "image" && node2.type !== "video") return;
-    if (!node2.prompt || typeof node2.prompt !== "string") return;
-    if (node2.src) return;
-    const id = node2.id ?? `${node2.type}-${genNodes.length}`;
-    genNodes.push({ node: node2, id, type: node2.type, prompt: node2.prompt });
-  });
-  for (const { node: node2, id, type, prompt } of genNodes) {
-    const safeId = id.replace(/[^a-zA-Z0-9_-]/g, "_");
-    const ext = type === "image" ? "png" : "mp4";
-    const outputPath = join(options.outputDir, `${safeId}.${ext}`);
-    const cli = type === "image" ? clone.tti ?? options.ttiCli ?? DEFAULT_TTI_CLI : clone.ttv ?? options.ttvCli ?? DEFAULT_TTV_CLI;
-    const cacheKey = computeCacheKey({ prompt, cli, type });
-    const cached = checkCache(cache, `gen:${safeId}`, cacheKey);
-    const label = type === "image" ? "TTI" : "TTV";
-    if (cached) {
-      node2.src = cached;
-      console.log(`  \u2713 ${label}: ${safeId} (cached)`);
-      continue;
-    }
-    try {
-      console.log(`  \u{1F50A} ${label}: ${safeId}...`);
-      const ttiCmd = clone.tti ?? options.ttiCli ?? DEFAULT_TTI_CLI;
-      const result = type === "image" ? generateTTI(prompt, outputPath, cli) : generateTTV(prompt, outputPath, cli, ttiCmd);
-      if (result) {
-        node2.src = outputPath;
-        updateCache(cache, `gen:${safeId}`, cacheKey, outputPath);
-        cacheDirty = true;
-        console.log(`  \u2713 ${label}: ${safeId}`);
-      } else {
-        const hint = cli.includes("echo") ? `No ${label} tool installed. The default CLI just echoes a message \u2014 set root.${type === "image" ? "tti" : "ttv"} to a real generation command.` : `The command ran but produced no output file. Check the CLI template or run the script manually to debug.`;
-        console.error(`  \u26A0 ${label}: ${safeId} produced no output. ${hint}`);
-      }
-    } catch (err) {
-      const hint = err?.stderr?.toString()?.includes("not found") ? `${label} tool not found. Install the required CLI or configure root.${type === "image" ? "tti" : "ttv"}.` : `Command failed. Try running the CLI template directly to debug: ${cli}`;
-      console.error(`  \u2717 ${label}: ${safeId} failed \u2014 ${err.message}. ${hint}`);
-    }
-  }
-  if (cacheDirty) writeCacheManifest(options.outputDir, cache);
-  return clone;
-}
-async function resolveAll(root, options = {}) {
-  let result = root;
-  if (options.mediaOutputDir) {
-    result = await resolveGeneratedMedia(result, {
-      outputDir: options.mediaOutputDir,
-      ttiCli: options.ttiCli,
-      ttvCli: options.ttvCli
-    });
-  }
-  result = await resolveMediaDurations(result, {
-    baseDir: options.baseDir,
-    skip: options.skip
-  });
-  if (options.scriptOutputDir) {
-    result = await resolveScripts(result, {
-      outputDir: options.scriptOutputDir,
-      ttsCli: options.ttsCli
-    });
-    result = await resolveMediaDurations(result, {
-      baseDir: options.baseDir,
-      skip: options.skip
-    });
-    const { compileDescriptiveRoot: compileDescriptiveRoot2 } = await Promise.resolve().then(() => (init_compiler(), compiler_exports));
-    const compiled = compileDescriptiveRoot2(result);
-    result = await resolveSubtitles(result, {
-      outputDir: options.scriptOutputDir,
-      sttCli: options.sttCli,
-      compiled
-    });
-  }
-  return result;
 }
 
 // node_modules/bail/index.js
@@ -5236,7 +4901,7 @@ function classifyCharacter(code) {
 }
 
 // node_modules/micromark-util-resolve-all/index.js
-function resolveAll2(constructs2, events, context) {
+function resolveAll(constructs2, events, context) {
   const called = [];
   let index2 = -1;
   while (++index2 < constructs2.length) {
@@ -5326,7 +4991,7 @@ function resolveAllAttention(events, context) {
             nextEvents = push(nextEvents, [["enter", events[open][1], context], ["exit", events[open][1], context]]);
           }
           nextEvents = push(nextEvents, [["enter", group, context], ["enter", openingSequence, context], ["exit", openingSequence, context], ["enter", text3, context]]);
-          nextEvents = push(nextEvents, resolveAll2(context.parser.constructs.insideSpan.null, events.slice(open + 1, index2), context));
+          nextEvents = push(nextEvents, resolveAll(context.parser.constructs.insideSpan.null, events.slice(open + 1, index2), context));
           nextEvents = push(nextEvents, [["exit", text3, context], ["enter", closingSequence, context], ["exit", closingSequence, context], ["exit", group, context]]);
           if (events[index2][1].end.offset - events[index2][1].start.offset) {
             offset = 2;
@@ -7699,7 +7364,7 @@ function resolveToLabelEnd(events, context) {
   media = [["enter", group, context], ["enter", label, context]];
   media = push(media, events.slice(open + 1, open + offset + 3));
   media = push(media, [["enter", text3, context]]);
-  media = push(media, resolveAll2(context.parser.constructs.insideSpan.null, events.slice(open + offset + 4, close2 - 3), context));
+  media = push(media, resolveAll(context.parser.constructs.insideSpan.null, events.slice(open + offset + 4, close2 - 3), context));
   media = push(media, [["exit", text3, context], events[close2 - 2], events[close2 - 1], ["exit", label, context]]);
   media = push(media, events.slice(close2 + 1));
   media = push(media, [["exit", group, context]]);
@@ -8464,7 +8129,7 @@ function createTokenizer(parser, initialize, from) {
       return [];
     }
     addResult(initialize, 0);
-    context.events = resolveAll2(resolveAllConstructs, context.events, context);
+    context.events = resolveAll(resolveAllConstructs, context.events, context);
     return context.events;
   }
   function sliceSerialize(token, expandTabs) {
@@ -12918,6 +12583,382 @@ function applyRootAttrs(root, attrs) {
   }
 }
 
+// src/descriptive/resolve.ts
+function computeCacheKey(parts) {
+  const json = JSON.stringify(parts);
+  return createHash("sha1").update(json).digest("hex").slice(0, 12);
+}
+function readCacheManifest(outputDir) {
+  const manifestPath = join(outputDir, ".cache.json");
+  try {
+    return JSON.parse(readFileSync(manifestPath, "utf-8"));
+  } catch {
+    return {};
+  }
+}
+function writeCacheManifest(outputDir, manifest) {
+  const manifestPath = join(outputDir, ".cache.json");
+  try {
+    writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), "utf-8");
+  } catch {
+  }
+}
+function checkCache(manifest, key, cacheKey) {
+  const entry = manifest[key];
+  if (entry?.hash === cacheKey && entry.output && existsSync2(entry.output)) {
+    return entry.output;
+  }
+  return null;
+}
+function updateCache(manifest, key, cacheKey, output) {
+  manifest[key] = { hash: cacheKey, output };
+}
+function probeDuration(src, baseDir) {
+  const absPath = resolveSrc(src, baseDir);
+  try {
+    const out = execSync2(
+      `ffprobe -v error -show_entries format=duration -of csv=p=0 "${absPath}"`,
+      { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"], timeout: 1e4 }
+    ).trim();
+    const d = parseFloat(out);
+    return Number.isFinite(d) && d > 0 ? d : null;
+  } catch {
+    return null;
+  }
+}
+function resolveSrc(src, baseDir) {
+  if (/^(https?:|file:|\/)/.test(src)) return src;
+  return resolvePath(baseDir ?? process.cwd(), src);
+}
+async function resolveMediaDurations(root, options = {}) {
+  const clone = JSON.parse(JSON.stringify(root));
+  const baseDir = options.baseDir;
+  walkDown(clone, (node2) => {
+    const n = node2;
+    if (n.type !== "video" && n.type !== "audio") return;
+    if (typeof n.duration === "number" && n.duration > 0) return;
+    if (typeof n.endAt === "number") return;
+    if (!n.src) return;
+    if (options.skip?.test(n.src)) return;
+    const probed = probeDuration(n.src, baseDir);
+    if (probed != null) {
+      n.duration = probed;
+      if (n.startFrom == null) n.startFrom = 0;
+      if (n.endAt == null) n.endAt = probed;
+    }
+  });
+  return clone;
+}
+async function resolveScripts(root, options) {
+  const clone = JSON.parse(JSON.stringify(root));
+  mkdirSync2(options.outputDir, { recursive: true });
+  const cache = readCacheManifest(options.outputDir);
+  let cacheDirty = false;
+  const allScriptNodes = [];
+  walkDown(clone, (node2, parent) => {
+    if (node2.type !== "audio") return;
+    if (!node2.script || typeof node2.script !== "string") return;
+    if (node2.src) return;
+    const id = node2.id ?? `audio-${allScriptNodes.length}`;
+    allScriptNodes.push({ node: node2, id, parent });
+  });
+  if (allScriptNodes.length > 0) {
+    console.log(`  \u{1F50A} TTS: generating ${allScriptNodes.length} script${allScriptNodes.length > 1 ? "s" : ""}...`);
+  }
+  for (const { node: node2, id, parent } of allScriptNodes) {
+    const ttsCli = parent?.tts ?? clone.tts ?? options.ttsCli ?? DEFAULT_TTS_CLI;
+    const cacheKey = computeCacheKey({ script: node2.script, cli: ttsCli });
+    const audioPath = join(options.outputDir, `${cacheKey}.mp3`);
+    const cached = checkCache(cache, `tts:${cacheKey}`, cacheKey);
+    let generated;
+    if (cached) {
+      generated = cached;
+      console.log(`  \u2713 TTS: ${cacheKey} (cached)`);
+    } else {
+      generated = generateTTS(node2.script, audioPath, ttsCli);
+      if (generated) {
+        updateCache(cache, `tts:${cacheKey}`, cacheKey, generated);
+        cacheDirty = true;
+      } else {
+        console.warn(`  \u26A0 TTS produced no audio for ${cacheKey}. Audio will have no source. Check root.tts config.`);
+      }
+    }
+    if (!generated) continue;
+    node2.src = generated;
+    delete node2.script;
+  }
+  if (cacheDirty) writeCacheManifest(options.outputDir, cache);
+  if (allScriptNodes.length > 0) {
+    const unique = new Set(allScriptNodes.filter((s) => s.node.src).map((s) => s.node.src)).size;
+    console.log(`  \u2705 TTS: ${unique} unique audio file${unique > 1 ? "s" : ""} (${allScriptNodes.length} node${allScriptNodes.length > 1 ? "s" : ""})`);
+  }
+  return clone;
+}
+async function resolveSubtitles(root, options) {
+  const clone = JSON.parse(JSON.stringify(root));
+  const sttCli = clone.stt ?? options.sttCli ?? DEFAULT_STT_CLI;
+  if (!sttCli) return clone;
+  mkdirSync2(options.outputDir, { recursive: true });
+  const cache = readCacheManifest(options.outputDir);
+  let cacheDirty = false;
+  const clips = [];
+  function walkSiblings(nodes, parentOffset, parentIsSeries, parentTransition, parentTransitionTime) {
+    let seriesOffset = parentOffset;
+    for (const node2 of nodes) {
+      const nodeStart = parentIsSeries ? seriesOffset : parentOffset;
+      const actionStart = node2.actions?.[0]?.start ?? 0;
+      const effectiveOffset = nodeStart + actionStart;
+      if (node2.type === "audio" && node2.src) {
+        clips.push({ audioSrc: node2.src, offset: effectiveOffset });
+      }
+      if (node2.children && node2.children.length > 0) {
+        let childIsSeries = false;
+        let childTransition = void 0;
+        let childTransitionTime = 0.5;
+        if (node2.type === "folder") {
+          childIsSeries = node2.isSeries ?? false;
+          childTransition = node2.transition;
+          childTransitionTime = node2.transitionTime ?? 0.5;
+        } else if (node2.type === "scene") {
+          if (node2.children.length === 1 && node2.children[0].type === "folder" && node2.children[0].isSeries) {
+            childIsSeries = true;
+            childTransition = node2.children[0].transition;
+            childTransitionTime = node2.children[0].transitionTime ?? 0.5;
+          }
+        }
+        walkSiblings(node2.children, effectiveOffset, childIsSeries, childTransition, childTransitionTime);
+      }
+      if (parentIsSeries && node2.durationInSeconds) {
+        const overlap = parentTransition ? parentTransitionTime ?? 0.5 : 0;
+        seriesOffset += node2.durationInSeconds - overlap;
+      }
+    }
+  }
+  const treeToWalk = options.compiled ?? clone;
+  walkSiblings(
+    treeToWalk.children ?? [],
+    0,
+    treeToWalk.isSeries ?? false,
+    treeToWalk.transition,
+    treeToWalk.transitionTime
+  );
+  const mergedLines = ["WEBVTT", ""];
+  let cueIndex = 1;
+  let sttFailedCount = 0;
+  for (const { audioSrc, offset } of clips) {
+    const audioHash = existsSync2(audioSrc) ? createHash("sha1").update(readFileSync(audioSrc)).digest("hex").slice(0, 12) : audioSrc;
+    const sttCacheKey = computeCacheKey({ audioHash, cli: sttCli });
+    const sttKey = `stt:${audioSrc.split("/").pop()}`;
+    const clipName = audioSrc.split("/").pop();
+    let vttPath = null;
+    const cachedVtt = checkCache(cache, sttKey, sttCacheKey);
+    if (cachedVtt) {
+      vttPath = cachedVtt;
+    } else {
+      try {
+        await generateSTT(audioSrc, options.outputDir, sttCli);
+        const base = audioSrc.replace(/\.wav$/, "").replace(/\.mp3$/, "");
+        const name = base.split("/").pop();
+        const candidate = join(options.outputDir, `${name}.vtt`);
+        if (existsSync2(candidate)) {
+          vttPath = candidate;
+          updateCache(cache, sttKey, sttCacheKey, vttPath);
+          cacheDirty = true;
+        }
+      } catch {
+        console.warn(`  \u26A0 STT failed for ${clipName}. Install whisper (pip install openai-whisper) or set root.stt.`);
+        sttFailedCount++;
+      }
+    }
+    if (!vttPath || !existsSync2(vttPath)) continue;
+    const vttText = readFileSync(vttPath, "utf-8");
+    const blocks = vttText.replace(/\r\n/g, "\n").split(/\n\n+/);
+    for (const block of blocks) {
+      const lines = block.split("\n").filter(Boolean);
+      const tline = lines.find((l) => l.includes("-->"));
+      if (!tline) continue;
+      const [a, z] = tline.split("-->").map((s) => s.trim());
+      if (!a || !z) continue;
+      const toSec = (ts) => {
+        const parts = ts.split(":").map(Number);
+        if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+        return parts[0] * 60 + parts[1];
+      };
+      const formatSec = (s) => {
+        const h = Math.floor(s / 3600);
+        const m = Math.floor(s % 3600 / 60);
+        const sec = (s % 60).toFixed(3).padStart(6, "0");
+        return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${sec}`;
+      };
+      const text3 = lines.slice(lines.indexOf(tline) + 1).join("\n").trim();
+      mergedLines.push(String(cueIndex++));
+      mergedLines.push(`${formatSec(toSec(a) + offset)} --> ${formatSec(toSec(z) + offset)}`);
+      mergedLines.push(text3, "");
+    }
+  }
+  if (clips.length > 0) {
+    const transcribed = clips.length - sttFailedCount;
+    if (transcribed > 0 || sttFailedCount > 0) {
+      console.log(`  \u{1F4DD} STT: ${transcribed} transcribed${sttFailedCount > 0 ? `, ${sttFailedCount} failed` : ""}`);
+    }
+  }
+  if (cueIndex > 1) {
+    const mergedPath = join(options.outputDir, "subtitles.vtt");
+    writeFileSync(mergedPath, mergedLines.join("\n"), "utf-8");
+    clone.subtitle = { ...clone.subtitle ?? {}, src: mergedPath };
+    console.log(`  \u2705 STT: subtitles ready (${cueIndex - 1} cues)`);
+  }
+  if (cacheDirty) writeCacheManifest(options.outputDir, cache);
+  return clone;
+}
+async function resolveGeneratedMedia(root, options) {
+  const clone = JSON.parse(JSON.stringify(root));
+  mkdirSync2(options.outputDir, { recursive: true });
+  const cache = readCacheManifest(options.outputDir);
+  let cacheDirty = false;
+  const genNodes = [];
+  walkDown(clone, (node2) => {
+    if (node2.type !== "image" && node2.type !== "video") return;
+    if (!node2.prompt || typeof node2.prompt !== "string") return;
+    if (node2.src) return;
+    const id = node2.id ?? `${node2.type}-${genNodes.length}`;
+    genNodes.push({ node: node2, id, type: node2.type, prompt: node2.prompt });
+  });
+  for (const { node: node2, id, type, prompt } of genNodes) {
+    const ext = type === "image" ? "png" : "mp4";
+    const cli = type === "image" ? clone.tti ?? options.ttiCli ?? DEFAULT_TTI_CLI : clone.ttv ?? options.ttvCli ?? DEFAULT_TTV_CLI;
+    const cacheKey = computeCacheKey({ prompt, cli, type });
+    const outputPath = join(options.outputDir, `${cacheKey}.${ext}`);
+    const cached = checkCache(cache, `gen:${cacheKey}`, cacheKey);
+    const label = type === "image" ? "TTI" : "TTV";
+    if (cached) {
+      node2.src = cached;
+      console.log(`  \u2713 ${label}: ${cacheKey} (cached)`);
+      continue;
+    }
+    try {
+      console.log(`  \u{1F50A} ${label}: ${cacheKey}...`);
+      const ttiCmd = clone.tti ?? options.ttiCli ?? DEFAULT_TTI_CLI;
+      const result = type === "image" ? generateTTI(prompt, outputPath, cli) : generateTTV(prompt, outputPath, cli, ttiCmd);
+      if (result) {
+        node2.src = outputPath;
+        updateCache(cache, `gen:${cacheKey}`, cacheKey, outputPath);
+        cacheDirty = true;
+        console.log(`  \u2713 ${label}: ${cacheKey}`);
+      } else {
+        const hint = cli.includes("echo") ? `No ${label} tool installed. The default CLI just echoes a message \u2014 set root.${type === "image" ? "tti" : "ttv"} to a real generation command.` : `The command ran but produced no output file. Check the CLI template or run the script manually to debug.`;
+        console.error(`  \u26A0 ${label}: ${cacheKey} produced no output. ${hint}`);
+      }
+    } catch (err) {
+      const hint = err?.stderr?.toString()?.includes("not found") ? `${label} tool not found. Install the required CLI or configure root.${type === "image" ? "tti" : "ttv"}.` : `Command failed. Try running the CLI template directly to debug: ${cli}`;
+      console.error(`  \u2717 ${label}: ${cacheKey} failed \u2014 ${err.message}. ${hint}`);
+    }
+  }
+  if (cacheDirty) writeCacheManifest(options.outputDir, cache);
+  return clone;
+}
+async function resolveIncludes(root, options = {}) {
+  const clone = JSON.parse(JSON.stringify(root));
+  const baseDir = options.baseDir ?? process.cwd();
+  const outputDir = options.includeOutputDir ?? join(baseDir, ".markcut", "generated", "includes");
+  mkdirSync2(outputDir, { recursive: true });
+  function extractImportEntriesFromRaw(raw) {
+    const match = raw.match(/^(```|~~~)\s*js imports\s*\n([\s\S]*?)^\1\s*$/m);
+    if (!match) return { entries: null, extraSpecs: [], rawSource: null };
+    const src = match[2];
+    const entries = parseImportsBlock(src);
+    const extraSpecs = extractDependencySpecs(src);
+    return { entries, extraSpecs, rawSource: src };
+  }
+  async function resolveOneInclude(includeNode, parentBaseDir) {
+    const n = includeNode;
+    if (n.type !== "include") return;
+    const src = n.src;
+    if (!src || !src.endsWith(".md")) return;
+    const absPath = src.startsWith("/") ? src : resolvePath(parentBaseDir, src);
+    if (!existsSync2(absPath)) {
+      console.warn(`  \u26A0 Include "${src}" not found at ${absPath}`);
+      return;
+    }
+    const raw = readFileSync(absPath, "utf-8");
+    const subRoot = parseMarkdownDescriptive(raw);
+    const { entries: importEntries, extraSpecs, rawSource } = extractImportEntriesFromRaw(raw);
+    const resolved = await resolveAll2(subRoot, {
+      ...options,
+      includeOutputDir: outputDir,
+      baseDir: dirname2(absPath)
+    });
+    const compiled = compileDescriptiveRoot(resolved);
+    const dur = compiled.durationInSeconds ?? compiled.children?.reduce(
+      (max, c) => Math.max(max, c.durationInSeconds ?? 0),
+      0
+    ) ?? 3;
+    const hash = createHash("sha1").update(absPath).digest("hex").slice(0, 12);
+    const compiledPath = join(outputDir, `${hash}.json`);
+    const metaPath = join(outputDir, `${hash}.meta.json`);
+    if (importEntries && importEntries.length > 0) {
+      const sourceName = absPath.split("/").pop().replace(/\.[^.]+$/, "");
+      const meta = { importEntries, extraSpecs, rawSource, sourceName };
+      writeFileSync(metaPath, JSON.stringify(meta, null, 2), "utf-8");
+    }
+    const compiledJson = {
+      root: {
+        ...compiled,
+        // Include a stub field so the server knows this needs bundling
+        ...importEntries && importEntries.length > 0 ? { _pendingImports: true } : {}
+      }
+    };
+    writeFileSync(compiledPath, JSON.stringify(compiledJson, null, 2), "utf-8");
+    n.src = compiledPath;
+    n.durationInSeconds = dur;
+    n.duration = dur;
+    delete n.children;
+    console.log(`  \u{1F517} Include resolved: ${src} \u2192 ${relative(process.cwd(), compiledPath)} (${dur.toFixed(1)}s)`);
+  }
+  const includes = [];
+  walkDown(clone, (node2, parent) => {
+    if (node2.type === "include" && node2.src?.endsWith(".md")) {
+      includes.push({ node: node2, baseDir });
+    }
+  });
+  for (const inc of includes) {
+    await resolveOneInclude(inc.node, inc.baseDir);
+  }
+  return clone;
+}
+async function resolveAll2(root, options = {}) {
+  let result = root;
+  result = await resolveIncludes(result, options);
+  if (options.mediaOutputDir) {
+    result = await resolveGeneratedMedia(result, {
+      outputDir: options.mediaOutputDir,
+      ttiCli: options.ttiCli,
+      ttvCli: options.ttvCli
+    });
+  }
+  result = await resolveMediaDurations(result, {
+    baseDir: options.baseDir,
+    skip: options.skip
+  });
+  if (options.scriptOutputDir) {
+    result = await resolveScripts(result, {
+      outputDir: options.scriptOutputDir,
+      ttsCli: options.ttsCli
+    });
+    result = await resolveMediaDurations(result, {
+      baseDir: options.baseDir,
+      skip: options.skip
+    });
+    const compiled = compileDescriptiveRoot(result);
+    result = await resolveSubtitles(result, {
+      outputDir: options.scriptOutputDir,
+      sttCli: options.sttCli,
+      compiled
+    });
+  }
+  return result;
+}
+
 // src/player/pipeline.ts
 function isDescriptiveRoot(data) {
   if (!data || typeof data !== "object") return false;
@@ -12933,10 +12974,11 @@ function isDescriptiveRoot(data) {
   return false;
 }
 async function resolveAndCompile(data, options = {}) {
-  const resolved = await resolveAll(data, {
+  const resolved = await resolveAll2(data, {
     baseDir: options.baseDir,
     scriptOutputDir: options.scriptOutputDir,
     mediaOutputDir: options.mediaOutputDir,
+    includeOutputDir: options.includeOutputDir,
     ttsCli: options.ttsCli,
     sttCli: options.sttCli
   });
@@ -12953,9 +12995,10 @@ export {
   isDescriptiveRoot,
   parseImportsBlock,
   parseMarkdownDescriptive,
-  resolveAll,
+  resolveAll2 as resolveAll,
   resolveAndCompile,
-  resolveAndCompileMarkdown
+  resolveAndCompileMarkdown,
+  resolveIncludes
 };
 /*! Bundled license information:
 

@@ -188,15 +188,25 @@ When to use: animated route visualization (Google Maps).
 
 ### `include`
 
-When to use: embed an external video JSON (stream tree or scene-based).
+When to use: embed an external markdown file as a sub-video.
+
+In the **descriptive form**, `src` points to a `.md` file. The pipeline
+resolves it recursively: parses the markdown, runs TTS/media/includes,
+compiles to a stream tree JSON (cached at `.markcut/generated/includes/`),
+and bundles any component imports independently.
 
 | Field | Required | Type | Notes |
 |---|---|---|---|
 | `type` | yes | `"include"` | |
-| `src` | cond | string | path/URL to JSON |
+| `src` | cond | string | path to `.md` file (descriptive) or compiled `.json` |
 | `children` | opt | node[] | inline fallback if no `src` |
-| `duration` | cond | number | required if `src` set |
+| `duration` | cond | number | optional — auto-detected from compiled sub-video |
 | `volume` | opt | number | |
+
+> **Component isolation:** The sub-video's `imports` are bundled to
+> `.markcut/<sub-basename>/components/<hash>.js` and loaded at render
+> time in a nested `ComposeContext`, so sub-video components don't
+> conflict with parent components.
 
 ## Imports
 

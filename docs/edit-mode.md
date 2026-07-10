@@ -1,8 +1,11 @@
 # Watch Mode
 
-> `preview <file.json> --edit` — live editing loop with AI-assisted JSON editing.
+> `preview <file.md> --edit` — live editing loop with AI-assisted JSON editing.
 
-Edit mode gives you a browser player that **automatically reloads** when the JSON file changes, plus an **edit input** that calls an AI coding agent (pi) to make changes on your behalf.
+Edit mode gives you a browser player that **automatically reloads** when the source file changes, plus an **edit input** that calls an AI coding agent (pi) to make changes on your behalf.
+
+Generated artifacts (TTS audio, compiled includes, component bundles) are
+stored under `.markcut/` next to the source file — see [SKILL.md](../SKILL.md) for the full layout.
 
 ## Quickstart
 

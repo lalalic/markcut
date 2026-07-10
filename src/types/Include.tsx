@@ -47,6 +47,49 @@ function resolveIncludeSrc(src: string): string {
 }
 
 /**
+ * Dynamic import of a component bundle, returning the registry map.
+ * Returns null if the URL is falsy or import fails.
+ */
+function useSubVideoRegistry(importsUrl: string | undefined):
+  { registry: Record<string, React.ComponentType<any>> | null; loaded: boolean }
+{
+  const [registry, setRegistry] = React.useState<Record<string, React.ComponentType<any>> | null>(null);
+  const [loaded, setLoaded] = React.useState(false);
+  const handleRef = React.useRef<number | null>(null);
+
+  React.useEffect(() => {
+    if (!importsUrl) {
+      setRegistry(null);
+      setLoaded(true);
+      return;
+    }
+    if (!handleRef.current) {
+      handleRef.current = delayRender(`Loading sub-video components: ${importsUrl}`);
+    }
+
+    import(/* webpackIgnore: true */ importsUrl)
+      .then((mod: any) => {
+        setRegistry(mod.default ?? mod);
+        setLoaded(true);
+        if (handleRef.current) {
+          continueRender(handleRef.current);
+          handleRef.current = null;
+        }
+      })
+      .catch((err: Error) => {
+        console.warn(`Sub-video component registry failed to load: ${importsUrl}`, err);
+        setLoaded(true);
+        if (handleRef.current) {
+          continueRender(handleRef.current);
+          handleRef.current = null;
+        }
+      });
+  }, [importsUrl]);
+
+  return { registry, loaded };
+}
+
+/**
  * IncludeLeaf renders a video composition referenced by `src`.
  *
  * The `src` points to a JSON file that can be either:
@@ -55,12 +98,18 @@ function resolveIncludeSrc(src: string): string {
  *
  * Falls back to inline `children` (legacy behavior) when `src` is not set.
  *
+ * When the loaded JSON carries its own `imports` field (component bundle URL),
+ * IncludeLeaf dynamically imports the bundle and creates a nested ComposeContext
+ * with the sub-video's registry merged into the parent's, so custom components
+ * registered by the sub-video are available during its rendering.
+ *
  * Usage:
  *   { type: "include", src: "./path/to/video.json", actions: [{ start: 0, end: 5 }] }
  */
 export function IncludeLeaf({ stream }: { stream: IncludeStream }) {
   const { fps: parentFps, width: parentWidth, height: parentHeight } = useVideoConfig();
-  const { Container } = React.useContext(ComposeContext);
+  const parentCompose = React.useContext(ComposeContext);
+  const { Container } = parentCompose;
   const parentAudio = React.useContext(AudioContext);
   const totalDur = stream.durationInSeconds ?? stream.actions[0]?.end ?? 1;
   useFrameEvents(stream.on, Math.max(1, Math.floor(totalDur * parentFps)));
@@ -110,6 +159,29 @@ export function IncludeLeaf({ stream }: { stream: IncludeStream }) {
       getDurationInSeconds(stream as unknown as DurationStream, true);
     }
   }, [stream, stream.src]);
+
+  // ── Extract sub-video imports URL from loaded data ─────────────────
+  const subImportsUrl = React.useMemo<string | undefined>(() => {
+    if (!externalData) return undefined;
+    const root = (externalData as any).root ?? externalData;
+    return root?.imports;
+  }, [externalData]);
+
+  // ── Load sub-video component registry ──────────────────────────────
+  const { registry: subRegistry, loaded: subRegistryLoaded } = useSubVideoRegistry(subImportsUrl);
+
+  // ── Merge registries: sub-video components take priority ───────────
+  const mergedCompose = React.useMemo(() => {
+    const parentComponents = parentCompose.components;
+    if (!subRegistry) return parentCompose;
+    return {
+      ...parentCompose,
+      components: {
+        ...parentComponents,
+        ...subRegistry,
+      },
+    };
+  }, [parentCompose, subRegistry]);
 
   // ── Include foreground audio context ─────────────────────────────
   const audioCtx = React.useMemo(
@@ -299,9 +371,24 @@ export function IncludeLeaf({ stream }: { stream: IncludeStream }) {
     );
   };
 
-  return (
+  // ── Determine if we need a nested ComposeContext ───────────────────
+  const needsNestedContext = subRegistry !== null && subRegistry !== parentCompose.components;
+
+  const inner = (
     <AudioContext.Provider value={audioCtx as any}>
       {stream.actions.map(renderAction)}
     </AudioContext.Provider>
   );
+
+  // When the sub-video has its own component registry, wrap in a nested
+  // ComposeContext so its components are available to FolderLeaf.
+  if (needsNestedContext && subRegistryLoaded) {
+    return (
+      <ComposeContext.Provider value={mergedCompose}>
+        {inner}
+      </ComposeContext.Provider>
+    );
+  }
+
+  return inner;
 }

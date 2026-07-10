@@ -3,6 +3,7 @@
  *
  * - resolveMediaDurations: probe actual video/audio duration via ffprobe
  * - resolveScripts: TTS each `script` to audio, STT to VTT, attach as children
+ * - resolveIncludes: recursively resolve included descriptive markdown files
  *
  * These run BEFORE compileDescriptiveRoot() so the synchronous compiler
  * has complete duration and renderable children.
@@ -10,7 +11,7 @@
 import { execSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync, statSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { join, dirname, resolve as resolvePath } from "node:path";
+import { join, dirname, resolve as resolvePath, relative } from "node:path";
 import {
   generateTTS,
   generateSTT,
@@ -23,6 +24,8 @@ import {
 } from "../render/cli-tools";
 import { walkDown } from "../utils";
 import type { DescriptiveNode, DescriptiveRoot } from "./compiler";
+import { compileDescriptiveRoot, parseImportsBlock, extractDependencySpecs } from "./compiler";
+import { parseMarkdownDescriptive } from "./markdown";
 
 // ── Content-hash cache for expensive operations (TTS, STT) ────────────────
 // Skips regeneration when input hasn't changed. Cache key is a hash of all
@@ -191,28 +194,27 @@ export async function resolveScripts(
   }
 
   for (const { node, id, parent } of allScriptNodes) {
-    const safeId = id.replace(/[^a-zA-Z0-9_-]/g, "_");
-    const audioPath = join(options.outputDir, `${safeId}.mp3`);
-
     // Resolve TTS config: parent scene tts > root tts > options ttsCli > default
     const ttsCli = parent?.tts ?? clone.tts ?? options.ttsCli ?? DEFAULT_TTS_CLI;
 
-    // Cache key: script + CLI string
+    // Content-addressed filename: hash of script + CLI, so identical scripts
+    // across different source files share the same audio file.
     const cacheKey = computeCacheKey({ script: node.script, cli: ttsCli });
+    const audioPath = join(options.outputDir, `${cacheKey}.mp3`);
 
     // Check cache — skip TTS if script + config unchanged AND audio file exists
-    const cached = checkCache(cache, `tts:${safeId}`, cacheKey);
+    const cached = checkCache(cache, `tts:${cacheKey}`, cacheKey);
     let generated: string;
     if (cached) {
       generated = cached;
-      console.log(`  ✓ TTS: ${safeId} (cached)`);
+      console.log(`  ✓ TTS: ${cacheKey} (cached)`);
     } else {
       generated = generateTTS(node.script, audioPath, ttsCli);
       if (generated) {
-        updateCache(cache, `tts:${safeId}`, cacheKey, generated);
+        updateCache(cache, `tts:${cacheKey}`, cacheKey, generated);
         cacheDirty = true;
       } else {
-        console.warn(`  ⚠ TTS produced no audio for ${safeId}. Audio will have no source. Check root.tts config.`);
+        console.warn(`  ⚠ TTS produced no audio for ${cacheKey}. Audio will have no source. Check root.tts config.`);
       }
     }
     if (!generated) continue;
@@ -224,7 +226,8 @@ export async function resolveScripts(
 
   if (cacheDirty) writeCacheManifest(options.outputDir, cache);
   if (allScriptNodes.length > 0) {
-    console.log(`  ✅ TTS: ${allScriptNodes.length} script${allScriptNodes.length > 1 ? "s" : ""} ready`);
+    const unique = new Set(allScriptNodes.filter(s => s.node.src).map(s => s.node.src)).size;
+    console.log(`  ✅ TTS: ${unique} unique audio file${unique > 1 ? "s" : ""} (${allScriptNodes.length} node${allScriptNodes.length > 1 ? "s" : ""})`);
   }
   return clone;
 }
@@ -463,49 +466,49 @@ export async function resolveGeneratedMedia(
   });
 
   for (const { node, id, type, prompt } of genNodes) {
-    const safeId = id.replace(/[^a-zA-Z0-9_-]/g, "_");
     const ext = type === "image" ? "png" : "mp4";
-    const outputPath = join(options.outputDir, `${safeId}.${ext}`);
 
     // Resolve TTI/TTV config: root-level config overrides CLI defaults
     const cli = type === "image"
       ? (clone.tti ?? options.ttiCli ?? DEFAULT_TTI_CLI)
       : (clone.ttv ?? options.ttvCli ?? DEFAULT_TTV_CLI);
 
-    // Cache key: prompt + CLI template (encodes all model/style params)
+    // Content-addressed filename: hash of prompt + CLI + type, so identical
+    // prompts across different source files share the same generated media.
     const cacheKey = computeCacheKey({ prompt, cli, type });
+    const outputPath = join(options.outputDir, `${cacheKey}.${ext}`);
 
-    const cached = checkCache(cache, `gen:${safeId}`, cacheKey);
+    const cached = checkCache(cache, `gen:${cacheKey}`, cacheKey);
     const label = type === "image" ? "TTI" : "TTV";
 
     if (cached) {
       node.src = cached;
-      console.log(`  ✓ ${label}: ${safeId} (cached)`);
+      console.log(`  ✓ ${label}: ${cacheKey} (cached)`);
       continue;
     }
 
     try {
-      console.log(`  🔊 ${label}: ${safeId}...`);
+      console.log(`  🔊 ${label}: ${cacheKey}...`);
       const ttiCmd = clone.tti ?? options.ttiCli ?? DEFAULT_TTI_CLI;
       const result = type === "image"
         ? generateTTI(prompt, outputPath, cli)
         : generateTTV(prompt, outputPath, cli, ttiCmd);
       if (result) {
         node.src = outputPath;
-        updateCache(cache, `gen:${safeId}`, cacheKey, outputPath);
+        updateCache(cache, `gen:${cacheKey}`, cacheKey, outputPath);
         cacheDirty = true;
-        console.log(`  ✓ ${label}: ${safeId}`);
+        console.log(`  ✓ ${label}: ${cacheKey}`);
       } else {
         const hint = cli.includes("echo")
           ? `No ${label} tool installed. The default CLI just echoes a message — set root.${type === "image" ? "tti" : "ttv"} to a real generation command.`
           : `The command ran but produced no output file. Check the CLI template or run the script manually to debug.`;
-        console.error(`  ⚠ ${label}: ${safeId} produced no output. ${hint}`);
+        console.error(`  ⚠ ${label}: ${cacheKey} produced no output. ${hint}`);
       }
     } catch (err: any) {
       const hint = (err as any)?.stderr?.toString()?.includes("not found")
         ? `${label} tool not found. Install the required CLI or configure root.${type === "image" ? "tti" : "ttv"}.`
         : `Command failed. Try running the CLI template directly to debug: ${cli}`;
-      console.error(`  ✗ ${label}: ${safeId} failed — ${err.message}. ${hint}`);
+      console.error(`  ✗ ${label}: ${cacheKey} failed — ${err.message}. ${hint}`);
     }
   }
 
@@ -528,14 +531,146 @@ export interface ResolveAllOptions extends ResolveMediaOptions {
   ttiCli?: string;
   /** TTV CLI template override (default: pi agent). Overrides root.ttv. */
   ttvCli?: string;
+  /** If set, resolve includes. Directory where pre-compiled include JSON files are stored. */
+  includeOutputDir?: string;
+}
+
+/**
+ * Recursively resolve include nodes in the descriptive tree.
+ *
+ * For each `include` node with a `.md` src:
+ *   1. Read and parse the referenced markdown file
+ *   2. Recursively resolve it (media durations, TTS, STT, nested includes)
+ *   3. Compile it to a stream tree Root
+ *   4. Write the compiled Root to `includeOutputDir/<hash>.json`
+ *   5. Write a companion `.meta.json` file with import entries for the server
+ *   6. Update the include node's `src` to the compiled JSON path
+ *   7. Stamp `durationInSeconds` with the sub-video's real duration
+ *
+ * After this step, the descriptive tree is fully resolved: all includes point
+ * to pre-compiled JSON files with accurate durations. The server can then
+ * bundle per-subvideo component imports using the companion meta files.
+ */
+export async function resolveIncludes(
+  root: DescriptiveRoot,
+  options: ResolveAllOptions = {},
+): Promise<DescriptiveRoot> {
+  const clone: DescriptiveRoot = JSON.parse(JSON.stringify(root));
+  const baseDir = options.baseDir ?? process.cwd();
+  const outputDir = options.includeOutputDir ?? join(baseDir, ".markcut", "generated", "includes");
+  mkdirSync(outputDir, { recursive: true });
+
+  // Extract imports block from raw markdown source (reusable helper)
+  function extractImportEntriesFromRaw(raw: string): {
+    entries: Array<{ name: string; from?: string; exports?: string }> | null;
+    extraSpecs: string[];
+    rawSource: string | null;
+  } {
+    const match = raw.match(/^(```|~~~)\s*js imports\s*\n([\s\S]*?)^\1\s*$/m);
+    if (!match) return { entries: null, extraSpecs: [], rawSource: null };
+    const src = match[2]!;
+    const entries = parseImportsBlock(src);
+    const extraSpecs = extractDependencySpecs(src);
+    return { entries, extraSpecs, rawSource: src };
+  }
+
+  async function resolveOneInclude(
+    includeNode: DescriptiveNode,
+    parentBaseDir: string,
+  ): Promise<void> {
+    const n = includeNode as any;
+    if (n.type !== "include") return;
+    const src = n.src;
+    if (!src || !src.endsWith(".md")) return;
+
+    // Resolve the path
+    const absPath = src.startsWith("/") ? src : resolvePath(parentBaseDir, src);
+    if (!existsSync(absPath)) {
+      console.warn(`  ⚠ Include "${src}" not found at ${absPath}`);
+      return;
+    }
+
+    // Read and parse
+    const raw = readFileSync(absPath, "utf-8");
+    const subRoot = parseMarkdownDescriptive(raw);
+
+    // Extract import info from the included file (for the server to bundle later)
+    const { entries: importEntries, extraSpecs, rawSource } = extractImportEntriesFromRaw(raw);
+
+    // Recursively resolve the sub-root (this handles nested includes too)
+    // Use the same output dir so all compiled includes are co-located
+    const resolved = await resolveAll(subRoot, {
+      ...options,
+      includeOutputDir: outputDir,
+      baseDir: dirname(absPath),
+    });
+
+    // Compile to stream tree
+    const compiled = compileDescriptiveRoot(resolved);
+
+    // Determine duration
+    const dur = compiled.durationInSeconds ?? compiled.children?.reduce(
+      (max: number, c: any) => Math.max(max, c.durationInSeconds ?? 0), 0
+    ) ?? 3;
+
+    // Create a stable filename from the absolute path
+    const hash = createHash("sha1").update(absPath).digest("hex").slice(0, 12);
+    const compiledPath = join(outputDir, `${hash}.json`);
+    const metaPath = join(outputDir, `${hash}.meta.json`);
+
+    // Write companion meta file if there are imports
+    if (importEntries && importEntries.length > 0) {
+      const sourceName = absPath.split("/").pop().replace(/\.[^.]+$/, "");
+      const meta = { importEntries, extraSpecs, rawSource, sourceName };
+      writeFileSync(metaPath, JSON.stringify(meta, null, 2), "utf-8");
+    }
+
+    // Write compiled JSON (without imports field — the server will set it after bundling)
+    const compiledJson = {
+      root: {
+        ...compiled,
+        // Include a stub field so the server knows this needs bundling
+        ...(importEntries && importEntries.length > 0 ? { _pendingImports: true } : {}),
+      },
+    };
+    writeFileSync(compiledPath, JSON.stringify(compiledJson, null, 2), "utf-8");
+
+    // Update the include node
+    n.src = compiledPath;
+    n.durationInSeconds = dur;
+    n.duration = dur;
+    // Remove children if any (the sub-video is now an external reference)
+    delete n.children;
+
+    console.log(`  🔗 Include resolved: ${src} → ${relative(process.cwd(), compiledPath)} (${dur.toFixed(1)}s)`);
+  }
+
+  // Walk the tree and resolve includes. We do a multi-pass approach:
+  // first collect all includes, then resolve them (to avoid mutation during iteration).
+  const includes: Array<{ node: DescriptiveNode; baseDir: string }> = [];
+  walkDown(clone as any, (node, parent) => {
+    if ((node as any).type === "include" && (node as any).src?.endsWith(".md")) {
+      includes.push({ node: node as DescriptiveNode, baseDir: baseDir });
+    }
+  });
+
+  for (const inc of includes) {
+    await resolveOneInclude(inc.node, inc.baseDir);
+  }
+
+  return clone;
 }
 
 /**
  * Run all pre-pass resolvers in the correct order:
+ * 0. Resolve includes (pre-compile referenced .md files to JSON)
  * 1. Generated media (TTI/TTV) — resolve image/video prompts to actual files
  * 2. Media duration probing
  * 3. Script → TTS (audio only) — uses root.tts / scene.tts / CLI options
  * 4. Post-compile: STT → VTT (subtitle) — uses root.stt / CLI options
+ *
+ * Step 0 runs first so that sub-video durations are known before duration
+ * probing of the parent tree.
  */
 export async function resolveAll(
   root: DescriptiveRoot,
@@ -543,7 +678,11 @@ export async function resolveAll(
 ): Promise<DescriptiveRoot> {
   let result = root;
 
-  // Step 0: Generate images/videos from prompts before probing durations
+  // Step 0: Resolve includes (pre-compile referenced .md files to JSON with accurate durations)
+  // This must run first so sub-video durations inform the parent tree's layout.
+  result = await resolveIncludes(result, options);
+
+  // Step 1: Generate images/videos from prompts before probing durations
   if (options.mediaOutputDir) {
     result = await resolveGeneratedMedia(result, {
       outputDir: options.mediaOutputDir,
@@ -552,11 +691,13 @@ export async function resolveAll(
     });
   }
 
+  // Step 2: Media duration probing
   result = await resolveMediaDurations(result, {
     baseDir: options.baseDir,
     skip: options.skip,
   });
 
+  // Step 3: Script → TTS
   if (options.scriptOutputDir) {
     result = await resolveScripts(result, {
       outputDir: options.scriptOutputDir,
@@ -570,7 +711,6 @@ export async function resolveAll(
     });
 
     // Post-compile subtitle generation (uses root.stt, options.sttCli, or default whisper CLI)
-    const { compileDescriptiveRoot } = await import("./compiler");
     const compiled = compileDescriptiveRoot(result);
     result = await resolveSubtitles(result, {
       outputDir: options.scriptOutputDir,

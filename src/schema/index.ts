@@ -187,6 +187,7 @@ export const include = base.extend({
   volume: z.number().min(0).max(1).default(1),
   children: z.array(z.lazy((): z.ZodTypeAny => stream)).default(() => []),
   actions: z.array(action).min(1).default(() => [action.parse({})]),
+  imports: z.string().optional().describe("component bundle URL for sub-video (set by engine)"),
 });
 export type Include = z.infer<typeof include>;
 

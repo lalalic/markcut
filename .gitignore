@@ -1,7 +1,11 @@
 node_modules/
 .tmp/
+.cache/
 out/
+.markcut/
+public/.component-cache/
 *.bak
 public/
 labels.json
 tests/fixtures/templates/assets/
+.DS_Store

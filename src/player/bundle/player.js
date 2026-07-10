@@ -44665,9 +44665,44 @@ function resolveIncludeSrc(src) {
   }
   return staticFile(src);
 }
+function useSubVideoRegistry(importsUrl) {
+  const [registry2, setRegistry] = React39.useState(null);
+  const [loaded, setLoaded] = React39.useState(false);
+  const handleRef = React39.useRef(null);
+  React39.useEffect(() => {
+    if (!importsUrl) {
+      setRegistry(null);
+      setLoaded(true);
+      return;
+    }
+    if (!handleRef.current) {
+      handleRef.current = delayRender(`Loading sub-video components: ${importsUrl}`);
+    }
+    import(
+      /* webpackIgnore: true */
+      importsUrl
+    ).then((mod) => {
+      setRegistry(mod.default ?? mod);
+      setLoaded(true);
+      if (handleRef.current) {
+        continueRender(handleRef.current);
+        handleRef.current = null;
+      }
+    }).catch((err) => {
+      console.warn(`Sub-video component registry failed to load: ${importsUrl}`, err);
+      setLoaded(true);
+      if (handleRef.current) {
+        continueRender(handleRef.current);
+        handleRef.current = null;
+      }
+    });
+  }, [importsUrl]);
+  return { registry: registry2, loaded };
+}
 function IncludeLeaf({ stream: stream2 }) {
   const { fps: parentFps, width: parentWidth, height: parentHeight } = useVideoConfig();
-  const { Container } = React39.useContext(ComposeContext);
+  const parentCompose = React39.useContext(ComposeContext);
+  const { Container } = parentCompose;
   const parentAudio = React39.useContext(AudioContext2);
   const totalDur = stream2.durationInSeconds ?? stream2.actions[0]?.end ?? 1;
   useFrameEvents(stream2.on, Math.max(1, Math.floor(totalDur * parentFps)));
@@ -44706,6 +44741,23 @@ function IncludeLeaf({ stream: stream2 }) {
       getDurationInSeconds(stream2, true);
     }
   }, [stream2, stream2.src]);
+  const subImportsUrl = React39.useMemo(() => {
+    if (!externalData) return void 0;
+    const root2 = externalData.root ?? externalData;
+    return root2?.imports;
+  }, [externalData]);
+  const { registry: subRegistry, loaded: subRegistryLoaded } = useSubVideoRegistry(subImportsUrl);
+  const mergedCompose = React39.useMemo(() => {
+    const parentComponents = parentCompose.components;
+    if (!subRegistry) return parentCompose;
+    return {
+      ...parentCompose,
+      components: {
+        ...parentComponents,
+        ...subRegistry
+      }
+    };
+  }, [parentCompose, subRegistry]);
   const audioCtx = React39.useMemo(
     () => ({ id: stream2.id, foreground: true, parent: parentAudio }),
     [stream2.id, parentAudio]
@@ -44877,7 +44929,12 @@ function IncludeLeaf({ stream: stream2 }) {
       a2.id
     );
   };
-  return /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(AudioContext2.Provider, { value: audioCtx, children: stream2.actions.map(renderAction) });
+  const needsNestedContext = subRegistry !== null && subRegistry !== parentCompose.components;
+  const inner2 = /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(AudioContext2.Provider, { value: audioCtx, children: stream2.actions.map(renderAction) });
+  if (needsNestedContext && subRegistryLoaded) {
+    return /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(ComposeContext.Provider, { value: mergedCompose, children: inner2 });
+  }
+  return inner2;
 }
 
 // src/types/Scene.tsx
@@ -59744,7 +59801,8 @@ var include = base.extend({
   src: external_exports.string().optional().describe("path or URL to video JSON file (stream tree or scene-based)"),
   volume: external_exports.number().min(0).max(1).default(1),
   children: external_exports.array(external_exports.lazy(() => stream)).default(() => []),
-  actions: external_exports.array(action).min(1).default(() => [action.parse({})])
+  actions: external_exports.array(action).min(1).default(() => [action.parse({})]),
+  imports: external_exports.string().optional().describe("component bundle URL for sub-video (set by engine)")
 });
 var scene = base.extend({
   type: external_exports.literal("scene").default("scene"),

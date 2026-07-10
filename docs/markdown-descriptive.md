@@ -369,9 +369,21 @@ When: animated route. Required: `duration`, `waypoints`.
 
 ### `include`
 
-When: external video JSON. Required: `src` + `duration`, or inline `children`.
+When: embed an external markdown file as a sub-video. The sub-video is
+fully resolved by the pipeline (TTS, media, includes, component imports).
 
-`- include src:./child.json duration:4`
+The sub-video can have its own ` ```js imports ``` ` block — components
+are bundled independently and available in an isolated `ComposeContext`
+at render time (nested context, "sub-video wins" priority).
+
+`- include src:./sub-video.md`
+
+> **Note:** `duration` is optional — the pipeline compiles the sub-video
+> to determine its real duration. The compiled JSON is cached at
+> `.markcut/generated/includes/<hash>.json` so repeated runs are fast.
+>
+> Component imports from the sub-video are bundled to
+> `.markcut/<sub-basename>/components/<hash>.js`.
 
 ## Events
 

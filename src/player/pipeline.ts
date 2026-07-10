@@ -15,7 +15,7 @@
  *   bash scripts/build-pipeline.sh
  */
 import { compileDescriptiveRoot, parseImportsBlock, extractDependencySpecs } from "../descriptive/compiler";
-import { resolveAll } from "../descriptive/resolve";
+import { resolveAll, resolveIncludes } from "../descriptive/resolve";
 import { parseMarkdownDescriptive } from "../descriptive/markdown";
 import type { DescriptiveRoot } from "../descriptive/compiler";
 import type { Root } from "../schema/index";
@@ -27,6 +27,8 @@ export interface ResolveAndCompileOptions {
   scriptOutputDir?: string;
   /** Output directory for generated TTI/TTV media files */
   mediaOutputDir?: string;
+  /** Output directory for pre-compiled include JSON files */
+  includeOutputDir?: string;
   /** TTS CLI template override (default: edge-tts). Overrides root.tts. */
   ttsCli?: string;
   /** STT CLI template override (default: whisper). Overrides root.stt. */
@@ -73,11 +75,12 @@ export async function resolveAndCompile(
   data: DescriptiveRoot,
   options: ResolveAndCompileOptions = {},
 ): Promise<Root> {
-  // 1. Async resolve: durations, TTS, STT
+  // 1. Async resolve: durations, TTS, STT, includes
   const resolved = await resolveAll(data, {
     baseDir: options.baseDir,
     scriptOutputDir: options.scriptOutputDir,
     mediaOutputDir: options.mediaOutputDir,
+    includeOutputDir: options.includeOutputDir,
     ttsCli: options.ttsCli,
     sttCli: options.sttCli,
   });
@@ -102,5 +105,5 @@ export async function resolveAndCompileMarkdown(
   return resolveAndCompile(descriptive, options);
 }
 
-export { compileDescriptiveRoot, resolveAll, parseMarkdownDescriptive, parseImportsBlock, extractDependencySpecs };
+export { compileDescriptiveRoot, resolveAll, resolveIncludes, parseMarkdownDescriptive, parseImportsBlock, extractDependencySpecs };
 export type { DescriptiveRoot, Root };
