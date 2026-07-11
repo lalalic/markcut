@@ -81,16 +81,15 @@ let editHistory = [];
 
 // ─── .markcut/ directory layout ────────────────────────────────────────────
 //   .markcut/                     ← server document root
-//     generated/                  ← shared, content-addressed (across all files)
+//     generated/                  ← shared, content-addressed (across all variants & files)
 //       tts/                      ← TTS audio (content-hash filenames)
 //       media/                    ← TTI/TTV media (content-hash filenames)
 //       includes/                 ← compiled sub-video JSON (content-hash)
+//       components/               ← component bundles (content-hash, shared across variants)
 //     <basename>/                 ← per-source-file
 //       default/                  ← default variant artifacts
-//         components/             ← component bundles (per-file: imports differ)
 //         compiled.json
 //       zh-tiktok/                ← variant-specific artifacts
-//         components/
 //         compiled.json
 const MARKCUT_BASE = join(dirname(VIDEO_JSON), ".markcut");
 const MARKCUT_DIR = join(MARKCUT_BASE, "generated");
@@ -98,6 +97,7 @@ const BASENAME = VIDEO_JSON.split("/").pop().replace(/\.[^.]+$/, "");
 const TTS_OUTPUT_DIR = join(MARKCUT_DIR, "tts");
 const MEDIA_OUTPUT_DIR = join(MARKCUT_DIR, "media");
 const INCLUDE_CACHE_DIR = join(MARKCUT_DIR, "includes");
+const COMPONENT_OUTPUT_DIR = join(MARKCUT_DIR, "components");
 const WHISPER_BIN = process.env.WHISPER_BIN || "/Users/lir/Library/Python/3.9/bin/whisper";
 
 /** Get the per-variant directory under .markcut/<basename>/<label>/ */
@@ -160,7 +160,6 @@ async function compileVariant(config, parsed, raw) {
   if (compiledRootCache.has(cacheKey)) return compiledRootCache.get(cacheKey);
 
   const vDir = variantDir(config.label);
-  const componentDir = join(vDir, "components");
   const subtitleDir = vDir;
 
   const { entries: importEntries, extraSpecs, rawSource } = extractImportEntries(raw);
@@ -220,11 +219,14 @@ async function compileVariant(config, parsed, raw) {
     }
   }
 
-  // Bundle component imports
+  // Bundle component imports — output goes to shared generated/components/ (content-addressed)
+  // The bundler's cache dir doubles as both the temp project location and output dir.
+  // Using a shared COMPONENT_OUTPUT_DIR ensures identical imports across variants
+  // reuse the same cached bundle.
   const shouldBundle = (importEntries && importEntries.length > 0) || (rawSource && rawSource.trim());
   if (shouldBundle) {
     try {
-      const bundle = await bundleFromEntries(importEntries || [], extraSpecs, rawSource, componentDir);
+      const bundle = await bundleFromEntries(importEntries || [], extraSpecs, rawSource, COMPONENT_OUTPUT_DIR);
       if (bundle.url) {
         compiled.imports = bundle.url;
         console.log(`  ✅ ${config.label}: components → ${bundle.exports.join(", ")}`);
@@ -284,8 +286,8 @@ async function loadCompiledRoot(variantLabel) {
  * companion file (created by resolveIncludes in the pipeline), bundle the
  * sub-video's component imports and write the bundle URL into the compiled JSON.
  *
- * Sub-video component bundles are stored under .markcut/<sub-source-name>/components/
- * (per-file), and served from .markcut/ as the document root.
+ * Sub-video component bundles are stored under .markcut/generated/components/
+ * (shared, content-addressed), served from .markcut/ as the document root.
  *
  * This runs AFTER resolveAndCompile so the server can bundle per-subvideo
  * component registrations independently.
@@ -316,21 +318,16 @@ async function resolveIncludeImports(root) {
       continue;
     }
 
-    const { importEntries, extraSpecs, rawSource, sourceName } = meta;
+    const { importEntries, extraSpecs, rawSource } = meta;
     if (!importEntries || importEntries.length === 0) continue;
-
-    // Use the sub-video's basename for its component directory
-    // Falls back to the first variant's component dir if sourceName is missing
-    const subComponentDir = sourceName
-      ? join(MARKCUT_BASE, sourceName, "components")
-      : join(variantDir(VARIANT_CONFIGS[0].label), "components");
 
     try {
       console.log(`  🔗 Sub-video includes: bundling ${importEntries.length} component(s) from "${inc.src}"`);
-      const bundle = await bundleFromEntries(importEntries, extraSpecs || [], rawSource, subComponentDir);
+      // Use shared generated/components/ for content-addressed caching
+      const bundle = await bundleFromEntries(importEntries, extraSpecs || [], rawSource, COMPONENT_OUTPUT_DIR);
       if (bundle.url) {
-        // bundle.url: /Users/.../.markcut/<sub-basename>/components/abc123.js
-        // server root: .markcut/ → serves as /<sub-basename>/components/abc123.js
+        // bundle.url: /Users/.../.markcut/generated/components/abc123.js
+        // server root: .markcut/ — strip MARKCUT_BASE to get /generated/components/abc123.js
         let bundleUrl = bundle.url;
         if (bundleUrl.startsWith(MARKCUT_BASE)) {
           bundleUrl = bundleUrl.replace(MARKCUT_BASE, "");

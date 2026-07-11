@@ -97,25 +97,92 @@ Inline components can be defined entirely in the imports block using `export fun
 | [docs/edit-mode.md](docs/edit-mode.md) | Live edit mode with SSE reload |
 
 
+## Variants
+
+Create different versions of the same video for different platforms, languages, or formats using **variant sections** in your markdown.
+
+### Defining Variants
+
+Add `# variant-name` headings alongside `# video` (the base). Each variant can override any property using variant-prefixed keys:
+
+```markdown
+# video
+width:1080 height:1920 fps:30 layout:series
+
+## Intro
+layout:parallel
+- component duration:3 jsx:"<h1>Hello</h1>"
+- image src:default.jpg duration:3
+
+# zh
+## Intro
+layout:parallel
+- component duration:3 zh:"<h1>你好</h1>"         ← bare key overrides jsx (primary content)
+- image zh-src:zh-image.jpg src:default.jpg       ← zh-src overrides src
+
+# youtube
+width:1920 height:1080 fps:30                     ← different aspect ratio
+## Intro
+layout:parallel
+- component duration:3 jsx:"<h1>YouTube Hello</h1>"
+```
+
+Two override mechanisms:
+- **Variant-prefixed keys**: `zh-src` → `src`, `zh-jsx` → `jsx`, `zh-script` → `script`
+- **Bare variant keys**: `zh:"<h1>你好</h1>"` replaces the node's primary content key (`jsx` for components, `src` for images/video, `script` for audio)
+
+### Multi-Variant Preview Server
+
+The `preview` command accepts multiple `--variant` flags, each defining a separate compilation target. Variants are compiled **sequentially** (not in parallel) to avoid resource contention from CLI tools like whisper and ffprobe.
+
+```bash
+# Preview 4 variants simultaneously
+npx markcut preview storyboard.md \
+  --variant default \
+  --variant zh-tiktok \
+  --variant en-tiktok \
+  --variant youtube
+
+# Each variant is served at its own URL:
+#   http://localhost:3001            → default
+#   http://localhost:3001/zh-tiktok  → zh + tiktok chain
+#   http://localhost:3001/en-tiktok  → en + tiktok chain
+#   http://localhost:3001/youtube    → youtube
+```
+
+Compound variant labels (like `zh-tiktok`) are split on `-` to form a **variant chain** — the parser applies `zh` overrides first, then `tiktok` overrides on top. Each variant gets its own compiled output and subtitle directory. Component bundles are stored in a shared cache (`.markcut/generated/components/`) — identical imports across variants reuse the same bundle.
+
+### Variant-Aware Browser
+
+The browser player reads `window.VARIANT` from the URL path and fetches the correct compiled data via `/api/video-data?variant=<name>`. A **variant switcher bar** at the top of the player lets you jump between variants instantly.
+
 ## `.markcut/` Directory Layout
 
-When you run `preview` or `render`, all generated artifacts live under `.markcut/` next to the source file:
+When you run `preview` or `render`, all generated artifacts live under `.markcut/` next to the source file. With multiple variants, each gets its own subdirectory:
 
 ```
 .markcut/
-  generated/                    ← shared, content-addressed
+  generated/                    ← shared, content-addressed (across all variants & files)
     tts/                        ← TTS narration audio (content-hash filenames)
     media/                      ← TTI/TTV media (content-hash filenames)
     includes/                   ← compiled sub-video JSON (content-hash)
-  <basename>/                   ← per-source-file artifacts
-    components/                 ← component bundles (per-file: imports differ)
-    <variant>/                  ← per-variant artifacts (subtitles, etc.)
+    components/                 ← component bundles (content-hash, shared across variants)
+  <basename>/                   ← per-source-file
+    default/                    ← default variant artifacts
+      compiled.json             ← compiled stream tree
+      subtitles.vtt
+    zh-tiktok/                  ← variant-specific artifacts
+      compiled.json
+      subtitles.vtt
+    youtube/
+      compiled.json
+      subtitles.vtt
 ```
 
-- **`generated/`** — shared artifacts using content-hash filenames, so identical scripts/prompts across different source files reuse the same cached file
-- **`<basename>/components/`** — per-file component bundles; each source file has its own `imports` block, so bundles live under its basename
-- **`<basename>/<variant>/`** — per-variant output (e.g., subtitles in different languages or formats)
-- The server serves `.markcut/` as a document root, so components at `.markcut/slides/components/abc.js` are served as `/slides/components/abc.js`
+- **`generated/`** — shared artifacts using content-hash filenames, so identical scripts/prompts across different variants reuse the same cached file
+- **`generated/components/`** — component bundles shared across all variants and source files. Identical imports produce the same content hash, so variants with the same component registrations reuse the same bundle
+- **`<basename>/<variant>/compiled.json`** — the compiled stream tree for each variant, cached to disk for fast restarts
+- The server serves `.markcut/` as a document root, so components at `.markcut/generated/components/abc.js` are served as `/generated/components/abc.js`
 
 The `.markcut/` directory is gitignored by default — it's regenerated on each run.
 
