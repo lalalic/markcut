@@ -97,6 +97,28 @@ Inline components can be defined entirely in the imports block using `export fun
 | [docs/edit-mode.md](docs/edit-mode.md) | Live edit mode with SSE reload |
 
 
+## `.markcut/` Directory Layout
+
+When you run `preview` or `render`, all generated artifacts live under `.markcut/` next to the source file:
+
+```
+.markcut/
+  generated/                    ← shared, content-addressed
+    tts/                        ← TTS narration audio (content-hash filenames)
+    media/                      ← TTI/TTV media (content-hash filenames)
+    includes/                   ← compiled sub-video JSON (content-hash)
+  <basename>/                   ← per-source-file artifacts
+    components/                 ← component bundles (per-file: imports differ)
+    <variant>/                  ← per-variant artifacts (subtitles, etc.)
+```
+
+- **`generated/`** — shared artifacts using content-hash filenames, so identical scripts/prompts across different source files reuse the same cached file
+- **`<basename>/components/`** — per-file component bundles; each source file has its own `imports` block, so bundles live under its basename
+- **`<basename>/<variant>/`** — per-variant output (e.g., subtitles in different languages or formats)
+- The server serves `.markcut/` as a document root, so components at `.markcut/slides/components/abc.js` are served as `/slides/components/abc.js`
+
+The `.markcut/` directory is gitignored by default — it's regenerated on each run.
+
 ## Architecture
 
 ```
