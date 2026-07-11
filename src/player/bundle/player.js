@@ -45438,12 +45438,17 @@ function FolderLeaf({ stream: stream2 }) {
   const transition = stream2.transition;
   const transitionTime = stream2.transitionTime ?? 0.5;
   const isRoot = stream2.id === "root";
+  const visibleChildren = stream2.children.filter((c3) => c3.visible !== false);
+  const bgChildren = visibleChildren.filter((c3) => c3.isBackground);
+  const seriesChildren = isSeries ? visibleChildren.filter((c3) => !c3.isBackground) : visibleChildren;
+  const allAudio = seriesChildren.length > 0 && seriesChildren.every((c3) => c3.type === "audio");
+  const effectiveTransition = allAudio ? void 0 : transition;
   const TypedSeries = React44.useMemo(() => {
     if (!isSeries) return NotSeries;
-    return transition ? TransitionSeries : Series;
-  }, [isSeries, transition]);
+    return effectiveTransition ? TransitionSeries : Series;
+  }, [isSeries, effectiveTransition]);
   const transEl = React44.useMemo(() => {
-    if (!isSeries || !transition) return null;
+    if (!isSeries || !effectiveTransition) return null;
     const presentation = TransitionPresets[transition]?.(
       transition === "clockWipe" ? { width, height } : void 0
     );
@@ -45454,10 +45459,7 @@ function FolderLeaf({ stream: stream2 }) {
         timing: linearTiming({ durationInFrames: Math.floor(fps * transitionTime) })
       }
     );
-  }, [isSeries, transition, transitionTime, fps, width, height]);
-  const visibleChildren = stream2.children.filter((c3) => c3.visible !== false);
-  const bgChildren = visibleChildren.filter((c3) => c3.isBackground);
-  const seriesChildren = isSeries ? visibleChildren.filter((c3) => !c3.isBackground) : visibleChildren;
+  }, [isSeries, effectiveTransition, transitionTime, fps, width, height]);
   const sequences = seriesChildren.map((child) => {
     const dur = child.durationInSeconds ?? 0;
     const durFrames = Math.max(1, Math.floor(dur * fps));

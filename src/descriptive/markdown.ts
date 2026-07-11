@@ -88,6 +88,28 @@ function pushChild(parent: ParentNode, child: DescriptiveNode): void {
   parent.children.push(child);
 }
 
+/**
+ * Copy any attrs that aren't standard leaf-node keys onto the node.
+ * These are variant overrides like `zh`, `portrait-src`, etc.
+ */
+function preserveVariantAttrs(node: Record<string, unknown>, attrs: Record<string, unknown>): void {
+  // Standard keys consumed by leaf node types — anything else is a variant override
+  const STANDARD = new Set([
+    "type", "id", "src", "script", "jsx", "volume", "playbackRate",
+    "start", "duration", "startFrom", "endAt", "loop", "width", "height", "fit",
+    "foreground", "visible", "isBackground", "instruction", "style", "effects", "on",
+    "spots", "waypoints", "routeColor", "routeWeight", "routeMarker",
+    "travelMode", "zoom", "center", "mapType", "data", "prompt",
+    "name", "title", "transition", "transitionTime", "layout",
+    "componentName", "props",
+  ]);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (!STANDARD.has(k)) {
+      (node as any)[k] = v;
+    }
+  }
+}
+
 function parseNodeLine(content: string, lineNum?: number): DescriptiveNode {
   const ctx: ParseContext | undefined = lineNum ? { line: lineNum, lineText: content } : undefined;
   const tokens = splitTokens(content);
@@ -155,6 +177,7 @@ function parseNodeLine(content: string, lineNum?: number): DescriptiveNode {
         effects: attrs.effects as any,
         on: attrs.on as any,
       };
+      preserveVariantAttrs(node, attrs);
       return node;
     }
     case "video": {
@@ -181,6 +204,7 @@ function parseNodeLine(content: string, lineNum?: number): DescriptiveNode {
         effects: attrs.effects as any,
         on: attrs.on as any,
       };
+      preserveVariantAttrs(node, attrs);
       return node;
     }
     case "audio": {
@@ -205,6 +229,7 @@ function parseNodeLine(content: string, lineNum?: number): DescriptiveNode {
         effects: attrs.effects as any,
         on: attrs.on as any,
       };
+      preserveVariantAttrs(node, attrs);
       return node;
     }
     case "component": {
@@ -223,6 +248,7 @@ function parseNodeLine(content: string, lineNum?: number): DescriptiveNode {
         effects: attrs.effects as any,
         on: attrs.on as any,
       };
+      preserveVariantAttrs(node, attrs);
       return node;
     }
     case "rhythm": {
@@ -243,6 +269,7 @@ function parseNodeLine(content: string, lineNum?: number): DescriptiveNode {
         effects: attrs.effects as any,
         on: attrs.on as any,
       };
+      preserveVariantAttrs(node, attrs);
       return node;
     }
     case "include": {
@@ -269,8 +296,7 @@ function parseNodeLine(content: string, lineNum?: number): DescriptiveNode {
       // Unquote if needed (standalone `- script "..."` preserves quotes in the token)
       const text = isQuoted(raw) ? unquote(raw) : raw;
       // Script is an alias for audio — creates an audio node with TTS-needed marker.
-      // Supports standard audio keys: volume, start, duration, foreground, isBackground, style, etc.
-      return {
+      const scriptNode: any = {
         type: "audio",
         id: attrs.id as any,
         script: text,
@@ -283,7 +309,9 @@ function parseNodeLine(content: string, lineNum?: number): DescriptiveNode {
         visible: attrs.visible as any,
         effects: attrs.effects as any,
         on: attrs.on as any,
-      } as any;
+      };
+      preserveVariantAttrs(scriptNode, attrs);
+      return scriptNode;
     }
     case "map": {
       const node: DescriptiveMap = {
@@ -306,6 +334,7 @@ function parseNodeLine(content: string, lineNum?: number): DescriptiveNode {
         effects: attrs.effects as any,
         on: attrs.on as any,
       };
+      preserveVariantAttrs(node, attrs);
       return node;
     }
     default:
@@ -313,8 +342,40 @@ function parseNodeLine(content: string, lineNum?: number): DescriptiveNode {
   }
 }
 
+/**
+ * Parse result with variant support.
+ *
+ * `# video` defines the base root (config + scenes).
+ * Each subsequent `# <name>` defines a variant with root config overrides only.
+ * Variant names become keys for `<variant>-<key>` overrides on leaf nodes.
+ */
+export interface VariantParseResult {
+  /** Base root — the `# video` section. Contains all scenes. */
+  base: DescriptiveRoot;
+  /** Named variants — keyed by heading text, each with root config overrides. */
+  variants: Map<string, Partial<DescriptiveRoot>>;
+}
+
+/**
+ * Backward-compatible: parses markdown and returns only the base `# video` root.
+ * Equivalent to `parseMarkdownVariants(md).base`.
+ */
 export function parseMarkdownDescriptive(markdown: string): DescriptiveRoot {
-  const root: DescriptiveRoot = { children: [] };
+  return internalParse(markdown).base;
+}
+
+/**
+ * Full variant-aware parse. Returns the base root + all variant configs.
+ */
+export function parseMarkdownVariants(markdown: string): VariantParseResult {
+  return internalParse(markdown);
+}
+
+/** Shared internal implementation */
+function internalParse(markdown: string): VariantParseResult {
+  const base: DescriptiveRoot = { children: [] };
+  const variants: Map<string, Partial<DescriptiveRoot>> = new Map();
+  let activeVariant: string | null = null;
   const lines = markdown.split("\n");
 
   // Use remark to parse the markdown into an MDAST tree for STRUCTURE only
@@ -327,12 +388,20 @@ export function parseMarkdownDescriptive(markdown: string): DescriptiveRoot {
   let inSceneMetadata = false;
   let currentScene: DescriptiveScene | null = null;
 
+  // Get the target root for current state: base or variant
+  function targetRoot(): DescriptiveRoot {
+    if (activeVariant && variants.has(activeVariant)) {
+      const v = variants.get(activeVariant)!;
+      if (!v.children) v.children = [];
+      return v as DescriptiveRoot;
+    }
+    return base;
+  }
+
   for (const node of (mdast as any).children) {
     switch (node.type) {
       case "yaml": {
         // Frontmatter is metadata only — does not affect video config.
-        // Video configuration (width, height, fps, layout, tts, etc.)
-        // comes from the root key-value line after `# video`.
         break;
       }
       case "heading": {
@@ -340,6 +409,21 @@ export function parseMarkdownDescriptive(markdown: string): DescriptiveRoot {
           sceneStack = [];
           currentScene = null;
           inSceneMetadata = false;
+
+          // Extract heading text as variant name
+          const lineText = rawTextAtNode(lines, node);
+          const variantName = lineText.replace(/^#+\s*/, "").trim().split(/\s+/)[0]!;
+
+          if (variantName && variantName !== "video") {
+            // This is a named variant — create root config holder
+            activeVariant = variantName;
+            if (!variants.has(variantName)) {
+              variants.set(variantName, { children: [] });
+            }
+          } else {
+            // "video" or unnamed h1 — back to base
+            activeVariant = null;
+          }
         } else {
           // Extract heading text from the raw source line (skip '##' prefix)
           const lineText = rawTextAtNode(lines, node);
@@ -353,7 +437,7 @@ export function parseMarkdownDescriptive(markdown: string): DescriptiveRoot {
           if (parentScene) {
             parentScene.children.push(scene);
           } else {
-            root.children.push(scene);
+            targetRoot().children.push(scene);
           }
           sceneStack.push({ level: node.depth, scene });
           currentScene = scene;
@@ -374,14 +458,14 @@ export function parseMarkdownDescriptive(markdown: string): DescriptiveRoot {
         if (inSceneMetadata && currentScene) {
           applySceneMetadata(currentScene, attrs);
         } else {
-          applyRootAttrs(root, attrs);
+          applyRootAttrs(targetRoot(), attrs);
         }
         break;
       }
       case "list": {
         inSceneMetadata = false;
         if (!node.ordered) {
-          const parent: ParentNode = currentScene ?? root;
+          const parent: ParentNode = currentScene ?? targetRoot();
           for (const item of node.children) {
             processMDASTListItem(item, parent, lines);
           }
@@ -392,16 +476,16 @@ export function parseMarkdownDescriptive(markdown: string): DescriptiveRoot {
         const lang = (node.lang ?? "").toLowerCase();
         const meta = (node.meta ?? "").trim();
         if ((lang === "js" && meta === "imports") || lang === "imports") {
-          root.importsBlock = node.value;
+          targetRoot().importsBlock = node.value;
         } else if (meta === "stylesheet") {
-          root.stylesheet = node.value;
+          targetRoot().stylesheet = node.value;
         }
         break;
       }
     }
   }
 
-  return root;
+  return { base, variants };
 }
 
 /** Extract raw text from an MDAST node using source line positions. */

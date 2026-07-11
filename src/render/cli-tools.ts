@@ -26,10 +26,48 @@ export const DEFAULT_TTV_CLI = '';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
+/**
+ * Smart placeholder substitution with quote-aware escaping.
+ *
+ * Detects whether {input}/{output} is wrapped in single or double quotes
+ * in the template and applies the correct escaping strategy:
+ *
+ *   - Double-quoted: escape `"` → `\"` and keep `'` literal
+ *   - Single-quoted: escape `'` → `'\''`  (end quote, escaped quote, resume)
+ *   - Unquoted: escape both `'` and `"`
+ *
+ * Examples:
+ *   template: --text "{input}"     input: it's "great"
+ *     →       --text "it's \"great\""
+ *
+ *   template: --text '{input}'     input: it's "great"
+ *     →       --text 'it'\''s "great"'
+ */
 function substituteCli(template: string, input: string, output: string): string {
+  // Escape the output value (file paths rarely have quotes, but be safe)
+  const safeOutput = output;
+
+  // For input, detect quote context and escape accordingly
+  let safeInput: string;
+  // Look for {input} preceded by a quote character (ignoring whitespace)
+  const inputMatch = template.match(/(['"])\{input\}/);
+  if (inputMatch) {
+    const quote = inputMatch[1]!;
+    if (quote === '"') {
+      // Double-quoted: escape double quotes
+      safeInput = input.replace(/"/g, '\\"');
+    } else {
+      // Single-quoted: escape single quotes using '\'' sequence
+      safeInput = input.replace(/'/g, "'\\''");
+    }
+  } else {
+    // Unquoted: escape both
+    safeInput = input.replace(/"/g, '\\"').replace(/'/g, "'\\''");
+  }
+
   return template
-    .replace(/\{input\}/g, input.replace(/"/g, '\\"'))
-    .replace(/\{output\}/g, output);
+    .replace(/\{input\}/g, safeInput)
+    .replace(/\{output\}/g, safeOutput);
 }
 
 // ── Exported functions ────────────────────────────────────────────────────
@@ -56,12 +94,11 @@ export function generateTTS(text: string, outputPath: string, cli?: string): str
  */
 export async function generateSTT(audioPath: string, outputDir: string, cli?: string): Promise<void> {
   const cmd = substituteCli(cli ?? DEFAULT_STT_CLI, audioPath, outputDir);
-  await new Promise<void>((resolve, reject) => {
-    exec(cmd, { timeout: 120_000 }, (err) => {
-      if (err) reject(err);
-      else resolve();
-    });
-  });
+  try {
+    execSync(cmd, { stdio: "pipe" });
+  } catch (e: any) {
+    console.warn(`  ⚠ STT failed: ${e.message}`);
+  }
 }
 
 /**

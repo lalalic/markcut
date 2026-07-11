@@ -57,7 +57,8 @@ __export(compiler_exports, {
   parseTransition: () => parseTransition,
   resolveAllTemplateVars: () => resolveAllTemplateVars,
   resolveTemplateVars: () => resolveTemplateVars,
-  resolveTransition: () => resolveTransition
+  resolveTransition: () => resolveTransition,
+  resolveVariantOverrides: () => resolveVariantOverrides
 });
 function resolveTemplateVars(value2, ctx) {
   return value2.replace(/\$\{(\w+)\}/g, (_, name) => {
@@ -652,6 +653,85 @@ function warnUnregisteredComponents(root, registeredNames) {
   };
   for (const c of root.children) visit(c);
 }
+function collectVariantNames(root, variantChain) {
+  const names = /* @__PURE__ */ new Set();
+  function scan(node2) {
+    for (const key of Object.keys(node2)) {
+      const idx = key.indexOf("-");
+      if (idx > 0) {
+        const candidate = key.slice(0, idx);
+        if (candidate.length > 0 && /^[a-zA-Z][a-zA-Z0-9_-]*$/.test(candidate) && !names.has(candidate)) {
+          const baseKey = key.slice(idx + 1);
+          if (baseKey in node2 || variantChain.includes(candidate)) {
+            names.add(candidate);
+          }
+        }
+      }
+    }
+    const children = node2.children;
+    if (Array.isArray(children)) {
+      for (const child of children) scan(child);
+    }
+  }
+  scan(root);
+  return names;
+}
+function lookupVariantValue(node2, key, variantChain) {
+  if (variantChain.length > 1) {
+    const combinedKey = `${variantChain.join("-")}-${key}`;
+    if (combinedKey in node2) return node2[combinedKey];
+  }
+  for (const v of variantChain) {
+    const vKey = `${v}-${key}`;
+    if (vKey in node2) return node2[vKey];
+  }
+  return void 0;
+}
+function resolveVariantOverrides(root, variantChain) {
+  if (variantChain.length === 0) return root;
+  const clone = JSON.parse(JSON.stringify(root));
+  const knownVariants = collectVariantNames(clone, variantChain);
+  function applyOverrides(node2) {
+    const keys = Object.keys(node2);
+    for (const key of keys) {
+      if (key === "type" || key === "id" || key === "children") continue;
+      const override = lookupVariantValue(node2, key, variantChain);
+      if (override !== void 0) {
+        node2[key] = override;
+      }
+    }
+    const nodeType = node2.type;
+    const primaryKey = nodeType ? PRIMARY_CONTENT_KEY[nodeType] : void 0;
+    if (primaryKey) {
+      for (const v of variantChain) {
+        if (v in node2) {
+          node2[primaryKey] = node2[v];
+          break;
+        }
+      }
+    }
+    const stripKeys = new Set(variantChain);
+    for (const v of knownVariants) {
+      const prefix = `${v}-`;
+      for (const key of Object.keys(node2)) {
+        if (key.startsWith(prefix) || stripKeys.has(key)) {
+          delete node2[key];
+        }
+      }
+    }
+    for (const v of variantChain) {
+      delete node2[v];
+    }
+    const children = node2.children;
+    if (Array.isArray(children)) {
+      for (const child of children) {
+        applyOverrides(child);
+      }
+    }
+  }
+  applyOverrides(clone);
+  return clone;
+}
 function compileDescriptiveRoot(input, options = {}) {
   const ctx = {
     defaults: {
@@ -685,7 +765,7 @@ function compileDescriptiveRoot(input, options = {}) {
   };
   return compiled;
 }
-var DEFAULTS, VALID_TRANSITIONS;
+var DEFAULTS, VALID_TRANSITIONS, PRIMARY_CONTENT_KEY;
 var init_compiler = __esm({
   "src/descriptive/compiler.ts"() {
     "use strict";
@@ -701,6 +781,12 @@ var init_compiler = __esm({
       effect: 2
     };
     VALID_TRANSITIONS = /* @__PURE__ */ new Set(["fade", "slide", "wipe", "flip", "clockWipe"]);
+    PRIMARY_CONTENT_KEY = {
+      audio: "script",
+      component: "jsx",
+      image: "src",
+      video: "src"
+    };
   }
 });
 
@@ -903,7 +989,7 @@ import { createHash } from "node:crypto";
 import { join, dirname as dirname2, resolve as resolvePath, relative } from "node:path";
 
 // src/render/cli-tools.ts
-import { execSync, exec } from "node:child_process";
+import { execSync } from "node:child_process";
 import { existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 var DEFAULT_TTS_CLI = 'uvx edge-tts --voice "en-US-GuyNeural" --text "{input}" --write-media "{output}"';
@@ -911,7 +997,20 @@ var DEFAULT_STT_CLI = 'uvx --from openai-whisper whisper "{input}" --output_form
 var DEFAULT_TTI_CLI = 'uvx --from mflux mflux-generate-flux2 --model flux2-klein-4b --steps 5 --prompt "{input}" --output "{output}"';
 var DEFAULT_TTV_CLI = "";
 function substituteCli(template, input, output) {
-  return template.replace(/\{input\}/g, input.replace(/"/g, '\\"')).replace(/\{output\}/g, output);
+  const safeOutput = output;
+  let safeInput;
+  const inputMatch = template.match(/(['"])\{input\}/);
+  if (inputMatch) {
+    const quote = inputMatch[1];
+    if (quote === '"') {
+      safeInput = input.replace(/"/g, '\\"');
+    } else {
+      safeInput = input.replace(/'/g, "'\\''");
+    }
+  } else {
+    safeInput = input.replace(/"/g, '\\"').replace(/'/g, "'\\''");
+  }
+  return template.replace(/\{input\}/g, safeInput).replace(/\{output\}/g, safeOutput);
 }
 function generateTTS(text3, outputPath, cli) {
   mkdirSync(dirname(outputPath), { recursive: true });
@@ -926,12 +1025,11 @@ function generateTTS(text3, outputPath, cli) {
 }
 async function generateSTT(audioPath, outputDir, cli) {
   const cmd = substituteCli(cli ?? DEFAULT_STT_CLI, audioPath, outputDir);
-  await new Promise((resolve, reject) => {
-    exec(cmd, { timeout: 12e4 }, (err) => {
-      if (err) reject(err);
-      else resolve();
-    });
-  });
+  try {
+    execSync(cmd, { stdio: "pipe" });
+  } catch (e) {
+    console.warn(`  \u26A0 STT failed: ${e.message}`);
+  }
 }
 function generateTTI(prompt, outputPath, cli) {
   mkdirSync(dirname(outputPath), { recursive: true });
@@ -9989,6 +10087,55 @@ function pushChild(parent, child) {
   if (!parent.children) parent.children = [];
   parent.children.push(child);
 }
+function preserveVariantAttrs(node2, attrs) {
+  const STANDARD = /* @__PURE__ */ new Set([
+    "type",
+    "id",
+    "src",
+    "script",
+    "jsx",
+    "volume",
+    "playbackRate",
+    "start",
+    "duration",
+    "startFrom",
+    "endAt",
+    "loop",
+    "width",
+    "height",
+    "fit",
+    "foreground",
+    "visible",
+    "isBackground",
+    "instruction",
+    "style",
+    "effects",
+    "on",
+    "spots",
+    "waypoints",
+    "routeColor",
+    "routeWeight",
+    "routeMarker",
+    "travelMode",
+    "zoom",
+    "center",
+    "mapType",
+    "data",
+    "prompt",
+    "name",
+    "title",
+    "transition",
+    "transitionTime",
+    "layout",
+    "componentName",
+    "props"
+  ]);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (!STANDARD.has(k)) {
+      node2[k] = v;
+    }
+  }
+}
 function parseNodeLine(content3, lineNum) {
   const ctx = lineNum ? { line: lineNum, lineText: content3 } : void 0;
   const tokens = splitTokens(content3);
@@ -10042,6 +10189,7 @@ function parseNodeLine(content3, lineNum) {
         effects: attrs.effects,
         on: attrs.on
       };
+      preserveVariantAttrs(node2, attrs);
       return node2;
     }
     case "video": {
@@ -10067,6 +10215,7 @@ function parseNodeLine(content3, lineNum) {
         effects: attrs.effects,
         on: attrs.on
       };
+      preserveVariantAttrs(node2, attrs);
       return node2;
     }
     case "audio": {
@@ -10091,6 +10240,7 @@ function parseNodeLine(content3, lineNum) {
         effects: attrs.effects,
         on: attrs.on
       };
+      preserveVariantAttrs(node2, attrs);
       return node2;
     }
     case "component": {
@@ -10108,6 +10258,7 @@ function parseNodeLine(content3, lineNum) {
         effects: attrs.effects,
         on: attrs.on
       };
+      preserveVariantAttrs(node2, attrs);
       return node2;
     }
     case "rhythm": {
@@ -10128,6 +10279,7 @@ function parseNodeLine(content3, lineNum) {
         effects: attrs.effects,
         on: attrs.on
       };
+      preserveVariantAttrs(node2, attrs);
       return node2;
     }
     case "include": {
@@ -10152,7 +10304,7 @@ function parseNodeLine(content3, lineNum) {
       const raw = firstPositional ?? (attrs.script ? String(attrs.script) : void 0);
       if (!raw) throw new DslError("script requires text content", ctx);
       const text3 = isQuoted(raw) ? unquote(raw) : raw;
-      return {
+      const scriptNode = {
         type: "audio",
         id: attrs.id,
         script: text3,
@@ -10166,6 +10318,8 @@ function parseNodeLine(content3, lineNum) {
         effects: attrs.effects,
         on: attrs.on
       };
+      preserveVariantAttrs(scriptNode, attrs);
+      return scriptNode;
     }
     case "map": {
       const node2 = {
@@ -10188,6 +10342,7 @@ function parseNodeLine(content3, lineNum) {
         effects: attrs.effects,
         on: attrs.on
       };
+      preserveVariantAttrs(node2, attrs);
       return node2;
     }
     default:
@@ -10195,12 +10350,28 @@ function parseNodeLine(content3, lineNum) {
   }
 }
 function parseMarkdownDescriptive(markdown) {
-  const root = { children: [] };
+  return internalParse(markdown).base;
+}
+function parseMarkdownVariants(markdown) {
+  return internalParse(markdown);
+}
+function internalParse(markdown) {
+  const base = { children: [] };
+  const variants = /* @__PURE__ */ new Map();
+  let activeVariant = null;
   const lines = markdown.split("\n");
   const mdast = unified().use(remarkParse).use(remarkFrontmatter).parse(markdown);
   let sceneStack = [];
   let inSceneMetadata = false;
   let currentScene = null;
+  function targetRoot() {
+    if (activeVariant && variants.has(activeVariant)) {
+      const v = variants.get(activeVariant);
+      if (!v.children) v.children = [];
+      return v;
+    }
+    return base;
+  }
   for (const node2 of mdast.children) {
     switch (node2.type) {
       case "yaml": {
@@ -10211,6 +10382,16 @@ function parseMarkdownDescriptive(markdown) {
           sceneStack = [];
           currentScene = null;
           inSceneMetadata = false;
+          const lineText = rawTextAtNode(lines, node2);
+          const variantName = lineText.replace(/^#+\s*/, "").trim().split(/\s+/)[0];
+          if (variantName && variantName !== "video") {
+            activeVariant = variantName;
+            if (!variants.has(variantName)) {
+              variants.set(variantName, { children: [] });
+            }
+          } else {
+            activeVariant = null;
+          }
         } else {
           const lineText = rawTextAtNode(lines, node2);
           const headingContent = lineText.replace(/^#+\s*/, "");
@@ -10222,7 +10403,7 @@ function parseMarkdownDescriptive(markdown) {
           if (parentScene) {
             parentScene.children.push(scene);
           } else {
-            root.children.push(scene);
+            targetRoot().children.push(scene);
           }
           sceneStack.push({ level: node2.depth, scene });
           currentScene = scene;
@@ -10241,14 +10422,14 @@ function parseMarkdownDescriptive(markdown) {
         if (inSceneMetadata && currentScene) {
           applySceneMetadata(currentScene, attrs);
         } else {
-          applyRootAttrs(root, attrs);
+          applyRootAttrs(targetRoot(), attrs);
         }
         break;
       }
       case "list": {
         inSceneMetadata = false;
         if (!node2.ordered) {
-          const parent = currentScene ?? root;
+          const parent = currentScene ?? targetRoot();
           for (const item of node2.children) {
             processMDASTListItem(item, parent, lines);
           }
@@ -10259,15 +10440,15 @@ function parseMarkdownDescriptive(markdown) {
         const lang = (node2.lang ?? "").toLowerCase();
         const meta = (node2.meta ?? "").trim();
         if (lang === "js" && meta === "imports" || lang === "imports") {
-          root.importsBlock = node2.value;
+          targetRoot().importsBlock = node2.value;
         } else if (meta === "stylesheet") {
-          root.stylesheet = node2.value;
+          targetRoot().stylesheet = node2.value;
         }
         break;
       }
     }
   }
-  return root;
+  return { base, variants };
 }
 function rawTextAtNode(lines, node2) {
   const startLine = node2.position.start.line - 1;
@@ -10450,6 +10631,10 @@ function checkCache(manifest, key, cacheKey) {
 function updateCache(manifest, key, cacheKey, output) {
   manifest[key] = { hash: cacheKey, output };
 }
+function firstWords(text3, n) {
+  if (!text3) return "";
+  return text3.split(/\s+/).slice(0, n).join(" ").replace(/[^a-zA-Z0-9\u4e00-\u9fff\s-]/g, "").slice(0, 60) || text3.slice(0, 60);
+}
 function probeDuration(src, baseDir) {
   const absPath = resolveSrc(src, baseDir);
   try {
@@ -10572,24 +10757,30 @@ async function resolveScripts(root, options) {
     const audioPath = join(options.outputDir, `${cacheKey}.mp3`);
     const cached = checkCache(cache, `tts:${cacheKey}`, cacheKey);
     let generated;
+    const label = firstWords(node2.script, 8);
     if (cached) {
       generated = cached;
-      console.log(`  \u2713 TTS: ${cacheKey} (cached)`);
+      console.log(`  \u2713 TTS: ${label} (cached)`);
     } else {
       generated = generateTTS(node2.script, audioPath, ttsCli);
       if (generated) {
         updateCache(cache, `tts:${cacheKey}`, cacheKey, generated);
         cacheDirty = true;
+        console.log(`  \u2713 TTS: ${label}`);
       } else {
-        console.warn(`  \u26A0 TTS produced no audio for ${cacheKey}. Audio will have no source. Check root.tts config.`);
+        console.warn(`  \u26A0 TTS produced no audio for "${label}". Audio will have no source. Check root.tts config.`);
       }
     }
     if (!generated) continue;
-    node2.src = generated;
+    node2.src = resolvePath(generated);
     delete node2.script;
   }
   if (cacheDirty) writeCacheManifest(options.outputDir, cache);
   if (allScriptNodes.length > 0) {
+    try {
+      writeFileSync(join(options.outputDir, ".cache.json"), JSON.stringify(cache, null, 2), "utf-8");
+    } catch {
+    }
     const unique = new Set(allScriptNodes.filter((s) => s.node.src).map((s) => s.node.src)).size;
     console.log(`  \u2705 TTS: ${unique} unique audio file${unique > 1 ? "s" : ""} (${allScriptNodes.length} node${allScriptNodes.length > 1 ? "s" : ""})`);
   }
@@ -10606,6 +10797,7 @@ async function resolveSubtitles(root, options) {
   function walkSiblings(nodes, parentOffset, parentIsSeries, parentTransition, parentTransitionTime) {
     let seriesOffset = parentOffset;
     for (const node2 of nodes) {
+      if (node2.isBackground) continue;
       const nodeStart = parentIsSeries ? seriesOffset : parentOffset;
       const actionStart = node2.actions?.[0]?.start ?? 0;
       const effectiveOffset = nodeStart + actionStart;
@@ -10704,7 +10896,9 @@ async function resolveSubtitles(root, options) {
     }
   }
   if (cueIndex > 1) {
-    const mergedPath = join(options.outputDir, "subtitles.vtt");
+    const mergedDir = options.mergedOutputDir ?? options.outputDir;
+    mkdirSync2(mergedDir, { recursive: true });
+    const mergedPath = join(mergedDir, "subtitles.vtt");
     writeFileSync(mergedPath, mergedLines.join("\n"), "utf-8");
     clone.subtitle = { ...clone.subtitle ?? {}, src: mergedPath };
     console.log(`  \u2705 STT: subtitles ready (${cueIndex - 1} cues)`);
@@ -10732,27 +10926,28 @@ async function resolveGeneratedMedia(root, options) {
     const outputPath = join(options.outputDir, `${cacheKey}.${ext}`);
     const cached = checkCache(cache, `gen:${cacheKey}`, cacheKey);
     const label = type === "image" ? "TTI" : "TTV";
+    const labelText = firstWords(prompt, 8);
     if (cached) {
-      node2.src = cached;
-      console.log(`  \u2713 ${label}: ${cacheKey} (cached)`);
+      node2.src = resolvePath(cached);
+      console.log(`  \u2713 ${label}: ${labelText} (cached)`);
       continue;
     }
     try {
-      console.log(`  \u{1F50A} ${label}: ${cacheKey}...`);
+      console.log(`  \u{1F50A} ${label}: ${labelText}...`);
       const ttiCmd = clone.tti ?? options.ttiCli ?? DEFAULT_TTI_CLI;
       const result = type === "image" ? generateTTI(prompt, outputPath, cli) : generateTTV(prompt, outputPath, cli, ttiCmd);
       if (result) {
         node2.src = outputPath;
         updateCache(cache, `gen:${cacheKey}`, cacheKey, outputPath);
         cacheDirty = true;
-        console.log(`  \u2713 ${label}: ${cacheKey}`);
+        console.log(`  \u2713 ${label}: ${labelText}`);
       } else {
         const hint = cli.includes("echo") ? `No ${label} tool installed. The default CLI just echoes a message \u2014 set root.${type === "image" ? "tti" : "ttv"} to a real generation command.` : `The command ran but produced no output file. Check the CLI template or run the script manually to debug.`;
-        console.error(`  \u26A0 ${label}: ${cacheKey} produced no output. ${hint}`);
+        console.error(`  \u26A0 ${label}: "${labelText}" produced no output. ${hint}`);
       }
     } catch (err) {
       const hint = err?.stderr?.toString()?.includes("not found") ? `${label} tool not found. Install the required CLI or configure root.${type === "image" ? "tti" : "ttv"}.` : `Command failed. Try running the CLI template directly to debug: ${cli}`;
-      console.error(`  \u2717 ${label}: ${cacheKey} failed \u2014 ${err.message}. ${hint}`);
+      console.error(`  \u2717 ${label}: "${labelText}" failed \u2014 ${err.message}. ${hint}`);
     }
   }
   if (cacheDirty) writeCacheManifest(options.outputDir, cache);
@@ -10862,7 +11057,8 @@ async function resolveAll2(root, options = {}) {
     result = await resolveSubtitles(result, {
       outputDir: options.scriptOutputDir,
       sttCli: options.sttCli,
-      compiled
+      compiled,
+      mergedOutputDir: options.subtitleOutputDir
     });
   }
   return result;
@@ -10889,7 +11085,8 @@ async function resolveAndCompile(data, options = {}) {
     mediaOutputDir: options.mediaOutputDir,
     includeOutputDir: options.includeOutputDir,
     ttsCli: options.ttsCli,
-    sttCli: options.sttCli
+    sttCli: options.sttCli,
+    subtitleOutputDir: options.subtitleOutputDir
   });
   const compiled = compileDescriptiveRoot(resolved);
   return compiled;
@@ -10904,8 +11101,10 @@ export {
   isDescriptiveRoot,
   parseImportsBlock,
   parseMarkdownDescriptive,
+  parseMarkdownVariants,
   resolveAll2 as resolveAll,
   resolveAndCompile,
   resolveAndCompileMarkdown,
-  resolveIncludes
+  resolveIncludes,
+  resolveVariantOverrides
 };

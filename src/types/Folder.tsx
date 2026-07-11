@@ -57,13 +57,27 @@ export function FolderLeaf({ stream }: { stream: FolderStream }) {
   const transitionTime = stream.transitionTime ?? 0.5;
   const isRoot = stream.id === "root";
 
+  const visibleChildren = (stream.children as Stream[]).filter((c) => c.visible !== false);
+
+  // Background children are rendered outside the series (parallel overlays),
+  // so TransitionSeries doesn't reject the <Loop> wrapper.
+  const bgChildren = visibleChildren.filter((c) => c.isBackground);
+  const seriesChildren = isSeries ? visibleChildren.filter((c) => !c.isBackground) : visibleChildren;
+
+  // When all non-background series children are audio, skip transitions to
+  // avoid audio overlap (both audio tracks play simultaneously during a fade).
+  const allAudio = seriesChildren.length > 0 && seriesChildren.every((c) => c.type === "audio");
+
+  // Skip transitions when all series children are audio (avoids audio overlap).
+  const effectiveTransition = allAudio ? undefined : transition;
+
   const TypedSeries: any = React.useMemo(() => {
     if (!isSeries) return NotSeries;
-    return transition ? TransitionSeries : Series;
-  }, [isSeries, transition]);
+    return effectiveTransition ? TransitionSeries : Series;
+  }, [isSeries, effectiveTransition]);
 
   const transEl = React.useMemo(() => {
-    if (!isSeries || !transition) return null;
+    if (!isSeries || !effectiveTransition) return null;
     const presentation = TransitionPresets[transition]?.(
       transition === "clockWipe" ? { width, height } : undefined,
     );
@@ -73,14 +87,7 @@ export function FolderLeaf({ stream }: { stream: FolderStream }) {
         timing={linearTiming({ durationInFrames: Math.floor(fps * transitionTime) })}
       />
     );
-  }, [isSeries, transition, transitionTime, fps, width, height]);
-
-  const visibleChildren = (stream.children as Stream[]).filter((c) => c.visible !== false);
-
-  // Background children are rendered outside the series (parallel overlays),
-  // so TransitionSeries doesn't reject the <Loop> wrapper.
-  const bgChildren = visibleChildren.filter((c) => c.isBackground);
-  const seriesChildren = isSeries ? visibleChildren.filter((c) => !c.isBackground) : visibleChildren;
+  }, [isSeries, effectiveTransition, transitionTime, fps, width, height]);
 
   const sequences = seriesChildren
     .map((child) => {

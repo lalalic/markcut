@@ -11,7 +11,7 @@
  */
 import { spawn } from "node:child_process";
 import { createServer } from "node:http";
-import { readFileSync, writeFileSync, watchFile, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, watchFile, existsSync, mkdirSync, statSync } from "node:fs";
 import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isDescriptiveRoot, resolveAndCompile, resolveAndCompileMarkdown, parseImportsBlock, extractDependencySpecs } from "./pipeline.mjs";
@@ -29,6 +29,15 @@ const IS_MARKDOWN = VIDEO_JSON.endsWith(".md");
 const MODE_LABEL = process.argv.includes("--label");
 const MODE_EDIT = process.argv.includes("--edit");
 
+// Parse variant flags (can be repeated: --variant zh --variant tiktok)
+const VARIANTS = [];
+for (const arg of process.argv) {
+  if (arg === "--variant" || arg.startsWith("--variant=")) {
+    const v = arg.includes("=") ? arg.split("=")[1] : process.argv[process.argv.indexOf(arg) + 1];
+    if (v && !v.startsWith("--")) VARIANTS.push(v);
+  }
+}
+
 // ─── SSE clients for reload notifications ────────────────────────────────
 const sseClients = new Set();
 let shutdownTimer = null;
@@ -41,12 +50,13 @@ let editHistory = [];
 
 // ─── .markcut/ directory layout ────────────────────────────────────────────
 //   .markcut/                     ← server document root
-//     generated/                  ← shared, content-addressed artifacts
+//     generated/                  ← shared, content-addressed (across all files)
 //       tts/                      ← TTS audio (content-hash filenames)
 //       media/                    ← TTI/TTV media (content-hash filenames)
 //       includes/                 ← compiled sub-video JSON (content-hash)
-//     <basename>/                 ← per-source-file artifacts
+//     <basename>/                 ← per-source-file
 //       components/               ← component bundles (per-file: imports differ)
+//       <variant>/                ← per-variant artifacts (subtitles, etc.)
 const MARKCUT_BASE = join(dirname(VIDEO_JSON), ".markcut");
 const MARKCUT_DIR = join(MARKCUT_BASE, "generated");
 const BASENAME = VIDEO_JSON.split("/").pop().replace(/\.[^.]+$/, "");
@@ -54,6 +64,9 @@ const TTS_OUTPUT_DIR = join(MARKCUT_DIR, "tts");
 const MEDIA_OUTPUT_DIR = join(MARKCUT_DIR, "media");
 const INCLUDE_CACHE_DIR = join(MARKCUT_DIR, "includes");
 const COMPONENT_CACHE_DIR = join(MARKCUT_BASE, BASENAME, "components");
+const VARIANT_DIR = VARIANTS.length > 0
+  ? join(MARKCUT_BASE, BASENAME, VARIANTS.join("-"))
+  : join(MARKCUT_BASE, BASENAME);
 const WHISPER_BIN = process.env.WHISPER_BIN || "/Users/lir/Library/Python/3.9/bin/whisper";
 
 // ─── extractScenes imported from ./server-shared.mjs ────────────────────
@@ -61,6 +74,9 @@ const WHISPER_BIN = process.env.WHISPER_BIN || "/Users/lir/Library/Python/3.9/bi
 // ─── Compiled root cache (avoids re-running pipeline on every fetch) ─────
 let compiledRootCache = null;
 let pipelineRunning = false;
+
+// Compiled root is also persisted to disk at VARIANT_DIR/compiled.json
+const COMPILED_CACHE_FILE = join(VARIANT_DIR, "compiled.json");
 
 /**
  * Extract component import entries from the raw file source.
@@ -99,6 +115,9 @@ function extractImportEntries(raw) {
 /**
  * Read the input file (.json or .md), detect format, run pipeline,
  * bundle any component imports, extract scenes. Caches the result.
+ *
+ * The compiled root is persisted to VARIANT_DIR/compiled.json so it
+ * survives server restarts and can be inspected on disk.
  */
 async function loadCompiledRoot() {
   if (compiledRootCache) return compiledRootCache;
@@ -113,24 +132,51 @@ async function loadCompiledRoot() {
 
   if (IS_MARKDOWN) {
     console.log("  📝 Markdown → pipeline...");
-    compiled = await resolveAndCompileMarkdown(raw, {
+    const { parseMarkdownVariants, resolveVariantOverrides, resolveAll, compileDescriptiveRoot } = await import("./pipeline.mjs");
+    const parsed = parseMarkdownVariants(raw);
+    let descriptive = parsed.base;
+
+    // Apply variant overrides if --variant flags provided
+    if (VARIANTS.length > 0) {
+      // Merge root config from the first variant's section
+      const variantRoot = parsed.variants.get(VARIANTS[0]);
+      if (variantRoot) {
+        const { children: _, ...configOverrides } = variantRoot;
+        descriptive = { ...descriptive, ...configOverrides };
+      }
+      descriptive = resolveVariantOverrides(descriptive, VARIANTS);
+      const variantLabel = VARIANTS.join("+");
+      console.log(`  🎯 Variant: ${variantLabel}`);
+    }
+
+    const resolved = await resolveAll(descriptive, {
       baseDir: dirname(VIDEO_JSON),
       scriptOutputDir: TTS_OUTPUT_DIR,
       mediaOutputDir: MEDIA_OUTPUT_DIR,
       includeOutputDir: INCLUDE_CACHE_DIR,
+      subtitleOutputDir: VARIANT_DIR,
       whisperBin: existsSync(WHISPER_BIN) ? WHISPER_BIN : undefined,
     });
+    compiled = compileDescriptiveRoot(resolved);
   } else {
     const parsed = JSON.parse(raw);
     const root = parsed.root || parsed;
 
     if (isDescriptiveRoot(root)) {
       console.log("  🔍 Descriptive JSON → pipeline...");
-      compiled = await resolveAndCompile(root, {
+      let descriptive = root;
+
+      if (VARIANTS.length > 0) {
+        const { resolveVariantOverrides } = await import("./pipeline.mjs");
+        descriptive = resolveVariantOverrides(descriptive, VARIANTS);
+      }
+
+      compiled = await resolveAndCompile(descriptive, {
         baseDir: dirname(VIDEO_JSON),
         scriptOutputDir: TTS_OUTPUT_DIR,
         mediaOutputDir: MEDIA_OUTPUT_DIR,
         includeOutputDir: INCLUDE_CACHE_DIR,
+        subtitleOutputDir: VARIANT_DIR,
         whisperBin: existsSync(WHISPER_BIN) ? WHISPER_BIN : undefined,
       });
     } else {
@@ -154,6 +200,14 @@ async function loadCompiledRoot() {
       console.error("  ⚠️  Component bundling failed:", e.message);
       // Continue without bundled components — JSX will fail gracefully
     }
+  }
+
+  // Persist to disk so it survives restarts and is inspectable
+  try {
+    mkdirSync(VARIANT_DIR, { recursive: true });
+    writeFileSync(COMPILED_CACHE_FILE, JSON.stringify(compiled, null, 2), "utf-8");
+  } catch (e) {
+    console.warn("  ⚠ Failed to write compiled.json:", e.message);
   }
 
   compiledRootCache = compiled;

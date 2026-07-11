@@ -1036,6 +1036,160 @@ function warnUnregisteredComponents(root: DescriptiveRoot, registeredNames: Set<
   for (const c of root.children) visit(c);
 }
 
+// ── Variant override resolution ─────────────────────────────────────────
+
+/**
+ * Collect all variant names from the entire tree by scanning every node's keys.
+ * Detects keys like `zh-src`, `zh-tiktok-style`, etc.
+ */
+function collectVariantNames(root: Record<string, unknown>, variantChain: string[]): Set<string> {
+  const names = new Set<string>();
+
+  function scan(node: Record<string, unknown>): void {
+    for (const key of Object.keys(node)) {
+      const idx = key.indexOf("-");
+      if (idx > 0) {
+        const candidate = key.slice(0, idx);
+        // Only collect if it matches a variant in the chain or is a known variant prefix
+        if (
+          candidate.length > 0 &&
+          /^[a-zA-Z][a-zA-Z0-9_-]*$/.test(candidate) &&
+          !names.has(candidate)
+        ) {
+          // Check if this prefix appears on a key that has a corresponding base key
+          const baseKey = key.slice(idx + 1);
+          if (baseKey in node || variantChain.includes(candidate)) {
+            names.add(candidate);
+          }
+        }
+      }
+    }
+    // Recurse
+    const children = node.children;
+    if (Array.isArray(children)) {
+      for (const child of children) scan(child as Record<string, unknown>);
+    }
+  }
+
+  scan(root);
+  return names;
+}
+
+/**
+ * For a given field name and variant chain, check if a variant-specific
+ * override exists on the node. Returns the override value if found, else undefined.
+ *
+ * Lookup order (first match wins):
+ *   1. <variant1>-<variant2>-<key>  (most specific combined)
+ *   2. <variant1>-<key>
+ *   3. <variant2>-<key>
+ *   4. <key>  (base — caller handles this)
+ */
+function lookupVariantValue(
+  node: Record<string, unknown>,
+  key: string,
+  variantChain: string[],
+): unknown | undefined {
+  // Combined variant key: zh-tiktok-src
+  if (variantChain.length > 1) {
+    const combinedKey = `${variantChain.join("-")}-${key}`;
+    if (combinedKey in node) return node[combinedKey];
+  }
+  // Individual variant keys: zh-src, then tiktok-src
+  for (const v of variantChain) {
+    const vKey = `${v}-${key}`;
+    if (vKey in node) return node[vKey];
+  }
+  return undefined;
+}
+
+/**
+ * Map of node type → its "primary content" key.
+ * When a bare variant key like `zh` is found, its value replaces this key.
+ */
+const PRIMARY_CONTENT_KEY: Record<string, string> = {
+  audio: "script",
+  component: "jsx",
+  image: "src",
+  video: "src",
+};
+
+/**
+ * Resolve variant-specific overrides on a deep-cloned copy of the descriptive root.
+ *
+ * Two override mechanisms:
+ *   1. **Variant-prefixed keys**: `zh-src` → `src` for variant "zh"
+ *   2. **Bare variant keys**: `zh` → replaces the node's "primary content" key
+ *      (e.g., `zh:"欢迎"` → replaces `script` on audio nodes, `jsx` on components)
+ *
+ * Then strips all `<variant>-*` keys from the output.
+ *
+ * @param root - The base descriptive root (from `# video`)
+ * @param variantChain - Ordered variant names (e.g. ["zh", "tiktok"])
+ * @returns A new DescriptiveRoot with variant overrides applied
+ */
+export function resolveVariantOverrides(
+  root: DescriptiveRoot,
+  variantChain: string[],
+): DescriptiveRoot {
+  if (variantChain.length === 0) return root;
+
+  const clone: DescriptiveRoot = JSON.parse(JSON.stringify(root));
+
+  // Scan entire tree for variant-prefixed keys to strip later
+  const knownVariants = collectVariantNames(clone as Record<string, unknown>, variantChain);
+
+  function applyOverrides(node: Record<string, unknown>): void {
+    // Phase 1: variant-prefixed overrides (zh-src → src)
+    const keys = Object.keys(node);
+    for (const key of keys) {
+      if (key === "type" || key === "id" || key === "children") continue;
+      const override = lookupVariantValue(node, key, variantChain);
+      if (override !== undefined) {
+        node[key] = override;
+      }
+    }
+
+    // Phase 2: bare variant keys (zh → replaces primary content key)
+    const nodeType = node.type as string | undefined;
+    const primaryKey = nodeType ? PRIMARY_CONTENT_KEY[nodeType] : undefined;
+    if (primaryKey) {
+      for (const v of variantChain) {
+        if (v in node) {
+          node[primaryKey] = node[v];
+          break; // first matching variant wins
+        }
+      }
+    }
+
+    // Strip all <variant>-* keys AND bare variant keys from the output
+    const stripKeys = new Set<string>(variantChain);
+    for (const v of knownVariants) {
+      const prefix = `${v}-`;
+      for (const key of Object.keys(node)) {
+        if (key.startsWith(prefix) || stripKeys.has(key)) {
+          delete node[key];
+        }
+      }
+    }
+    // Also strip bare variant keys that aren't covered by knownVariants
+    for (const v of variantChain) {
+      delete node[v];
+    }
+
+    // Recurse into children
+    const children = node.children;
+    if (Array.isArray(children)) {
+      for (const child of children) {
+        applyOverrides(child as Record<string, unknown>);
+      }
+    }
+  }
+
+  applyOverrides(clone as Record<string, unknown>);
+  return clone;
+}
+
 export function compileDescriptiveRoot(input: DescriptiveRoot, options: CompileOptions = {}): Root {
   const ctx: CompileContext = {
     defaults: {

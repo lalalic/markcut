@@ -14,9 +14,9 @@
  * Build:
  *   bash scripts/build-pipeline.sh
  */
-import { compileDescriptiveRoot, parseImportsBlock, extractDependencySpecs } from "../descriptive/compiler";
+import { compileDescriptiveRoot, resolveVariantOverrides, parseImportsBlock, extractDependencySpecs } from "../descriptive/compiler";
 import { resolveAll, resolveIncludes } from "../descriptive/resolve";
-import { parseMarkdownDescriptive } from "../descriptive/markdown";
+import { parseMarkdownDescriptive, parseMarkdownVariants } from "../descriptive/markdown";
 import type { DescriptiveRoot } from "../descriptive/compiler";
 import type { Root } from "../schema/index";
 
@@ -33,6 +33,9 @@ export interface ResolveAndCompileOptions {
   ttsCli?: string;
   /** STT CLI template override (default: whisper). Overrides root.stt. */
   sttCli?: string;
+  /** Separate output dir for the merged subtitles.vtt (e.g., per-variant).
+   *  Per-clip VTTs stay in scriptOutputDir; defaults to scriptOutputDir. */
+  subtitleOutputDir?: string;
 }
 
 /**
@@ -83,6 +86,7 @@ export async function resolveAndCompile(
     includeOutputDir: options.includeOutputDir,
     ttsCli: options.ttsCli,
     sttCli: options.sttCli,
+    subtitleOutputDir: options.subtitleOutputDir,
   });
 
   // 2. Sync compile: descriptive → stream tree
@@ -105,5 +109,5 @@ export async function resolveAndCompileMarkdown(
   return resolveAndCompile(descriptive, options);
 }
 
-export { compileDescriptiveRoot, resolveAll, resolveIncludes, parseMarkdownDescriptive, parseImportsBlock, extractDependencySpecs };
-export type { DescriptiveRoot, Root };
+export { compileDescriptiveRoot, resolveVariantOverrides, resolveAll, resolveIncludes, parseMarkdownDescriptive, parseMarkdownVariants, parseImportsBlock, extractDependencySpecs };
+export type { DescriptiveRoot, Root, VariantParseResult } from "../descriptive/markdown";

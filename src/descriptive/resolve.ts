@@ -86,6 +86,12 @@ function updateCache(
 
 // ── Media Duration ─────────────────────────────────────────────────────────
 
+/** First N words of a string, safe for log labels. */
+function firstWords(text: string, n: number): string {
+  if (!text) return "";
+  return text.split(/\s+/).slice(0, n).join(" ").replace(/[^a-zA-Z0-9\u4e00-\u9fff\s-]/g, "").slice(0, 60) || text.slice(0, 60);
+}
+
 export interface ResolveMediaOptions {
   /** Base directory for resolving relative src paths (default: cwd) */
   baseDir?: string;
@@ -312,27 +318,30 @@ export async function resolveScripts(
     // Check cache — skip TTS if script + config unchanged AND audio file exists
     const cached = checkCache(cache, `tts:${cacheKey}`, cacheKey);
     let generated: string;
+    const label = firstWords(node.script, 8);
     if (cached) {
       generated = cached;
-      console.log(`  ✓ TTS: ${cacheKey} (cached)`);
+      console.log(`  ✓ TTS: ${label} (cached)`);
     } else {
       generated = generateTTS(node.script, audioPath, ttsCli);
       if (generated) {
         updateCache(cache, `tts:${cacheKey}`, cacheKey, generated);
         cacheDirty = true;
+        console.log(`  ✓ TTS: ${label}`);
       } else {
-        console.warn(`  ⚠ TTS produced no audio for ${cacheKey}. Audio will have no source. Check root.tts config.`);
+        console.warn(`  ⚠ TTS produced no audio for "${label}". Audio will have no source. Check root.tts config.`);
       }
     }
     if (!generated) continue;
 
-    // Set resolved src and remove script marker
-    node.src = generated;
+    // Set resolved src (normalize to absolute for reliable probing later)
+    node.src = resolvePath(generated);
     delete node.script;
   }
 
   if (cacheDirty) writeCacheManifest(options.outputDir, cache);
   if (allScriptNodes.length > 0) {
+    try { writeFileSync(join(options.outputDir, ".cache.json"), JSON.stringify(cache, null, 2), "utf-8"); } catch {}
     const unique = new Set(allScriptNodes.filter(s => s.node.src).map(s => s.node.src)).size;
     console.log(`  ✅ TTS: ${unique} unique audio file${unique > 1 ? "s" : ""} (${allScriptNodes.length} node${allScriptNodes.length > 1 ? "s" : ""})`);
   }
@@ -354,6 +363,10 @@ export async function resolveSubtitles(
     sttCli?: string;
     /** Compiled stream tree with action start times, used for correct offset calculation. */
     compiled?: { children?: any[] };
+    /** Separate output directory for the merged subtitles.vtt.
+     *  When set, per-clip VTTs stay in outputDir (shared cache) while
+     *  the merged VTT goes here (e.g., per-variant). Defaults to outputDir. */
+    mergedOutputDir?: string;
   },
 ): Promise<DescriptiveRoot> {
   const clone: DescriptiveRoot = JSON.parse(JSON.stringify(root));
@@ -384,6 +397,10 @@ export async function resolveSubtitles(
   ): void {
     let seriesOffset = parentOffset;
     for (const node of nodes) {
+      // Skip background children — they are rendered outside the series as
+      // parallel overlays (see FolderLeaf), so they don't advance the offset.
+      if (node.isBackground) continue;
+
       // In a series, each child starts after all previous siblings' durations.
       // In parallel, all children share the parent offset.
       const nodeStart = parentIsSeries ? seriesOffset : parentOffset;
@@ -516,7 +533,9 @@ export async function resolveSubtitles(
   }
 
   if (cueIndex > 1) {
-    const mergedPath = join(options.outputDir, "subtitles.vtt");
+    const mergedDir = options.mergedOutputDir ?? options.outputDir;
+    mkdirSync(mergedDir, { recursive: true });
+    const mergedPath = join(mergedDir, "subtitles.vtt");
     writeFileSync(mergedPath, mergedLines.join("\n"), "utf-8");
     clone.subtitle = { ...(clone.subtitle ?? {}), src: mergedPath };
     console.log(`  ✅ STT: subtitles ready (${cueIndex - 1} cues)`);
@@ -587,15 +606,16 @@ export async function resolveGeneratedMedia(
 
     const cached = checkCache(cache, `gen:${cacheKey}`, cacheKey);
     const label = type === "image" ? "TTI" : "TTV";
+    const labelText = firstWords(prompt, 8);
 
     if (cached) {
-      node.src = cached;
-      console.log(`  ✓ ${label}: ${cacheKey} (cached)`);
+      node.src = resolvePath(cached);
+      console.log(`  ✓ ${label}: ${labelText} (cached)`);
       continue;
     }
 
     try {
-      console.log(`  🔊 ${label}: ${cacheKey}...`);
+      console.log(`  🔊 ${label}: ${labelText}...`);
       const ttiCmd = clone.tti ?? options.ttiCli ?? DEFAULT_TTI_CLI;
       const result = type === "image"
         ? generateTTI(prompt, outputPath, cli)
@@ -604,18 +624,18 @@ export async function resolveGeneratedMedia(
         node.src = outputPath;
         updateCache(cache, `gen:${cacheKey}`, cacheKey, outputPath);
         cacheDirty = true;
-        console.log(`  ✓ ${label}: ${cacheKey}`);
+        console.log(`  ✓ ${label}: ${labelText}`);
       } else {
         const hint = cli.includes("echo")
           ? `No ${label} tool installed. The default CLI just echoes a message — set root.${type === "image" ? "tti" : "ttv"} to a real generation command.`
           : `The command ran but produced no output file. Check the CLI template or run the script manually to debug.`;
-        console.error(`  ⚠ ${label}: ${cacheKey} produced no output. ${hint}`);
+        console.error(`  ⚠ ${label}: "${labelText}" produced no output. ${hint}`);
       }
     } catch (err: any) {
       const hint = (err as any)?.stderr?.toString()?.includes("not found")
         ? `${label} tool not found. Install the required CLI or configure root.${type === "image" ? "tti" : "ttv"}.`
         : `Command failed. Try running the CLI template directly to debug: ${cli}`;
-      console.error(`  ✗ ${label}: ${cacheKey} failed — ${err.message}. ${hint}`);
+      console.error(`  ✗ ${label}: "${labelText}" failed — ${err.message}. ${hint}`);
     }
   }
 
@@ -640,6 +660,10 @@ export interface ResolveAllOptions extends ResolveMediaOptions {
   ttvCli?: string;
   /** If set, resolve includes. Directory where pre-compiled include JSON files are stored. */
   includeOutputDir?: string;
+  /** Separate output dir for the merged subtitles.vtt.
+   *  Per-clip VTTs stay in scriptOutputDir (shared cache) while the merged
+   *  VTT goes here (e.g., per-variant). Defaults to scriptOutputDir. */
+  subtitleOutputDir?: string;
 }
 
 /**
@@ -839,6 +863,7 @@ export async function resolveAll(
       outputDir: options.scriptOutputDir,
       sttCli: options.sttCli,
       compiled,
+      mergedOutputDir: options.subtitleOutputDir,
     });
   }
 

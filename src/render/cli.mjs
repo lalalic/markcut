@@ -69,7 +69,7 @@ Commands:
 }
 
 function parseArgs(argv) {
-  const args = { command: "", file: "", aspect: "16x9", output: "", forceNew: false, verbose: false, label: false, edit: false, noBrowser: false, chat: false, port: 3001, compile: false, cli: false, scriptOutputDir: "", mediaOutputDir: "" };
+  const args = { command: "", file: "", aspect: "16x9", output: "", forceNew: false, verbose: false, label: false, edit: false, noBrowser: false, chat: false, port: 3001, compile: false, cli: false, scriptOutputDir: "", mediaOutputDir: "", variant: [] };
   let i = 2;
   if (argv[i]) args.command = argv[i++];
   if (argv[i] && !argv[i].startsWith("--")) args.file = argv[i++];
@@ -88,6 +88,8 @@ function parseArgs(argv) {
     else if (flag === "--no-browser") args.noBrowser = true;
     else if (flag === "--port" && argv[i]) args.port = parseInt(argv[i], 10);
     else if (flag.startsWith("--port=")) args.port = parseInt(flag.split("=")[1], 10);
+    else if (flag === "--variant" && argv[i]) args.variant.push(argv[i++]);
+    else if (flag.startsWith("--variant=")) args.variant.push(flag.split("=")[1]);
   }
   return args;
 }
@@ -207,7 +209,9 @@ async function main() {
       const portFlag = `--port=${args.port || 3001}`;
       const fileFlag = args.file || join(ROOT, "video.json");
       const port = args.port || 3001;
-      const serverArgs = [playerServer, resolve(fileFlag), modeFlags, editFlag, `--port=${port}`].filter(Boolean);
+      // Pass variant flags to the server
+      const variantFlags = args.variant.map(v => `--variant=${v}`);
+      const serverArgs = [playerServer, resolve(fileFlag), modeFlags, editFlag, `--port=${port}`, ...variantFlags].filter(Boolean);
       const child = spawn("node", serverArgs, { cwd: ROOT, stdio: ["ignore", "pipe", "inherit"] });
       let serverReady = false;
       let stdoutBuffer = "";
@@ -250,26 +254,59 @@ async function main() {
       const raw = readFileSync(filePath, "utf-8");
 
       // Helper: all generated artifacts live under .markcut/generated/
-      // using content-addressed filenames, so multiple .md files in the
-      // same folder share cached files without collisions.
       function generatedDir(filePath, sub) {
         return join(dirname(filePath), ".markcut", "generated", sub);
       }
 
+      // Helper: per-variant output directory for subtitles and variant-specific artifacts
+      function variantDir(filePath) {
+        const base = dirname(filePath);
+        const basename = filePath.split("/").pop().replace(/\.[^.]+$/, "");
+        const variantLabel = args.variant && args.variant.length > 0 ? args.variant.join("-") : "";
+        return variantLabel
+          ? join(base, ".markcut", basename, variantLabel)
+          : join(base, ".markcut", basename);
+      }
+
+      // Helper: resolve variants from the parsed descriptive root
+      async function resolveWithVariants(descriptive, options) {
+        const { resolveVariantOverrides, compileDescriptiveRoot, resolveAll } = await import("../player/pipeline.mjs");
+        const { parseMarkdownDescriptive } = await import("../player/pipeline.mjs");
+
+        let resolved = descriptive;
+
+        // If variants are specified, apply variant-prefixed overrides
+        if (args.variant && args.variant.length > 0) {
+          // Also apply root config overrides from variant sections
+          const parsed = parseMarkdownDescriptive(raw);
+          const variantRoot = parsed.variants.get(args.variant[0]);
+          if (variantRoot) {
+            // Merge variant root config into base (tts, stt, width, height, etc.)
+            const { variant, children: _, ...configOverrides } = variantRoot;
+            resolved = { ...resolved, ...configOverrides };
+          }
+          // Apply leaf-level variant overrides (zh-src → src, etc.)
+          resolved = resolveVariantOverrides(resolved, args.variant);
+        }
+
+        const final = await resolveAll(resolved, options);
+        return compileDescriptiveRoot(final);
+      }
+
       if (filePath.endsWith(".md")) {
-        // Markdown → resolve (TTS/STT) + compile → stream tree
-        const { resolveAndCompileMarkdown } = await import("../player/pipeline.mjs");
+        const { parseMarkdownDescriptive } = await import("../player/pipeline.mjs");
         const fileDir = dirname(filePath);
-        streamTree = await resolveAndCompileMarkdown(raw, {
+        const parsed = parseMarkdownDescriptive(raw);
+        streamTree = await resolveWithVariants(parsed.base, {
           baseDir: fileDir,
           scriptOutputDir: generatedDir(filePath, "tts"),
           mediaOutputDir: generatedDir(filePath, "media"),
           includeOutputDir: generatedDir(filePath, "includes"),
+          subtitleOutputDir: variantDir(filePath),
         });
       } else {
         const parsed = JSON.parse(raw);
         const root = parsed.root ?? parsed;
-        // Check if descriptive JSON
         const { isDescriptiveRoot, resolveAndCompile } = await import("../player/pipeline.mjs");
         if (isDescriptiveRoot(root)) {
           const fileDir = dirname(filePath);
@@ -278,6 +315,7 @@ async function main() {
             scriptOutputDir: generatedDir(filePath, "tts"),
             mediaOutputDir: generatedDir(filePath, "media"),
             includeOutputDir: generatedDir(filePath, "includes"),
+            subtitleOutputDir: variantDir(filePath),
           });
         } else {
           streamTree = root;
