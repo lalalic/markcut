@@ -467,6 +467,170 @@ In the compiled stream tree, events are represented as an `on` field on any node
 }
 ```
 
+## Variants (Language / Platform / Any Override)
+
+Produce different versions of the same video from a single markdown file
+— for example, Chinese and English narration, portrait and landscape layouts,
+or TikTok and YouTube versions.
+
+### How it works
+
+The document has a **base section** (`# video`) that defines the default video.
+Additional **variant sections** (`# zh`, `# portrait`, `# tiktok`) contain
+root-level config overrides. Leaf nodes in the base section carry
+variant-prefixed keys to override specific fields per variant.
+
+### 1. Define a variant section
+
+A variant is a top-level `# <name>` heading. It can override root config
+keys (like `tts`, `width`, `height`):
+
+```markdown
+# video
+layout:series width:1920 height:1080 fps:30
+tts:"edge-tts --voice 'en-US-GuyNeural' --text '{input}' --write-media '{output}'"
+
+## Hook
+- image duration:3 prompt:"..."
+
+## Title
+- script "Welcome to the course"
+- component jsx:"<Slide>{source}</Slide>"
+  ~~~md source
+  # Hello
+  ~~~
+
+# zh
+tts:"edge-tts --voice 'zh-CN-YunxiNeural' --text '{input}' --write-media '{output}'"
+```
+
+The `# zh` section only needs the keys that differ from the base —
+here the TTS voice is switched to Chinese. The video's width, height, fps,
+scenes and all content remain inherited from `# video`.
+
+### 2. Override leaf values
+
+Always write variant overrides on a **new indented line** under the bullet,
+never inline on the same line. This keeps the base declaration clean and
+makes variants easy to scan:
+
+```markdown
+# video
+- script "Welcome to the course"
+  zh:"欢迎来到本课程"
+- component jsx:"<Slide>{source}</Slide>"
+  ~~~md source
+  ## English title
+  ~~~
+  ~~~md zh-source
+  ## 中文标题
+  ~~~
+```
+
+Two mechanisms for overriding content per-variant on individual nodes:
+
+**Variant-prefixed keys** (`zh-<key>`) — replace a specific field.
+The prefix (`zh-`) matches the variant section name (`# zh`):
+
+```markdown
+- component jsx:"<Slide>{source}</Slide>"
+  ~~~md source      ← base value for key "source"
+  ## English title
+  ~~~
+  ~~~md zh-source   ← overrides "source" when --variant zh is used
+  ## 中文标题
+  ~~~
+```
+
+Here `zh-source` replaces `source` when the `zh` variant is active.
+Code-fence-backed props (`~~~md source`, `~~~js jsx`) use variant-prefixed
+keys the same way as inline attributes: the code fence's prop name gets
+the variant prefix.
+
+**Bare variant keys** (`zh`) — replaces the node's "primary content" field
+(meaning depends on node type):
+
+| Node type | Primary key | `zh` replaces |
+|---|---|---|
+| `audio` / `- script` | `script` | narration text |
+| `component` | `jsx` | JSX expression |
+| `image` | `src` | image path |
+| `video` | `src` | video path |
+
+```markdown
+- script "Welcome to the course"
+  zh:"欢迎来到本课程"
+```
+
+Here `zh` replaces `script` on the audio node, switching the narration text
+to Chinese when the variant is active.
+
+### 3. Run with a variant
+
+```bash
+# Preview Chinese version
+npx markcut preview courseware.md --variant zh
+
+# Preview with multiple variants (e.g. Chinese + TikTok portrait)
+npx markcut preview courseware.md --variant zh --variant tiktok
+
+# Render Chinese version
+npx markcut render courseware.md --variant zh --output zh-video.mp4
+```
+
+### Combined variants
+
+Multiple `--variant` flags are applied in order. Each subsequent variant
+can override values set by a previous one. The directory is named with
+all variants joined by `-`:
+
+```bash
+npx markcut preview courseware.md --variant zh --variant tiktok
+# Uses .markcut/courseware/zh-tiktok/ for variant artifacts
+```
+
+### Root config override priority
+
+When a variant section provides a root-level key (e.g., `tts`), it merges
+into the base config. Scene-level `tts` overrides root-level `tts`,
+and the `ttsCli` option (if provided) overrides both.
+
+### How overrides are resolved
+
+1. The parser extracts `# video` as the base root and each `# <name>` as a
+   variant config map.
+2. When `--variant zh` is used, the `# zh` section's root keys are merged
+   into the base root (e.g., `tts` is replaced).
+3. `resolveVariantOverrides` walks the entire tree: for each node,
+   variant-prefixed keys (like `zh-src`) replace their unprefixed
+   counterparts. Bare variant keys (like `zh`) replace the node's
+   primary content key (see table above).
+4. All `<variant>-*` keys and bare variant keys are stripped from the
+   output — the compiled tree contains only the resolved values.
+5. The pipeline then runs TTS/STT/media generation as usual with the
+   overridden config and content.
+
+### Directory layout for variant artifacts
+
+```
+.markcut/
+├── generated/                  ← shared, content-addressed
+│   ├── tts/                    ← TTS audio (same script → same file)
+│   ├── media/                  ← TTI/TTV images/videos
+│   └── includes/               ← compiled sub-video JSON
+├── courseware/                 ← per-source-file
+│   ├── components/             ← component bundles (shared)
+│   ├── compiled.json           ← default (en) compiled output
+│   └── zh/
+│       ├── compiled.json       ← zh variant compiled output
+│       └── subtitles.vtt       ← zh variant subtitles
+```
+
+TTS audio files are content-addressed (hash of `script + CLI`), so
+identical scripts across variants produce the same file. The merged
+`subtitles.vtt` is per-variant because script content and timing offsets
+differ.
+
 ## Timing Rules
 
 1. `duration` authoritative for non-trimmed leaves.
