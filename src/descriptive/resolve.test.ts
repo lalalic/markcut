@@ -1,8 +1,8 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { mkdtempSync, writeFileSync, existsSync, rmSync, realpathSync, mkdirSync } from "node:fs";
+import { mkdtempSync, writeFileSync, existsSync, rmSync, realpathSync, mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { resolveMediaDurations, resolveScripts, resolveSubtitles, resolveGeneratedMedia } from "./resolve";
+import { resolveMediaDurations, resolveScripts, resolveSubtitles, resolveGeneratedMedia, resolveIncludes } from "./resolve";
 import type { DescriptiveRoot } from "./compiler";
 
 // ── Mock CLI tools ────────────────────────────────────────────────────────
@@ -795,5 +795,157 @@ describe("resolveMediaDurations", () => {
     const result = await resolveMediaDurations(root);
     expect(result).not.toBe(root);
     expect(root.children[0]).toBe(originalChildren);
+  });
+});
+
+// ── resolveIncludes with variants ──────────────────────────────────────────
+
+describe("resolveIncludes — variant overrides", () => {
+  /** Helper: create a root with a single include node and resolve it */
+  async function resolveIncludeFixture(
+    subMd: string,
+    options: { variants?: string[] } = {},
+  ) {
+    const root: DescriptiveRoot = {
+      width: 640, height: 480, fps: 30, layout: "series",
+      children: [{
+        type: "include",
+        src: subMd,
+      } as any],
+    };
+    return resolveIncludes(root, {
+      baseDir: tmpDir,
+      includeOutputDir: join(tmpDir, ".markcut", "generated", "includes"),
+      ...options,
+    });
+  }
+
+  it("resolves include and stamps duration from child content", async () => {
+    const subMd = join(tmpDir, "sub-plain.md");
+    writeFileSync(subMd, [
+      "# video",
+      "width:640 height:480 fps:30 layout:series",
+      "## Scene1",
+      "layout:parallel",
+      '- image src:default.jpg duration:3',
+    ].join("\n"));
+
+    const result = await resolveIncludeFixture(subMd);
+    const incNode = result.children[0] as any;
+    expect(incNode.src).toMatch(/\.json$/);
+    // Duration comes from the compiled stream tree (image has duration:3)
+    expect(incNode.durationInSeconds).toBe(3);
+  });
+
+  it("resolves include with variants option using base content (no overrides)", async () => {
+    // Sub-file has variant sections but no variants applied — should use base
+    const subMd = join(tmpDir, "sub-with-variants.md");
+    writeFileSync(subMd, [
+      "# video",
+      "width:640 height:480 fps:30 layout:series",
+      "## Scene1",
+      "layout:parallel",
+      '- image src:default.jpg duration:3',
+      '- component zh-jsx:"<h1>ZH</h1>" jsx:"<h1>EN</h1>" duration:3',
+      "",
+      "# zh",
+      "width:640 height:480 fps:30 layout:series",
+      "## Scene1",
+      "layout:parallel",
+      '- image src:zh.jpg duration:3',
+      '- component zh-jsx:"<h1>ZH</h1>" jsx:"<h1>EN</h1>" duration:3',
+    ].join("\n"));
+
+    const result = await resolveIncludeFixture(subMd);
+    const incNode = result.children[0] as any;
+    expect(incNode.src).toMatch(/\.json$/);
+    expect(incNode.durationInSeconds).toBe(3);
+  });
+
+  it("applies variant-prefixed overrides (zh-src → src) to included sub-video", async () => {
+    const subMd = join(tmpDir, "sub-overrides.md");
+    writeFileSync(subMd, [
+      "# video",
+      "width:640 height:480 fps:30 layout:series",
+      "## Scene1",
+      "layout:parallel",
+      '- image zh-src:zh-image.jpg src:default.jpg duration:3',
+      '- component zh-jsx:"<h1>ZH Variant</h1>" jsx:"<h1>Base</h1>" duration:3',
+      "",
+      "# zh",
+      "width:640 height:480 fps:30 layout:series",
+      "## Scene1",
+      "layout:parallel",
+      '- image zh-src:zh-image.jpg src:default.jpg duration:3',
+      '- component zh-jsx:"<h1>ZH Variant</h1>" jsx:"<h1>Base</h1>" duration:3',
+    ].join("\n"));
+
+    const result = await resolveIncludeFixture(subMd, { variants: ["zh"] });
+    const incNode = result.children[0] as any;
+    expect(incNode.src).toMatch(/\.json$/);
+    expect(incNode.durationInSeconds).toBe(3);
+  });
+
+  it("applies bare variant key (zh → primary content) to included sub-video", async () => {
+    const subMd = join(tmpDir, "sub-bare.md");
+    writeFileSync(subMd, [
+      "# video",
+      "width:640 height:480 fps:30 layout:series",
+      "## Scene1",
+      "layout:parallel",
+      '- component duration:3 jsx:"<h1>Base</h1>"',
+      '- image src:default.jpg duration:3',
+      "",
+      "# zh",
+      "width:640 height:480 fps:30 layout:series",
+      "## Scene1",
+      "layout:parallel",
+      '- component duration:3 zh:"<h1>中文</h1>"',
+      '- image src:default.jpg duration:3',
+    ].join("\n"));
+
+    const result = await resolveIncludeFixture(subMd, { variants: ["zh"] });
+    const incNode = result.children[0] as any;
+    expect(incNode.src).toMatch(/\.json$/);
+    expect(incNode.durationInSeconds).toBe(3);
+  });
+
+  it("nested includes receive variant overrides recursively", async () => {
+    // Create innermost sub-file with variant sections
+    const innerMd = join(tmpDir, "inner.md");
+    writeFileSync(innerMd, [
+      "# video",
+      "width:640 height:480 fps:30 layout:series",
+      "## InnerScene",
+      "layout:parallel",
+      '- image zh-src:inner_zh.jpg src:inner.jpg duration:2',
+      "",
+      "# zh",
+      "width:640 height:480 fps:30 layout:series",
+      "## InnerScene",
+      "layout:parallel",
+      '- image zh-src:inner_zh.jpg src:inner.jpg duration:2',
+    ].join("\n"));
+
+    // Middle file that includes inner
+    const midMd = join(tmpDir, "mid.md");
+    writeFileSync(midMd, [
+      "# video",
+      "width:640 height:480 fps:30 layout:series",
+      "## MidScene",
+      "layout:parallel",
+      '- include src:./inner.md',
+      "",
+      "# zh",
+      "width:640 height:480 fps:30 layout:series",
+      "## MidScene",
+      "layout:parallel",
+      '- include src:./inner.md',
+    ].join("\n"));
+
+    const result = await resolveIncludeFixture(midMd, { variants: ["zh"] });
+    const incNode = result.children[0] as any;
+    expect(incNode.src).toMatch(/\.json$/);
+    expect(incNode.durationInSeconds).toBe(2);
   });
 });

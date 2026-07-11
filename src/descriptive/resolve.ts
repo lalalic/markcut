@@ -24,8 +24,8 @@ import {
 } from "../render/cli-tools";
 import { walkDown } from "../utils";
 import type { DescriptiveNode, DescriptiveRoot } from "./compiler";
-import { compileDescriptiveRoot, parseImportsBlock, extractDependencySpecs, resolveTemplateVars } from "./compiler";
-import { parseMarkdownDescriptive } from "./markdown";
+import { compileDescriptiveRoot, parseImportsBlock, extractDependencySpecs, resolveTemplateVars, resolveVariantOverrides } from "./compiler";
+import { parseMarkdownDescriptive, parseMarkdownVariants } from "./markdown";
 
 // ── Content-hash cache for expensive operations (TTS, STT) ────────────────
 // Skips regeneration when input hasn't changed. Cache key is a hash of all
@@ -664,6 +664,10 @@ export interface ResolveAllOptions extends ResolveMediaOptions {
    *  Per-clip VTTs stay in scriptOutputDir (shared cache) while the merged
    *  VTT goes here (e.g., per-variant). Defaults to scriptOutputDir. */
   subtitleOutputDir?: string;
+  /** Variant chain to apply to included sub-videos (e.g. ["zh", "tiktok"]).
+   *  When set, include nodes parse their target .md files with variant awareness
+   *  and apply variant overrides (zh-src → src, bare `zh` key → primary content). */
+  variants?: string[];
 }
 
 /**
@@ -723,17 +727,33 @@ export async function resolveIncludes(
 
     // Read and parse
     const raw = readFileSync(absPath, "utf-8");
-    const subRoot = parseMarkdownDescriptive(raw);
+    let subRoot = parseMarkdownDescriptive(raw);
+
+    // Apply variant overrides to the sub-video if a variant chain is active
+    const variantChain = options.variants;
+    if (variantChain && variantChain.length > 0) {
+      const parsed = parseMarkdownVariants(raw);
+      subRoot = parsed.base;
+      // Merge root config from the first variant's section
+      const variantRoot = parsed.variants.get(variantChain[0]!);
+      if (variantRoot) {
+        const { children: _, ...configOverrides } = variantRoot;
+        subRoot = { ...subRoot, ...configOverrides };
+      }
+      subRoot = resolveVariantOverrides(subRoot, variantChain);
+    }
 
     // Extract import info from the included file (for the server to bundle later)
     const { entries: importEntries, extraSpecs, rawSource } = extractImportEntriesFromRaw(raw);
 
     // Recursively resolve the sub-root (this handles nested includes too)
-    // Use the same output dir so all compiled includes are co-located
+    // Use the same output dir so all compiled includes are co-located.
+    // Pass the variant chain so nested includes also get variant overrides.
     const resolved = await resolveAll(subRoot, {
       ...options,
       includeOutputDir: outputDir,
       baseDir: dirname(absPath),
+      variants: variantChain,
     });
 
     // Compile to stream tree
@@ -814,7 +834,7 @@ export async function resolveAll(
   // Step 0: Resolve includes (pre-compile referenced .md files to JSON with accurate durations)
   result = await resolveIncludes(result, options);
 
-  // Step 1: Resolve template variables (${width}, ${height}, ${fps}) in all string fields.
+  // Step 1: Resolve template variables (${width}, ${height}, ${fps}, ${variant}) in all string fields.
   // Uses root's current width/height/fps. This happens before media resolution
   // so that pattern-based src/prompt values are resolved with actual dimensions.
   const { resolveAllTemplateVars } = await import("./compiler");
@@ -822,7 +842,7 @@ export async function resolveAll(
     width: result.width ?? 1080,
     height: result.height ?? 1920,
     fps: result.fps ?? 30,
-    variant: "video",
+    variant: options.variants?.[0] ?? "video",
   });
 
   // Step 2: Best-match media src resolution — for pattern-based src values

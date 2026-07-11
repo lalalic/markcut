@@ -10977,12 +10977,24 @@ async function resolveIncludes(root, options = {}) {
       return;
     }
     const raw = readFileSync(absPath, "utf-8");
-    const subRoot = parseMarkdownDescriptive(raw);
+    let subRoot = parseMarkdownDescriptive(raw);
+    const variantChain = options.variants;
+    if (variantChain && variantChain.length > 0) {
+      const parsed = parseMarkdownVariants(raw);
+      subRoot = parsed.base;
+      const variantRoot = parsed.variants.get(variantChain[0]);
+      if (variantRoot) {
+        const { children: _, ...configOverrides } = variantRoot;
+        subRoot = { ...subRoot, ...configOverrides };
+      }
+      subRoot = resolveVariantOverrides(subRoot, variantChain);
+    }
     const { entries: importEntries, extraSpecs, rawSource } = extractImportEntriesFromRaw(raw);
     const resolved = await resolveAll2(subRoot, {
       ...options,
       includeOutputDir: outputDir,
-      baseDir: dirname2(absPath)
+      baseDir: dirname2(absPath),
+      variants: variantChain
     });
     const compiled = compileDescriptiveRoot(resolved);
     const dur = compiled.durationInSeconds ?? compiled.children?.reduce(
@@ -11030,7 +11042,7 @@ async function resolveAll2(root, options = {}) {
     width: result.width ?? 1080,
     height: result.height ?? 1920,
     fps: result.fps ?? 30,
-    variant: "video"
+    variant: options.variants?.[0] ?? "video"
   });
   result = await resolveMediaSrcs(result, { baseDir: options.baseDir });
   if (options.mediaOutputDir) {
@@ -11086,7 +11098,8 @@ async function resolveAndCompile(data, options = {}) {
     includeOutputDir: options.includeOutputDir,
     ttsCli: options.ttsCli,
     sttCli: options.sttCli,
-    subtitleOutputDir: options.subtitleOutputDir
+    subtitleOutputDir: options.subtitleOutputDir,
+    variants: options.variants
   });
   const compiled = compileDescriptiveRoot(resolved);
   return compiled;

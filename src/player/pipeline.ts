@@ -36,6 +36,9 @@ export interface ResolveAndCompileOptions {
   /** Separate output dir for the merged subtitles.vtt (e.g., per-variant).
    *  Per-clip VTTs stay in scriptOutputDir; defaults to scriptOutputDir. */
   subtitleOutputDir?: string;
+  /** Variant chain to apply to include nodes (e.g. ["zh", "tiktok"]).
+   *  When set, included .md files are parsed with variant awareness. */
+  variants?: string[];
 }
 
 /**
@@ -87,6 +90,7 @@ export async function resolveAndCompile(
     ttsCli: options.ttsCli,
     sttCli: options.sttCli,
     subtitleOutputDir: options.subtitleOutputDir,
+    variants: options.variants,
   });
 
   // 2. Sync compile: descriptive → stream tree
