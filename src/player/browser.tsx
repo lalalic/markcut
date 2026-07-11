@@ -125,7 +125,9 @@ function PlayerApp() {
 
   const loadData = React.useCallback(() => {
     setReady(false);
-    fetch("/api/video-data")
+    const variant = (window as any).VARIANT || "default";
+    const url = variant !== "default" ? `/api/video-data?variant=${variant}` : "/api/video-data";
+    fetch(url)
       .then((r) => r.json())
       .then((json) => {
         const root = json.root || json;

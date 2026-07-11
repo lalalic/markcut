@@ -29,14 +29,45 @@ const IS_MARKDOWN = VIDEO_JSON.endsWith(".md");
 const MODE_LABEL = process.argv.includes("--label");
 const MODE_EDIT = process.argv.includes("--edit");
 
-// Parse variant flags (can be repeated: --variant zh --variant tiktok)
-const VARIANTS = [];
-for (const arg of process.argv) {
-  if (arg === "--variant" || arg.startsWith("--variant=")) {
-    const v = arg.includes("=") ? arg.split("=")[1] : process.argv[process.argv.indexOf(arg) + 1];
-    if (v && !v.startsWith("--")) VARIANTS.push(v);
+// ─── Variant configuration ─────────────────────────────────────────────────
+// Each --variant flag defines a separate compilation target.
+// The label can be a dash-separated chain (e.g. "zh-tiktok" → ["zh", "tiktok"]).
+// The special label "default" means no variant overrides (base content).
+//
+// Usage: --variant default --variant zh-tiktok --variant en-tiktok --variant youtube
+// This compiles 4 variants: default (no overrides), zh+tiktok, en+tiktok, youtube.
+//
+// Each variant is served at its own URL path: /, /zh-tiktok, /en-tiktok, /youtube.
+//
+// Compilations run sequentially (not parallel) to avoid resource contention
+// from CLI tools like whisper, ffprobe, etc.
+//
+// Variant config:
+//   { label: string, chain: string[] }
+//   - label: display name / URL path segment (e.g. "default", "zh-tiktok")
+//   - chain: variant override names (e.g. [], ["zh", "tiktok"], ["youtube"])
+function parseVariantConfigs() {
+  const labels = [];
+  for (let i = 0; i < process.argv.length; i++) {
+    const arg = process.argv[i];
+    if (arg === "--variant") {
+      const next = process.argv[i + 1];
+      if (next && !next.startsWith("--")) {
+        labels.push(next);
+        i++; // skip the value
+      }
+    } else if (arg.startsWith("--variant=")) {
+      labels.push(arg.split("=")[1]);
+    }
   }
+  // If no --variant flags, default to a single "default" variant
+  if (labels.length === 0) labels.push("default");
+  return labels.map(label => ({
+    label,
+    chain: label === "default" ? [] : label.split("-"),
+  }));
 }
+const VARIANT_CONFIGS = parseVariantConfigs();
 
 // ─── SSE clients for reload notifications ────────────────────────────────
 const sseClients = new Set();
@@ -55,28 +86,36 @@ let editHistory = [];
 //       media/                    ← TTI/TTV media (content-hash filenames)
 //       includes/                 ← compiled sub-video JSON (content-hash)
 //     <basename>/                 ← per-source-file
-//       components/               ← component bundles (per-file: imports differ)
-//       <variant>/                ← per-variant artifacts (subtitles, etc.)
+//       default/                  ← default variant artifacts
+//         components/             ← component bundles (per-file: imports differ)
+//         compiled.json
+//       zh-tiktok/                ← variant-specific artifacts
+//         components/
+//         compiled.json
 const MARKCUT_BASE = join(dirname(VIDEO_JSON), ".markcut");
 const MARKCUT_DIR = join(MARKCUT_BASE, "generated");
 const BASENAME = VIDEO_JSON.split("/").pop().replace(/\.[^.]+$/, "");
 const TTS_OUTPUT_DIR = join(MARKCUT_DIR, "tts");
 const MEDIA_OUTPUT_DIR = join(MARKCUT_DIR, "media");
 const INCLUDE_CACHE_DIR = join(MARKCUT_DIR, "includes");
-const COMPONENT_CACHE_DIR = join(MARKCUT_BASE, BASENAME, "components");
-const VARIANT_DIR = VARIANTS.length > 0
-  ? join(MARKCUT_BASE, BASENAME, VARIANTS.join("-"))
-  : join(MARKCUT_BASE, BASENAME);
 const WHISPER_BIN = process.env.WHISPER_BIN || "/Users/lir/Library/Python/3.9/bin/whisper";
+
+/** Get the per-variant directory under .markcut/<basename>/<label>/ */
+function variantDir(label) {
+  return join(MARKCUT_BASE, BASENAME, label);
+}
+
+/** Get the compiled.json path for a given variant */
+function compiledCacheFile(label) {
+  return join(variantDir(label), "compiled.json");
+}
 
 // ─── extractScenes imported from ./server-shared.mjs ────────────────────
 
-// ─── Compiled root cache (avoids re-running pipeline on every fetch) ─────
-let compiledRootCache = null;
+// ─── Compiled root cache (per-variant) ────────────────────────────────────
+// Keyed by variant label (e.g. "default", "zh-tiktok").
+const compiledRootCache = new Map();
 let pipelineRunning = false;
-
-// Compiled root is also persisted to disk at VARIANT_DIR/compiled.json
-const COMPILED_CACHE_FILE = join(VARIANT_DIR, "compiled.json");
 
 /**
  * Extract component import entries from the raw file source.
@@ -88,8 +127,6 @@ function extractImportEntries(raw) {
   let rawSource = null;
 
   if (IS_MARKDOWN) {
-    // Extract ```js imports or ~~~js imports code fence from markdown.
-    // Supports both tilde (~) and backtick (`) fence styles (3+ delimiters).
     const match = raw.match(/^(```|~~~)\s*js imports\s*\n([\s\S]*?)^\1\s*$/m);
     if (match) {
       rawSource = match[2];
@@ -97,7 +134,6 @@ function extractImportEntries(raw) {
       extraSpecs = extractDependencySpecs(match[2]);
     }
   } else {
-    // Extract from parsed JSON root
     try {
       const parsed = JSON.parse(raw);
       const root = parsed.root || parsed;
@@ -113,70 +149,70 @@ function extractImportEntries(raw) {
 }
 
 /**
- * Read the input file (.json or .md), detect format, run pipeline,
- * bundle any component imports, extract scenes. Caches the result.
+ * Compile a single variant and cache the result.
  *
- * The compiled root is persisted to VARIANT_DIR/compiled.json so it
- * survives server restarts and can be inspected on disk.
+ * @param {object} config - Variant config { label, chain }
+ * @param {object} parsed - Parsed markdown variants (from parseMarkdownVariants)
+ * @param {string} raw - Raw source file content
  */
-async function loadCompiledRoot() {
-  if (compiledRootCache) return compiledRootCache;
+async function compileVariant(config, parsed, raw) {
+  const cacheKey = config.label;
+  if (compiledRootCache.has(cacheKey)) return compiledRootCache.get(cacheKey);
 
-  const raw = readFileSync(VIDEO_JSON, "utf-8");
+  const vDir = variantDir(config.label);
+  const componentDir = join(vDir, "components");
+  const subtitleDir = vDir;
 
-  // Extract component imports from raw source BEFORE compiling,
-  // so the server can bundle them and set compiled.imports directly.
   const { entries: importEntries, extraSpecs, rawSource } = extractImportEntries(raw);
 
   let compiled;
 
   if (IS_MARKDOWN) {
-    console.log("  📝 Markdown → pipeline...");
-    const { parseMarkdownVariants, resolveVariantOverrides, resolveAll, compileDescriptiveRoot } = await import("./pipeline.mjs");
-    const parsed = parseMarkdownVariants(raw);
     let descriptive = parsed.base;
 
-    // Apply variant overrides if --variant flags provided
-    if (VARIANTS.length > 0) {
+    if (config.chain.length > 0) {
       // Merge root config from the first variant's section
-      const variantRoot = parsed.variants.get(VARIANTS[0]);
+      const variantRoot = parsed.variants.get(config.chain[0]);
       if (variantRoot) {
         const { children: _, ...configOverrides } = variantRoot;
         descriptive = { ...descriptive, ...configOverrides };
       }
-      descriptive = resolveVariantOverrides(descriptive, VARIANTS);
-      const variantLabel = VARIANTS.join("+");
-      console.log(`  🎯 Variant: ${variantLabel}`);
+      const { resolveVariantOverrides } = await import("./pipeline.mjs");
+      descriptive = resolveVariantOverrides(descriptive, config.chain);
     }
 
+    console.log(`  📝 Variant "${config.label}": resolving...`);
+    const { resolveAll, compileDescriptiveRoot } = await import("./pipeline.mjs");
     const resolved = await resolveAll(descriptive, {
       baseDir: dirname(VIDEO_JSON),
       scriptOutputDir: TTS_OUTPUT_DIR,
       mediaOutputDir: MEDIA_OUTPUT_DIR,
       includeOutputDir: INCLUDE_CACHE_DIR,
-      subtitleOutputDir: VARIANT_DIR,
+      subtitleOutputDir: subtitleDir,
+      variants: config.chain.length > 0 ? config.chain : undefined,
       whisperBin: existsSync(WHISPER_BIN) ? WHISPER_BIN : undefined,
     });
     compiled = compileDescriptiveRoot(resolved);
   } else {
-    const parsed = JSON.parse(raw);
-    const root = parsed.root || parsed;
+    const parsedJson = JSON.parse(raw);
+    const root = parsedJson.root || parsedJson;
 
     if (isDescriptiveRoot(root)) {
-      console.log("  🔍 Descriptive JSON → pipeline...");
       let descriptive = root;
 
-      if (VARIANTS.length > 0) {
+      if (config.chain.length > 0) {
         const { resolveVariantOverrides } = await import("./pipeline.mjs");
-        descriptive = resolveVariantOverrides(descriptive, VARIANTS);
+        descriptive = resolveVariantOverrides(descriptive, config.chain);
       }
 
+      console.log(`  📝 Variant "${config.label}": resolving...`);
       compiled = await resolveAndCompile(descriptive, {
         baseDir: dirname(VIDEO_JSON),
         scriptOutputDir: TTS_OUTPUT_DIR,
         mediaOutputDir: MEDIA_OUTPUT_DIR,
         includeOutputDir: INCLUDE_CACHE_DIR,
-        subtitleOutputDir: VARIANT_DIR,
+        subtitleOutputDir: subtitleDir,
+        variants: config.chain.length > 0 ? config.chain : undefined,
         whisperBin: existsSync(WHISPER_BIN) ? WHISPER_BIN : undefined,
       });
     } else {
@@ -184,34 +220,63 @@ async function loadCompiledRoot() {
     }
   }
 
-  // ── Post-compile: resolve per-subvideo component imports ─────────────
-  await resolveIncludeImports(compiled);
-
-  // Bundle component imports — sets compiled.imports to the bundle URL
+  // Bundle component imports
   const shouldBundle = (importEntries && importEntries.length > 0) || (rawSource && rawSource.trim());
   if (shouldBundle) {
     try {
-      const bundle = await bundleFromEntries(importEntries || [], extraSpecs, rawSource, COMPONENT_CACHE_DIR);
+      const bundle = await bundleFromEntries(importEntries || [], extraSpecs, rawSource, componentDir);
       if (bundle.url) {
         compiled.imports = bundle.url;
-        console.log(`  ✅ Components: ${bundle.exports.join(", ")}`);
+        console.log(`  ✅ ${config.label}: components → ${bundle.exports.join(", ")}`);
       }
     } catch (e) {
-      console.error("  ⚠️  Component bundling failed:", e.message);
-      // Continue without bundled components — JSX will fail gracefully
+      console.error(`  ⚠️  ${config.label}: component bundling failed:`, e.message);
     }
   }
 
-  // Persist to disk so it survives restarts and is inspectable
+  // Persist to disk
   try {
-    mkdirSync(VARIANT_DIR, { recursive: true });
-    writeFileSync(COMPILED_CACHE_FILE, JSON.stringify(compiled, null, 2), "utf-8");
+    mkdirSync(vDir, { recursive: true });
+    writeFileSync(compiledCacheFile(config.label), JSON.stringify(compiled, null, 2), "utf-8");
   } catch (e) {
-    console.warn("  ⚠ Failed to write compiled.json:", e.message);
+    console.warn(`  ⚠ Failed to write compiled.json for "${config.label}":`, e.message);
   }
 
-  compiledRootCache = compiled;
+  compiledRootCache.set(cacheKey, compiled);
   return compiled;
+}
+
+/**
+ * Compile all variants sequentially.
+ */
+async function compileAllVariants() {
+  const raw = readFileSync(VIDEO_JSON, "utf-8");
+  let markdownParsed = null;
+
+  console.log(`  📄 ${VIDEO_JSON.split("/").pop()}`);
+
+  // Pre-parse markdown variants once (shared across all variants)
+  if (IS_MARKDOWN) {
+    const { parseMarkdownVariants } = await import("./pipeline.mjs");
+    markdownParsed = parseMarkdownVariants(raw);
+  }
+
+  for (const config of VARIANT_CONFIGS) {
+    const startTime = Date.now();
+    await compileVariant(config, markdownParsed, raw);
+    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+    console.log(`  ✅ "${config.label}" compiled (${elapsed}s)`);
+  }
+}
+
+/**
+ * Get a compiled root for a given variant label.
+ * Returns the pre-compiled cached root (no re-compilation).
+ */
+async function loadCompiledRoot(variantLabel) {
+  const label = variantLabel || "default";
+  if (compiledRootCache.has(label)) return compiledRootCache.get(label);
+  throw new Error(`Variant "${label}" not compiled. Available: ${[...compiledRootCache.keys()].join(", ")}`);
 }
 
 /**
@@ -255,9 +320,10 @@ async function resolveIncludeImports(root) {
     if (!importEntries || importEntries.length === 0) continue;
 
     // Use the sub-video's basename for its component directory
+    // Falls back to the first variant's component dir if sourceName is missing
     const subComponentDir = sourceName
       ? join(MARKCUT_BASE, sourceName, "components")
-      : COMPONENT_CACHE_DIR;
+      : join(variantDir(VARIANT_CONFIGS[0].label), "components");
 
     try {
       console.log(`  🔗 Sub-video includes: bundling ${importEntries.length} component(s) from "${inc.src}"`);
@@ -288,23 +354,31 @@ async function resolveIncludeImports(root) {
   }
 }
 
-// ─── Initial scene info ──────────────────────────────────────────────────
-let scenes = [];
-let totalDuration = 0;
+// ─── Scene info per variant ─────────────────────────────────────────────
+const scenesCache = new Map(); // label → { scenes, totalDuration }
 
-async function initScenes() {
-  try {
-    const root = await loadCompiledRoot();
-    const extracted = extractScenes(root);
-    scenes = extracted.scenes;
-    totalDuration = extracted.totalDuration;
-  } catch (e) {
-    console.error("Warning: could not parse video.json for scene info:", e.message);
+async function compileAndExtractScenes() {
+  // Compile all variants sequentially, then extract scenes for each
+  await compileAllVariants();
+
+  for (const config of VARIANT_CONFIGS) {
+    try {
+      const root = await loadCompiledRoot(config.label);
+      const extracted = extractScenes(root);
+      scenesCache.set(config.label, extracted);
+    } catch (e) {
+      console.error(`  ⚠ Could not extract scenes for "${config.label}":`, e.message);
+    }
   }
 }
 
+function getScenes(label) {
+  const key = label || "default";
+  return scenesCache.get(key) || { scenes: [], totalDuration: 0 };
+}
+
 // Will be awaited before announcing "Player ready"
-const initScenesPromise = initScenes();
+const initScenesPromise = compileAndExtractScenes();
 
 // ─── Watch file for changes (--edit mode) ───────────────────────────────
 if (MODE_EDIT) {
@@ -312,23 +386,26 @@ if (MODE_EDIT) {
   watchFile(VIDEO_JSON, { interval: 1000 }, async (curr, prev) => {
     if (curr.mtimeMs === prev.mtimeMs) return;
     if (pipelineRunning) return;
-    // Check if content actually changed (avoids false triggers from TTS or metadata updates)
     const newContent = readFileSync(VIDEO_JSON, "utf-8");
     if (newContent === lastContent) return;
     lastContent = newContent;
     pipelineRunning = true;
-    console.log(`  📁 ${VIDEO_JSON} changed, re-running pipeline...`);
+    console.log(`  📁 ${VIDEO_JSON} changed, re-running all variants...`);
 
     try {
-      // Invalidate cache so loadCompiledRoot re-reads the file
-      compiledRootCache = null;
-      const root = await loadCompiledRoot();
-      const extracted = extractScenes(root);
-      scenes = extracted.scenes;
-      totalDuration = extracted.totalDuration;
+      compiledRootCache.clear();
+      scenesCache.clear();
+      await compileAllVariants();
+
+      for (const config of VARIANT_CONFIGS) {
+        try {
+          const root = await loadCompiledRoot(config.label);
+          scenesCache.set(config.label, extractScenes(root));
+        } catch {}
+      }
 
       for (const client of sseClients) {
-        client.write("data: " + JSON.stringify({ type: "reload", scenes, totalDuration }) + "\n\n");
+        client.write("data: " + JSON.stringify({ type: "reload" }) + "\n\n");
       }
     } catch (e) {
       console.error("  ⚠️  Failed to re-process after change:", e.message);
@@ -339,21 +416,39 @@ if (MODE_EDIT) {
 }
 // ─── MIME imported from ./server-shared.mjs ──────────────────────────────
 
+// ─── Variant detection from URL path ─────────────────────────────────────
+// Extract variant label from the first path segment.
+// "/" or "/default" → "default"
+// "/zh-tiktok" → "zh-tiktok"
+// "/zh-tiktok/player.js" → "zh-tiktok" (with subpath /player.js)
+function parseVariantFromPath(urlPath) {
+  const parts = urlPath.split("/").filter(Boolean);
+  if (parts.length === 0) return { variant: "default", subpath: "/" };
+  const first = parts[0];
+  // Check if this segment matches a known variant label
+  const match = VARIANT_CONFIGS.find(c => c.label === first);
+  if (match) {
+    const subpath = "/" + parts.slice(1).join("/");
+    return { variant: match.label, subpath: subpath || "/" };
+  }
+  return { variant: "default", subpath: urlPath };
+}
+
 // ─── Resolve asset path ──────────────────────────────────────────────────
-function resolveAsset(urlPath) {
-  if (urlPath === "/") return join(ROOT, "src", "player", "index.html");
-  // Bundle dir for the Remotion Player
+function resolveAsset(urlPath, variantLabel) {
+  // Bundle dir for the Remotion Player (same for all variants)
   if (urlPath === "/player.js") return join(ROOT, "src", "player", "bundle", "player.js");
   // Absolute filesystem path — serve directly
   if (urlPath.startsWith("/") && existsSync(urlPath)) return urlPath;
-  // Serve from ROOT/public, ROOT, .markcut/, .markcut/generated/,
-  // or relative to the video.json directory
+  // Serve from variant dir, then .markcut/, then ROOT/public, etc.
+  const vDir = variantDir(variantLabel || "default");
   const jsonDir = dirname(VIDEO_JSON);
   const candidates = [
-    join(ROOT, "public", urlPath),
-    join(ROOT, urlPath),
+    join(vDir, urlPath),
     join(MARKCUT_BASE, urlPath),
     join(MARKCUT_DIR, urlPath),
+    join(ROOT, "public", urlPath),
+    join(ROOT, urlPath),
     join(jsonDir, urlPath),
   ];
   for (const c of candidates) {
@@ -363,10 +458,17 @@ function resolveAsset(urlPath) {
 }
 
 // ─── HTML page ───────────────────────────────────────────────────────────
-function getHtml() {
+function getHtml(variantLabel) {
+  const label = variantLabel || "default";
   const hasLabel = MODE_LABEL ? "true" : "false";
   const hasWatch = MODE_EDIT ? "true" : "false";
-  const title = MODE_LABEL ? " — Label" : MODE_EDIT ? " — Edit" : "";
+  const title = label !== "default" ? ` — ${label}` : MODE_LABEL ? " — Label" : MODE_EDIT ? " — Edit" : "";
+
+  // Build variant switcher links
+  const variantLinks = VARIANT_CONFIGS.map(c =>
+    `<a href="/${c.label === "default" ? "" : c.label}" class="variant-link${c.label === label ? " active" : ""}">${c.label}</a>`
+  ).join("");
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -382,6 +484,10 @@ function getHtml() {
   #header-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
   #close-btn { width: 22px; height: 22px; border-radius: 50%; border: 1px solid rgba(255,255,255,.15); background: rgba(0,0,0,.3); color: rgba(255,255,255,.4); font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all .15s; }
   #close-btn:hover { background: rgba(255,60,60,.4); border-color: rgba(255,60,60,.5); color: #fff; }
+  #variant-bar { display: flex; gap: 4px; align-items: center; width: 100%; max-width: 500px; padding: 6px 12px; flex-shrink: 0; overflow-x: auto; }
+  .variant-link { font-size: 11px; padding: 3px 10px; border-radius: 12px; background: rgba(255,255,255,.06); color: rgba(255,255,255,.4); text-decoration: none; white-space: nowrap; transition: all .15s; }
+  .variant-link:hover { background: rgba(255,255,255,.12); color: rgba(255,255,255,.7); }
+  .variant-link.active { background: rgba(74,158,255,.2); color: #4a9eff; }
   #player-frame { flex: 1; width: 100%; max-width: 480px; min-height: 0; border-radius: 16px; overflow: hidden; border: 1px solid rgba(255,255,255,.08); background: #000; box-shadow: 0 4px 40px rgba(0,0,0,.6); margin: 0 12px; }
   #root { width: 100%; height: 100%; }
   #reload-toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(74,158,255,.9); color: #fff; padding: 12px 24px; border-radius: 10px; font-size: 14px; font-weight: 600; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 200; backdrop-filter: blur(8px); }
@@ -396,12 +502,14 @@ function getHtml() {
 </style>
 </head>
 <body>
+<script>window.VARIANT = "${label}";</script>
 ${MODE_EDIT ? `<div id="header">
   <span id="header-status"></span>
   <div id="header-actions">
     <button id="close-btn" title="Close player and return to terminal">✕</button>
   </div>
 </div>` : ""}
+<div id="variant-bar">${variantLinks}</div>
 <div id="player-frame">
   <div id="root"></div>
 </div>
@@ -432,7 +540,6 @@ const editInput = document.getElementById("edit-input");
 const editBtn = document.getElementById("edit-btn");
 const headerStatus = document.getElementById("header-status");
 
-// Suppress SSE auto-reload during edits — we reload ourselves
 let suppressReload = false;
 
 async function applyEdit() {
@@ -452,7 +559,6 @@ async function applyEdit() {
     if (res.ok) {
       const summary = (data.output || "done").split("\\n")[0].slice(0, 65);
       headerStatus.textContent = summary;
-      // Refresh player in-place so timeline playback continues
       setTimeout(() => { suppressReload = false; window.dispatchEvent(new Event("refresh-player")); }, 4000);
     } else {
       headerStatus.textContent = "\u274C " + (data.error || "failed");
@@ -478,7 +584,22 @@ editInput?.addEventListener("keydown", (e) => {
 // ─── HTTP Server ──────────────────────────────────────────────────────────
 const server = createServer(async (req, res) => {
   const url = new URL(req.url, "http://localhost");
-  const path = url.pathname;
+  const rawPath = url.pathname;
+
+  // Extract variant label from URL path.
+  // API paths (starting with /api/) are not variant-routed — they use ?variant= query param.
+  // Everything else gets variant routing from the first path segment.
+  const isApiPath = rawPath.startsWith("/api/");
+  let path, variantLabel;
+
+  if (isApiPath) {
+    path = rawPath;
+    variantLabel = url.searchParams.get("variant") || "default";
+  } else {
+    const parsed = parseVariantFromPath(rawPath);
+    variantLabel = parsed.variant;
+    path = parsed.subpath;
+  }
 
   try {
     // API: Get or save labels (label mode)
@@ -490,7 +611,6 @@ const server = createServer(async (req, res) => {
           res.writeHead(200, { "Content-Type": "application/json" });
           res.end(data);
         } catch (e) {
-          // No labels file yet
           res.writeHead(200, { "Content-Type": "application/json" });
           res.end(JSON.stringify({ labels: [], scenes: [] }));
         }
@@ -519,8 +639,7 @@ const server = createServer(async (req, res) => {
       return;
     }
 
-    // API: Feedback from user — printed to stdout AND saved to feedback.txt
-    // Agent can read feedback.txt or tail the log
+    // API: Feedback from user
     if (path === "/api/feedback" && req.method === "POST") {
       let body = "";
       req.on("data", c => body += c);
@@ -731,18 +850,12 @@ IMPORTANT: Read the full existing JSON file before editing. Only edit the JSON f
       return;
     }
 
-    // API: Get video.json data (browser fetches this)
-    // If descriptive JSON: returns the compiled stream tree
-    // If compiled stream tree: returns as-is
+    // API: Get video.json data for a specific variant
     if (path === "/api/video-data") {
       try {
-        const root = await loadCompiledRoot();
-        // Convert absolute import bundle path to server-relative URL
-        // for the browser (import() needs a URL the server can serve).
+        const root = await loadCompiledRoot(variantLabel);
         const rootOut = { ...root };
         if (typeof rootOut.imports === "string" && rootOut.imports.startsWith("/")) {
-          // bundle.url: /Users/.../.markcut/<basename>/components/abc123.js
-          // server root: .markcut/ → serves as /<basename>/components/abc123.js
           const rel = rootOut.imports.replace(MARKCUT_BASE, "");
           rootOut.imports = rel.startsWith("/") ? rel : "/" + rel;
         }
@@ -755,33 +868,37 @@ IMPORTANT: Read the full existing JSON file before editing. Only edit the JSON f
       return;
     }
 
-    // API: Get scenes with media info (for thumbnails)
+    // API: Get scenes with media info for a specific variant
     if (path === "/api/scenes") {
+      const { scenes, totalDuration } = getScenes(variantLabel);
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify(scenes));
       return;
     }
 
-    // API: Get current video.json info
+    // API: Get current video info for a specific variant
     if (path === "/api/video-info") {
+      const { scenes, totalDuration } = getScenes(variantLabel);
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify({
         scenes,
         totalDuration,
+        variant: variantLabel,
+        variants: VARIANT_CONFIGS.map(c => c.label),
         mode: { label: MODE_LABEL, edit: MODE_EDIT },
       }));
       return;
     }
 
-    // Serve the main HTML page
+    // Serve the main HTML page (variant-aware)
     if (path === "/" || path === "/index.html") {
       res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-      res.end(getHtml());
+      res.end(getHtml(variantLabel));
       return;
     }
 
-    // Serve static files from ROOT/public/
-    const assetPath = resolveAsset(path);
+    // Serve static files
+    const assetPath = resolveAsset(path, variantLabel);
     if (assetPath && serveFile(req, res, assetPath)) return;
 
     res.writeHead(404);
@@ -797,7 +914,6 @@ IMPORTANT: Read the full existing JSON file before editing. Only edit the JSON f
 });
 
 server.listen(PORT, async () => {
-  // Wait for initial pipeline (TTS, STT, media) to fully resolve before announcing ready
   try {
     await initScenesPromise;
   } catch {
@@ -805,6 +921,12 @@ server.listen(PORT, async () => {
   }
   const mode = MODE_LABEL ? " --label" : MODE_EDIT ? " --edit" : "";
   console.log(`\n🎬 Player ready at http://localhost:${PORT}${mode}`);
+  if (VARIANT_CONFIGS.length > 1) {
+    for (const config of VARIANT_CONFIGS) {
+      const url = config.label === "default" ? `http://localhost:${PORT}` : `http://localhost:${PORT}/${config.label}`;
+      console.log(`   ${config.label}: ${url}`);
+    }
+  }
   if (MODE_EDIT) console.log(`   Watching: ${VIDEO_JSON.split("/").pop()}`);
   console.log("");
 });

@@ -60005,7 +60005,9 @@ function PlayerApp() {
   const durationInFrames = Math.max(1, Math.ceil(durationInSeconds * fps));
   const loadData = React47.useCallback(() => {
     setReady(false);
-    fetch("/api/video-data").then((r) => r.json()).then((json2) => {
+    const variant = window.VARIANT || "default";
+    const url2 = variant !== "default" ? `/api/video-data?variant=${variant}` : "/api/video-data";
+    fetch(url2).then((r) => r.json()).then((json2) => {
       const root2 = json2.root || json2;
       setData(root2);
       setReady(true);
