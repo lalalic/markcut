@@ -35,7 +35,7 @@ const MAX_VIDEO_DURATION = 60;      // max seconds for normalized video clip
 const MAX_VIDEO_DIMENSION = 360;    // max height/width for normalized video
 
 const DEFAULT_ITT =
-  'uvx --from mlx-vlm mlx_vlm.generate --model mlx-community/MiniCPM-V-4.6-bf16 --max-tokens 2048 --prompt "{prompt}" --image {input} --temperature 0.0';
+  'uvx --from mlx-vlm mlx_vlm.generate --model mlx-community/MiniCPM-V-4.6-bf16 --max-tokens 2048 --prompt "{prompt}" --image {input} --temperature 0.0 --thinking-mode disabled';
 /** Interval in seconds between sampled video frames (default: one frame every 5 s). */
 const DEFAULT_VTT_SAMPLE_INTERVAL = 5;
 const DEFAULT_VTT = 'uvx --from mlx-vlm mlx_vlm.generate --model mlx-community/MiniCPM-V-4.6-bf16 --max-tokens 2048 --prompt "{prompt}" --video {input} --temperature 0.0 --processor-kwargs \'{"max_num_frames": 32, "stack_frames": 1, "max_slice_nums": 1, "use_image_id": false}\''; // empty → use frame sampling + ITT; set to customize
@@ -79,15 +79,11 @@ function fileFingerprint(filePath) {
 }
 
 /** Build a deterministic cache key for a media file. */
-function perceptionCacheKey(filePath, prompts, ittCli, vttCli, sttCli, context, type) {
+function perceptionCacheKey(filePath, actualCmd, type) {
   const parts = {
     file: fileFingerprint(filePath),
     type,
-    ittCli: ittCli || DEFAULT_ITT,
-    vttCli: vttCli || DEFAULT_VTT,
-    sttCli: sttCli || DEFAULT_STT,
-    context: context || "",
-    prompts: Object.fromEntries([...prompts.entries()].sort()),
+    cmd: actualCmd,
   };
   return createHash("sha1").update(JSON.stringify(parts)).digest("hex").slice(0, 16);
 }
@@ -131,7 +127,8 @@ function loadPrompts(filePath) {
   }
   const content = readFileSync(filePath, "utf-8");
   // Match sections: ## prompt-name\n~~~md\n...content...\n~~~
-  const sectionRe = /^##\s+(\S[\w-]*)\s*\n~~~md\n([\s\S]*?)~~~\s*$/gm;
+  // Match sections: ## section-name\n...any text...~~~md\n...content...~~~
+  const sectionRe = /^##\s+(\S[\w-]*)\s*\n[\s\S]*?^~~~md\n([\s\S]*?)~~~\s*$/gm;
   let match;
   while ((match = sectionRe.exec(content)) !== null) {
     const name = match[1].trim();
@@ -153,6 +150,15 @@ function substituteTemplate(tmpl, vars) {
     result = result.replace(new RegExp(`\\{${key}\\}`, "g"), String(value));
   }
   return result;
+}
+
+/**
+ * Get a prompt template by name, or throw if missing.
+ */
+function getPrompt(prompts, name) {
+  const p = prompts.get(name);
+  if (!p) throw new Error(`Missing prompt: "${name}" — check vision_prompts.md`);
+  return p;
 }
 
 // ── Media Scanning ────────────────────────────────────────────────────────
@@ -846,7 +852,7 @@ function stripThinkBlocks(text) {
  */
 function analyzeImage(imagePath, normPath, prompts, ittCli, context = "") {
   const ctx = context ? `Context: ${context}\n\n` : "";
-  const prompt = ctx + (prompts.get("image-perception") || 'Describe this image in detail. What do you see? Include setting, colors, objects, weather, mood. Write at least 3-4 sentences.');
+  const prompt = ctx + getPrompt(prompts, "image-perception");
   const raw = runITT(normPath, prompt, ittCli);
   const parsed = parseJSONFromResponse(raw);
   const rawText = stripThinkBlocks(extractRawText(raw));
@@ -865,7 +871,7 @@ function analyzeVideo(videoPath, normInfo, normDir, prompts, vttCli, sttCli, con
 
   // Step 1: VTT → video description
   emitInfo(`  Running video understanding...`);
-  const descPrompt = ctx + (prompts.get("video-description") || 'Describe this video in detail. What is happening? Describe setting, subjects, actions, visual style, mood. Write at least 3-4 sentences.');
+  const descPrompt = ctx + getPrompt(prompts, "video-perception");
   const descRaw = runVTT(normInfo.path, descPrompt, vttCli, ittCli, sampleInterval);
   const descParsed = parseJSONFromResponse(descRaw);
   const descText = stripThinkBlocks(extractRawText(descRaw));
@@ -888,7 +894,7 @@ function analyzeVideo(videoPath, normInfo, normDir, prompts, vttCli, sttCli, con
         `${formatTime(c.start)} --> ${formatTime(c.end)}\n${c.text}`
       ).join("\n\n");
 
-      const segPrompt = ctx + (prompts.get("video-segments-by-subtitle") || "Analyze these subtitles and split into segments.");
+      const segPrompt = ctx + getPrompt(prompts, "video-segments-by-subtitle");
       const segInput = `${segPrompt}\n\nInput:\n${transcript}`;
       const segRaw = queryLLM(segInput);
       const segParsed = parseJSONFromResponse(segRaw);
@@ -912,8 +918,7 @@ function analyzeVideo(videoPath, normInfo, normDir, prompts, vttCli, sttCli, con
       // Analyze each segment with the vision model
       const segDir = join(normDir, "segments");
       mkdirSync(segDir, { recursive: true });
-      const visSegPrompt = prompts.get("video-segments-by-subtitle-vision") ||
-        "Describe what is visually happening in this short video clip. Focus on visual details only.";
+      const visSegPrompt = getPrompt(prompts, "video-segments-by-subtitle-vision");
 
       for (const [key, seg] of Object.entries(segments)) {
         // Parse ms key: "12500to25000" → start=12.5s, duration=12.5s
@@ -965,7 +970,7 @@ function analyzeVideo(videoPath, normInfo, normDir, prompts, vttCli, sttCli, con
 
   // Step 4: Segments by Vision Model
   emitInfo(`  Analyzing segments by vision...`);
-  const visDescPrompt = ctx + (prompts.get("video-segments-by-vision") || "Watch this video and describe each scene you see. List scenes with start/end times in ms and what's happening visually.");
+  const visDescPrompt = ctx + getPrompt(prompts, "video-segments-by-vision");
   const visRaw = runVTT(normInfo.path, visDescPrompt, vttCli, ittCli, sampleInterval);
   const visParsed = parseJSONFromResponse(visRaw);
   if (visParsed && typeof visParsed === "object") {
@@ -1153,7 +1158,13 @@ export async function main(args) {
     let perception = {};
     let cacheKey = "";
     if (!dryRun) {
-      cacheKey = perceptionCacheKey(imgPath, prompts, ittCli, null, null, context, "image");
+      // Compute actual command for cache key
+      const ctx = context ? `Context: ${context}\n\n` : "";
+      const imgPrompt = ctx + getPrompt(prompts, "image-perception");
+      const imgPrefix = ittCli ? "" : "@";
+      const imgInput = `${imgPrefix}${shQuote(normPath)}`;
+      const imgCmd = substituteTemplate(ittCli || DEFAULT_ITT, { input: imgInput, prompt: imgPrompt });
+      cacheKey = perceptionCacheKey(imgPath, imgCmd, "image");
       if (cache[cacheKey]) {
         perception = cache[cacheKey];
         emitInfo(`  (cached)`);
@@ -1203,7 +1214,22 @@ export async function main(args) {
     let cacheKey = "";
     if (!dryRun) {
       const stt = skipSTT ? null : sttCli;
-      cacheKey = perceptionCacheKey(vidPath, prompts, null, vttCli, stt, context, "video");
+      // Compute actual VTT command for cache key
+      const ctxV = context ? `Context: ${context}\n\n` : "";
+      const vidPrompt = ctxV + getPrompt(prompts, "video-perception");
+      let vttActualCmd;
+      if (vttCli) {
+        vttActualCmd = substituteTemplate(vttCli, { input: shQuote(normInfo.path), prompt: vidPrompt });
+      } else {
+        // Default: frames + ITT — build a canonical representation of the pi command
+        const dur = meta.duration || 0;
+        const n = Math.max(5, Math.min(10, Math.ceil(dur / vttSampleInterval)));
+        const framePaths = Array.from({ length: n }, (_, i) => `${basename(normInfo.path, extname(normInfo.path))}_${String(i + 1).padStart(3, "0")}.jpg`);
+        const vPrefix = ittCli ? "" : "@";
+        const vInput = framePaths.map(p => `${vPrefix}${p}`).join(" ");
+        vttActualCmd = substituteTemplate(ittCli || DEFAULT_ITT, { input: vInput, prompt: vidPrompt });
+      }
+      cacheKey = perceptionCacheKey(vidPath, vttActualCmd, "video");
       if (cache[cacheKey]) {
         perception = cache[cacheKey];
         emitInfo(`  (cached)`);

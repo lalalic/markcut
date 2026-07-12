@@ -15,7 +15,7 @@ Describe this image in detail. What do you see? Include the setting, colors, obj
 Be specific and thorough.
 ~~~
 
-## video-description
+## video-perception
 
 Analyze the video and produce a detailed description.
 
@@ -75,4 +75,3 @@ Watch this video and describe each distinct scene you see. For each scene, note 
 
 Describe the visual content only — setting, subjects, actions, colors.
 ~~~
-
