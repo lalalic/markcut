@@ -110,6 +110,85 @@ function compiledCacheFile(label) {
   return join(variantDir(label), "compiled.json");
 }
 
+/**
+ * Recursively convert all absolute paths under MARKCUT_BASE to relative paths.
+ * This makes the cached compiled.json portable across machines.
+ * The /api/video-data endpoint converts them back to server-relative URLs.
+ */
+function makePathsRelative(obj) {
+  if (!obj || typeof obj !== "object") return obj;
+  if (Array.isArray(obj)) return obj.map(makePathsRelative);
+  const result = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (typeof value === "string" && value.startsWith(MARKCUT_BASE)) {
+      result[key] = value.replace(MARKCUT_BASE + "/", "");
+    } else if (typeof value === "object" && value !== null) {
+      result[key] = makePathsRelative(value);
+    } else {
+      result[key] = value;
+    }
+  }
+  return result;
+}
+
+/**
+ * Convert relative (to MARKCUT_BASE) paths in the compiled root to server-relative URLs
+ * for the browser. This is the inverse of makePathsRelative — it prepends "/" to paths
+ * so the browser can fetch them from the server.
+ *
+ * Handles:
+ *   - compiled.imports (component bundle URL)
+ *   - compiled.subtitle.src (VTT file)
+ *   - Any node.src (media/tts/images) that is a relative path under MARKCUT_BASE
+ */
+function resolveAssetPaths(root) {
+  const out = JSON.parse(JSON.stringify(root));
+
+  function walkNode(node) {
+    if (!node || typeof node !== "object") return;
+    if (Array.isArray(node)) { node.forEach(walkNode); return; }
+
+    // Convert src fields that are relative paths
+    if (typeof node.src === "string" && !node.src.startsWith("http://") && !node.src.startsWith("https://") && !node.src.startsWith("data:")) {
+      // Already a relative path under MARKCUT_BASE (shouldn't be absolute)
+      if (!node.src.startsWith("/") && !node.src.startsWith(".")) {
+        if (node.src.startsWith("generated/") || node.src.startsWith(BASENAME + "/")) {
+          node.src = "/" + node.src;
+        }
+      }
+      // Convert absolute paths under MARKCUT_BASE
+      if (typeof node.src === "string" && node.src.startsWith(MARKCUT_BASE)) {
+        node.src = "/" + node.src.replace(MARKCUT_BASE + "/", "");
+      }
+    }
+
+    // Convert subtitle src
+    if (node.subtitle && typeof node.subtitle.src === "string") {
+      if (node.subtitle.src.startsWith(MARKCUT_BASE)) {
+        node.subtitle.src = "/" + node.subtitle.src.replace(MARKCUT_BASE + "/", "");
+      } else if (!node.subtitle.src.startsWith("/") && !node.subtitle.src.startsWith("http")) {
+        node.subtitle.src = "/" + node.subtitle.src;
+      }
+    }
+
+    // Convert imports (component bundle URL)
+    if (typeof node.imports === "string") {
+      if (node.imports.startsWith(MARKCUT_BASE)) {
+        node.imports = "/" + node.imports.replace(MARKCUT_BASE + "/", "");
+      } else if (!node.imports.startsWith("/") && !node.imports.startsWith("http")) {
+        node.imports = "/" + node.imports;
+      }
+    }
+
+    if (Array.isArray(node.children)) {
+      node.children.forEach(walkNode);
+    }
+  }
+
+  walkNode(out);
+  return out;
+}
+
 // ─── extractScenes imported from ./server-shared.mjs ────────────────────
 
 // ─── Compiled root cache (per-variant) ────────────────────────────────────
@@ -235,6 +314,12 @@ async function compileVariant(config, parsed, raw) {
       console.error(`  ⚠️  ${config.label}: component bundling failed:`, e.message);
     }
   }
+
+  // Convert absolute paths under MARKCUT_BASE to relative paths for portability.
+  // The cached compiled.json on disk should not contain absolute filesystem paths
+  // so it's machine-independent. The /api/video-data endpoint converts them back
+  // to server-relative URLs when serving.
+  compiled = makePathsRelative(compiled);
 
   // Persist to disk
   try {
@@ -851,11 +936,7 @@ IMPORTANT: Read the full existing JSON file before editing. Only edit the JSON f
     if (path === "/api/video-data") {
       try {
         const root = await loadCompiledRoot(variantLabel);
-        const rootOut = { ...root };
-        if (typeof rootOut.imports === "string" && rootOut.imports.startsWith("/")) {
-          const rel = rootOut.imports.replace(MARKCUT_BASE, "");
-          rootOut.imports = rel.startsWith("/") ? rel : "/" + rel;
-        }
+        const rootOut = resolveAssetPaths(root);
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify(rootOut));
       } catch (e) {

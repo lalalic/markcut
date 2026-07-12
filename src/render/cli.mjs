@@ -65,6 +65,12 @@ Commands:
     --label                           Open label input overlay
     --no-browser                      Skip opening browser automatically
     --port <num>                        Port for the player server (default: 3001)
+
+  vision <folder>                       Analyze images/videos in a folder for video generation
+    --itt <template>                   Custom ITT CLI template with {input}, {prompt}
+    --vtt <template>                   Custom VTT CLI template with {input}, {prompt}
+    --stt <template>                   Custom STT CLI template with {input}, {output}
+    --<prompt-name> "text"             Override a prompt from vision_prompts.md
 `);
 }
 
@@ -186,6 +192,12 @@ async function main() {
 
   if (!args.command || args.command === "help" || args.command === "--help") {
     usage();
+    process.exit(0);
+  }
+
+  if (args.command === "vision") {
+    const { main: visionMain } = await import("../vision/cli.mjs");
+    await visionMain(process.argv);
     process.exit(0);
   }
 
