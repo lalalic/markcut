@@ -74,9 +74,24 @@ export const DEFAULT_TTS =
  * Default agent CLI — general-purpose text LLM.
  * Used for text-only tasks like detect-scenes.
  * Placeholders: {prompt}=the prompt text.
- * Override with MARKCUT_AGENT env var.
+ * Override with MARKCUT_AGENT (or MARKCUT_AGENT_CLI) env var.
  */
-export const DEFAULT_AGENT = process.env.MARKCUT_AGENT || 'npx pi -p {prompt}';
+export const DEFAULT_AGENT = process.env.MARKCUT_AGENT || process.env.MARKCUT_AGENT_CLI || 'npx pi -p {prompt}';
+
+/**
+ * Alias for DEFAULT_AGENT following the _CLI suffix convention.
+ */
+export const DEFAULT_AGENT_CLI = process.env.MARKCUT_AGENT_CLI || process.env.MARKCUT_AGENT || DEFAULT_AGENT;
+
+// ── Vision pipeline _CLI aliases ───────────────────────────────────────────
+// These follow the _CLI suffix convention for consistency with the render
+// pipeline. They read MARKCUT_ITT_CLI / MARKCUT_VTT_CLI env vars first, then
+// fall back to the plain MARKCUT_ITT / MARKCUT_VTT, then to hardcoded defaults.
+
+export const DEFAULT_ITT_CLI =
+  process.env.MARKCUT_ITT_CLI || process.env.MARKCUT_ITT || DEFAULT_ITT;
+export const DEFAULT_VTT_CLI =
+  process.env.MARKCUT_VTT_CLI || process.env.MARKCUT_VTT || DEFAULT_VTT;
 
 // ── Render pipeline CLI templates ──────────────────────────────────────────
 // These mirror the vision pipeline values where applicable, with additional
