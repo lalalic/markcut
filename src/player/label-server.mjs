@@ -269,14 +269,20 @@ function renderThumbnails(info) {
   if (!container) return;
   var scenes = info.scenes || [];
   var html = "";
+  var isVideoExt = {".mov":1,".mp4":1,".avi":1,".mkv":1,".webm":1,".m4v":1,".wmv":1};
   for (var i = 0; i < scenes.length; i++) {
     var s = scenes[i];
     var isActive = i === currentSceneIndex ? " active" : "";
     var hasLabel = labelDescriptions[i] ? " has-label" : "";
     var thumbSrc = s.src || "";
+    var ext = thumbSrc.substring(thumbSrc.lastIndexOf(".")).toLowerCase();
+    var isVideo = isVideoExt[ext] || false;
     var img;
-    if (thumbSrc) {
+    if (thumbSrc && !isVideo) {
       img = "<img src='" + thumbSrc + "' alt='' loading='lazy' />";
+    } else if (thumbSrc && isVideo) {
+      // Use video element that auto-seeks to first frame as poster
+      img = "<video src='" + thumbSrc + "' muted preload='metadata' style='width:100%;height:100%;object-fit:cover'></video>";
     } else {
       img = "<div style='width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.08);color:rgba(255,255,255,.3);font-size:16px;font-weight:600'>" + (s.name || "S" + (i+1)).slice(0,2).toUpperCase() + "</div>";
     }
@@ -477,6 +483,12 @@ const server = createServer((req, res) => {
     // Serve from public/ (with range request support for video/audio)
     const publicPath = join(ROOT, "public", path);
     if (serveFile(req, res, publicPath)) return;
+
+    // Fallback: serve from the source file's directory (for media files referenced in preview)
+    if (SOURCE !== "." && existsSync(SOURCE)) {
+      const mediaPath = join(dirname(SOURCE), path);
+      if (serveFile(req, res, mediaPath)) return;
+    }
 
     res.writeHead(404);
     res.end("Not found");

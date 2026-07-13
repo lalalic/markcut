@@ -25,53 +25,43 @@ You are given several still frames sampled from a video. Based on these frames, 
 Be specific and thorough. Note changes between frames — they represent different moments in time.
 ~~~
 
-## video-segments-by-subtitle
+## detect-scenes
 
-Analyze subtitle/VTT content and split into meaningful segments with descriptions.
+Analyze the merged subtitle/transcript with candidate segment boundaries and split into meaningful segments with descriptions.
 
 ~~~md
-You are an expert video editor analyzing subtitles. Given the full transcript with timestamps,
-group consecutive subtitle cues into meaningful segments. Each segment should represent
-a coherent narrative or topical unit.
+You are an expert video editor. You are given candidate segment boundaries for a video, gathered from up to three sources (ordered by reliability):
+
+1. **User hints** (most reliable) — explicit timestamps with descriptions provided by the user
+2. **Speech subtitles (VTT)** — subtitle cues with timestamps and transcript text
+3. **Visual scene changes** (least reliable) — raw ffprobe shot-detection timestamps
+
+Your task: merge these candidate boundaries into meaningful, coherent segments.
+
+Rules:
+- Each final segment should be a coherent narrative or visual unit (5-60 seconds)
+- Respect user hint boundaries — they are the most reliable. If the user marked a boundary at 5s, keep it
+- Use subtitle cues to refine: if a subtitle sentence crosses a user hint boundary, prefer the cue boundary
+- Use ffprobe changes as tiebreakers only — they mark raw visual cuts, not narrative breaks
+- Output ONLY a JSON object where keys are time ranges (milliseconds) and values are objects with a "description" field
+- Descriptions: 5-20 words, summarize what happens in that segment (use user hint text or subtitle text)
 
 Input format:
-00:00:05.000 --> 00:00:12.000
-Welcome to today's video about...
+```
+Candidates:
+- 5000ms [userHint]: "开始游泳"
+- 15250ms [userHint]: "beach scene"
+- 3200ms [subtitle]: "Welcome to the beach everyone"
+- 8500ms [subtitle]: "Let's go swimming in the ocean"
+- 16000ms [subtitle]: "Now let's build a sandcastle"
+- 4800ms [scene]: ffprobe shot change
+- 15300ms [scene]: ffprobe shot change
 
-00:00:12.500 --> 00:00:25.000
-We're here at the Grand Canyon...
+Duration: 30000ms
+```
 
-Respond with ONLY a JSON object where keys are time ranges (milliseconds) and values are descriptions:
-{"0to12500": "Introduction and topic setup", "12500to25000": "Arrival at Grand Canyon", ...}
+Output format:
+{"0to5000": {"description": "Introduction and welcome"}, "5000to15250": {"description": "Starting to swim"}, "15250to30000": {"description": "Building sandcastle"}}
 
-If the subtitles are too sparse, too short, or too incoherent to split meaningfully —
-for example, single words, silence markers, or gibberish — return an empty object {}.
-
-RULES:
-- Output ONLY the JSON object — no markdown, no code fences, no numbered lists
-- Merge consecutive cues that belong to the same narrative unit
-- Keep segments between 5-60 seconds when possible
-- Time ranges: "startMstoEndMs" (milliseconds, e.g. "0to12500")
-- Descriptions: 5-20 words, use actual subtitle text for content
-- If subtitles are not good enough for meaningful segmentation, return {} and skip
-~~~
-
-## video-segments-by-subtitle-vision
-
-Describe a short video clip that corresponds to a subtitle segment.
-
-~~~md
-Describe what is visually happening in this short video clip. Focus on setting, people, actions, colors, and lighting. Write 1-2 sentences.
-
-Be concise and visual only.
-~~~
-
-## video-segments-by-vision
-
-Analyze the video visually and split into segments with scene descriptions.
-
-~~~md
-Watch this video and describe each distinct scene you see. For each scene, note the start time (ms), end time (ms), and what's happening visually. Cover the full duration.
-
-Describe the visual content only — setting, subjects, actions, colors.
+If inputs are too sparse for segmentation, return an empty object {}.
 ~~~

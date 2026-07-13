@@ -66,10 +66,13 @@ Commands:
     --no-browser                      Skip opening browser automatically
     --port <num>                        Port for the player server (default: 3001)
 
-  vision <folder>                       Analyze images/videos in a folder for video generation
+  vision <folder>                       Extract metadata into metadata.json
+    --label                            Full pipeline: preview → label → normalize → percept → segments
+    --agent <template>                 Custom text LLM CLI for detect-scenes ({prompt})
     --itt <template>                   Custom ITT CLI template with {input}, {prompt}
     --vtt <template>                   Custom VTT CLI template with {input}, {prompt}
     --stt <template>                   Custom STT CLI template with {input}, {output}
+    --context "text"                   Background context (injected into prompts)
     --<prompt-name> "text"             Override a prompt from vision_prompts.md
 `);
 }
