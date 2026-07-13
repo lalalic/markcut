@@ -1,9 +1,9 @@
 {
   "name": "@lalalic/markcut",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Markdown-to-video engine. Describe scenes in markdown, get a rendered video.",
   "bin": {
-    "markcut": "./src/render/cli.mjs"
+    "markcut": "bin/markcut"
   },
   "type": "module",
   "main": "./src/entry.tsx",
