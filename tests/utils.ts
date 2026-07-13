@@ -8,6 +8,7 @@ import { execSync, execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync, statSync } from "node:fs";
 import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { DEFAULT_STT_CLI } from "../src/config.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -25,14 +26,6 @@ export const RENDER_TIMEOUT = 300_000;
 
 /** Default STT timeout (2 min) */
 export const STT_TIMEOUT = 120_000;
-
-/** Whisper binary path (override via MARKCUT_WHISPER_BIN env var) */
-const WHISPER_BIN = process.env.MARKCUT_WHISPER_BIN || process.env.WHISPER_BIN || "/Users/lir/Library/Python/3.9/bin/whisper";
-
-/** Check if whisper is available */
-export function hasWhisper(): boolean {
-  return existsSync(WHISPER_BIN);
-}
 
 // ── Render Helpers ─────────────────────────────────────────────────────────
 
@@ -264,22 +257,30 @@ export function extractAudio(
 }
 
 /**
- * Run whisper STT on an audio file.
+ * Run STT on an audio file using the configured STT CLI (DEFAULT_STT_CLI).
  * @returns The transcribed text
  */
-export function transcribeAudio(audioPath: string): string {
-  if (!hasWhisper()) {
-    return "[whisper not available]";
-  }
-  const cmd = `"${WHISPER_BIN}" "${audioPath}" --model tiny --language en --output_format txt --verbose False 2>/dev/null`;
+export function transcribeAudio(audioPath: string, sttCli?: string): string {
+  const cli = sttCli || DEFAULT_STT_CLI;
+  if (!cli) return "[stt not configured]";
+
+  const outputDir = dirname(audioPath);
+  const cmd = cli.replace(/\{input\}/g, audioPath).replace(/\{output\}/g, outputDir);
   try {
     execSync(cmd, { stdio: "pipe", timeout: STT_TIMEOUT, cwd: dirname(audioPath) });
-    // Whisper outputs a .txt file next to the audio file
-    const txtPath = audioPath.replace(/\.\w+$/, "") + ".txt";
-    if (existsSync(txtPath)) {
-      const text = readFileSync(txtPath, "utf-8").trim();
-      try { rmSync(txtPath); } catch {}
-      return text;
+    // Whisper STT outputs a .vtt file next to the audio file
+    const baseName = audioPath.replace(/\.\w+$/, "");
+    const vttPath = baseName + ".vtt";
+    if (existsSync(vttPath)) {
+      const vtt = readFileSync(vttPath, "utf-8").trim();
+      try { rmSync(vttPath); } catch {}
+      // Extract plain text from VTT (strip timestamps and headers)
+      return vtt
+        .replace(/^WEBVTT.*\n?/m, "")
+        .replace(/\d{2}:\d{2}:\d{2}\.\d{3}.*/g, "")
+        .replace(/-->.*/g, "")
+        .replace(/\n{2,}/g, "\n")
+        .trim();
     }
     return "";
   } catch (err: any) {

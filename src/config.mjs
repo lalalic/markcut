@@ -77,3 +77,17 @@ export const DEFAULT_TTS =
  * Override with MARKCUT_AGENT env var.
  */
 export const DEFAULT_AGENT = process.env.MARKCUT_AGENT || 'npx pi -p {prompt}';
+
+// ── Render pipeline CLI templates ──────────────────────────────────────────
+// These mirror the vision pipeline values where applicable, with additional
+// TTI (text-to-image) and TTV (text-to-video) defaults used by the renderer.
+// Override via MARKCUT_TTS_CLI, MARKCUT_STT_CLI, MARKCUT_TTI_CLI, MARKCUT_TTV_CLI.
+// When MARKCUT_TTS_CLI/MARKCUT_STT_CLI are unset, they fall back to the
+// vision-pipeline equivalents (MARKCUT_TTS / MARKCUT_STT).
+
+export const DEFAULT_TTS_CLI = process.env.MARKCUT_TTS_CLI || process.env.MARKCUT_TTS || DEFAULT_TTS;
+export const DEFAULT_STT_CLI = process.env.MARKCUT_STT_CLI || process.env.MARKCUT_STT || DEFAULT_STT;
+export const DEFAULT_TTI_CLI =
+  process.env.MARKCUT_TTI_CLI ||
+  'uvx --from mflux mflux-generate-flux2 --model flux2-klein-4b --steps 5 --prompt "{input}" --output "{output}"';
+export const DEFAULT_TTV_CLI = process.env.MARKCUT_TTV_CLI || '';

@@ -6,27 +6,21 @@
  *
  * This module exists so tests can mock each function individually instead of
  * mocking low-level execSync/exec, which is brittle and slow.
+ *
+ * Default CLI templates are imported from src/config.mjs — the single source of truth.
+ * Override via MARKCUT_TTS_CLI / MARKCUT_STT_CLI / MARKCUT_TTI_CLI / MARKCUT_TTV_CLI.
  */
 import { execSync, exec } from "node:child_process";
 import { existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
+import {
+  DEFAULT_TTS_CLI,
+  DEFAULT_STT_CLI,
+  DEFAULT_TTI_CLI,
+  DEFAULT_TTV_CLI,
+} from "../config.mjs";
 
-// ── Default CLI templates ─────────────────────────────────────────────────
-// All can be overridden via MARKCUT_* environment variables.
-
-export const DEFAULT_TTS_CLI =
-  process.env.MARKCUT_TTS_CLI ||
-  'uvx edge-tts --voice "en-US-GuyNeural" --text "{input}" --write-media "{output}"';
-
-export const DEFAULT_STT_CLI =
-  process.env.MARKCUT_STT_CLI ||
-  'uvx --from openai-whisper whisper "{input}" --output_format vtt --output_dir "{output}"';
-
-export const DEFAULT_TTI_CLI =
-  process.env.MARKCUT_TTI_CLI ||
-  'uvx --from mflux mflux-generate-flux2 --model flux2-klein-4b --steps 5 --prompt "{input}" --output "{output}"';
-
-export const DEFAULT_TTV_CLI = process.env.MARKCUT_TTV_CLI || '';
+export { DEFAULT_TTS_CLI, DEFAULT_STT_CLI, DEFAULT_TTI_CLI, DEFAULT_TTV_CLI };
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 

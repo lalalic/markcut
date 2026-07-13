@@ -98,8 +98,6 @@ const TTS_OUTPUT_DIR = join(MARKCUT_DIR, "tts");
 const MEDIA_OUTPUT_DIR = join(MARKCUT_DIR, "media");
 const INCLUDE_CACHE_DIR = join(MARKCUT_DIR, "includes");
 const COMPONENT_OUTPUT_DIR = join(MARKCUT_DIR, "components");
-const WHISPER_BIN = process.env.MARKCUT_WHISPER_BIN || process.env.WHISPER_BIN || "";
-
 /** Get the per-variant directory under .markcut/<basename>/<label>/ */
 function variantDir(label) {
   return join(MARKCUT_BASE, BASENAME, label);
@@ -268,7 +266,6 @@ async function compileVariant(config, parsed, raw) {
       includeOutputDir: INCLUDE_CACHE_DIR,
       subtitleOutputDir: subtitleDir,
       variants: config.chain.length > 0 ? config.chain : undefined,
-      whisperBin: existsSync(WHISPER_BIN) ? WHISPER_BIN : undefined,
     });
     compiled = compileDescriptiveRoot(resolved);
   } else {
@@ -291,7 +288,6 @@ async function compileVariant(config, parsed, raw) {
         includeOutputDir: INCLUDE_CACHE_DIR,
         subtitleOutputDir: subtitleDir,
         variants: config.chain.length > 0 ? config.chain : undefined,
-        whisperBin: existsSync(WHISPER_BIN) ? WHISPER_BIN : undefined,
       });
     } else {
       compiled = root;

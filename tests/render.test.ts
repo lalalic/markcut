@@ -19,7 +19,6 @@ import {
   getFrameFileSize,
   OUT_DIR,
   FIXTURES_DIR,
-  hasWhisper,
 } from "./utils";
 import { existsSync, rmSync, mkdirSync } from "node:fs";
 import { resolve } from "node:path";
@@ -441,11 +440,6 @@ describe("Scene Node Rendering", () => {
 
 describe("Audio STT Verification", () => {
   it("transcribes audio from rendered video", async () => {
-    if (!hasWhisper()) {
-      console.warn("Skipping STT test: whisper not available");
-      return;
-    }
-
     // Use a fixture that has audio
     const output = renderFixture(fixturePath("audio.json"), {
       outputName: "stt-audio.mp4",
@@ -466,11 +460,6 @@ describe("Audio STT Verification", () => {
   });
 
   it("transcribes audio from full feature video", async () => {
-    if (!hasWhisper()) {
-      console.warn("Skipping STT test: whisper not available");
-      return;
-    }
-
     const output = renderFixture(fixturePath("full.json"), {
       outputName: "stt-full.mp4",
       timeout: RENDER_TIMEOUT,
