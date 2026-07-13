@@ -27,7 +27,7 @@ import {
 } from "@vis.gl/react-google-maps";
 import type { MapStream } from "../schema/index";
 
-const GM_API_KEY = "AIzaSyC6x4jghg5ZggV5VTThu9JE4DwX9NlbN9U";
+const GM_API_KEY = process.env.GOOGLE_MAPS_API_KEY || "";
 
 // ============================================================
 // MapLeaf — entry point, renders each action as a Sequence

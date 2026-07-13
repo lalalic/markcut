@@ -10,3 +10,4 @@ labels.json
 tests/fixtures/templates/assets/
 .DS_Store
 .venv/
+.env

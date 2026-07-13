@@ -98,7 +98,7 @@ const TTS_OUTPUT_DIR = join(MARKCUT_DIR, "tts");
 const MEDIA_OUTPUT_DIR = join(MARKCUT_DIR, "media");
 const INCLUDE_CACHE_DIR = join(MARKCUT_DIR, "includes");
 const COMPONENT_OUTPUT_DIR = join(MARKCUT_DIR, "components");
-const WHISPER_BIN = process.env.WHISPER_BIN || "/Users/lir/Library/Python/3.9/bin/whisper";
+const WHISPER_BIN = process.env.MARKCUT_WHISPER_BIN || process.env.WHISPER_BIN || "";
 
 /** Get the per-variant directory under .markcut/<basename>/<label>/ */
 function variantDir(label) {

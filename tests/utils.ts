@@ -26,8 +26,8 @@ export const RENDER_TIMEOUT = 300_000;
 /** Default STT timeout (2 min) */
 export const STT_TIMEOUT = 120_000;
 
-/** Whisper binary path */
-const WHISPER_BIN = "/Users/lir/Library/Python/3.9/bin/whisper";
+/** Whisper binary path (override via MARKCUT_WHISPER_BIN env var) */
+const WHISPER_BIN = process.env.MARKCUT_WHISPER_BIN || process.env.WHISPER_BIN || "/Users/lir/Library/Python/3.9/bin/whisper";
 
 /** Check if whisper is available */
 export function hasWhisper(): boolean {

@@ -1,7 +1,6 @@
 {
   "name": "markcut",
   "version": "1.0.0",
-  "private": true,
   "description": "Markdown-to-video engine. Describe scenes in markdown, get a rendered video.",
   "bin": {
     "markcut": "./src/render/cli.mjs"

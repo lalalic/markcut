@@ -12,17 +12,21 @@ import { existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 
 // ── Default CLI templates ─────────────────────────────────────────────────
+// All can be overridden via MARKCUT_* environment variables.
 
 export const DEFAULT_TTS_CLI =
+  process.env.MARKCUT_TTS_CLI ||
   'uvx edge-tts --voice "en-US-GuyNeural" --text "{input}" --write-media "{output}"';
 
 export const DEFAULT_STT_CLI =
+  process.env.MARKCUT_STT_CLI ||
   'uvx --from openai-whisper whisper "{input}" --output_format vtt --output_dir "{output}"';
 
 export const DEFAULT_TTI_CLI =
+  process.env.MARKCUT_TTI_CLI ||
   'uvx --from mflux mflux-generate-flux2 --model flux2-klein-4b --steps 5 --prompt "{input}" --output "{output}"';
 
-export const DEFAULT_TTV_CLI = '';
+export const DEFAULT_TTV_CLI = process.env.MARKCUT_TTV_CLI || '';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
