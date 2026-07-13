@@ -45,20 +45,8 @@ markcut CLI — Markdown/JSON → video pipeline
 
 Commands:
 
-  compile <file> --output <path>        Parse + compile → stream tree JSON (sync, no I/O)
-
   verify <file>                         Parse + validate descriptive file
     --cli                             Check required CLI tools are installed
-
-  resolve <file> --output <path>        Run async pipeline: TTS, STT, media durations
-    --script-output-dir <dir>           Directory for generated TTS/STT files
-    --media-output-dir <dir>            Directory for generated TTI/TTV media files
-    --compile                          Also compile to stream tree after resolving
-
-  render <file.json|.md>                Resolve + compile + render to MP4
-    --aspect <16x9|9x16|1x1|all>       Aspect ratio (default: 16x9)
-    --output <path>                     Output path (default: out/video-{aspect}.mp4)
-    --verbose                           Show full per-frame progress (default: compact)
 
   preview <file.json|.md>               Open player with live preview
     --edit                             Auto-reload on file change
@@ -66,26 +54,37 @@ Commands:
     --no-browser                      Skip opening browser automatically
     --port <num>                        Port for the player server (default: 3001)
 
-  vision <folder>                       Extract metadata into metadata.json
+  render <file.json|.md>                Resolve + compile + render to MP4
+    --output <path>                     Output path (default: out/video.mp4)
+    --verbose                           Show full per-frame progress (default: compact)
+
+  vision <folder>                      Extract metadata into metadata.json
     --label                            Full pipeline: preview → label → normalize → percept → segments
     --agent <template>                 Custom text LLM CLI for detect-scenes ({prompt})
     --itt <template>                   Custom ITT CLI template with {input}, {prompt}
     --vtt <template>                   Custom VTT CLI template with {input}, {prompt}
     --stt <template>                   Custom STT CLI template with {input}, {output}
-    --context "text"                   Background context (injected into prompts)
-    --<prompt-name> "text"             Override a prompt from vision_prompts.md
+    --prompts-file <path>              Path to prompts markdown file (default: vision_prompts.md)
+    --vtt-sample-interval <n>          Sample one video frame every N seconds (default: 5)
+    --context "text"                   Background context about people/places (injected into prompts)
+    --pick <files>                     Comma-separated filenames to process
+    --skip-stt                         Skip speech-to-text for videos
+    --dry-run                          Show what would be processed without running AI
+    --show-prompts                     Print the prompts file and exit
+    --show-clis                        Print the default ITT/VTT/STT CLI templates
+    --help                             Show this help
+    --<prompt-name> "text"             Override any prompt template from vision_prompts.md
 `);
 }
 
-function parseArgs(argv) {
-  const args = { command: "", file: "", aspect: "16x9", output: "", forceNew: false, verbose: false, label: false, edit: false, noBrowser: false, chat: false, port: 3001, compile: false, cli: false, scriptOutputDir: "", mediaOutputDir: "", variant: [] };
+export function parseArgs(argv) {
+  const args = { command: "", file: "", output: "", forceNew: false, verbose: false, label: false, edit: false, noBrowser: false, chat: false, port: 3001, compile: false, cli: false, scriptOutputDir: "", mediaOutputDir: "", variant: [] };
   let i = 2;
   if (argv[i]) args.command = argv[i++];
   if (argv[i] && !argv[i].startsWith("--")) args.file = argv[i++];
   while (i < argv.length) {
     const flag = argv[i++];
-    if (flag === "--aspect" && argv[i]) args.aspect = argv[i++];
-    else if (flag === "--output" && argv[i]) args.output = argv[i++];
+    if (flag === "--output" && argv[i]) args.output = argv[i++];
     else if (flag === "--script-output-dir" && argv[i]) args.scriptOutputDir = argv[i++];
     else if (flag === "--media-output-dir" && argv[i]) args.mediaOutputDir = argv[i++];
     else if (flag === "--cli") args.cli = true;
@@ -341,16 +340,10 @@ async function main() {
       process.exit(1);
     }
 
-    const aspects = args.aspect === "all" ? Object.keys(ASPECTS) : [args.aspect];
+    const output = args.output ? resolve(args.output) : join(ROOT, "out", "video.mp4");
+    await renderOne(streamTree, "16x9", output, args.verbose);
 
-    for (const aspect of aspects) {
-      const output = args.output && aspects.length === 1
-        ? resolve(args.output)
-        : join(ROOT, "out", `video-${aspect}.mp4`);
-      await renderOne(streamTree, aspect, output, args.verbose);
-    }
-
-    console.log("\n✅ All renders complete.");
+    console.log("\n✅ Render complete.");
     process.exit(0);
   }
 
@@ -622,7 +615,9 @@ function hasScript(root) {
   process.exit(1);
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+if (process.argv[1] && process.argv[1].endsWith("cli.mjs")) {
+  main().catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
+}
