@@ -7,8 +7,9 @@
  *                                        (TTS/STT/durations)
  */
 import { execSync, spawn } from "node:child_process";
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
-import { resolve, dirname, join } from "node:path";
+import { readFileSync, writeFileSync, mkdirSync, existsSync, copyFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { resolve, dirname, join, extname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -111,11 +112,42 @@ export function parseArgs(argv) {
  *
  * Use --verbose to see every frame line (original behavior).
  */
+/**
+ * Stage local absolute-path assets (TTS audio, TTI/TTV media, subtitles from
+ * .markcut/) into ROOT/public/.render-assets/ and rewrite srcs to relative
+ * paths, so `npx remotion render` (publicDir = ROOT/public) can serve them.
+ * The preview server handles these paths via multi-root serving; the render
+ * CLI needs them staged into the one public dir Remotion knows about.
+ */
+function stageLocalAssets(tree) {
+  const assetsDir = join(ROOT, "public", ".render-assets");
+  const seen = new Map();
+  const walk = (node) => {
+    if (!node || typeof node !== "object") return;
+    if (typeof node.src === "string" && node.src.startsWith("/") && !node.src.startsWith("//") && existsSync(node.src)) {
+      let staged = seen.get(node.src);
+      if (!staged) {
+        const name = createHash("md5").update(node.src).digest("hex").slice(0, 12) + extname(node.src);
+        mkdirSync(assetsDir, { recursive: true });
+        copyFileSync(node.src, join(assetsDir, name));
+        staged = `.render-assets/${name}`;
+        seen.set(node.src, staged);
+      }
+      node.src = staged;
+    }
+    for (const value of Object.values(node)) {
+      if (value && typeof value === "object") walk(value);
+    }
+  };
+  walk(tree);
+  return tree;
+}
+
 function renderOne(streamTree, aspect, outputPath, verbose) {
   const dims = ASPECTS[aspect];
   if (!dims) throw new Error(`Unknown aspect: ${aspect}`);
 
-  const adapted = { ...streamTree, width: dims.width, height: dims.height };
+  const adapted = stageLocalAssets(JSON.parse(JSON.stringify({ ...streamTree, width: dims.width, height: dims.height })));
   const tmpProps = join(ROOT, ".tmp", `render-${aspect}.json`);
   mkdirSync(dirname(tmpProps), { recursive: true });
   writeFileSync(tmpProps, JSON.stringify({ root: adapted }));
@@ -262,10 +294,12 @@ async function main() {
 
   if (args.command === "render") {
     let streamTree;
+    let rawInput = "";
 
     if (args.file) {
       const filePath = resolve(args.file);
       const raw = readFileSync(filePath, "utf-8");
+      rawInput = raw;
 
       // Helper: all generated artifacts live under .markcut/generated/
       function generatedDir(filePath, sub) {
@@ -285,14 +319,14 @@ async function main() {
       // Helper: resolve variants from the parsed descriptive root
       async function resolveWithVariants(descriptive, options) {
         const { resolveVariantOverrides, compileDescriptiveRoot, resolveAll } = await import("../player/pipeline.mjs");
-        const { parseMarkdownDescriptive } = await import("../player/pipeline.mjs");
+        const { parseMarkdownVariants } = await import("../player/pipeline.mjs");
 
         let resolved = descriptive;
 
         // If variants are specified, apply variant-prefixed overrides
         if (args.variant && args.variant.length > 0) {
           // Also apply root config overrides from variant sections
-          const parsed = parseMarkdownDescriptive(raw);
+          const parsed = parseMarkdownVariants(raw);
           const variantRoot = parsed.variants.get(args.variant[0]);
           if (variantRoot) {
             // Merge variant root config into base (tts, stt, width, height, etc.)
@@ -308,9 +342,9 @@ async function main() {
       }
 
       if (filePath.endsWith(".md")) {
-        const { parseMarkdownDescriptive } = await import("../player/pipeline.mjs");
+        const { parseMarkdownVariants } = await import("../player/pipeline.mjs");
         const fileDir = dirname(filePath);
-        const parsed = parseMarkdownDescriptive(raw);
+        const parsed = parseMarkdownVariants(raw);
         streamTree = await resolveWithVariants(parsed.base, {
           baseDir: fileDir,
           scriptOutputDir: generatedDir(filePath, "tts"),
@@ -338,6 +372,27 @@ async function main() {
     } else {
       console.error("Error: provide a stream tree file (.json or .md)");
       process.exit(1);
+    }
+
+    // Bundle the ```js imports``` component block (the preview server does this
+    // post-compile; the render CLI must do it too, otherwise jsx components are
+    // unregistered and slides render as unstyled raw text).
+    if (!streamTree.imports) {
+      const fenceMatch = rawInput.match(/^(```|~~~)\s*js imports\s*\n([\s\S]*?)^\1\s*$/m);
+      const rawSource = fenceMatch ? fenceMatch[2] : (streamTree.importsBlock ?? null);
+      if (rawSource && rawSource.trim()) {
+        const { parseImportsBlock, extractDependencySpecs } = await import("../player/pipeline.mjs");
+        const { bundleFromEntries } = await import("../player/bundler.mjs");
+        const entries = parseImportsBlock(rawSource);
+        const extraSpecs = extractDependencySpecs(rawSource);
+        const bundleDir = join(ROOT, "public", ".render-assets");
+        mkdirSync(bundleDir, { recursive: true });
+        const bundle = await bundleFromEntries(entries, extraSpecs, rawSource, bundleDir);
+        if (bundle.url) {
+          streamTree.imports = ".render-assets/" + bundle.url.split("/").pop();
+          console.log(`  \u2705 components \u2192 ${bundle.exports.join(", ")}`);
+        }
+      }
     }
 
     const output = args.output ? resolve(args.output) : join(ROOT, "out", "video.mp4");

@@ -240,6 +240,8 @@ npx vitest run tests/render.test.ts -t "Test Name"  # single test
 4. **`signalstats` ffmpeg filter**: Doesn't output YAVG on all systems; use file size as proxy for visual content.
 5. **Asset paths**: Local files are resolved via `staticFile()` — files go in `public/` and are referenced without the `public/` prefix.
 6. **Map rendering**: Depends on external tile availability; may produce blank frames offline.
+7. **CLI md render needs three things preview gets for free**: (a) `parseMarkdownVariants(raw)` (returns `{base, variants}`) — `parseMarkdownDescriptive` returns the root directly; (b) bundling the ` ```js imports ``` ` block via `bundleFromEntries` and setting `root.imports` (otherwise jsx components are unregistered → slides render as unstyled black frames); (c) staging `.markcut/` assets into `public/.render-assets/` and rewriting srcs to relative paths (remotion render only serves its publicDir). All three live in `src/render/cli.mjs`; the import-map shim for shared react/remotion instances is `src/utils/component-import-map.ts` (must stay in sync with `player/browser.tsx` + `bundler.mjs getSharedExternals`).
+8. **Publishing**: verify `npx @lalalic/markcut render <md>` from a clean temp dir before/after publish — v1.1.1 shipped with cli.mjs/pipeline.mjs out of sync and md rendering was completely broken. Also beware stale npx caches (`~/.npm/_npx`) silently running old code.
 
 ## 3-Level Authoring Workflow (see SKILL.md)
 

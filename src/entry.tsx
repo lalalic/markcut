@@ -1,5 +1,6 @@
 import * as React from "react";
-import { AbsoluteFill, continueRender, delayRender } from "remotion";
+import { AbsoluteFill, continueRender, delayRender, staticFile } from "remotion";
+import { ensureSharedImportMap } from "./utils/component-import-map";
 import { ComposeContext, EventProvider, type ComposeContextValue } from "./context/index";
 
 import { FolderLeaf } from "./types/Folder";
@@ -58,7 +59,12 @@ function useComponentRegistry(imports: unknown): Record<string, React.ComponentT
       if (!handleRef.current) {
         handleRef.current = delayRender("Loading component registry: " + imports);
       }
-      import(/* webpackIgnore: true */ imports)
+      // Absolute URLs and "/"-rooted paths (preview server) load as-is;
+      // relative paths (render CLI stages bundles into publicDir) resolve
+      // through staticFile so the Remotion render server can serve them.
+      const moduleUrl = /^(https?:|data:|blob:|\/)/.test(imports) ? imports : staticFile(imports);
+      ensureSharedImportMap();
+      import(/* webpackIgnore: true */ moduleUrl)
         .then((mod: any) => {
           // The bundle exports all components as named exports
           setRegistry(mod.default ?? mod);

@@ -50,3 +50,16 @@ some common issues (photo or video can't be displayed, audio missing), take belo
 | Markdown descriptive format (primary authoring format) | [docs/markdown-descriptive.md](docs/markdown-descriptive.md) |
 | Label system (browse, label, export labels.json) | [docs/label-mode.md](docs/label-mode.md) |
 | Player servers (label + edit mode) | [docs/edit-mode.md](docs/edit-mode.md) |
+
+
+## common used components
+- `react-markdown` — render markdown content, use plugins to extend functionality
+  - `remark-gfm` — support GitHub Flavored Markdown (tables, strikethrough, task lists)
+  - `remark-toc` — generate table of contents
+  - `remark-math` — support math formulas
+  - `rehype-katex` — render math formulas with KaTeX
+  - `remark-mermaidjs` — render mermaid diagrams in 
+- `react-markdown-mermaid` — render mermaid diagrams in standalone mode (no need to install mermaid separately)
+
+- `@remotion/shapes` — render shapes like arrows, circles, rectangles, etc
+- `@remotion/starburst` — render starburst animations

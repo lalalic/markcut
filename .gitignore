@@ -11,3 +11,5 @@ tests/fixtures/templates/assets/
 .DS_Store
 .venv/
 .env
+*.tgz
+public/.render-assets/
