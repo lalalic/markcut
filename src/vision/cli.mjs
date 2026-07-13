@@ -641,12 +641,14 @@ function buildPreviewTree(folder, metadata) {
     if (!actualName) continue;
     const filePath = join(folder, actualName);
     const isVideo = VIDEO_EXTS.has(extname(actualName).toLowerCase());
+    const existingHints = data.userHints ? { ...data.userHints } : (data.userHint ? { overall: data.userHint } : null);
     entries.push({
       name: baseName,
       created: data.created || "1970-01-01T00:00:00Z",
       relSrc: `${actualName}`,
       dur: isVideo ? (data.duration || 5) : 3,
       isVideo,
+      userHints: existingHints,
     });
   }
   entries.sort((a, b) => a.created.localeCompare(b.created));
@@ -661,6 +663,8 @@ function buildPreviewTree(folder, metadata) {
         type: e.isVideo ? "video" : "image",
         src: e.relSrc, fit: "cover",
         actions: [{ start: 0, end: e.dur }],
+        // Preserve existing labels from metadata so re-labeling shows them
+        userHints: e.userHints || undefined,
       }],
     })),
   };
@@ -677,20 +681,42 @@ function mergeLabelsIntoMetadata(folder, metadata) {
   let mergeCount = 0;
   for (const child of children) {
     const media = child.children?.[0];
-    if (!media || !media.description) continue;
+    if (!media) continue;
     const baseName = child.id;
     if (!metadata[baseName]) continue;
-    metadata[baseName].userHint = media.description;
-    mergeCount++;
+    // New format: media.userHints = { overall: "...", timed: { at_XXXX: "...", ... } }
+    if (media.userHints) {
+      const hints = media.userHints;
+      const merged = {};
+      if (hints.overall) merged.overall = hints.overall;
+      if (hints.timed && typeof hints.timed === "object") {
+        const timedMerged = {};
+        for (const [key, val] of Object.entries(hints.timed)) {
+          if (val) timedMerged[key] = val;
+        }
+        if (Object.keys(timedMerged).length > 0) merged.timed = timedMerged;
+      }
+      if (Object.keys(merged).length > 0) {
+        metadata[baseName].userHints = merged;
+        // For backward compat, also set userHint to the overall or first timed
+        metadata[baseName].userHint = hints.overall || (hints.timed ? Object.values(hints.timed)[0] : "") || "";
+        mergeCount++;
+      }
+    } else if (media.description) {
+      // Legacy format: single description
+      metadata[baseName].userHint = media.description;
+      metadata[baseName].userHints = { overall: media.description };
+      mergeCount++;
+    }
   }
   try { rmSync(labelsPath, { force: true }); } catch {}
-  emitInfo(`  Merged ${mergeCount} labels → userHint in metadata.json`);
+  emitInfo(`  Merged ${mergeCount} labels → userHints in metadata.json`);
   return metadata;
 }
 
 // ── Perception helpers ────────────────────────────────────────────────────
 
-function analyzeImage(imagePath, normPath, prompts, ittCli, context = "", userHint = "") {
+function analyzeImage(imagePath, normPath, prompts, ittCli, context = "", userHint = "", userHints = null) {
   let ctxParts = [];
   if (context) ctxParts.push(`Context: ${context}`);
   if (userHint) ctxParts.push(`User hint: ${userHint}`);
@@ -727,8 +753,12 @@ function buildMergedCues(userHint, cues, sceneChangesMs, totalDurationMs) {
   }
 
   // 2. Merge user hints into the timeline (highest weight)
-  if (userHint && typeof userHint === "object" && !Array.isArray(userHint)) {
-    for (const [key, val] of Object.entries(userHint)) {
+  // Supports both flat { at_XXXX: "..." } and nested { overall: "...", timed: { at_XXXX: "..." } }
+  var hintSrc = userHint;
+  if (hintSrc && typeof hintSrc === "object" && !Array.isArray(hintSrc)) {
+    // If userHint has a "timed" sub-object, prefer entries from there
+    var timedEntries = hintSrc.timed && typeof hintSrc.timed === "object" ? hintSrc.timed : hintSrc;
+    for (const [key, val] of Object.entries(timedEntries)) {
       const m = key.match(/^at[_-]?(\d+)$/);
       if (m) {
         const t = parseInt(m[1], 10);
@@ -760,7 +790,7 @@ function buildMergedCues(userHint, cues, sceneChangesMs, totalDurationMs) {
   return merged;
 }
 
-function analyzeVideo(videoPath, normInfo, normDir, prompts, vttCli, sttCli, context = "", userHint = "", ittCli = null, sampleInterval = DEFAULT_VTT_SAMPLE_INTERVAL, agentCli = null) {
+function analyzeVideo(videoPath, normInfo, normDir, prompts, vttCli, sttCli, context = "", userHint = "", ittCli = null, sampleInterval = DEFAULT_VTT_SAMPLE_INTERVAL, agentCli = null, userHints = null) {
   let ctxParts = [];
   if (context) ctxParts.push(`Context: ${context}`);
   if (userHint && typeof userHint === "string") ctxParts.push(`User hint: ${userHint}`);
@@ -783,9 +813,12 @@ function analyzeVideo(videoPath, normInfo, normDir, prompts, vttCli, sttCli, con
   const cues = perception.subtitle ? parseVTT(join(dirname(videoPath), perception.subtitle)) : [];
   const totalDurMs = Math.round((normInfo.trimmedDuration || getVideoDuration(videoPath)) * 1000);
 
-  // Parse userHint: string → overall context only; object with at_* keys → timestamp boundaries
+  // Parse userHint/userHints: string → overall context only; object with at_* keys → timestamp boundaries
   let hintObject = {};
-  if (userHint && typeof userHint === "object") {
+  if (userHints && typeof userHints === "object") {
+    // New format: { overall: "...", at_XXXX: "...", ... }
+    hintObject = userHints;
+  } else if (userHint && typeof userHint === "object") {
     hintObject = userHint;
   }
 
@@ -978,7 +1011,8 @@ async function runNormalizeAndPercept(folder, metadataPath, prompts, ittCli, vtt
     const base = basename(fileName, extname(fileName));
     const meta = results[base];
     if (!meta) { emitWarn(`  No metadata for ${fileName}, skipping.`); continue; }
-    const userHint = meta.userHint || "";
+    const userHint = meta.userHints?.overall || meta.userHint || "";
+    const userHints = meta.userHints || (userHint ? { overall: userHint } : {});
 
     emitInfo(`\n📷 Image: ${base}${userHint ? ` (hint: "${userHint}")` : ""}`);
     const imgPath = join(folder, fileName);
@@ -995,7 +1029,7 @@ async function runNormalizeAndPercept(folder, metadataPath, prompts, ittCli, vtt
       perception = cache[cacheKey];
       emitInfo(`  (cached)`);
     } else {
-      perception = analyzeImage(imgPath, normPath, prompts, ittCli, context, userHint);
+      perception = analyzeImage(imgPath, normPath, prompts, ittCli, context, userHint, userHints);
       if (perception.desc) cache[cacheKey] = perception;
       emitInfo(`  ${perception.desc?.slice(0, 80)}...`);
     }
@@ -1017,7 +1051,8 @@ async function runNormalizeAndPercept(folder, metadataPath, prompts, ittCli, vtt
     const base = basename(fileName, extname(fileName));
     const meta = results[base];
     if (!meta) { emitWarn(`  No metadata for ${fileName}, skipping.`); continue; }
-    const userHint = meta.userHint || "";
+    const userHint = meta.userHints?.overall || meta.userHint || "";
+    const userHints = meta.userHints || (userHint ? { overall: userHint } : {});
 
     emitInfo(`\n🎬 Video: ${base}${userHint ? ` (hint: "${userHint}")` : ""}`);
     const vidPath = join(folder, fileName);
@@ -1042,7 +1077,7 @@ async function runNormalizeAndPercept(folder, metadataPath, prompts, ittCli, vtt
       perception = cache[cacheKey];
       emitInfo(`  (cached)`);
     } else {
-      perception = analyzeVideo(vidPath, normInfo, normDir, prompts, vttCli, stt, context, userHint, ittCli, vttSampleInterval, agentCli);
+      perception = analyzeVideo(vidPath, normInfo, normDir, prompts, vttCli, stt, context, userHint, ittCli, vttSampleInterval, agentCli, userHints);
       if (perception.desc) cache[cacheKey] = perception;
     }
 
