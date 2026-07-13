@@ -49,7 +49,7 @@ import { fileURLToPath } from "node:url";
 import {
   IMAGE_EXTS, VIDEO_EXTS,
   MAX_IMAGE_DIMENSION, MAX_VIDEO_DURATION, MAX_VIDEO_DIMENSION,
-  DEFAULT_ITT, DEFAULT_VTT_SAMPLE_INTERVAL, DEFAULT_VTT, DEFAULT_STT, DEFAULT_AGENT,
+  DEFAULT_ITT_CLI, DEFAULT_VTT_SAMPLE_INTERVAL, DEFAULT_VTT_CLI, DEFAULT_STT_CLI, DEFAULT_AGENT_CLI,
 } from "../config.mjs";
 
 // ── Paths ─────────────────────────────────────────────────────────────────
@@ -372,7 +372,7 @@ function detectSceneChanges(filePath, threshold = 0.3) {
 
 function runITT(inputPaths, promptText, ittCli) {
   const paths = Array.isArray(inputPaths) ? inputPaths : [inputPaths];
-  const tmpl = ittCli || DEFAULT_ITT;
+  const tmpl = ittCli || DEFAULT_ITT_CLI;
   const inputStr = paths.map(p => `${shQuote(p)}`).join(" ");
   const cmd = substituteTemplate(tmpl, { input: inputStr, prompt: promptText });
   try { return run(cmd).trim(); }
@@ -429,7 +429,7 @@ function runVTT(videoPath, promptText, vttCli, ittCli, sampleInterval = DEFAULT_
  * Defaults to the ITT CLI (frame-based image perception).
  */
 function runAgent(clipPath, promptText, agentCli) {
-  const tmpl = agentCli || DEFAULT_AGENT;
+  const tmpl = agentCli || DEFAULT_AGENT_CLI;
   // Always quote the prompt text to avoid shell injection from multi-line content
   const cmd = substituteTemplate(tmpl, { input: shQuote(clipPath), prompt: shQuote(promptText) });
   try { return run(cmd, { timeout: 300_000 }).trim(); }
@@ -446,7 +446,7 @@ function runSTT(videoPath, normDir, sttCli) {
   try { run(`ffmpeg -y -i ${shQuote(videoPath)} -vn -acodec libmp3lame -q:a 2 ${shQuote(audioPath)}`, { timeout: 300_000 }); }
   catch (e) { emitWarn(`Audio extraction failed for ${base}: ${e.message}`); return null; }
 
-  const tmpl = sttCli || DEFAULT_STT;
+  const tmpl = sttCli || DEFAULT_STT_CLI;
   const cmd = substituteTemplate(tmpl, { input: audioPath, output: normDir });
   try { run(cmd, { timeout: 600_000 }); } catch (e) { emitWarn(`STT failed for ${base}: ${e.message}`); return null; }
 
@@ -1023,7 +1023,7 @@ async function runNormalizeAndPercept(folder, metadataPath, prompts, ittCli, vtt
     const ctx = context ? `Context: ${context}\n\n` : "";
     const imgPrompt = (userHint ? `User hint: ${userHint}\n\n` : "") + ctx + getPrompt(prompts, "image-perception");
     const imgInput = `${ittCli ? "" : "@"}${shQuote(normPath)}`;
-    const imgCmd = substituteTemplate(ittCli || DEFAULT_ITT, { input: imgInput, prompt: imgPrompt });
+    const imgCmd = substituteTemplate(ittCli || DEFAULT_ITT_CLI, { input: imgInput, prompt: imgPrompt });
     cacheKey = perceptionCacheKey(imgPath, imgCmd, "image");
     if (cache[cacheKey]) {
       perception = cache[cacheKey];
@@ -1070,7 +1070,7 @@ async function runNormalizeAndPercept(folder, metadataPath, prompts, ittCli, vtt
       const dur = meta.duration || 0;
       const n = Math.max(5, Math.min(10, Math.ceil(dur / vttSampleInterval)));
       const framePaths = Array.from({ length: n }, (_, i) => `${basename(normInfo.path, extname(normInfo.path))}_${String(i + 1).padStart(3, "0")}.jpg`);
-      vttActualCmd = substituteTemplate(ittCli || DEFAULT_ITT, { input: framePaths.map(p => `@${p}`).join(" "), prompt: vidPrompt });
+      vttActualCmd = substituteTemplate(ittCli || DEFAULT_ITT_CLI, { input: framePaths.map(p => `@${p}`).join(" "), prompt: vidPrompt });
     }
     cacheKey = perceptionCacheKey(vidPath, vttActualCmd, "video");
     if (cache[cacheKey]) {
@@ -1156,9 +1156,9 @@ export async function main(args) {
     else if (flag === "--context" && args[i]) { context = args[i++]; }
     else if (flag === "--show-prompts") { console.log(readFileSync(promptsFile, "utf-8")); return; }
     else if (flag === "--show-clis") {
-      console.log(`DEFAULT_ITT:\n${DEFAULT_ITT}\n`);
-      console.log(`DEFAULT_VTT: (empty — uses ITT via frame extraction, sample every ${DEFAULT_VTT_SAMPLE_INTERVAL}s)\n`);
-      console.log(`DEFAULT_STT:\n${DEFAULT_STT}`);
+      console.log(`DEFAULT_ITT_CLI:\n${DEFAULT_ITT_CLI}\n`);
+      console.log(`DEFAULT_VTT_CLI: (empty — uses ITT via frame extraction, sample every ${DEFAULT_VTT_SAMPLE_INTERVAL}s)\n`);
+      console.log(`DEFAULT_STT_CLI:\n${DEFAULT_STT_CLI}`);
       return;
     }
     else if (flag === "--skip-stt") { skipSTT = true; }

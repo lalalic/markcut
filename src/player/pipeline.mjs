@@ -992,8 +992,8 @@ import { join, dirname as dirname2, resolve as resolvePath, relative } from "nod
 import { execSync } from "node:child_process";
 import { existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
-var DEFAULT_TTS_CLI = 'uvx edge-tts --voice "en-US-GuyNeural" --text "{input}" --write-media "{output}"';
-var DEFAULT_STT_CLI = 'uvx --from openai-whisper whisper "{input}" --output_format vtt --output_dir "{output}"';
+var DEFAULT_TTS_CLI = process.env.MARKCUT_TTS_CLI || 'uvx edge-tts --voice "en-US-GuyNeural" --text "{input}" --write-media "{output}"';
+var DEFAULT_STT_CLI = process.env.MARKCUT_STT_CLI || 'uvx --from openai-whisper whisper "{input}" --output_format vtt --output_dir "{output}"';
 var DEFAULT_TTI_CLI = 'uvx --from mflux mflux-generate-flux2 --model flux2-klein-4b --steps 5 --prompt "{input}" --output "{output}"';
 var DEFAULT_TTV_CLI = "";
 function substituteCli(template, input, output) {

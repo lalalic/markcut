@@ -30,7 +30,7 @@ export const MAX_VIDEO_DIMENSION = Number(process.env.MARKCUT_MAX_VIDEO_DIMENSIO
  * Placeholders: {input}=image path(s), {prompt}=description prompt.
  * Override with MARKCUT_ITT_CLI env var.
  */
-export const DEFAULT_ITT =
+export const DEFAULT_ITT_CLI =
   process.env.MARKCUT_ITT_CLI ||
   'uvx --from mlx-vlm mlx_vlm.generate --model mlx-community/MiniCPM-V-4.6-bf16 --max-tokens 2048 --prompt "{prompt}" --image {input} --temperature 0.0 --thinking-mode disabled';
 
@@ -45,7 +45,7 @@ export const DEFAULT_VTT_SAMPLE_INTERVAL = Number(process.env.MARKCUT_VTT_SAMPLE
  * Placeholders: {input}=video path, {prompt}=description prompt.
  * Override with MARKCUT_VTT_CLI env var.
  */
-export const DEFAULT_VTT =
+export const DEFAULT_VTT_CLI =
   process.env.MARKCUT_VTT_CLI ||
   'uvx --from mlx-vlm mlx_vlm.generate --model mlx-community/MiniCPM-V-4.6-bf16 --max-tokens 2048 --prompt "{prompt}" --video {input} --temperature 0.0 --processor-kwargs \'{"max_num_frames": 32, "stack_frames": 1, "max_slice_nums": 1, "use_image_id": false}\'';
 
@@ -54,8 +54,9 @@ export const DEFAULT_VTT =
  * Extracts audio and generates VTT subtitles.
  * Placeholders: {input}=audio path, {output}=output directory.
  * Override with MARKCUT_STT_CLI env var.
+ * Used by both vision and render pipelines.
  */
-export const DEFAULT_STT =
+export const DEFAULT_STT_CLI =
   process.env.MARKCUT_STT_CLI ||
   'uvx --from openai-whisper whisper "{input}" --output_format vtt --output_dir "{output}"';
 
@@ -64,8 +65,9 @@ export const DEFAULT_STT =
  * Generates audio from text.
  * Placeholders: {input}=text, {output}=audio file path.
  * Override with MARKCUT_TTS_CLI env var.
+ * Used by both vision and render pipelines.
  */
-export const DEFAULT_TTS =
+export const DEFAULT_TTS_CLI =
   process.env.MARKCUT_TTS_CLI ||
   'uvx edge-tts --voice "en-US-GuyNeural" --text "{input}" --write-media "{output}"';
 
@@ -75,15 +77,11 @@ export const DEFAULT_TTS =
  * Placeholders: {prompt}=the prompt text.
  * Override with MARKCUT_AGENT_CLI env var.
  */
-export const DEFAULT_AGENT = process.env.MARKCUT_AGENT_CLI || 'npx pi -p {prompt}';
+export const DEFAULT_AGENT_CLI = process.env.MARKCUT_AGENT_CLI || 'npx pi -p {prompt}';
 
-// ── Render pipeline CLI templates ──────────────────────────────────────────
-// These mirror the vision pipeline values where applicable, with additional
-// TTI (text-to-image) and TTV (text-to-video) defaults used by the renderer.
-// Override via MARKCUT_*_CLI env vars.
+// ── Render-only pipeline CLI templates ─────────────────────────────────────
+// These are specific to the render pipeline (no vision pipeline equivalent).
 
-export const DEFAULT_TTS_CLI = process.env.MARKCUT_TTS_CLI || DEFAULT_TTS;
-export const DEFAULT_STT_CLI = process.env.MARKCUT_STT_CLI || DEFAULT_STT;
 export const DEFAULT_TTI_CLI =
   process.env.MARKCUT_TTI_CLI ||
   'uvx --from mflux mflux-generate-flux2 --model flux2-klein-4b --steps 5 --prompt "{input}" --output "{output}"';
