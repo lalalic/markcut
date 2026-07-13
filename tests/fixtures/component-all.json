@@ -9,7 +9,7 @@
     {
       "id": "scene-html",
       "type": "scene",
-      "name": "HTML JSX",
+      "name": "HTML-JSX",
       "layout": "parallel",
       "children": [
         {
@@ -23,7 +23,7 @@
     {
       "id": "scene-tween",
       "type": "scene",
-      "name": "Tween Animation",
+      "name": "Tween-Animation",
       "layout": "parallel",
       "children": [
         {

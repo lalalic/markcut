@@ -8,7 +8,11 @@ import { execSync, execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync, statSync } from "node:fs";
 import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { config } from "dotenv";
 import { DEFAULT_STT_CLI } from "../src/config.mjs";
+
+// Load .env from project root so env vars (GOOGLE_MAPS_API_KEY, etc.) are available
+config({ path: resolve(fileURLToPath(import.meta.url), "../../.env") });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
