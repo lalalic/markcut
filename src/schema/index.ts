@@ -230,6 +230,7 @@ export const mapStream = base.extend({
   mapType: z.enum(["roadmap", "satellite", "hybrid", "terrain"]).default("roadmap").describe("Google Maps style"),
   travelMode: z.enum(["DRIVING", "WALKING", "BICYCLING", "TRANSIT"]).default("DRIVING").describe("Directions API travel mode"),
   routeMarker: z.string().default("🚗").describe("emoji/character for the animated traveling marker"),
+  googleMapsApiKey: z.string().optional().describe("injected by compiler from GOOGLE_MAPS_API_KEY env var"),
 });
 export type MapStream = z.infer<typeof mapStream>;
 

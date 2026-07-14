@@ -322,7 +322,8 @@ function compileLeaf(node2, ctx, parentKind) {
         center: node2.center,
         mapType: node2.mapType ?? "roadmap",
         travelMode: node2.travelMode ?? "DRIVING",
-        routeMarker: node2.routeMarker ?? "\u{1F697}"
+        routeMarker: node2.routeMarker ?? "\u{1F697}",
+        googleMapsApiKey: ctx.googleMapsApiKey
       };
       return { stream, duration: end };
     }
@@ -706,17 +707,20 @@ function resolveVariantOverrides(root, variantChain) {
   return clone;
 }
 function compileDescriptiveRoot(input, options = {}) {
+  const root = typeof input === "string" ? JSON.parse(input) : input;
+  const resolved = resolveTransition(root.layout ? root.transition ?? root.layout : root.transition, root.transitionTime);
+  const rootKind = root.layout === "parallel" ? "parallel" : "series";
+  const googleMapsApiKey = options.googleMapsApiKey ?? "";
   const ctx = {
     defaults: {
       ...DEFAULTS,
       ...options.defaults ?? {}
-    }
+    },
+    googleMapsApiKey
   };
   const registry = resolveComponentSources(input);
   warnUnregisteredComponents(input, registry);
   ensureUniqueIds(input.children, "root");
-  const rootKind = input.layout ?? "series";
-  const resolved = resolveTransition(input.transition, input.transitionTime);
   const children = compileChildren(input.children, ctx, rootKind);
   const duration = aggregateDuration(children, rootKind, resolved.time);
   const compiled = {
@@ -971,6 +975,7 @@ var MAX_IMAGE_DIMENSION = Number(process.env.MARKCUT_MAX_IMAGE_DIMENSION) || 384
 var MAX_VIDEO_DURATION = Number(process.env.MARKCUT_MAX_VIDEO_DURATION) || 60;
 var MAX_VIDEO_DIMENSION = Number(process.env.MARKCUT_MAX_VIDEO_DIMENSION) || 360;
 var DEFAULT_ITT_CLI = process.env.MARKCUT_ITT_CLI || 'uvx --from mlx-vlm mlx_vlm.generate --model mlx-community/MiniCPM-V-4.6-bf16 --max-tokens 2048 --prompt "{prompt}" --image {input} --temperature 0.0 --thinking-mode disabled';
+var GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY || "";
 var DEFAULT_VTT_SAMPLE_INTERVAL = Number(process.env.MARKCUT_VTT_SAMPLE_INTERVAL) || 5;
 var DEFAULT_VTT_CLI = process.env.MARKCUT_VTT_CLI || `uvx --from mlx-vlm mlx_vlm.generate --model mlx-community/MiniCPM-V-4.6-bf16 --max-tokens 2048 --prompt "{prompt}" --video {input} --temperature 0.0 --processor-kwargs '{"max_num_frames": 32, "stack_frames": 1, "max_slice_nums": 1, "use_image_id": false}'`;
 var DEFAULT_STT_CLI = process.env.MARKCUT_STT_CLI || 'uvx --from openai-whisper whisper "{input}" --output_format vtt --output_dir "{output}"';
@@ -11085,7 +11090,9 @@ async function resolveAndCompile(data, options = {}) {
     subtitleOutputDir: options.subtitleOutputDir,
     variants: options.variants
   });
-  const compiled = compileDescriptiveRoot(resolved);
+  const compiled = compileDescriptiveRoot(resolved, {
+    googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY
+  });
   return compiled;
 }
 async function resolveAndCompileMarkdown(markdown, options = {}) {

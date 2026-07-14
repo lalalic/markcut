@@ -37,6 +37,8 @@ export const DEFAULT_ITT_CLI =
 /**
  * Seconds between sampled video frames when using the default ITT-based VTT.
  */
+export const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY || "";
+
 export const DEFAULT_VTT_SAMPLE_INTERVAL = Number(process.env.MARKCUT_VTT_SAMPLE_INTERVAL) || 5;
 
 /**

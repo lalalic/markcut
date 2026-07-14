@@ -94,7 +94,9 @@ export async function resolveAndCompile(
   });
 
   // 2. Sync compile: descriptive → stream tree
-  const compiled = compileDescriptiveRoot(resolved);
+  const compiled = compileDescriptiveRoot(resolved, {
+    googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY,
+  });
 
   return compiled;
 }

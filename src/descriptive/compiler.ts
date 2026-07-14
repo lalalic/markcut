@@ -18,6 +18,8 @@ import { uid, walkDown } from "../utils/index";
 
 export interface CompileOptions {
   defaults?: Partial<Record<"image" | "video" | "audio" | "component" | "rhythm" | "include" | "map", number>>;
+  /** Google Maps API key, injected onto map nodes during compilation. */
+  googleMapsApiKey?: string;
 }
 
 /** A single effect spec — either a bare animation name or an object with options. */
@@ -250,6 +252,7 @@ export function resolveAllTemplateVars(
 
 interface CompileContext {
   defaults: Record<"image" | "video" | "audio" | "component" | "rhythm" | "include" | "map" | "effect", number>;
+  googleMapsApiKey: string;
 }
 
 interface CompileResult {
@@ -568,6 +571,7 @@ function compileLeaf(node: Exclude<DescriptiveNode, DescriptiveContainer | Descr
         mapType: node.mapType ?? "roadmap",
         travelMode: node.travelMode ?? "DRIVING",
         routeMarker: node.routeMarker ?? "🚗",
+        googleMapsApiKey: ctx.googleMapsApiKey,
       };
       return { stream, duration: end };
     }
@@ -1160,11 +1164,18 @@ export function resolveVariantOverrides(
 }
 
 export function compileDescriptiveRoot(input: DescriptiveRoot, options: CompileOptions = {}): Root {
+  const root: DescriptiveRoot = typeof input === "string" ? JSON.parse(input) : input;
+
+  const resolved = resolveTransition(root.layout ? root.transition ?? root.layout : root.transition, root.transitionTime);
+  const rootKind: "series" | "parallel" | "transitionSeries" = root.layout === "parallel" ? "parallel" : "series";
+
+  const googleMapsApiKey = options.googleMapsApiKey ?? "";
   const ctx: CompileContext = {
     defaults: {
       ...DEFAULTS,
       ...(options.defaults ?? {}),
     },
+    googleMapsApiKey,
   };
 
   // Resolve frontmatter imports / inline component defs onto each component node.
@@ -1173,8 +1184,6 @@ export function compileDescriptiveRoot(input: DescriptiveRoot, options: CompileO
 
   ensureUniqueIds(input.children, "root");
 
-  const rootKind = input.layout ?? "series";
-  const resolved = resolveTransition(input.transition, input.transitionTime);
   const children = compileChildren(input.children, ctx, rootKind);
   const duration = aggregateDuration(children, rootKind, resolved.time);
 

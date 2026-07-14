@@ -27,7 +27,17 @@ import {
 } from "@vis.gl/react-google-maps";
 import type { MapStream } from "../schema/index";
 
-const GM_API_KEY = process.env.GOOGLE_MAPS_API_KEY || "";
+// API key is injected by the compiler onto the stream node (see compileLeaf in compiler.ts).
+// This fallback handles the case where Map.tsx is used directly without the compiler.
+function resolveApiKey(stream: MapStream): string {
+  if (stream.googleMapsApiKey) return stream.googleMapsApiKey;
+  // Safe fallback for Node.js contexts (e.g. remotion render without compiler).
+  // In the browser player the key is always pre-stamped by the server-side compiler.
+  if (typeof process !== "undefined" && typeof process.env !== "undefined" && process.env.GOOGLE_MAPS_API_KEY) {
+    return process.env.GOOGLE_MAPS_API_KEY;
+  }
+  return "";
+}
 
 // ============================================================
 // MapLeaf — entry point, renders each action as a Sequence
@@ -38,6 +48,7 @@ export function MapLeaf({ stream }: { stream: MapStream }) {
   const start = stream.start ?? 0;
   const end = stream.end ?? start + (stream.duration ?? 1);
   const totalDur = stream.durationInSeconds ?? end;
+  const apiKey = resolveApiKey(stream);
   useFrameEvents(stream.on, Math.max(1, Math.floor(totalDur * fps)));
   if (waypoints.length === 0) return null;
 
@@ -53,7 +64,7 @@ export function MapLeaf({ stream }: { stream: MapStream }) {
       from={Math.floor(fps * start)}
       layout="none"
     >
-      <APIProvider apiKey={GM_API_KEY}>
+      <APIProvider apiKey={apiKey}>
         <GoogleMap
           mapId={String(stream.id ?? "map")}
           defaultCenter={center}

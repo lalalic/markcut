@@ -44534,13 +44534,20 @@ Rectangle.displayName = "Rectangle";
 
 // src/types/Map.tsx
 var import_jsx_runtime83 = __toESM(require_jsx_runtime(), 1);
-var GM_API_KEY = process.env.GOOGLE_MAPS_API_KEY || "";
+function resolveApiKey(stream2) {
+  if (stream2.googleMapsApiKey) return stream2.googleMapsApiKey;
+  if (typeof process !== "undefined" && typeof process.env !== "undefined" && process.env.GOOGLE_MAPS_API_KEY) {
+    return process.env.GOOGLE_MAPS_API_KEY;
+  }
+  return "";
+}
 function MapLeaf({ stream: stream2 }) {
   const { fps } = useVideoConfig();
   const waypoints = stream2.waypoints ?? [];
   const start = stream2.start ?? 0;
   const end = stream2.end ?? start + (stream2.duration ?? 1);
   const totalDur = stream2.durationInSeconds ?? end;
+  const apiKey = resolveApiKey(stream2);
   useFrameEvents(stream2.on, Math.max(1, Math.floor(totalDur * fps)));
   if (waypoints.length === 0) return null;
   const durFrames = Math.max(1, Math.floor(fps * (end - start)));
@@ -44555,7 +44562,7 @@ function MapLeaf({ stream: stream2 }) {
       durationInFrames: durFrames,
       from: Math.floor(fps * start),
       layout: "none",
-      children: /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(APIProvider, { apiKey: GM_API_KEY, children: /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(
+      children: /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(APIProvider, { apiKey, children: /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(
         Map2,
         {
           mapId: String(stream2.id ?? "map"),
@@ -59861,7 +59868,8 @@ var mapStream = base.extend({
   center: external_exports.object({ lat: external_exports.number(), lng: external_exports.number() }).optional().describe("map view center (defaults to first waypoint)"),
   mapType: external_exports.enum(["roadmap", "satellite", "hybrid", "terrain"]).default("roadmap").describe("Google Maps style"),
   travelMode: external_exports.enum(["DRIVING", "WALKING", "BICYCLING", "TRANSIT"]).default("DRIVING").describe("Directions API travel mode"),
-  routeMarker: external_exports.string().default("\u{1F697}").describe("emoji/character for the animated traveling marker")
+  routeMarker: external_exports.string().default("\u{1F697}").describe("emoji/character for the animated traveling marker"),
+  googleMapsApiKey: external_exports.string().optional().describe("injected by compiler from GOOGLE_MAPS_API_KEY env var")
 });
 var stream = external_exports.discriminatedUnion("type", [
   root,
