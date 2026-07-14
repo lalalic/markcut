@@ -17,7 +17,8 @@
           "id": "headline",
           "type": "component",
           "jsx": "<div style={{background:'linear-gradient(135deg,#667eea,#764ba2)',padding:'40px',borderRadius:'16px',textAlign:'center'}}><h1 style={{color:'white',fontSize:'36px',margin:0}}>Component Test</h1><p style={{color:'rgba(255,255,255,0.7)',fontSize:'18px'}}>Built-in components render correctly</p></div>",
-          "actions": [{ "start": 0, "end": 3 }]
+          "start": 0,
+          "end": 3
         }
       ]
     },
@@ -30,7 +31,8 @@
           "id": "stats",
           "type": "component",
           "jsx": "<div style={{background:'#1a1a2e',padding:'30px',borderRadius:'16px',textAlign:'center'}}><span style={{color:'#667eea',fontSize:'64px',fontWeight:'bold'}}>100%</span><p style={{color:'rgba(255,255,255,0.6)',fontSize:'16px'}}>Working</p></div>",
-          "actions": [{ "start": 0, "end": 3 }]
+          "start": 0,
+          "end": 3
         }
       ]
     }

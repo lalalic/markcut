@@ -20,10 +20,12 @@
           "type": "image",
           "src": "https://picsum.photos/seed/effect-fade/640/480",
           "fit": "cover",
-          "actions": [{ "start": 0, "end": 2 }]
+          "start": 0,
+          "end": 2
         }
       ],
-      "actions": [{ "start": 0, "end": 2 }]
+      "start": 0,
+      "end": 2
     },
     {
       "id": "bounce",
@@ -35,10 +37,12 @@
           "type": "image",
           "src": "https://picsum.photos/seed/effect-bounce/640/480",
           "fit": "cover",
-          "actions": [{ "start": 0, "end": 2 }]
+          "start": 0,
+          "end": 2
         }
       ],
-      "actions": [{ "start": 0, "end": 2 }]
+      "start": 0,
+      "end": 2
     },
     {
       "id": "custom-kf",
@@ -55,10 +59,12 @@
           "type": "image",
           "src": "https://picsum.photos/seed/effect-custom/640/480",
           "fit": "cover",
-          "actions": [{ "start": 0, "end": 2 }]
+          "start": 0,
+          "end": 2
         }
       ],
-      "actions": [{ "start": 0, "end": 2 }]
+      "start": 0,
+      "end": 2
     }
   ]
 }

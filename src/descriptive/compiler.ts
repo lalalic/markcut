@@ -422,24 +422,18 @@ function wrapWithEffects(
   if (!rawEffects || rawEffects.length === 0) return result;
 
   const effects = rawEffects.map(normalizeEffectSpec);
-  const innerStream = result.stream;
-  const innerActions = (innerStream as any).actions ?? [];
-  const firstAction = innerActions[0] ?? {};
-  const absStart = firstAction.start ?? 0;
-  const absEnd = firstAction.end ?? result.duration;
+  const innerStream = result.stream as any;
+  const absStart = innerStream.start ?? 0;
+  const absEnd = innerStream.end ?? result.duration;
   const duration = absEnd - absStart;
 
-  // Reset inner stream's actions to be relative (start=0) so the effect
+  // Reset inner stream's timing to be relative (start=0) so the effect
   // wrapper owns the absolute timing. The EffectWrapper renders children
-  // with their relative actions inside its own Sequence.
+  // with their relative timing inside its own Sequence.
   const resetStream = {
     ...innerStream,
-    actions: [{
-      ...firstAction,
-      id: uid(),
-      start: 0,
-      end: duration,
-    }],
+    start: 0,
+    end: duration,
     durationInSeconds: duration,
   } as any;
 
@@ -466,11 +460,8 @@ function wrapWithEffects(
       animationIterationCount: spec.animationIterationCount ?? 1,
       customKeyframes: spec.customKeyframes,
       children: [currentStream],
-      actions: [{
-        id: uid(),
-        start: effStart,
-        end: effEnd,
-      }],
+      start: effStart,
+      end: effEnd,
       visible: true,
       ...pickOn(node),
     } as Effect;
@@ -490,21 +481,12 @@ function compileLeaf(node: Exclude<DescriptiveNode, DescriptiveContainer | Descr
     style: node.style,
     visible: node.visible ?? true,
     isBackground: node.isBackground,
-    durationInSeconds: end,
-    ...pickOn(node),
-  };
-
-  const action = {
-    id: uid(),
     start,
     end,
     startFrom: node.type === "video" || node.type === "audio" ? node.startFrom : undefined,
     endAt: node.type === "video" || node.type === "audio" ? node.endAt : undefined,
-    loop: node.type === "audio" ? node.loop : undefined,
-    volume:
-      node.type === "video" || node.type === "audio" || node.type === "rhythm"
-        ? node.volume
-        : undefined,
+    durationInSeconds: end,
+    ...pickOn(node),
   };
 
   switch (node.type) {
@@ -517,7 +499,6 @@ function compileLeaf(node: Exclude<DescriptiveNode, DescriptiveContainer | Descr
         playbackRate: node.playbackRate,
         width: node.width ?? 1080,
         height: node.height ?? 1920,
-        actions: [action],
       };
       return { stream, duration: end };
     }
@@ -528,7 +509,7 @@ function compileLeaf(node: Exclude<DescriptiveNode, DescriptiveContainer | Descr
         src: node.src,
         volume: node.volume ?? 1,
         foreground: node.foreground,
-        actions: [action],
+        loop: node.loop,
       };
       return { stream, duration: end };
     }
@@ -538,7 +519,6 @@ function compileLeaf(node: Exclude<DescriptiveNode, DescriptiveContainer | Descr
         type: "image",
         src: node.src,
         fit: node.fit ?? "contain",
-        actions: [action],
       };
       return { stream, duration: end };
     }
@@ -561,7 +541,6 @@ function compileLeaf(node: Exclude<DescriptiveNode, DescriptiveContainer | Descr
         type: "component",
         jsx: node.jsx,
         data: Object.keys(bindings).length ? bindings : undefined,
-        actions: [action],
       };
       return { stream, duration: end };
     }
@@ -574,7 +553,6 @@ function compileLeaf(node: Exclude<DescriptiveNode, DescriptiveContainer | Descr
         volume: node.volume ?? 1,
         spots: node.spots,
         children: [],
-        actions: [action],
       };
       return { stream, duration: end };
     }
@@ -590,7 +568,6 @@ function compileLeaf(node: Exclude<DescriptiveNode, DescriptiveContainer | Descr
         mapType: node.mapType ?? "roadmap",
         travelMode: node.travelMode ?? "DRIVING",
         routeMarker: node.routeMarker ?? "🚗",
-        actions: [action],
       };
       return { stream, duration: end };
     }
@@ -668,6 +645,7 @@ function compileScene(
         type: "folder",
         visible: true,
         isSeries: true,
+        start: 0,
         transition: sceneKind === "transitionSeries" ? resolved.name : undefined,
         transitionTime: sceneKind === "transitionSeries" ? resolved.time : 0.5,
         children: compiledChildren.map((c) => c.stream),
@@ -691,6 +669,7 @@ function compileScene(
     style: node.style,
     visible: node.visible ?? true,
     isBackground: node.isBackground,
+    start,
     children: sceneChildren,
     durationInSeconds: end,
     ...pickOn(node),
@@ -732,13 +711,8 @@ function compileInclude(
     src: node.src,
     volume: node.volume ?? 1,
     children: compiledChildren.map((c) => c.stream),
-    actions: [
-      {
-        id: uid(),
-        start,
-        end,
-      },
-    ],
+    start,
+    end,
     durationInSeconds: end,
     ...pickOn(node),
   };
@@ -802,14 +776,8 @@ function compileRhythm(
     volume: node.volume ?? 1,
     spots: node.spots,
     children: compiledChildren,
-    actions: [
-      {
-        id: uid(),
-        start,
-        end,
-        volume: node.volume,
-      },
-    ],
+    start,
+    end,
     durationInSeconds: end,
     ...pickOn(node),
   };
@@ -833,6 +801,7 @@ function compileContainer(node: DescriptiveContainer, ctx: CompileContext, paren
     style: node.style,
     visible: node.visible ?? true,
     isBackground: node.isBackground,
+    start: 0,
     isSeries: node.type !== "parallel",
     transition: node.type === "transitionSeries" ? resolved.name : undefined,
     transitionTime: node.type === "transitionSeries" ? resolved.time : 0.5,

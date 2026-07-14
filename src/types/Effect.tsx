@@ -23,57 +23,49 @@ export function EffectWrapper({
 }) {
   const frame = useCurrentFrame();
   const { fps, width, height } = useVideoConfig();
-  const totalDur = stream.durationInSeconds ?? stream.actions[0]?.end ?? 1;
+  const startSec = stream.start ?? 0;
+  const endSec = stream.end ?? startSec + (stream.duration ?? 1);
+  const totalDur = stream.durationInSeconds ?? endSec;
   useFrameEvents(stream.on, Math.max(1, Math.floor(totalDur * fps)));
 
-  const actions = stream.actions ?? [];
-
   const styles = React.useMemo(() => {
-    const result: Record<string, string>[] = [];
+    const start = Math.ceil(startSec * fps);
+    const end = Math.ceil(endSec * fps);
+    const durationInFrames = end - start;
+    if (durationInFrames <= 0) return [] as Record<string, string>[];
 
-    for (const action of actions) {
-      const start = Math.ceil(action.start * fps);
-      const end = Math.ceil(action.end * fps);
-      const durationInFrames = end - start;
-      if (durationInFrames <= 0) continue;
+    const animation = stream.animation;
+    const timingFn = stream.animationTimingFunction;
+    const iterCount = stream.animationIterationCount ?? 1;
+    const style = (cssJS(stream.style) ?? {}) as Record<string, string>;
 
-      const animation = stream.animation;
-      const timingFn = stream.animationTimingFunction;
-      const iterCount = stream.animationIterationCount ?? 1;
-      const style = (cssJS(action.style) ?? {}) as Record<string, string>;
-
-      // Handle iteration count: loop the animation within the action range
-      let currentFrame = frame;
-      if (iterCount > 0 && durationInFrames > 0) {
-        const iteration = Math.floor((frame - start) / durationInFrames);
-        if (iteration < iterCount) {
-          currentFrame = start + ((frame - start) % durationInFrames);
-        }
+    // Handle iteration count: loop the animation within the span
+    let currentFrame = frame;
+    if (iterCount > 0 && durationInFrames > 0) {
+      const iteration = Math.floor((frame - start) / durationInFrames);
+      if (iteration < iterCount) {
+        currentFrame = start + ((frame - start) % durationInFrames);
       }
+    }
 
-      if (currentFrame >= start && currentFrame < end) {
-        const actionFrame = currentFrame - start;
+    if (currentFrame >= start && currentFrame < end) {
+      const actionFrame = currentFrame - start;
 
-        if (animation) {
-          const config = resolveAnimation(animation, stream.customKeyframes);
-          if (config) {
-            const animStyle = interpolateKeyframes(config, actionFrame, {
-              fps,
-              durationInSeconds: durationInFrames / fps,
-              timingFunction: timingFn,
-            });
-            if (animStyle) Object.assign(style, animStyle);
-          }
-        }
-
-        if (Object.keys(style).length > 0) {
-          result.push(style);
+      if (animation) {
+        const config = resolveAnimation(animation, stream.customKeyframes);
+        if (config) {
+          const animStyle = interpolateKeyframes(config, actionFrame, {
+            fps,
+            durationInSeconds: durationInFrames / fps,
+            timingFunction: timingFn,
+          });
+          if (animStyle) Object.assign(style, animStyle);
         }
       }
     }
 
-    return result;
-  }, [frame, fps, actions, stream.animation, stream.animationTimingFunction, stream.animationIterationCount, stream.customKeyframes]);
+    return Object.keys(style).length > 0 ? [style] : [];
+  }, [frame, fps, startSec, endSec, stream.animation, stream.animationTimingFunction, stream.animationIterationCount, stream.customKeyframes, stream.style]);
 
   if (styles.length === 0) return <>{children}</>;
 

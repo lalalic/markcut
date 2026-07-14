@@ -19,7 +19,8 @@
           "type": "image",
           "src": "https://picsum.photos/seed/test-basic/640/480",
           "fit": "cover",
-          "actions": [{ "start": 0, "end": 2 }]
+          "start": 0,
+          "end": 2
         }
       ]
     }

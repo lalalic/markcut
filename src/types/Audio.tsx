@@ -13,44 +13,36 @@ export function AudioLeaf({ stream }: { stream: Audio }) {
   const { fps } = useVideoConfig();
   const environment = useRemotionEnvironment();
   const ctx = React.useContext(AudioContext);
-  const totalDur = stream.durationInSeconds ?? stream.actions[0]?.end ?? 1;
+  const start = stream.start ?? 0;
+  const end = stream.end ?? start + (stream.duration ?? 1);
+  const totalDur = stream.durationInSeconds ?? end;
   useFrameEvents(stream.on, Math.max(1, Math.floor(totalDur * fps)));
   if (!stream.src) return null;
   if (environment.isStudio) return null;
 
   const resolvedSrc = resolveAudioSrc(stream.src);
-
+  const startFrom = stream.startFrom ?? 0;
+  const endAt = stream.endAt ?? totalDur;
+  const volume = stream.volume ?? 1;
+  const playbackRate = stream.loop ? 1 : toPlaybackRate((endAt - startFrom) / (end - start));
   return (
-    <>
-      {stream.actions.map((a) => {
-        const start = a.start ?? 0;
-        const end = a.end ?? start + 1;
-        const startFrom = a.startFrom ?? 0;
-        const endAt = a.endAt ?? stream.durationInSeconds ?? end - start;
-        const volume = a.volume ?? stream.volume ?? 1;
-        const playbackRate = a.loop ? 1 : toPlaybackRate((endAt - startFrom) / (end - start));
-        return (
-          <Sequence
-            key={a.id}
-            name={stream.src ?? "audio"}
-            durationInFrames={Math.max(1, Math.floor(fps * (end - start)))}
-            from={Math.floor(fps * start)}
-            layout="none"
-            showInTimeline={false}
-          >
-            <RemotionAudio
-              src={resolvedSrc}
-              startFrom={Math.floor(startFrom * fps)}
-              endAt={Math.floor(startFrom * fps) + Math.floor(((endAt - startFrom) * fps) / playbackRate)}
-              muted={volume === 0 || !!ctx?.foreground}
-              volume={volume}
-              loop={(a.loop ?? 1) > 1}
-              playbackRate={playbackRate}
-              showInTimeline={false}
-            />
-          </Sequence>
-        );
-      })}
-    </>
+    <Sequence
+      name={stream.src ?? "audio"}
+      durationInFrames={Math.max(1, Math.floor(fps * (end - start)))}
+      from={Math.floor(fps * start)}
+      layout="none"
+      showInTimeline={false}
+    >
+      <RemotionAudio
+        src={resolvedSrc}
+        startFrom={Math.floor(startFrom * fps)}
+        endAt={Math.floor(startFrom * fps) + Math.floor(((endAt - startFrom) * fps) / playbackRate)}
+        muted={volume === 0 || !!ctx?.foreground}
+        volume={volume}
+        loop={(stream.loop ?? 1) > 1}
+        playbackRate={playbackRate}
+        showInTimeline={false}
+      />
+    </Sequence>
   );
 }

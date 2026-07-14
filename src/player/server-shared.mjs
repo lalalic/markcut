@@ -41,8 +41,8 @@ export function extractScenes(root) {
       if (!(s.type === "folder" || s.type === "scene" || s.children?.length)) continue;
       if (s.isBackground) continue;
       const leaf = (s.children || []).find(c => c.src && (c.type === "image" || c.type === "video"));
-      const action = leaf?.actions?.[0] || s.actions?.[0] || {};
-      const dur = (action.end || 5) - (action.start || 0);
+      const src2 = leaf || s;
+      const dur = (src2.end ?? 5) - (src2.start ?? 0);
       scenes.push({
         name: s.name || s.id || "scene",
         start: offset,
@@ -62,8 +62,7 @@ export function extractScenes(root) {
     let offset = 0;
     for (const s of scenesFolder.children) {
       const child = s.children?.[0] || {};
-      const action = child?.actions?.[0];
-      const dur = action ? (action.end - action.start) : 5;
+      const dur = (child.end ?? ((child.start ?? 0) + 5)) - (child.start ?? 0);
       scenes.push({
         name: s.name,
         start: offset,

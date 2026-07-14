@@ -104,17 +104,20 @@ function useSubVideoRegistry(importsUrl: string | undefined):
  * registered by the sub-video are available during its rendering.
  *
  * Usage:
- *   { type: "include", src: "./path/to/video.json", actions: [{ start: 0, end: 5 }] }
+ *   { type: "include", src: "./path/to/video.json", start: 0, end: 5 }
  */
 export function IncludeLeaf({ stream }: { stream: IncludeStream }) {
   const { fps: parentFps, width: parentWidth, height: parentHeight } = useVideoConfig();
   const parentCompose = React.useContext(ComposeContext);
   const { Container } = parentCompose;
   const parentAudio = React.useContext(AudioContext);
-  const totalDur = stream.durationInSeconds ?? stream.actions[0]?.end ?? 1;
+  const start = stream.start ?? 0;
+  const end = stream.end ?? (stream.durationInSeconds ?? (start + (stream.duration ?? 1)));
+  const totalDur = stream.durationInSeconds ?? end;
   useFrameEvents(stream.on, Math.max(1, Math.floor(totalDur * parentFps)));
 
-  if (!stream.actions?.length) return null;
+  const hasContent = !!stream.src || (stream.children?.length ?? 0) > 0;
+  if (!hasContent) return null;
 
   // ── External JSON loading ─────────────────────────────────────────────
   const [externalData, setExternalData] = React.useState<unknown | null>(null);
@@ -296,87 +299,78 @@ export function IncludeLeaf({ stream }: { stream: IncludeStream }) {
     );
   }, [externalData, loadError, parentFps, parentWidth, parentHeight]);
 
-  // ── Action-based rendering ───────────────────────────────────────
-  const renderAction = (a: IncludeStream["actions"][number]) => {
-    const start = a.start ?? 0;
-    const end = a.end ?? (stream.durationInSeconds ?? start + 1);
-    const dur = Math.max(0.1, end - start);
-    const durFrames = Math.max(1, Math.floor(parentFps * dur));
+  // ── Single-span rendering ────────────────────────────────────────
+  const dur = Math.max(0.1, end - start);
+  const durFrames = Math.max(1, Math.floor(parentFps * dur));
 
-    // ── Inline children fallback (legacy) ─────────────────────────
-    if (!stream.src && stream.children?.length) {
-      return (
-        <Sequence
-          key={a.id}
-          durationInFrames={durFrames}
-          from={Math.floor(parentFps * start)}
-          layout="none"
-          showInTimeline={false}
-        >
-          <Container
-            id={stream.id}
-            type="include"
-            style={{
-              ...cssJS(stream.style) as React.CSSProperties,
-              width: parentWidth,
-              height: parentHeight,
-              overflow: "hidden",
-              position: "relative",
-            }}
-            className={`include ${toClassName(stream.id ?? "")}`}
-          >
-            <FolderLeaf stream={stream as any} />
-          </Container>
-        </Sequence>
-      );
-    }
-
-    // ── External src rendering ─────────────────────────────────────
-    return (
-      <Sequence
-        key={a.id}
-        durationInFrames={durFrames}
-        from={Math.floor(parentFps * start)}
-        layout="none"
-        showInTimeline={false}
+  // ── Inline children fallback (legacy) ─────────────────────────
+  let innerNode: React.ReactNode;
+  if (!stream.src && stream.children?.length) {
+    innerNode = (
+      <Container
+        id={stream.id}
+        type="include"
+        style={{
+          ...cssJS(stream.style) as React.CSSProperties,
+          width: parentWidth,
+          height: parentHeight,
+          overflow: "hidden",
+          position: "relative",
+        }}
+        className={`include ${toClassName(stream.id ?? "")}`}
       >
-        {externalData || loadError ? (
-          <div
-            style={{
-              width: parentWidth,
-              height: parentHeight,
-              overflow: "hidden",
-              position: "relative",
-            }}
-          >
-            {renderExternalContent()}
-          </div>
-        ) : (
-          <div
-            style={{
-              width: parentWidth,
-              height: parentHeight,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#666",
-              fontSize: 20,
-              fontFamily: "monospace",
-            }}
-          >
-            Loading… {stream.src}
-          </div>
-        )}
-      </Sequence>
+        <FolderLeaf stream={stream as any} />
+      </Container>
     );
-  };
+  } else if (externalData || loadError) {
+    innerNode = (
+      <div
+        style={{
+          width: parentWidth,
+          height: parentHeight,
+          overflow: "hidden",
+          position: "relative",
+        }}
+      >
+        {renderExternalContent()}
+      </div>
+    );
+  } else {
+    innerNode = (
+      <div
+        style={{
+          width: parentWidth,
+          height: parentHeight,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "#666",
+          fontSize: 20,
+          fontFamily: "monospace",
+        }}
+      >
+        Loading… {stream.src}
+      </div>
+    );
+  }
+
+  const sequence = (
+    <Sequence
+      durationInFrames={durFrames}
+      from={Math.floor(parentFps * start)}
+      layout="none"
+      showInTimeline={false}
+    >
+      {innerNode}
+    </Sequence>
+  );
 
   // ── Determine if we need a nested ComposeContext ───────────────────
   const needsNestedContext = subRegistry !== null && subRegistry !== parentCompose.components;
 
   const inner = (
     <AudioContext.Provider value={audioCtx as any}>
-      {stream.actions.map(renderAction)}
+      {sequence}
     </AudioContext.Provider>
   );
 

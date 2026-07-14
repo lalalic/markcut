@@ -11,7 +11,8 @@
       "type": "audio",
       "src": "assets/bgm/ambient-loop.mp3",
       "volume": 0.15,
-      "actions": [{ "start": 0, "end": 5 }]
+      "start": 0,
+      "end": 5
     },
     {
       "id": "scene-1",
@@ -23,13 +24,15 @@
           "type": "component",
           "jsx": "<div style={{position:'absolute',inset:0,background:'radial-gradient(circle at center,#667eea,#764ba2)'}} />",
           "isBackground": true,
-          "actions": [{ "start": 0, "end": 5 }]
+          "start": 0,
+          "end": 5
         },
         {
           "id": "headline",
           "type": "component",
           "jsx": "<div style={{background:'linear-gradient(135deg,#667eea,#764ba2)',padding:'40px',borderRadius:'16px',textAlign:'center'}}><h1 style={{color:'white',fontSize:'32px',margin:0}}>Full Feature Test</h1><p style={{color:'rgba(255,255,255,0.7)',fontSize:'16px'}}>All systems operational</p></div>",
-          "actions": [{ "start": 0.3, "end": 4.5 }]
+          "start": 0.3,
+          "end": 4.5
         }
       ]
     },
@@ -43,7 +46,8 @@
           "type": "component",
           "type": "component",
           "jsx": "<div style={{background:'#1a1a2e',padding:'30px',borderRadius:'16px',textAlign:'center'}}><span style={{color:'#667eea',fontSize:'64px',fontWeight:'bold'}}>100%</span><p style={{color:'rgba(255,255,255,0.6)',fontSize:'16px'}}>Coverage</p></div>",
-          "actions": [{ "start": 0.5, "end": 4.5 }]
+          "start": 0.5,
+          "end": 4.5
         }
       ]
     }

@@ -88,7 +88,8 @@ if (existsSync(SOURCE)) {
               type: s.mediaType === "video" ? "video" : "image",
               src: s.src,
               fit: "cover",
-              actions: [{ start: 0, end: s.duration }],
+              start: 0,
+              end: s.duration,
             }],
           })),
         };

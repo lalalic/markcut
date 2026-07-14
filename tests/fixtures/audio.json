@@ -12,14 +12,16 @@
       "src": "assets/bgm/ambient-loop.mp3",
       "volume": 0.3,
       "isBackground": true,
-      "actions": [{ "start": 0, "end": 3 }]
+      "start": 0,
+      "end": 3
     },
     {
       "id": "bg",
       "type": "image",
       "src": "https://picsum.photos/seed/audio-test/640/480",
       "fit": "cover",
-      "actions": [{ "start": 0, "end": 3 }]
+      "start": 0,
+      "end": 3
     }
   ]
 }

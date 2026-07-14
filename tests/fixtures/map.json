@@ -17,7 +17,8 @@
       ],
       "routeColor": "#4285F4",
       "routeWeight": 5,
-      "actions": [{ "start": 0, "end": 3 }]
+      "start": 0,
+      "end": 3
     }
   ]
 }

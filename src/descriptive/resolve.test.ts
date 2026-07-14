@@ -119,7 +119,8 @@ describe("resolveSubtitles", () => {
         type: "scene", name: "S", layout: "parallel",
         children: [{
           id: "a1", type: "audio", src: audioPath,
-          actions: [{ id: "act1", start: 5, end: 8 }],
+          start: 5,
+          end: 8,
         } as any],
         durationInSeconds: 8,
       } as any],
@@ -490,7 +491,8 @@ describe("resolveSubtitles — additional", () => {
       stt: "custom-stt {input} --out {output}",
       children: [{
         type: "scene", name: "S", layout: "parallel",
-        children: [{ id: "a1", type: "audio", src: audioPath, actions: [{ id: "act1", start: 0, end: 2 }] } as any],
+        children: [{ id: "a1", type: "audio", src: audioPath, start: 0,
+        end: 2 } as any],
         durationInSeconds: 2,
       } as any],
     };
@@ -511,7 +513,8 @@ describe("resolveSubtitles — additional", () => {
     const root: DescriptiveRoot = {
       children: [{
         type: "scene", name: "S", layout: "parallel",
-        children: [{ id: "a1", type: "audio", src: audioPath, actions: [{ id: "act1", start: 0, end: 2 }] } as any],
+        children: [{ id: "a1", type: "audio", src: audioPath, start: 0,
+        end: 2 } as any],
         durationInSeconds: 2,
       } as any],
     };
@@ -531,7 +534,8 @@ describe("resolveSubtitles — additional", () => {
     const root: DescriptiveRoot = {
       children: [{
         type: "scene", name: "S", layout: "parallel",
-        children: [{ id: "a1", type: "audio", src: audioPath, actions: [{ id: "act1", start: 0, end: 2 }] } as any],
+        children: [{ id: "a1", type: "audio", src: audioPath, start: 0,
+        end: 2 } as any],
         durationInSeconds: 2,
       } as any],
     };
@@ -558,8 +562,10 @@ describe("resolveSubtitles — additional", () => {
       children: [{
         type: "scene", name: "S", layout: "parallel",
         children: [
-          { id: "a1", type: "audio", src: a1, actions: [{ id: "act1", start: 0, end: 2 }] },
-          { id: "a2", type: "audio", src: a2, actions: [{ id: "act2", start: 3, end: 5 }] },
+          { id: "a1", type: "audio", src: a1, start: 0,
+        end: 2 },
+          { id: "a2", type: "audio", src: a2, start: 3,
+        end: 5 },
         ],
         durationInSeconds: 5,
       }],
@@ -586,7 +592,8 @@ describe("resolveSubtitles — additional", () => {
     const root: any = {
       children: [{
         type: "scene", name: "S", layout: "parallel",
-        children: [{ id: "a1", type: "audio", src: audioPath, actions: [{ id: "act1", start: 0, end: 2 }] }],
+        children: [{ id: "a1", type: "audio", src: audioPath, start: 0,
+        end: 2 }],
         durationInSeconds: 2,
       }],
     };

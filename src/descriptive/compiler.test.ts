@@ -132,7 +132,7 @@ export { BarChart } from "npm:recharts"`,
 });
 
 describe("compileDescriptiveRoot", () => {
-  it("compiles simple series into legacy root+actions", () => {
+  it("compiles simple series into flat start/end timing", () => {
     const compiled = compileDescriptiveRoot({
       width: 640,
       height: 480,
@@ -149,13 +149,13 @@ describe("compileDescriptiveRoot", () => {
     expect(compiled.children).toHaveLength(2);
 
     const first = compiled.children[0] as any;
-    expect(first.actions[0].start).toBe(0);
-    expect(first.actions[0].end).toBe(2);
+    expect(first.start).toBe(0);
+    expect(first.end).toBe(2);
 
     const second = compiled.children[1] as any;
-    expect(second.actions[0].startFrom).toBe(1);
-    expect(second.actions[0].endAt).toBe(4);
-    expect(second.actions[0].end).toBe(3);
+    expect(second.startFrom).toBe(1);
+    expect(second.endAt).toBe(4);
+    expect(second.end).toBe(3);
   });
 
   it("allows explicit start in parallel root", () => {
@@ -170,8 +170,8 @@ describe("compileDescriptiveRoot", () => {
     expect(compiled.isSeries).toBe(false);
     expect(compiled.durationInSeconds).toBe(3);
     const first = compiled.children[0] as any;
-    expect(first.actions[0].start).toBe(1);
-    expect(first.actions[0].end).toBe(3);
+    expect(first.start).toBe(1);
+    expect(first.end).toBe(3);
   });
 
   it("warns on duplicate ids", () => {
@@ -253,8 +253,8 @@ describe("compileDescriptiveRoot", () => {
 
     const includeWithSrc = withSrc.children[0] as any;
     expect(includeWithSrc.type).toBe("include");
-    expect(includeWithSrc.actions[0].start).toBe(0);
-    expect(includeWithSrc.actions[0].end).toBe(4);
+    expect(includeWithSrc.start).toBe(0);
+    expect(includeWithSrc.end).toBe(4);
 
     const withChildren = compileDescriptiveRoot({
       layout: "series",
@@ -273,7 +273,7 @@ describe("compileDescriptiveRoot", () => {
     const includeInline = withChildren.children[0] as any;
     expect(includeInline.type).toBe("include");
     expect(includeInline.children).toHaveLength(2);
-    expect(includeInline.actions[0].end).toBe(3);
+    expect(includeInline.end).toBe(3);
   });
 
   it("covers remaining types: effect (via effects:[]) and map", () => {
@@ -304,13 +304,13 @@ describe("compileDescriptiveRoot", () => {
     // effects:[] on image compiles into Effect wrapper stream
     const effect = compiled.children[0] as any;
     expect(effect.type).toBe("effect");
-    expect(effect.actions[0].start).toBe(0);
-    expect(effect.actions[0].end).toBe(2);
+    expect(effect.start).toBe(0);
+    expect(effect.end).toBe(2);
     expect(effect.children).toHaveLength(1);
 
     const map = compiled.children.find((c: any) => c.id === "map-1") as any;
     expect(map.type).toBe("map");
-    expect(map.actions[0].end).toBe(4);
+    expect(map.end).toBe(4);
     expect(map.waypoints).toHaveLength(2);
     expect(map.routeMarker).toBe("🚲");
     expect(map.travelMode).toBe("BICYCLING");
@@ -339,11 +339,11 @@ describe("compileDescriptiveRoot", () => {
     expect(fx.children[0].type).toBe("image");
     expect(fx.children[0].src).toBe("hero.jpg");
     // Effect action spans leaf duration
-    expect(fx.actions[0].start).toBe(0);
-    expect(fx.actions[0].end).toBe(3);
+    expect(fx.start).toBe(0);
+    expect(fx.end).toBe(3);
     // Inner leaf action is relative (start=0)
-    expect(fx.children[0].actions[0].start).toBe(0);
-    expect(fx.children[0].actions[0].end).toBe(3);
+    expect(fx.children[0].start).toBe(0);
+    expect(fx.children[0].end).toBe(3);
   });
 
   it("compiles leaf node with effects as object specs", () => {
@@ -371,11 +371,11 @@ describe("compileDescriptiveRoot", () => {
     expect(fx.animationTimingFunction).toBe("ease-out");
     expect(fx.animationIterationCount).toBe(2);
     // Outermost effect carries the absolute timing from parallel layout
-    expect(fx.actions[0].start).toBe(1);
-    expect(fx.actions[0].end).toBe(3);
+    expect(fx.start).toBe(1);
+    expect(fx.end).toBe(3);
     // Inner leaf timing is relative
-    expect(fx.children[0].actions[0].start).toBe(0);
-    expect(fx.children[0].actions[0].end).toBe(2);
+    expect(fx.children[0].start).toBe(0);
+    expect(fx.children[0].end).toBe(2);
   });
 
   it("compiles effects on container (parallel) nodes", () => {
@@ -471,9 +471,9 @@ describe("compileDescriptiveRoot", () => {
     expect(fx.animationTimingFunction).toBe("ease-out");
     expect(fx.animationIterationCount).toBe(3);
     // Effect duration from param overrides to 2s
-    expect(fx.actions[0].end - fx.actions[0].start).toBe(2);
+    expect(fx.end - fx.start).toBe(2);
     // Inner leaf still plays full 5s
-    expect(fx.children[0].actions[0].end - fx.children[0].actions[0].start).toBe(5);
+    expect(fx.children[0].end - fx.children[0].start).toBe(5);
   });
 
   it("compiles effect with comma-separated positional params (duration, timingFunction, iterationCount)", () => {
@@ -495,7 +495,7 @@ describe("compileDescriptiveRoot", () => {
     expect(fx.animation).toBe("fadeIn");
     expect(fx.animationTimingFunction).toBe("ease-in");
     expect(fx.animationIterationCount).toBe(3);
-    expect(fx.actions[0].end - fx.actions[0].start).toBe(2);
+    expect(fx.end - fx.start).toBe(2);
   });
 
   it("compiles effect with positional params — duration only", () => {
@@ -515,7 +515,7 @@ describe("compileDescriptiveRoot", () => {
     const fx = compiled.children[0] as any;
     expect(fx.type).toBe("effect");
     expect(fx.animation).toBe("fadeIn");
-    expect(fx.actions[0].end - fx.actions[0].start).toBe(1.5);
+    expect(fx.end - fx.start).toBe(1.5);
   });
 
   it("compiles effect with partial positional params — duration + timingFunction", () => {
@@ -536,7 +536,7 @@ describe("compileDescriptiveRoot", () => {
     expect(fx.animation).toBe("fadeIn");
     expect(fx.animationTimingFunction).toBe("ease-out");
     expect(fx.animationIterationCount).toBe(1);
-    expect(fx.actions[0].end - fx.actions[0].start).toBe(2.5);
+    expect(fx.end - fx.start).toBe(2.5);
   });
 
   it("supports deep nested layout containers across all modes", () => {
@@ -726,15 +726,15 @@ describe("compileDescriptiveRoot", () => {
     expect(rhythm.children).toHaveLength(4);
 
     // child[0] starts at beat 0.5, ends at beat 1.5 => duration 1
-    expect(rhythm.children[0].actions[0].start).toBe(0.5);
-    expect(rhythm.children[0].actions[0].end).toBe(1.5);
+    expect(rhythm.children[0].start).toBe(0.5);
+    expect(rhythm.children[0].end).toBe(1.5);
 
     // child[1] starts at beat 1.5, ends at beat 2.5 => duration 1
-    expect(rhythm.children[1].actions[0].start).toBe(1.5);
-    expect(rhythm.children[1].actions[0].end).toBe(2.5);
+    expect(rhythm.children[1].start).toBe(1.5);
+    expect(rhythm.children[1].end).toBe(2.5);
 
     // last child starts at last beat (3.5), extends by avg gap (1.0) => ends at 4.5
-    expect(rhythm.children[3].actions[0].end).toBe(4.5);
+    expect(rhythm.children[3].end).toBe(4.5);
     // rhythm duration = last spot + avg gap
     expect(rhythm.durationInSeconds).toBe(4.5);
   });
@@ -778,11 +778,11 @@ describe("compileDescriptiveRoot", () => {
     expect(bgm.type).toBe("audio");
     expect(bgm.volume).toBe(0.3);
     expect(bgm.foreground).toBe(false);
-    expect(bgm.actions[0].end).toBe(5);
+    expect(bgm.end).toBe(5);
 
     const sfx = compiled.children.find((c: any) => c.id === "sfx") as any;
-    expect(sfx.actions[0].start).toBe(2);
-    expect(sfx.actions[0].end).toBe(3);
+    expect(sfx.start).toBe(2);
+    expect(sfx.end).toBe(3);
   });
 
   it("compiles component node with props", () => {
@@ -801,7 +801,7 @@ describe("compileDescriptiveRoot", () => {
     const c = compiled.children[0] as any;
     expect(c.type).toBe("component");
     expect(c.jsx).toContain("AnimatedHeadline");
-    expect(c.actions[0].end).toBe(3);
+    expect(c.end).toBe(3);
   });
 
   it("compiles rhythm without children as audio leaf", () => {
@@ -817,7 +817,7 @@ describe("compileDescriptiveRoot", () => {
     expect(r.src).toBe("beat.mp3");
     expect(r.children).toEqual([]);
     // rhythm duration = last spot + avg gap = 2.5 + 2.0 = 4.5
-    expect(r.actions[0].end).toBeCloseTo(4.5);
+    expect(r.end).toBeCloseTo(4.5);
   });
 
   it("compiles include with src as leaf", () => {
@@ -831,7 +831,7 @@ describe("compileDescriptiveRoot", () => {
     const inc = compiled.children[0] as any;
     expect(inc.type).toBe("include");
     expect(inc.src).toBe("./child.json");
-    expect(inc.actions[0].end).toBe(3);
+    expect(inc.end).toBe(3);
   });
 
   it("compiles effects:[] with named params (duration, timingFunction, iterationCount)", () => {
@@ -865,10 +865,10 @@ describe("compileDescriptiveRoot", () => {
     });
 
     const img = compiled.children[0] as any;
-    expect(img.actions[0].end).toBe(3); // image default is 3s
+    expect(img.end).toBe(3); // image default is 3s
 
     const vid = compiled.children[1] as any;
-    expect(vid.actions[0].end).toBe(3); // video default is 3s
+    expect(vid.end).toBe(3); // video default is 3s
   });
 
   it("uses default duration when duration is missing", () => {
@@ -879,7 +879,7 @@ describe("compileDescriptiveRoot", () => {
       ],
     });
     const img = compiled.children[0] as any;
-    expect(img.actions[0].end).toBe(3); // image default is 3s
+    expect(img.end).toBe(3); // image default is 3s
   });
 
   it("preserves root-level instruction and stylesheet", () => {
@@ -916,7 +916,7 @@ describe("compileDescriptiveRoot", () => {
     expect(m.type).toBe("map");
     expect(m.waypoints).toHaveLength(2);
     expect(m.travelMode).toBe("DRIVING");
-    expect(m.actions[0].end).toBe(5);
+    expect(m.end).toBe(5);
   });
 
   it("filters invisible children", () => {

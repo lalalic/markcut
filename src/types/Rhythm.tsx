@@ -21,38 +21,30 @@ function resolveAudioSrc(src: string): string {
 export function RhythmLeaf({ stream }: { stream: Rhythm }) {
   const { fps } = useVideoConfig();
   const environment = useRemotionEnvironment();
-  const totalDur = stream.durationInSeconds ?? stream.actions[0]?.end ?? 1;
+  const start = stream.start ?? 0;
+  const end = stream.end ?? start + (stream.duration ?? 1);
+  const totalDur = stream.durationInSeconds ?? end;
   useFrameEvents(stream.on, Math.max(1, Math.floor(totalDur * fps)));
 
   if (!stream.src || environment.isStudio) return null;
 
   const resolvedSrc = resolveAudioSrc(stream.src);
-
+  const volume = stream.volume ?? 1;
   return (
-    <>
-      {stream.actions.map((a) => {
-        const start = a.start ?? 0;
-        const end = a.end ?? start + 1;
-        const volume = a.volume ?? stream.volume ?? 1;
-        return (
-          <Sequence
-            key={a.id}
-            name={stream.src ?? "rhythm"}
-            durationInFrames={Math.max(1, Math.floor(fps * (end - start)))}
-            from={Math.floor(fps * start)}
-            layout="none"
-            showInTimeline={false}
-          >
-            <RemotionAudio
-              src={resolvedSrc}
-              muted={volume === 0}
-              volume={volume}
-              loop
-              showInTimeline={false}
-            />
-          </Sequence>
-        );
-      })}
-    </>
+    <Sequence
+      name={stream.src ?? "rhythm"}
+      durationInFrames={Math.max(1, Math.floor(fps * (end - start)))}
+      from={Math.floor(fps * start)}
+      layout="none"
+      showInTimeline={false}
+    >
+      <RemotionAudio
+        src={resolvedSrc}
+        muted={volume === 0}
+        volume={volume}
+        loop
+        showInTimeline={false}
+      />
+    </Sequence>
   );
 }

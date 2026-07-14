@@ -41,7 +41,8 @@ describe("component node", () => {
     const c = component.parse({
       type: "component",
       jsx: "<BarChart data={[{value: 1}]} />",
-      actions: [{ start: 0, end: 2 }],
+      start: 0,
+      end: 2,
     });
     expect(c.type).toBe("component");
     expect(c.jsx).toContain("BarChart");
@@ -52,7 +53,8 @@ describe("component node", () => {
       type: "component",
       jsx: "<Hello name={who} />",
       data: { who: "World" },
-      actions: [{ start: 0, end: 1 }],
+      start: 0,
+      end: 1,
     });
     expect(c.data).toEqual({ who: "World" });
   });
@@ -61,7 +63,8 @@ describe("component node", () => {
     expect(() =>
       component.parse({
         type: "component",
-        actions: [{ start: 0, end: 1 }],
+        start: 0,
+        end: 1,
       }),
     ).toThrow();
   });

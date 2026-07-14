@@ -13,58 +13,51 @@ import { FrameSyncStyle } from "./FrameSyncStyle";
 export function VideoLeaf({ stream }: { stream: Video }) {
   const { fps } = useVideoConfig();
   const audio = React.useContext(AudioContext);
-  const totalDur = stream.durationInSeconds ?? stream.actions[0]?.end ?? 1;
+  const start = stream.start ?? 0;
+  const end = stream.end ?? start + (stream.duration ?? 1);
+  const totalDur = stream.durationInSeconds ?? end;
   useFrameEvents(stream.on, Math.max(1, Math.floor(totalDur * fps)));
   if (!stream.src) return null;
   const resolvedSrc = resolveVideoSrc(stream.src);
 
+  const startFrom = stream.startFrom ?? 0;
+  const endAt = stream.endAt ?? totalDur;
+  const volume = stream.volume ?? 1;
+  const playbackRate = stream.loop ? 1 : Math.min(1, toPlaybackRate((endAt - startFrom) / (end - start)));
+  const streamStyle = cssJS(stream.style);
+  const hasAnimation = "animation" in streamStyle;
   return (
-    <>
-      {stream.actions.map((a) => {
-        const start = a.start ?? 0;
-        const end = a.end ?? start + 1;
-        const startFrom = a.startFrom ?? 0;
-        const endAt = a.endAt ?? stream.durationInSeconds ?? end - start;
-        const volume = a.volume ?? stream.volume ?? 1;
-        const playbackRate = a.loop ? 1 : Math.min(1, toPlaybackRate((endAt - startFrom) / (end - start)));
-        const actionStyle = cssJS(a.style);
-        const hasAnimation = "animation" in actionStyle;
-        return (
-          <Sequence
-            key={a.id}
-            durationInFrames={Math.max(1, Math.floor(fps * (end - start)))}
-            from={Math.floor(fps * start)}
-            layout="none"
+    <Sequence
+      durationInFrames={Math.max(1, Math.floor(fps * (end - start)))}
+      from={Math.floor(fps * start)}
+      layout="none"
+      showInTimeline={false}
+    >
+      {hasAnimation ? (
+        <FrameSyncStyle style={streamStyle}>
+          <OffthreadVideo
+            src={resolvedSrc}
+            startFrom={Math.floor(startFrom * fps)}
+            endAt={Math.floor(startFrom * fps) + Math.floor(((endAt - startFrom) * fps) / playbackRate)}
+            muted={volume === 0 || !!audio?.foreground}
+            volume={volume}
+            playbackRate={playbackRate}
             showInTimeline={false}
-          >
-            {hasAnimation ? (
-              <FrameSyncStyle style={actionStyle}>
-                <OffthreadVideo
-                  src={resolvedSrc}
-                  startFrom={Math.floor(startFrom * fps)}
-                  endAt={Math.floor(startFrom * fps) + Math.floor(((endAt - startFrom) * fps) / playbackRate)}
-                  muted={volume === 0 || !!audio?.foreground}
-                  volume={volume}
-                  playbackRate={playbackRate}
-                  showInTimeline={false}
-                  style={{ width: "100%", height: "100%" }}
-                />
-              </FrameSyncStyle>
-            ) : (
-              <OffthreadVideo
-                src={resolvedSrc}
-                startFrom={Math.floor(startFrom * fps)}
-                endAt={Math.floor(startFrom * fps) + Math.floor(((endAt - startFrom) * fps) / playbackRate)}
-                muted={volume === 0 || !!audio?.foreground}
-                volume={volume}
-                playbackRate={playbackRate}
-                showInTimeline={false}
-                style={{ width: "100%", height: "100%", ...actionStyle }}
-              />
-            )}
-          </Sequence>
-        );
-      })}
-    </>
+            style={{ width: "100%", height: "100%" }}
+          />
+        </FrameSyncStyle>
+      ) : (
+        <OffthreadVideo
+          src={resolvedSrc}
+          startFrom={Math.floor(startFrom * fps)}
+          endAt={Math.floor(startFrom * fps) + Math.floor(((endAt - startFrom) * fps) / playbackRate)}
+          muted={volume === 0 || !!audio?.foreground}
+          volume={volume}
+          playbackRate={playbackRate}
+          showInTimeline={false}
+          style={{ width: "100%", height: "100%", ...streamStyle }}
+        />
+      )}
+    </Sequence>
   );
 }

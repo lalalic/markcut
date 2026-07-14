@@ -18,13 +18,15 @@
           "type": "image",
           "src": "https://picsum.photos/seed/subv-intro/640/480",
           "fit": "cover",
-          "actions": [{ "start": 0, "end": 2 }]
+          "start": 0,
+          "end": 2
         },
         {
           "id": "title-intro",
           "type": "component",
           "jsx": "<div style={{background:'#667eea',color:'white',padding:'30px',borderRadius:'12px',textAlign:'center'}}><h2 style={{margin:0,fontSize:'28px'}}>Main Video</h2></div>",
-          "actions": [{ "start": 0, "end": 2 }]
+          "start": 0,
+          "end": 2
         }
       ]
     },
@@ -32,8 +34,9 @@
       "id": "subvideo-chapter",
       "type": "include",
       "name": "Embedded-Reel",
-      "src": "data:application/json;base64,eyJpZCI6InJvb3QiLCJ0eXBlIjoicm9vdCIsIndpZHRoIjo2NDAsImhlaWdodCI6NDgwLCJmcHMiOjMwLCJpc1NlcmllcyI6dHJ1ZSwidHJhbnNpdGlvbiI6ImZhZGUiLCJ0cmFuc2l0aW9uVGltZSI6MC4zLCJjaGlsZHJlbiI6W3siaWQiOiJzdWItc2NlbmUtMSIsInR5cGUiOiJmb2xkZXIiLCJpc1NlcmllcyI6ZmFsc2UsImNoaWxkcmVuIjpbeyJpZCI6InN1Yi1iZy0xIiwidHlwZSI6ImltYWdlIiwic3JjIjoiaHR0cHM6Ly9waWNzdW0ucGhvdG9zL3NlZWQvc3Vidi1pbm5lcjEvNjQwLzQ4MCIsImZpdCI6ImNvdmVyIiwiYWN0aW9ucyI6W3sic3RhcnQiOjAsImVuZCI6Mn1dfV19LHsiaWQiOiJzdWItc2NlbmUtMiIsInR5cGUiOiJmb2xkZXIiLCJpc1NlcmllcyI6ZmFsc2UsImNoaWxkcmVuIjpbeyJpZCI6InN1Yi1iZy0yIiwidHlwZSI6ImltYWdlIiwic3JjIjoiaHR0cHM6Ly9waWNzdW0ucGhvdG9zL3NlZWQvc3Vidi1pbm5lcjIvNjQwLzQ4MCIsImZpdCI6ImNvdmVyIiwiYWN0aW9ucyI6W3sic3RhcnQiOjAsImVuZCI6Mn1dfV19XX0=",
-      "actions": [{ "start": 0, "end": 4 }]
+      "src": "data:application/json;base64,eyJpZCI6InJvb3QiLCJ0eXBlIjoicm9vdCIsIndpZHRoIjo2NDAsImhlaWdodCI6NDgwLCJmcHMiOjMwLCJpc1NlcmllcyI6dHJ1ZSwidHJhbnNpdGlvbiI6ImZhZGUiLCJ0cmFuc2l0aW9uVGltZSI6MC4zLCJjaGlsZHJlbiI6W3siaWQiOiJzdWItc2NlbmUtMSIsInR5cGUiOiJmb2xkZXIiLCJpc1NlcmllcyI6ZmFsc2UsImNoaWxkcmVuIjpbeyJpZCI6InN1Yi1iZy0xIiwidHlwZSI6ImltYWdlIiwic3JjIjoiaHR0cHM6Ly9waWNzdW0ucGhvdG9zL3NlZWQvc3Vidi1pbm5lcjEvNjQwLzQ4MCIsImZpdCI6ImNvdmVyIiwic3RhcnQiOjAsImVuZCI6Mn1dfSx7ImlkIjoic3ViLXNjZW5lLTIiLCJ0eXBlIjoiZm9sZGVyIiwiaXNTZXJpZXMiOmZhbHNlLCJjaGlsZHJlbiI6W3siaWQiOiJzdWItYmctMiIsInR5cGUiOiJpbWFnZSIsInNyYyI6Imh0dHBzOi8vcGljc3VtLnBob3Rvcy9zZWVkL3N1YnYtaW5uZXIyLzY0MC80ODAiLCJmaXQiOiJjb3ZlciIsInN0YXJ0IjowLCJlbmQiOjJ9XX1dfQ==",
+      "start": 0,
+      "end": 4
     },
     {
       "id": "outro",
@@ -45,13 +48,15 @@
           "type": "image",
           "src": "https://picsum.photos/seed/subv-outro/640/480",
           "fit": "cover",
-          "actions": [{ "start": 0, "end": 2 }]
+          "start": 0,
+          "end": 2
         },
         {
           "id": "title-outro",
           "type": "component",
           "jsx": "<div style={{background:'#764ba2',color:'white',padding:'30px',borderRadius:'12px',textAlign:'center'}}><h2 style={{margin:0,fontSize:'28px'}}>Back to Main</h2></div>",
-          "actions": [{ "start": 0, "end": 2 }]
+          "start": 0,
+          "end": 2
         }
       ]
     }

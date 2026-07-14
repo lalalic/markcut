@@ -383,10 +383,11 @@ export async function resolveSubtitles(
   /**
    * Walk an array of sibling nodes, tracking cumulative offset for series layouts.
    *
-   * In the compiled stream tree, container nodes (Folder/Scene) don't carry `actions`
-   * — their position on the timeline is implicit in the `<Series>`/`<TransitionSeries>`
-   * renderer which plays each child sequentially based on `durationInSeconds`.
-   * This function replicates that logic to compute absolute audio offsets.
+   * In the compiled stream tree, container nodes (Folder/Scene) don't carry leaf
+   * timing (start/end) — their position on the timeline is implicit in the
+   * `<Series>`/`<TransitionSeries>` renderer which plays each child sequentially
+   * based on `durationInSeconds`. This function replicates that logic to compute
+   * absolute audio offsets.
    */
   function walkSiblings(
     nodes: any[],
@@ -404,9 +405,9 @@ export async function resolveSubtitles(
       // In a series, each child starts after all previous siblings' durations.
       // In parallel, all children share the parent offset.
       const nodeStart = parentIsSeries ? seriesOffset : parentOffset;
-      // Leaf nodes (video/audio/image/component) carry an action start offset
-      // relative to the container start (e.g., parallel layout with staggered start).
-      const actionStart = node.actions?.[0]?.start ?? 0;
+      // Leaf nodes carry a start offset relative to the container start
+      // (e.g., parallel layout with staggered start) directly on the base field.
+      const actionStart = node.start ?? 0;
       const effectiveOffset = nodeStart + actionStart;
 
       if (node.type === "audio" && node.src) {
@@ -449,7 +450,7 @@ export async function resolveSubtitles(
     }
   }
 
-  // Walk the compiled tree (with actions) for correct absolute offsets;
+  // Walk the compiled tree (with base timing) for correct absolute offsets;
   // fall back to the descriptive tree if no compiled tree provided.
   const treeToWalk = options.compiled ?? (clone as any);
   walkSiblings(

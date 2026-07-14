@@ -189,19 +189,13 @@ function wrapWithEffects(node2, result, parentKind) {
   if (!rawEffects || rawEffects.length === 0) return result;
   const effects = rawEffects.map(normalizeEffectSpec);
   const innerStream = result.stream;
-  const innerActions = innerStream.actions ?? [];
-  const firstAction = innerActions[0] ?? {};
-  const absStart = firstAction.start ?? 0;
-  const absEnd = firstAction.end ?? result.duration;
+  const absStart = innerStream.start ?? 0;
+  const absEnd = innerStream.end ?? result.duration;
   const duration = absEnd - absStart;
   const resetStream = {
     ...innerStream,
-    actions: [{
-      ...firstAction,
-      id: uid(),
-      start: 0,
-      end: duration
-    }],
+    start: 0,
+    end: duration,
     durationInSeconds: duration
   };
   let currentStream = resetStream;
@@ -220,11 +214,8 @@ function wrapWithEffects(node2, result, parentKind) {
       animationIterationCount: spec.animationIterationCount ?? 1,
       customKeyframes: spec.customKeyframes,
       children: [currentStream],
-      actions: [{
-        id: uid(),
-        start: effStart,
-        end: effEnd
-      }],
+      start: effStart,
+      end: effEnd,
       visible: true,
       ...pickOn(node2)
     };
@@ -241,17 +232,12 @@ function compileLeaf(node2, ctx, parentKind) {
     style: node2.style,
     visible: node2.visible ?? true,
     isBackground: node2.isBackground,
-    durationInSeconds: end,
-    ...pickOn(node2)
-  };
-  const action = {
-    id: uid(),
     start,
     end,
     startFrom: node2.type === "video" || node2.type === "audio" ? node2.startFrom : void 0,
     endAt: node2.type === "video" || node2.type === "audio" ? node2.endAt : void 0,
-    loop: node2.type === "audio" ? node2.loop : void 0,
-    volume: node2.type === "video" || node2.type === "audio" || node2.type === "rhythm" ? node2.volume : void 0
+    durationInSeconds: end,
+    ...pickOn(node2)
   };
   switch (node2.type) {
     case "video": {
@@ -262,8 +248,7 @@ function compileLeaf(node2, ctx, parentKind) {
         volume: node2.volume ?? 1,
         playbackRate: node2.playbackRate,
         width: node2.width ?? 1080,
-        height: node2.height ?? 1920,
-        actions: [action]
+        height: node2.height ?? 1920
       };
       return { stream, duration: end };
     }
@@ -274,7 +259,7 @@ function compileLeaf(node2, ctx, parentKind) {
         src: node2.src,
         volume: node2.volume ?? 1,
         foreground: node2.foreground,
-        actions: [action]
+        loop: node2.loop
       };
       return { stream, duration: end };
     }
@@ -283,8 +268,7 @@ function compileLeaf(node2, ctx, parentKind) {
         ...base,
         type: "image",
         src: node2.src,
-        fit: node2.fit ?? "contain",
-        actions: [action]
+        fit: node2.fit ?? "contain"
       };
       return { stream, duration: end };
     }
@@ -312,8 +296,7 @@ function compileLeaf(node2, ctx, parentKind) {
         ...base,
         type: "component",
         jsx: node2.jsx,
-        data: Object.keys(bindings).length ? bindings : void 0,
-        actions: [action]
+        data: Object.keys(bindings).length ? bindings : void 0
       };
       return { stream, duration: end };
     }
@@ -324,8 +307,7 @@ function compileLeaf(node2, ctx, parentKind) {
         src: node2.src,
         volume: node2.volume ?? 1,
         spots: node2.spots,
-        children: [],
-        actions: [action]
+        children: []
       };
       return { stream, duration: end };
     }
@@ -340,8 +322,7 @@ function compileLeaf(node2, ctx, parentKind) {
         center: node2.center,
         mapType: node2.mapType ?? "roadmap",
         travelMode: node2.travelMode ?? "DRIVING",
-        routeMarker: node2.routeMarker ?? "\u{1F697}",
-        actions: [action]
+        routeMarker: node2.routeMarker ?? "\u{1F697}"
       };
       return { stream, duration: end };
     }
@@ -397,6 +378,7 @@ function compileScene(node2, ctx, parentKind) {
       type: "folder",
       visible: true,
       isSeries: true,
+      start: 0,
       transition: sceneKind === "transitionSeries" ? resolved.name : void 0,
       transitionTime: sceneKind === "transitionSeries" ? resolved.time : 0.5,
       children: compiledChildren.map((c) => c.stream),
@@ -416,6 +398,7 @@ function compileScene(node2, ctx, parentKind) {
     style: node2.style,
     visible: node2.visible ?? true,
     isBackground: node2.isBackground,
+    start,
     children: sceneChildren,
     durationInSeconds: end,
     ...pickOn(node2)
@@ -447,13 +430,8 @@ function compileInclude(node2, ctx, parentKind) {
     src: node2.src,
     volume: node2.volume ?? 1,
     children: compiledChildren.map((c) => c.stream),
-    actions: [
-      {
-        id: uid(),
-        start,
-        end
-      }
-    ],
+    start,
+    end,
     durationInSeconds: end,
     ...pickOn(node2)
   };
@@ -489,14 +467,8 @@ function compileRhythm(node2, ctx, parentKind) {
     volume: node2.volume ?? 1,
     spots: node2.spots,
     children: compiledChildren,
-    actions: [
-      {
-        id: uid(),
-        start,
-        end,
-        volume: node2.volume
-      }
-    ],
+    start,
+    end,
     durationInSeconds: end,
     ...pickOn(node2)
   };
@@ -514,6 +486,7 @@ function compileContainer(node2, ctx, parentKind) {
     style: node2.style,
     visible: node2.visible ?? true,
     isBackground: node2.isBackground,
+    start: 0,
     isSeries: node2.type !== "parallel",
     transition: node2.type === "transitionSeries" ? resolved.name : void 0,
     transitionTime: node2.type === "transitionSeries" ? resolved.time : 0.5,
@@ -992,10 +965,21 @@ import { join, dirname as dirname2, resolve as resolvePath, relative } from "nod
 import { execSync } from "node:child_process";
 import { existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
-var DEFAULT_TTS_CLI = process.env.MARKCUT_TTS_CLI || 'uvx edge-tts --voice "en-US-GuyNeural" --text "{input}" --write-media "{output}"';
+
+// src/config.mjs
+var MAX_IMAGE_DIMENSION = Number(process.env.MARKCUT_MAX_IMAGE_DIMENSION) || 384;
+var MAX_VIDEO_DURATION = Number(process.env.MARKCUT_MAX_VIDEO_DURATION) || 60;
+var MAX_VIDEO_DIMENSION = Number(process.env.MARKCUT_MAX_VIDEO_DIMENSION) || 360;
+var DEFAULT_ITT_CLI = process.env.MARKCUT_ITT_CLI || 'uvx --from mlx-vlm mlx_vlm.generate --model mlx-community/MiniCPM-V-4.6-bf16 --max-tokens 2048 --prompt "{prompt}" --image {input} --temperature 0.0 --thinking-mode disabled';
+var DEFAULT_VTT_SAMPLE_INTERVAL = Number(process.env.MARKCUT_VTT_SAMPLE_INTERVAL) || 5;
+var DEFAULT_VTT_CLI = process.env.MARKCUT_VTT_CLI || `uvx --from mlx-vlm mlx_vlm.generate --model mlx-community/MiniCPM-V-4.6-bf16 --max-tokens 2048 --prompt "{prompt}" --video {input} --temperature 0.0 --processor-kwargs '{"max_num_frames": 32, "stack_frames": 1, "max_slice_nums": 1, "use_image_id": false}'`;
 var DEFAULT_STT_CLI = process.env.MARKCUT_STT_CLI || 'uvx --from openai-whisper whisper "{input}" --output_format vtt --output_dir "{output}"';
-var DEFAULT_TTI_CLI = 'uvx --from mflux mflux-generate-flux2 --model flux2-klein-4b --steps 5 --prompt "{input}" --output "{output}"';
-var DEFAULT_TTV_CLI = "";
+var DEFAULT_TTS_CLI = process.env.MARKCUT_TTS_CLI || 'uvx edge-tts --voice "en-US-GuyNeural" --text "{input}" --write-media "{output}"';
+var DEFAULT_AGENT_CLI = process.env.MARKCUT_AGENT_CLI || "npx pi -p {prompt}";
+var DEFAULT_TTI_CLI = process.env.MARKCUT_TTI_CLI || 'uvx --from mflux mflux-generate-flux2 --model flux2-klein-4b --steps 5 --prompt "{input}" --output "{output}"';
+var DEFAULT_TTV_CLI = process.env.MARKCUT_TTV_CLI || "";
+
+// src/render/cli-tools.ts
 function substituteCli(template, input, output) {
   const safeOutput = output;
   let safeInput;
@@ -10799,7 +10783,7 @@ async function resolveSubtitles(root, options) {
     for (const node2 of nodes) {
       if (node2.isBackground) continue;
       const nodeStart = parentIsSeries ? seriesOffset : parentOffset;
-      const actionStart = node2.actions?.[0]?.start ?? 0;
+      const actionStart = node2.start ?? 0;
       const effectiveOffset = nodeStart + actionStart;
       if (node2.type === "audio" && node2.src) {
         clips.push({ audioSrc: node2.src, offset: effectiveOffset });

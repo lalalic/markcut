@@ -23,7 +23,8 @@
           "type": "image",
           "src": "https://picsum.photos/seed/sub1/640/480",
           "fit": "cover",
-          "actions": [{ "start": 0, "end": 4 }]
+          "start": 0,
+          "end": 4
         }
       ]
     },
@@ -37,7 +38,8 @@
           "type": "image",
           "src": "https://picsum.photos/seed/sub2/640/480",
           "fit": "cover",
-          "actions": [{ "start": 0, "end": 4 }]
+          "start": 0,
+          "end": 4
         }
       ]
     },
@@ -51,7 +53,8 @@
           "type": "image",
           "src": "https://picsum.photos/seed/sub3/640/480",
           "fit": "cover",
-          "actions": [{ "start": 0, "end": 5 }]
+          "start": 0,
+          "end": 5
         }
       ]
     }

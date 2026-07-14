@@ -74,31 +74,25 @@ export function ComponentLeaf({ stream }: { stream: Component }) {
 
   if (!stream.jsx) return null;
 
+  const start = stream.start ?? 0;
+  const end = stream.end ?? start + (stream.duration ?? 1);
+  const durFrames = Math.max(1, Math.floor(fps * (end - start)));
+
   return (
-    <>
-      {stream.actions.map((a) => {
-        const start = a.start ?? 0;
-        const end = a.end ?? start + 1;
-        const durFrames = Math.max(1, Math.floor(fps * (end - start)));
-        return (
-          <Sequence
-            key={a.id}
-            durationInFrames={durFrames}
-            from={Math.floor(fps * start)}
-            layout="none"
-          >
-            <EventAwareComponent
-              jsx={stream.jsx}
-              components={components}
-              data={bindings}
-              action={a}
-              durFrames={durFrames}
-              on={stream.on}
-            />
-          </Sequence>
-        );
-      })}
-    </>
+    <Sequence
+      durationInFrames={durFrames}
+      from={Math.floor(fps * start)}
+      layout="none"
+    >
+      <EventAwareComponent
+        jsx={stream.jsx}
+        components={components}
+        data={bindings}
+        action={{ start, end }}
+        durFrames={durFrames}
+        on={stream.on}
+      />
+    </Sequence>
   );
 }
 

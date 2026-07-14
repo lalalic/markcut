@@ -177,7 +177,7 @@ The tree description walks the JSON recursively, showing:
 - **Nesting depth** via indentation
 - **Type** and **id/name** of each node
 - **Key fields** (dimensions, fps, theme, series/parallel, transitions)
-- **Timing** from actions (`[startÔåÆend]`)
+- **Timing** from leaf span (`[start→end]`)
 - **isBackground** flag (`[bg]`)
 - **Component props** and node-specific fields (fontSize, fit, style, volume, etc.)
 

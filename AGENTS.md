@@ -107,22 +107,22 @@ The tree is validated by Zod and rendered by Remotion via recursive React compon
 | **Series** (`isSeries:true`) | Children play sequentially. Optional `transition` (fade/slide/wipe/flip/clockWipe) + `transitionTime` (default 0.5s). |
 | **Parallel** (`isSeries:false`) | Children play simultaneously. Duration = max child duration. |
 | **Background** (`isBackground:true`) | Loops for parent duration. Excluded from duration calculation. |
-| **Actions** | Every leaf has `actions[{start, end, startFrom?, endAt?, loop?, volume?, style?}]` — seconds relative to parent. |
+| **Timing** | Every leaf carries base fields `start`/`end` (seconds, relative to parent) + optional `startFrom`/`endAt` (source trim) + `duration` (convenience). `end` is the source of truth; `duration` normalizes to `end = start + duration` when `end` is absent. Inside series parents `start` is 0 (positioning is implicit). |
 | **Scene** (`type:"scene"`) | UI storyboard card; engine treats as folder. Has `name` + `description` + `script`. |
 
 ### Duration Calculation
 
 Computed by `getDurationInSeconds()` in `src/utils/index.ts`:
-- **Leaf nodes**: duration = last action's `end` value
+- **Leaf nodes**: duration = `leafEnd(stream)` = `end ?? (start + duration)` (single deterministic read; `start`/`end`/`duration` live on the base node)
 - **Series**: sum of children durations minus transition overlaps
 - **Parallel**: max of children durations
 - **Background children**: excluded from calculation
-- **Include with `src`**: treated as leaf (duration from action end)
+- **Include with `src`**: treated as leaf (duration from base `end`)
 - Sets `durationInSeconds` on every node as a side effect
 
 ### 12 Stream Types
 
-All types share base fields from `BaseShape`: `id`, `name`, `title`, `description`, `script`, `src`, `style`, `visible`, `isBackground`, `durationInSeconds`.
+All types share base fields from `BaseShape`: `id`, `name`, `title`, `description`, `script`, `src`, `style`, `visible`, `isBackground`, `start`, `end`, `duration`, `startFrom`, `endAt`, `durationInSeconds`.
 
 | Type | Purpose | Key Fields |
 |------|---------|------------|
@@ -130,8 +130,8 @@ All types share base fields from `BaseShape`: `id`, `name`, `title`, `descriptio
 | `folder` | Group children | `isSeries`, `transition`, `children[]` |
 | `scene` | Storyboard node (alias for folder) | `name`, `description`, `script`, `children[]` |
 | `image` | Still photo | `src`, `fit` (contain/cover/fill) |
-| `video` | Video clip | `src`, `volume`, `playbackRate` |
-| `audio` | Soundtrack/SFX | `src`, `volume`, `foreground` (ducks parent) |
+| `video` | Video clip | `src`, `volume`, `playbackRate`, `loop` |
+| `audio` | Soundtrack/SFX | `src`, `volume`, `foreground` (ducks parent), `loop` |
 | `subtitle` | Text overlay | `src` (text/VTT) or `cues[]`, `fontSize`, `style` |
 | `component` | React component | `componentName`, `props`, `src` (remote ESM) |
 | `effect` | CSS animation wrapper | `animation`, `customKeyframes`, `children[]` |
@@ -155,7 +155,7 @@ All types share base fields from `BaseShape`: `id`, `name`, `title`, `descriptio
 ### Video.tsx — startFrom/endAt Trimming
 
 - Uses Remotion `<OffthreadVideo>` for CPU-efficient video decoding
-- `startFrom` / `endAt` on actions trim the source video (in seconds)
+- `startFrom` / `endAt` on the base node trim the source video (in seconds)
 - `playbackRate` is capped at 1 (`Math.min(1, ...)`) so source longer than timeline plays at normal speed and is truncated by the Sequence
 - **Critical formula**: `OffthreadVideo endAt = startFrom_frames + ((endAt_source - startFrom_source) * fps / playbackRate)`
   This sets `endAt` beyond the actual source end when `playbackRate < 1`, which prevents Remotion from rendering blank frames before the Sequence ends.
@@ -235,13 +235,13 @@ npx vitest run tests/render.test.ts -t "Test Name"  # single test
 ## Known Issues & Gotchas
 
 1. **TransitionSeries + isBackground**: `TransitionSeries` from `@remotion/transitions` rejects non-Sequence/Transition children. Don't mix `isBackground:true` children with `isSeries:true, transition:"..."` at the same level.
-2. **Subvideo internal actions**: Should use `start:0` when placed in a series parent (series handles positioning).
-3. **Video endAt formula**: Must be `startFrom_frames + ((endAt_source - startFrom_source) * fps / playbackRate)` — changing to `endAt_source * fps` breaks slow-motion playback.
-4. **`signalstats` ffmpeg filter**: Doesn't output YAVG on all systems; use file size as proxy for visual content.
-5. **Asset paths**: Local files are resolved via `staticFile()` — files go in `public/` and are referenced without the `public/` prefix.
-6. **Map rendering**: Depends on external tile availability; may produce blank frames offline.
-7. **CLI md render needs three things preview gets for free**: (a) `parseMarkdownVariants(raw)` (returns `{base, variants}`) — `parseMarkdownDescriptive` returns the root directly; (b) bundling the ` ```js imports ``` ` block via `bundleFromEntries` and setting `root.imports` (otherwise jsx components are unregistered → slides render as unstyled black frames); (c) staging `.markcut/` assets into `public/.render-assets/` and rewriting srcs to relative paths (remotion render only serves its publicDir). All three live in `src/render/cli.mjs`; the import-map shim for shared react/remotion instances is `src/utils/component-import-map.ts` (must stay in sync with `player/browser.tsx` + `bundler.mjs getSharedExternals`).
-8. **Publishing**: verify `npx @lalalic/markcut render <md>` from a clean temp dir before/after publish — v1.1.1 shipped with cli.mjs/pipeline.mjs out of sync and md rendering was completely broken. Also beware stale npx caches (`~/.npm/_npx`) silently running old code.
+2. **Video endAt formula**: Must be `startFrom_frames + ((endAt_source - startFrom_source) * fps / playbackRate)` — changing to `endAt_source * fps` breaks slow-motion playback.
+3. **`signalstats` ffmpeg filter**: Doesn't output YAVG on all systems; use file size as proxy for visual content.
+4. **Asset paths**: Local files are resolved via `staticFile()` — files go in `public/` and are referenced without the `public/` prefix.
+5. **Map rendering**: Depends on external tile availability; may produce blank frames offline.
+6. **CLI md render needs three things preview gets for free**: (a) `parseMarkdownVariants(raw)` (returns `{base, variants}`) — `parseMarkdownDescriptive` returns the root directly; (b) bundling the ` ```js imports ``` ` block via `bundleFromEntries` and setting `root.imports` (otherwise jsx components are unregistered → slides render as unstyled black frames); (c) staging `.markcut/` assets into `public/.render-assets/` and rewriting srcs to relative paths (remotion render only serves its publicDir). All three live in `src/render/cli.mjs`; the import-map shim for shared react/remotion instances is `src/utils/component-import-map.ts` (must stay in sync with `player/browser.tsx` + `bundler.mjs getSharedExternals`).
+7. **Publishing**: verify `npx @lalalic/markcut render <md>` from a clean temp dir before/after publish — v1.1.1 shipped with cli.mjs/pipeline.mjs out of sync and md rendering was completely broken. Also beware stale npx caches (`~/.npm/_npx`) silently running old code.
+8. **Clean break from `actions[]`**: leaf timing is now flat base fields (`start`/`end`/`duration`/`startFrom`/`endAt`). Old compiled JSON carrying `actions:[{...}]` no longer parses into a duration — re-compile from markdown/descriptive JSON, or migrate `actions[0]` → flat fields (drop `id`/`volume`/`style`/`effectId`; keep `start`/`end`/`startFrom`/`endAt`/`loop`).
 
 ## 3-Level Authoring Workflow (see SKILL.md)
 

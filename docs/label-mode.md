@@ -36,7 +36,7 @@ Labels are saved to the source file.
             "id": "scene-1-media",
             "type": "image",
             "src": "/media/photo.jpg",
-            "actions": [{ "start": 0, "end": 5 }],
+            "start": 0, "end": 5,
             "description": "Best group shot from the campfire"
           }
         ]
@@ -49,7 +49,7 @@ Labels are saved to the source file.
             "id": "scene-2-media",
             "type": "video",
             "src": "/media/clip.mp4",
-            "actions": [{ "start": 0, "end": 5 }],
+            "start": 0, "end": 5,
             "description": "Sunset timelapse — use for intro"
           }
         ]

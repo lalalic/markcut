@@ -57,11 +57,12 @@ export function walkDown<T extends StreamNode>(
  * Compute duration of a stream subtree, in seconds.
  *
  *  - rhythm streams use their pre-set durationInSeconds (set by host)
- *  - leaf actions use action.end as default
+ *  - leaf duration uses base `end` (or `start + duration`) via leafEnd()
  *  - series sums children, subtracting transition overlaps
  *  - sequence (parallel) takes max child duration
  *  - background children do not contribute
- *  - actions[].streamRef is unsupported in lite (no template instancing)
+ *  - leaf duration uses base `end` (or `start + duration`) via leafEnd()
+ *  - streamRef/template instancing is unsupported in lite
  */
 export interface DurationStream extends StreamNode {
   type?: string;
@@ -70,8 +71,22 @@ export interface DurationStream extends StreamNode {
   transition?: string;
   transitionTime?: number;
   durationInSeconds?: number;
-  actions?: Array<{ start?: number; end?: number; startFrom?: number; endAt?: number }>;
+  start?: number;
+  end?: number;
+  duration?: number;
   children?: DurationStream[];
+}
+
+/**
+ * Resolve a leaf node's effective end time from its base timing fields.
+ * `end` is the source of truth; `duration` is a convenience that normalizes
+ * to `start + duration` when `end` is absent. Returns 0 when neither is set.
+ */
+export function leafEnd(stream: { start?: number; end?: number; duration?: number }): number {
+  if (typeof stream.end === "number") return stream.end;
+  const s = stream.start ?? 0;
+  if (typeof stream.duration === "number") return s + stream.duration;
+  return 0;
 }
 
 export function getDurationInSeconds(stream: DurationStream, update = true): number {
@@ -81,13 +96,12 @@ export function getDurationInSeconds(stream: DurationStream, update = true): num
     return stream.durationInSeconds ?? 0;
   }
 
-  // include: if src is set, treat as leaf (duration from action end).
+  // include: if src is set, treat as leaf (duration from base end).
   // Otherwise fall back to inline children (legacy).
   if (stream.type === "include") {
     if (stream.src) {
-      // External reference — use action end (like other leaves)
-      const last = stream.actions?.[stream.actions.length - 1];
-      const d = last?.end ?? 0;
+      // External reference — use base end (like other leaves)
+      const d = leafEnd(stream);
       if (update) stream.durationInSeconds = d;
       return d;
     }
@@ -109,10 +123,9 @@ export function getDurationInSeconds(stream: DurationStream, update = true): num
   }
 
   // scene is a container (like folder) — falls through to general children logic
-  // leaf with actions
+  // leaf with base timing fields (start/end/duration)
   if (!stream.children?.length) {
-    const last = stream.actions?.[stream.actions.length - 1];
-    const d = last?.end ?? 0;
+    const d = leafEnd(stream);
     if (update) stream.durationInSeconds = d;
     return d;
   }

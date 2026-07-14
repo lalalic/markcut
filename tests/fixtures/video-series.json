@@ -20,14 +20,10 @@
           "volume": 0,
           "width": 640,
           "height": 480,
-          "actions": [
-            {
-              "start": 0,
-              "end": 6,
-              "startFrom": 2,
-              "endAt": 8
-            }
-          ]
+          "start": 0,
+          "end": 6,
+          "startFrom": 2,
+          "endAt": 8
         }
       ]
     },
@@ -41,12 +37,8 @@
           "type": "image",
           "src": "https://picsum.photos/seed/video-series-photo/640/480",
           "fit": "cover",
-          "actions": [
-            {
-              "start": 0,
-              "end": 3
-            }
-          ]
+          "start": 0,
+          "end": 3
         }
       ]
     }

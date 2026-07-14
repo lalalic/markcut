@@ -416,8 +416,8 @@ var require_react_production = __commonJS({
     exports.use = function(usable) {
       return ReactSharedInternals.H.use(usable);
     };
-    exports.useActionState = function(action2, initialState, permalink) {
-      return ReactSharedInternals.H.useActionState(action2, initialState, permalink);
+    exports.useActionState = function(action, initialState, permalink) {
+      return ReactSharedInternals.H.useActionState(action, initialState, permalink);
     };
     exports.useCallback = function(callback, deps) {
       return ReactSharedInternals.H.useCallback(callback, deps);
@@ -778,7 +778,7 @@ var require_scheduler = __commonJS({
 var require_react_dom_production = __commonJS({
   "node_modules/react-dom/cjs/react-dom.production.js"(exports) {
     "use strict";
-    var React48 = require_react();
+    var React49 = require_react();
     function formatProdErrorMessage(code) {
       var url2 = "https://react.dev/errors/" + code;
       if (1 < arguments.length) {
@@ -818,7 +818,7 @@ var require_react_dom_production = __commonJS({
         implementation
       };
     }
-    var ReactSharedInternals = React48.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
+    var ReactSharedInternals = React49.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
     function getCrossOriginStringAs(as, input) {
       if ("font" === as) return "";
       if ("string" === typeof input)
@@ -913,8 +913,8 @@ var require_react_dom_production = __commonJS({
     exports.unstable_batchedUpdates = function(fn, a2) {
       return fn(a2);
     };
-    exports.useFormState = function(action2, initialState, permalink) {
-      return ReactSharedInternals.H.useFormState(action2, initialState, permalink);
+    exports.useFormState = function(action, initialState, permalink) {
+      return ReactSharedInternals.H.useFormState(action, initialState, permalink);
     };
     exports.useFormStatus = function() {
       return ReactSharedInternals.H.useHostTransitionStatus();
@@ -954,8 +954,8 @@ var require_react_dom_client_production = __commonJS({
   "node_modules/react-dom/cjs/react-dom-client.production.js"(exports) {
     "use strict";
     var Scheduler = require_scheduler();
-    var React48 = require_react();
-    var ReactDOM2 = require_react_dom();
+    var React49 = require_react();
+    var ReactDOM3 = require_react_dom();
     function formatProdErrorMessage(code) {
       var url2 = "https://react.dev/errors/" + code;
       if (1 < arguments.length) {
@@ -1145,8 +1145,8 @@ var require_react_dom_client_production = __commonJS({
       return null;
     }
     var isArrayImpl = Array.isArray;
-    var ReactSharedInternals = React48.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
-    var ReactDOMSharedInternals = ReactDOM2.__DOM_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
+    var ReactSharedInternals = React49.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
+    var ReactDOMSharedInternals = ReactDOM3.__DOM_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
     var sharedNotPendingObject = {
       pending: false,
       data: null,
@@ -4323,8 +4323,8 @@ var require_react_dom_client_production = __commonJS({
       memoCache.index++;
       return updateQueue;
     }
-    function basicStateReducer(state, action2) {
-      return "function" === typeof action2 ? action2(state) : action2;
+    function basicStateReducer(state, action) {
+      return "function" === typeof action ? action(state) : action;
     }
     function updateReducer(reducer) {
       var hook = updateWorkInProgressHook();
@@ -4541,12 +4541,12 @@ var require_react_dom_client_production = __commonJS({
       }
     }
     function runActionStateAction(actionQueue, node) {
-      var action2 = node.action, payload = node.payload, prevState = actionQueue.state;
+      var action = node.action, payload = node.payload, prevState = actionQueue.state;
       if (node.isTransition) {
         var prevTransition = ReactSharedInternals.T, currentTransition = {};
         ReactSharedInternals.T = currentTransition;
         try {
-          var returnValue = action2(prevState, payload), onStartTransitionFinish = ReactSharedInternals.S;
+          var returnValue = action(prevState, payload), onStartTransitionFinish = ReactSharedInternals.S;
           null !== onStartTransitionFinish && onStartTransitionFinish(currentTransition, returnValue);
           handleActionReturnValue(actionQueue, node, returnValue);
         } catch (error49) {
@@ -4556,7 +4556,7 @@ var require_react_dom_client_production = __commonJS({
         }
       } else
         try {
-          prevTransition = action2(prevState, payload), handleActionReturnValue(actionQueue, node, prevTransition);
+          prevTransition = action(prevState, payload), handleActionReturnValue(actionQueue, node, prevTransition);
         } catch (error$66) {
           onActionError(actionQueue, node, error$66);
         }
@@ -4597,7 +4597,7 @@ var require_react_dom_client_production = __commonJS({
     function actionStateReducer(oldState, newState) {
       return newState;
     }
-    function mountActionState(action2, initialStateProp) {
+    function mountActionState(action, initialStateProp) {
       if (isHydrating) {
         var ssrFormState = workInProgressRoot.formState;
         if (null !== ssrFormState) {
@@ -4665,7 +4665,7 @@ var require_react_dom_client_production = __commonJS({
       JSCompiler_inline_result$jscomp$0 = {
         state: initialStateProp,
         dispatch: null,
-        action: action2,
+        action,
         pending: null
       };
       JSCompiler_inline_result.queue = JSCompiler_inline_result$jscomp$0;
@@ -4677,14 +4677,14 @@ var require_react_dom_client_production = __commonJS({
         ssrFormState
       );
       JSCompiler_inline_result$jscomp$0.dispatch = ssrFormState;
-      JSCompiler_inline_result.memoizedState = action2;
+      JSCompiler_inline_result.memoizedState = action;
       return [initialStateProp, ssrFormState, false];
     }
-    function updateActionState(action2) {
+    function updateActionState(action) {
       var stateHook = updateWorkInProgressHook();
-      return updateActionStateImpl(stateHook, currentHook, action2);
+      return updateActionStateImpl(stateHook, currentHook, action);
     }
-    function updateActionStateImpl(stateHook, currentStateHook, action2) {
+    function updateActionStateImpl(stateHook, currentStateHook, action) {
       currentStateHook = updateReducerImpl(
         stateHook,
         currentStateHook,
@@ -4701,26 +4701,26 @@ var require_react_dom_client_production = __commonJS({
       else state = currentStateHook;
       currentStateHook = updateWorkInProgressHook();
       var actionQueue = currentStateHook.queue, dispatch = actionQueue.dispatch;
-      action2 !== currentStateHook.memoizedState && (currentlyRenderingFiber.flags |= 2048, pushSimpleEffect(
+      action !== currentStateHook.memoizedState && (currentlyRenderingFiber.flags |= 2048, pushSimpleEffect(
         9,
         { destroy: void 0 },
-        actionStateActionEffect.bind(null, actionQueue, action2),
+        actionStateActionEffect.bind(null, actionQueue, action),
         null
       ));
       return [state, dispatch, stateHook];
     }
-    function actionStateActionEffect(actionQueue, action2) {
-      actionQueue.action = action2;
+    function actionStateActionEffect(actionQueue, action) {
+      actionQueue.action = action;
     }
-    function rerenderActionState(action2) {
+    function rerenderActionState(action) {
       var stateHook = updateWorkInProgressHook(), currentStateHook = currentHook;
       if (null !== currentStateHook)
-        return updateActionStateImpl(stateHook, currentStateHook, action2);
+        return updateActionStateImpl(stateHook, currentStateHook, action);
       updateWorkInProgressHook();
       stateHook = stateHook.memoizedState;
       currentStateHook = updateWorkInProgressHook();
       var dispatch = currentStateHook.queue.dispatch;
-      currentStateHook.memoizedState = action2;
+      currentStateHook.memoizedState = action;
       return [stateHook, dispatch, false];
     }
     function pushSimpleEffect(tag, inst, create, deps) {
@@ -4892,7 +4892,7 @@ var require_react_dom_client_production = __commonJS({
     }
     function noop2() {
     }
-    function startHostTransition(formFiber, pendingState, action2, formData) {
+    function startHostTransition(formFiber, pendingState, action, formData) {
       if (5 !== formFiber.tag) throw Error(formatProdErrorMessage(476));
       var queue = ensureFormComponentIsStateful(formFiber).queue;
       startTransition(
@@ -4900,9 +4900,9 @@ var require_react_dom_client_production = __commonJS({
         queue,
         pendingState,
         sharedNotPendingObject,
-        null === action2 ? noop2 : function() {
+        null === action ? noop2 : function() {
           requestFormReset$1(formFiber);
-          return action2(formData);
+          return action(formData);
         }
       );
     }
@@ -4976,29 +4976,29 @@ var require_react_dom_client_production = __commonJS({
         provider = provider.return;
       }
     }
-    function dispatchReducerAction(fiber, queue, action2) {
+    function dispatchReducerAction(fiber, queue, action) {
       var lane = requestUpdateLane();
-      action2 = {
+      action = {
         lane,
         revertLane: 0,
         gesture: null,
-        action: action2,
+        action,
         hasEagerState: false,
         eagerState: null,
         next: null
       };
-      isRenderPhaseUpdate(fiber) ? enqueueRenderPhaseUpdate(queue, action2) : (action2 = enqueueConcurrentHookUpdate(fiber, queue, action2, lane), null !== action2 && (scheduleUpdateOnFiber(action2, fiber, lane), entangleTransitionUpdate(action2, queue, lane)));
+      isRenderPhaseUpdate(fiber) ? enqueueRenderPhaseUpdate(queue, action) : (action = enqueueConcurrentHookUpdate(fiber, queue, action, lane), null !== action && (scheduleUpdateOnFiber(action, fiber, lane), entangleTransitionUpdate(action, queue, lane)));
     }
-    function dispatchSetState(fiber, queue, action2) {
+    function dispatchSetState(fiber, queue, action) {
       var lane = requestUpdateLane();
-      dispatchSetStateInternal(fiber, queue, action2, lane);
+      dispatchSetStateInternal(fiber, queue, action, lane);
     }
-    function dispatchSetStateInternal(fiber, queue, action2, lane) {
+    function dispatchSetStateInternal(fiber, queue, action, lane) {
       var update = {
         lane,
         revertLane: 0,
         gesture: null,
-        action: action2,
+        action,
         hasEagerState: false,
         eagerState: null,
         next: null
@@ -5008,7 +5008,7 @@ var require_react_dom_client_production = __commonJS({
         var alternate = fiber.alternate;
         if (0 === fiber.lanes && (null === alternate || 0 === alternate.lanes) && (alternate = queue.lastRenderedReducer, null !== alternate))
           try {
-            var currentState = queue.lastRenderedState, eagerState = alternate(currentState, action2);
+            var currentState = queue.lastRenderedState, eagerState = alternate(currentState, action);
             update.hasEagerState = true;
             update.eagerState = eagerState;
             if (objectIs(eagerState, currentState))
@@ -5016,18 +5016,18 @@ var require_react_dom_client_production = __commonJS({
           } catch (error49) {
           } finally {
           }
-        action2 = enqueueConcurrentHookUpdate(fiber, queue, update, lane);
-        if (null !== action2)
-          return scheduleUpdateOnFiber(action2, fiber, lane), entangleTransitionUpdate(action2, queue, lane), true;
+        action = enqueueConcurrentHookUpdate(fiber, queue, update, lane);
+        if (null !== action)
+          return scheduleUpdateOnFiber(action, fiber, lane), entangleTransitionUpdate(action, queue, lane), true;
       }
       return false;
     }
-    function dispatchOptimisticSetState(fiber, throwIfDuringRender, queue, action2) {
-      action2 = {
+    function dispatchOptimisticSetState(fiber, throwIfDuringRender, queue, action) {
+      action = {
         lane: 2,
         revertLane: requestTransitionLane(),
         gesture: null,
-        action: action2,
+        action,
         hasEagerState: false,
         eagerState: null,
         next: null
@@ -5038,7 +5038,7 @@ var require_react_dom_client_production = __commonJS({
         throwIfDuringRender = enqueueConcurrentHookUpdate(
           fiber,
           queue,
-          action2,
+          action,
           2
         ), null !== throwIfDuringRender && scheduleUpdateOnFiber(throwIfDuringRender, fiber, 2);
     }
@@ -9816,10 +9816,10 @@ var require_react_dom_client_production = __commonJS({
     }
     function extractEvents$1(dispatchQueue, domEventName, maybeTargetInst, nativeEvent, nativeEventTarget) {
       if ("submit" === domEventName && maybeTargetInst && maybeTargetInst.stateNode === nativeEventTarget) {
-        var action2 = coerceFormActionProp(
+        var action = coerceFormActionProp(
           (nativeEventTarget[internalPropsKey] || null).action
         ), submitter = nativeEvent.submitter;
-        submitter && (domEventName = (domEventName = submitter[internalPropsKey] || null) ? coerceFormActionProp(domEventName.formAction) : submitter.getAttribute("formAction"), null !== domEventName && (action2 = domEventName, submitter = null));
+        submitter && (domEventName = (domEventName = submitter[internalPropsKey] || null) ? coerceFormActionProp(domEventName.formAction) : submitter.getAttribute("formAction"), null !== domEventName && (action = domEventName, submitter = null));
         var event = new SyntheticEvent(
           "action",
           "action",
@@ -9842,22 +9842,22 @@ var require_react_dom_client_production = __commonJS({
                         pending: true,
                         data: formData,
                         method: nativeEventTarget.method,
-                        action: action2
+                        action
                       },
                       null,
                       formData
                     );
                   }
                 } else
-                  "function" === typeof action2 && (event.preventDefault(), formData = submitter ? createFormDataWithSubmitter(nativeEventTarget, submitter) : new FormData(nativeEventTarget), startHostTransition(
+                  "function" === typeof action && (event.preventDefault(), formData = submitter ? createFormDataWithSubmitter(nativeEventTarget, submitter) : new FormData(nativeEventTarget), startHostTransition(
                     maybeTargetInst,
                     {
                       pending: true,
                       data: formData,
                       method: nativeEventTarget.method,
-                      action: action2
+                      action
                     },
-                    action2,
+                    action,
                     formData
                   ));
               },
@@ -12506,15 +12506,15 @@ var require_react_dom_client_production = __commonJS({
           if ("function" === typeof submitterOrAction)
             formProps || scheduleReplayQueueIfNeeded(i3);
           else if (formProps) {
-            var action2 = null;
+            var action = null;
             if (submitterOrAction && submitterOrAction.hasAttribute("formAction"))
               if (form = submitterOrAction, formProps = submitterOrAction[internalPropsKey] || null)
-                action2 = formProps.formAction;
+                action = formProps.formAction;
               else {
                 if (null !== findInstanceBlockingTarget(form)) continue;
               }
-            else action2 = formProps.action;
-            "function" === typeof action2 ? i3[queuedTarget + 1] = action2 : (i3.splice(queuedTarget, 3), queuedTarget -= 3);
+            else action = formProps.action;
+            "function" === typeof action ? i3[queuedTarget + 1] = action : (i3.splice(queuedTarget, 3), queuedTarget -= 3);
             scheduleReplayQueueIfNeeded(i3);
           }
         }
@@ -12591,7 +12591,7 @@ var require_react_dom_client_production = __commonJS({
         0 === i3 && attemptExplicitHydrationTarget(target);
       }
     };
-    var isomorphicReactPackageVersion$jscomp$inline_1840 = React48.version;
+    var isomorphicReactPackageVersion$jscomp$inline_1840 = React49.version;
     if ("19.2.5" !== isomorphicReactPackageVersion$jscomp$inline_1840)
       throw Error(
         formatProdErrorMessage(
@@ -12794,9 +12794,9 @@ var require_fast_deep_equal = __commonJS({
 });
 
 // src/player/browser.tsx
-var React47 = __toESM(require_react(), 1);
+var React48 = __toESM(require_react(), 1);
 var import_client = __toESM(require_client(), 1);
-var ReactDOM = __toESM(require_react_dom(), 1);
+var ReactDOM2 = __toESM(require_react_dom(), 1);
 
 // node_modules/remotion/dist/esm/index.mjs
 var esm_exports = {};
@@ -17159,16 +17159,16 @@ var resolveTrimProps = ({
   const trimAfterValue = trimAfter ?? endAt ?? void 0;
   return { trimBeforeValue, trimAfterValue };
 };
-var durationReducer = (state, action2) => {
-  switch (action2.type) {
+var durationReducer = (state, action) => {
+  switch (action.type) {
     case "got-duration": {
-      const absoluteSrc = getAbsoluteSrc(action2.src);
-      if (state[absoluteSrc] === action2.durationInSeconds) {
+      const absoluteSrc = getAbsoluteSrc(action.src);
+      if (state[absoluteSrc] === action.durationInSeconds) {
         return state;
       }
       return {
         ...state,
-        [absoluteSrc]: action2.durationInSeconds
+        [absoluteSrc]: action.durationInSeconds
       };
     }
     default:
@@ -27936,15 +27936,84 @@ var forward2 = import_react110.forwardRef;
 var Thumbnail = forward2(ThumbnailFn);
 
 // src/entry.tsx
-var React46 = __toESM(require_react(), 1);
+var React47 = __toESM(require_react(), 1);
+
+// src/utils/component-import-map.ts
+var React8 = __toESM(require_react(), 1);
+var ReactDOM = __toESM(require_react_dom(), 1);
+function ensureSharedImportMap() {
+  var _a3, _b, _c;
+  if (typeof document === "undefined") return;
+  if (document.querySelector("#rmtr-import-map")) return;
+  const g2 = globalThis;
+  g2.__remotionShared ?? (g2.__remotionShared = {});
+  (_a3 = g2.__remotionShared)["react"] ?? (_a3["react"] = React8);
+  (_b = g2.__remotionShared)["react-dom"] ?? (_b["react-dom"] = ReactDOM);
+  (_c = g2.__remotionShared)["remotion"] ?? (_c["remotion"] = esm_exports);
+  if (!g2.__nodeModuleStub) {
+    const nodeModuleStubCode = `export function createRequire() { return () => ({ resolve: () => { throw new Error("node:module.createRequire is not available in the browser"); } }); }`;
+    g2.__nodeModuleStub = URL.createObjectURL(
+      new Blob([nodeModuleStubCode], { type: "application/javascript" })
+    );
+  }
+  try {
+    const imports = {};
+    for (const spec of ["node:module", "node:fs", "node:path", "node:os"]) {
+      imports[spec] = g2.__nodeModuleStub;
+    }
+    for (const [specifier, mod] of Object.entries(g2.__remotionShared)) {
+      const lines = [
+        `const _mod = globalThis.__remotionShared[${JSON.stringify(specifier)}];`
+      ];
+      for (const name of Object.keys(mod)) {
+        if (name === "default") continue;
+        lines.push(
+          `const __${name} = _mod[${JSON.stringify(name)}];`,
+          `export { __${name} as ${name} };`
+        );
+      }
+      if ("default" in mod) lines.push("export default _mod.default;");
+      imports[specifier] = URL.createObjectURL(
+        new Blob([lines.join("\n")], { type: "application/javascript" })
+      );
+    }
+    const blobJsx = new Blob(
+      [
+        `
+        const R = globalThis.__remotionShared["react"];
+        const { createElement, Fragment } = R;
+        export { Fragment };
+        export function jsx(type, props, key) {
+          return createElement(type, key != null ? { ...props, key } : props);
+        }
+        export function jsxs(type, props, key) {
+          return createElement(type, key != null ? { ...props, key } : props);
+        }
+        export function jsxDEV(type, props, key, isStaticChildren, source, self) {
+          return createElement(type, key != null ? { ...props, key } : props);
+        }
+      `
+      ],
+      { type: "application/javascript" }
+    );
+    imports["react/jsx-runtime"] = URL.createObjectURL(blobJsx);
+    const script = document.createElement("script");
+    script.type = "importmap";
+    script.id = "rmtr-import-map";
+    script.textContent = JSON.stringify({ imports });
+    document.head.appendChild(script);
+  } catch (e) {
+    console.warn("Failed to create shared module import map:", e);
+  }
+}
 
 // src/context/index.tsx
-var React9 = __toESM(require_react(), 1);
+var React15 = __toESM(require_react(), 1);
 
 // src/context/EventContext.tsx
-var React8 = __toESM(require_react(), 1);
+var React9 = __toESM(require_react(), 1);
 var import_jsx_runtime56 = __toESM(require_jsx_runtime(), 1);
-var EventContext = React8.createContext(null);
+var EventContext = React9.createContext(null);
 function createComponentProxy(target, setState) {
   return new Proxy(target, {
     set(obj, prop, value) {
@@ -27959,8 +28028,8 @@ function createComponentProxy(target, setState) {
   });
 }
 function EventProvider({ children }) {
-  const registryRef = React8.useRef(/* @__PURE__ */ new Map());
-  const register = React8.useCallback(
+  const registryRef = React9.useRef(/* @__PURE__ */ new Map());
+  const register = React9.useCallback(
     (id, setState) => {
       const target = {};
       const proxy = createComponentProxy(target, setState);
@@ -27968,10 +28037,10 @@ function EventProvider({ children }) {
     },
     []
   );
-  const unregister = React8.useCallback((id) => {
+  const unregister = React9.useCallback((id) => {
     registryRef.current.delete(id);
   }, []);
-  const evaluate = React8.useCallback((code) => {
+  const evaluate = React9.useCallback((code) => {
     const scope = {};
     for (const [id, reg] of registryRef.current) {
       scope[id] = reg.proxy;
@@ -27986,14 +28055,14 @@ function EventProvider({ children }) {
       console.warn(`Event evaluation failed: "${code}"`, err);
     }
   }, []);
-  const value = React8.useMemo(
+  const value = React9.useMemo(
     () => ({ register, unregister, evaluate }),
     [register, unregister, evaluate]
   );
   return /* @__PURE__ */ (0, import_jsx_runtime56.jsx)(EventContext.Provider, { value, children });
 }
 function useEventContext() {
-  const ctx = React8.useContext(EventContext);
+  const ctx = React9.useContext(EventContext);
   if (!ctx) {
     throw new Error("useEventContext must be used within an EventProvider");
   }
@@ -28017,8 +28086,8 @@ function useFrameEvents(on, durationInFrames) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const { evaluate } = useEventContext();
-  const handledRef = React8.useRef(false);
-  React8.useEffect(() => {
+  const handledRef = React9.useRef(false);
+  React9.useEffect(() => {
     if (!on || durationInFrames <= 0) return;
     const targetFrame = resolveWhenToFrame(on.when, durationInFrames, fps);
     if (frame === targetFrame && !handledRef.current) {
@@ -28032,13 +28101,13 @@ function useFrameEvents(on, durationInFrames) {
 // src/context/index.tsx
 var import_jsx_runtime57 = __toESM(require_jsx_runtime(), 1);
 var DefaultContainer = ({ children, style: style2 }) => /* @__PURE__ */ (0, import_jsx_runtime57.jsx)("div", { style: { position: "absolute", inset: 0, ...style2 }, children });
-var ComposeContext = React9.createContext({
+var ComposeContext = React15.createContext({
   Container: DefaultContainer
 });
-var AudioContext2 = React9.createContext(null);
+var AudioContext2 = React15.createContext(null);
 
 // src/types/Folder.tsx
-var React44 = __toESM(require_react(), 1);
+var React45 = __toESM(require_react(), 1);
 
 // node_modules/@remotion/transitions/dist/esm/index.mjs
 var import_react113 = __toESM(require_react(), 1);
@@ -30316,6 +30385,12 @@ function cssJS(css) {
   }
   return out;
 }
+function leafEnd(stream2) {
+  if (typeof stream2.end === "number") return stream2.end;
+  const s2 = stream2.start ?? 0;
+  if (typeof stream2.duration === "number") return s2 + stream2.duration;
+  return 0;
+}
 function getDurationInSeconds(stream2, update = true) {
   if (!stream2) return 0;
   if (stream2.type === "rhythm") {
@@ -30323,8 +30398,7 @@ function getDurationInSeconds(stream2, update = true) {
   }
   if (stream2.type === "include") {
     if (stream2.src) {
-      const last = stream2.actions?.[stream2.actions.length - 1];
-      const d2 = last?.end ?? 0;
+      const d2 = leafEnd(stream2);
       if (update) stream2.durationInSeconds = d2;
       return d2;
     }
@@ -30344,8 +30418,7 @@ function getDurationInSeconds(stream2, update = true) {
     return total2;
   }
   if (!stream2.children?.length) {
-    const last = stream2.actions?.[stream2.actions.length - 1];
-    const d2 = last?.end ?? 0;
+    const d2 = leafEnd(stream2);
     if (update) stream2.durationInSeconds = d2;
     return d2;
   }
@@ -30394,10 +30467,10 @@ function parseVTT(src) {
 }
 
 // src/types/Video.tsx
-var React18 = __toESM(require_react(), 1);
+var React19 = __toESM(require_react(), 1);
 
 // src/types/FrameSyncStyle.tsx
-var React16 = __toESM(require_react(), 1);
+var React18 = __toESM(require_react(), 1);
 var import_jsx_runtime77 = __toESM(require_jsx_runtime(), 1);
 function FrameSyncStyle({
   style: style2,
@@ -30406,7 +30479,7 @@ function FrameSyncStyle({
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const hasAnimation = "animation" in style2;
-  const mergedStyle = React16.useMemo(() => {
+  const mergedStyle = React18.useMemo(() => {
     if (!hasAnimation) return style2;
     const currentTime = frame / fps;
     return {
@@ -30437,60 +30510,57 @@ function resolveVideoSrc(src) {
 }
 function VideoLeaf({ stream: stream2 }) {
   const { fps } = useVideoConfig();
-  const audio2 = React18.useContext(AudioContext2);
-  const totalDur = stream2.durationInSeconds ?? stream2.actions[0]?.end ?? 1;
+  const audio2 = React19.useContext(AudioContext2);
+  const start = stream2.start ?? 0;
+  const end = stream2.end ?? start + (stream2.duration ?? 1);
+  const totalDur = stream2.durationInSeconds ?? end;
   useFrameEvents(stream2.on, Math.max(1, Math.floor(totalDur * fps)));
   if (!stream2.src) return null;
   const resolvedSrc = resolveVideoSrc(stream2.src);
-  return /* @__PURE__ */ (0, import_jsx_runtime78.jsx)(import_jsx_runtime78.Fragment, { children: stream2.actions.map((a2) => {
-    const start = a2.start ?? 0;
-    const end = a2.end ?? start + 1;
-    const startFrom = a2.startFrom ?? 0;
-    const endAt = a2.endAt ?? stream2.durationInSeconds ?? end - start;
-    const volume = a2.volume ?? stream2.volume ?? 1;
-    const playbackRate = a2.loop ? 1 : Math.min(1, toPlaybackRate((endAt - startFrom) / (end - start)));
-    const actionStyle = cssJS(a2.style);
-    const hasAnimation = "animation" in actionStyle;
-    return /* @__PURE__ */ (0, import_jsx_runtime78.jsx)(
-      Sequence,
-      {
-        durationInFrames: Math.max(1, Math.floor(fps * (end - start))),
-        from: Math.floor(fps * start),
-        layout: "none",
-        showInTimeline: false,
-        children: hasAnimation ? /* @__PURE__ */ (0, import_jsx_runtime78.jsx)(FrameSyncStyle, { style: actionStyle, children: /* @__PURE__ */ (0, import_jsx_runtime78.jsx)(
-          OffthreadVideo,
-          {
-            src: resolvedSrc,
-            startFrom: Math.floor(startFrom * fps),
-            endAt: Math.floor(startFrom * fps) + Math.floor((endAt - startFrom) * fps / playbackRate),
-            muted: volume === 0 || !!audio2?.foreground,
-            volume,
-            playbackRate,
-            showInTimeline: false,
-            style: { width: "100%", height: "100%" }
-          }
-        ) }) : /* @__PURE__ */ (0, import_jsx_runtime78.jsx)(
-          OffthreadVideo,
-          {
-            src: resolvedSrc,
-            startFrom: Math.floor(startFrom * fps),
-            endAt: Math.floor(startFrom * fps) + Math.floor((endAt - startFrom) * fps / playbackRate),
-            muted: volume === 0 || !!audio2?.foreground,
-            volume,
-            playbackRate,
-            showInTimeline: false,
-            style: { width: "100%", height: "100%", ...actionStyle }
-          }
-        )
-      },
-      a2.id
-    );
-  }) });
+  const startFrom = stream2.startFrom ?? 0;
+  const endAt = stream2.endAt ?? totalDur;
+  const volume = stream2.volume ?? 1;
+  const playbackRate = stream2.loop ? 1 : Math.min(1, toPlaybackRate((endAt - startFrom) / (end - start)));
+  const streamStyle = cssJS(stream2.style);
+  const hasAnimation = "animation" in streamStyle;
+  return /* @__PURE__ */ (0, import_jsx_runtime78.jsx)(
+    Sequence,
+    {
+      durationInFrames: Math.max(1, Math.floor(fps * (end - start))),
+      from: Math.floor(fps * start),
+      layout: "none",
+      showInTimeline: false,
+      children: hasAnimation ? /* @__PURE__ */ (0, import_jsx_runtime78.jsx)(FrameSyncStyle, { style: streamStyle, children: /* @__PURE__ */ (0, import_jsx_runtime78.jsx)(
+        OffthreadVideo,
+        {
+          src: resolvedSrc,
+          startFrom: Math.floor(startFrom * fps),
+          endAt: Math.floor(startFrom * fps) + Math.floor((endAt - startFrom) * fps / playbackRate),
+          muted: volume === 0 || !!audio2?.foreground,
+          volume,
+          playbackRate,
+          showInTimeline: false,
+          style: { width: "100%", height: "100%" }
+        }
+      ) }) : /* @__PURE__ */ (0, import_jsx_runtime78.jsx)(
+        OffthreadVideo,
+        {
+          src: resolvedSrc,
+          startFrom: Math.floor(startFrom * fps),
+          endAt: Math.floor(startFrom * fps) + Math.floor((endAt - startFrom) * fps / playbackRate),
+          muted: volume === 0 || !!audio2?.foreground,
+          volume,
+          playbackRate,
+          showInTimeline: false,
+          style: { width: "100%", height: "100%", ...streamStyle }
+        }
+      )
+    }
+  );
 }
 
 // src/types/Audio.tsx
-var React19 = __toESM(require_react(), 1);
+var React25 = __toESM(require_react(), 1);
 var import_jsx_runtime79 = __toESM(require_jsx_runtime(), 1);
 function resolveAudioSrc(src) {
   if (/^(https?:|data:|blob:|file:|\/)/.test(src)) return src;
@@ -30499,44 +30569,41 @@ function resolveAudioSrc(src) {
 function AudioLeaf({ stream: stream2 }) {
   const { fps } = useVideoConfig();
   const environment = useRemotionEnvironment();
-  const ctx = React19.useContext(AudioContext2);
-  const totalDur = stream2.durationInSeconds ?? stream2.actions[0]?.end ?? 1;
+  const ctx = React25.useContext(AudioContext2);
+  const start = stream2.start ?? 0;
+  const end = stream2.end ?? start + (stream2.duration ?? 1);
+  const totalDur = stream2.durationInSeconds ?? end;
   useFrameEvents(stream2.on, Math.max(1, Math.floor(totalDur * fps)));
   if (!stream2.src) return null;
   if (environment.isStudio) return null;
   const resolvedSrc = resolveAudioSrc(stream2.src);
-  return /* @__PURE__ */ (0, import_jsx_runtime79.jsx)(import_jsx_runtime79.Fragment, { children: stream2.actions.map((a2) => {
-    const start = a2.start ?? 0;
-    const end = a2.end ?? start + 1;
-    const startFrom = a2.startFrom ?? 0;
-    const endAt = a2.endAt ?? stream2.durationInSeconds ?? end - start;
-    const volume = a2.volume ?? stream2.volume ?? 1;
-    const playbackRate = a2.loop ? 1 : toPlaybackRate((endAt - startFrom) / (end - start));
-    return /* @__PURE__ */ (0, import_jsx_runtime79.jsx)(
-      Sequence,
-      {
-        name: stream2.src ?? "audio",
-        durationInFrames: Math.max(1, Math.floor(fps * (end - start))),
-        from: Math.floor(fps * start),
-        layout: "none",
-        showInTimeline: false,
-        children: /* @__PURE__ */ (0, import_jsx_runtime79.jsx)(
-          Audio,
-          {
-            src: resolvedSrc,
-            startFrom: Math.floor(startFrom * fps),
-            endAt: Math.floor(startFrom * fps) + Math.floor((endAt - startFrom) * fps / playbackRate),
-            muted: volume === 0 || !!ctx?.foreground,
-            volume,
-            loop: (a2.loop ?? 1) > 1,
-            playbackRate,
-            showInTimeline: false
-          }
-        )
-      },
-      a2.id
-    );
-  }) });
+  const startFrom = stream2.startFrom ?? 0;
+  const endAt = stream2.endAt ?? totalDur;
+  const volume = stream2.volume ?? 1;
+  const playbackRate = stream2.loop ? 1 : toPlaybackRate((endAt - startFrom) / (end - start));
+  return /* @__PURE__ */ (0, import_jsx_runtime79.jsx)(
+    Sequence,
+    {
+      name: stream2.src ?? "audio",
+      durationInFrames: Math.max(1, Math.floor(fps * (end - start))),
+      from: Math.floor(fps * start),
+      layout: "none",
+      showInTimeline: false,
+      children: /* @__PURE__ */ (0, import_jsx_runtime79.jsx)(
+        Audio,
+        {
+          src: resolvedSrc,
+          startFrom: Math.floor(startFrom * fps),
+          endAt: Math.floor(startFrom * fps) + Math.floor((endAt - startFrom) * fps / playbackRate),
+          muted: volume === 0 || !!ctx?.foreground,
+          volume,
+          loop: (stream2.loop ?? 1) > 1,
+          playbackRate,
+          showInTimeline: false
+        }
+      )
+    }
+  );
 }
 
 // src/types/Image.tsx
@@ -30547,42 +30614,39 @@ function resolveImageSrc(src) {
 }
 function ImageLeaf({ stream: stream2 }) {
   const { fps } = useVideoConfig();
-  const totalDur = stream2.durationInSeconds ?? stream2.actions[0]?.end ?? 1;
+  const start = stream2.start ?? 0;
+  const end = stream2.end ?? start + (stream2.duration ?? 1);
+  const totalDur = stream2.durationInSeconds ?? end;
   useFrameEvents(stream2.on, Math.max(1, Math.floor(totalDur * fps)));
   if (!stream2.src) return null;
   const resolvedSrc = resolveImageSrc(stream2.src);
-  return /* @__PURE__ */ (0, import_jsx_runtime80.jsx)(import_jsx_runtime80.Fragment, { children: stream2.actions.map((a2) => {
-    const start = a2.start ?? 0;
-    const end = a2.end ?? start + 1;
-    return /* @__PURE__ */ (0, import_jsx_runtime80.jsx)(
-      Sequence,
-      {
-        durationInFrames: Math.max(1, Math.floor(fps * (end - start))),
-        from: Math.floor(fps * start),
-        layout: "none",
-        children: /* @__PURE__ */ (0, import_jsx_runtime80.jsx)(FrameSyncStyle, { style: cssJS(a2.style), children: /* @__PURE__ */ (0, import_jsx_runtime80.jsx)(
-          Img,
-          {
-            src: resolvedSrc,
-            style: {
-              width: "100%",
-              height: "100%",
-              objectFit: stream2.fit
-            },
-            onDragStart: (e) => {
-              e.stopPropagation();
-              return false;
-            }
+  return /* @__PURE__ */ (0, import_jsx_runtime80.jsx)(
+    Sequence,
+    {
+      durationInFrames: Math.max(1, Math.floor(fps * (end - start))),
+      from: Math.floor(fps * start),
+      layout: "none",
+      children: /* @__PURE__ */ (0, import_jsx_runtime80.jsx)(FrameSyncStyle, { style: cssJS(stream2.style), children: /* @__PURE__ */ (0, import_jsx_runtime80.jsx)(
+        Img,
+        {
+          src: resolvedSrc,
+          style: {
+            width: "100%",
+            height: "100%",
+            objectFit: stream2.fit
+          },
+          onDragStart: (e) => {
+            e.stopPropagation();
+            return false;
           }
-        ) })
-      },
-      a2.id
-    );
-  }) });
+        }
+      ) })
+    }
+  );
 }
 
 // src/types/Component.tsx
-var React27 = __toESM(require_react(), 1);
+var React30 = __toESM(require_react(), 1);
 
 // node_modules/react-jsx-parser/dist/react-jsx-parser.min.js
 var import_react125 = __toESM(require_react());
@@ -41955,7 +42019,7 @@ __publicField(JsxParser, "defaultProps", {
 var source_default = JsxParser;
 
 // src/utils/tween.ts
-var React26 = __toESM(require_react(), 1);
+var React27 = __toESM(require_react(), 1);
 var EASING_MAP = {
   linear: void 0,
   ease: Easing.ease,
@@ -41976,16 +42040,16 @@ function hexToNumber(hex3) {
 function lerp(a2, b3, t) {
   return a2 + (b3 - a2) * t;
 }
-function useTweenBindings(action2) {
+function useTweenBindings(action) {
   const frame = useCurrentFrame();
-  const actionDurationFrames = Math.max(1, Math.floor(((action2.end ?? 1) - (action2.start ?? 0)) * 30));
-  const cacheRef = React26.useRef(/* @__PURE__ */ new Map());
-  const prevFrameRef = React26.useRef(frame);
+  const actionDurationFrames = Math.max(1, Math.floor(((action.end ?? 1) - (action.start ?? 0)) * 30));
+  const cacheRef = React27.useRef(/* @__PURE__ */ new Map());
+  const prevFrameRef = React27.useRef(frame);
   if (prevFrameRef.current !== frame) {
     cacheRef.current = /* @__PURE__ */ new Map();
     prevFrameRef.current = frame;
   }
-  const tween = React26.useCallback(
+  const tween = React27.useCallback(
     (from, to, easing) => {
       const key = `${from},${to},${easing || "linear"}`;
       const cached2 = cacheRef.current.get(key);
@@ -42030,14 +42094,14 @@ function TweenedJsxParser({
   jsx: jsx68,
   components,
   data: data2,
-  action: action2
+  action
 }) {
-  const tweenBindings = useTweenBindings(action2);
+  const tweenBindings = useTweenBindings(action);
   return /* @__PURE__ */ (0, import_jsx_runtime81.jsx)(import_jsx_runtime81.Fragment, { children: /* @__PURE__ */ (0, import_jsx_runtime81.jsx)(
     source_default,
     {
       components,
-      bindings: React27.useMemo(() => ({ ...data2, ...tweenBindings }), [data2, tweenBindings]),
+      bindings: React30.useMemo(() => ({ ...data2, ...tweenBindings }), [data2, tweenBindings]),
       jsx: jsx68,
       renderInWrapper: false,
       blacklistedAttrs: [],
@@ -42048,10 +42112,10 @@ function TweenedJsxParser({
 }
 function ComponentLeaf({ stream: stream2 }) {
   const { fps } = useVideoConfig();
-  const { components } = React27.useContext(ComposeContext);
+  const { components } = React30.useContext(ComposeContext);
   const eventCtx = useEventContext();
-  const [eventState, setEventState] = React27.useState({});
-  React27.useLayoutEffect(() => {
+  const [eventState, setEventState] = React30.useState({});
+  React30.useLayoutEffect(() => {
     if (stream2.id) {
       eventCtx.register(
         stream2.id,
@@ -42060,42 +42124,39 @@ function ComponentLeaf({ stream: stream2 }) {
       return () => eventCtx.unregister(stream2.id);
     }
   }, [stream2.id, eventCtx]);
-  const bindings = React27.useMemo(
+  const bindings = React30.useMemo(
     () => ({ ...components, ...stream2.data, ...eventState }),
     [stream2.data, components, eventState]
   );
   if (!stream2.jsx) return null;
-  return /* @__PURE__ */ (0, import_jsx_runtime81.jsx)(import_jsx_runtime81.Fragment, { children: stream2.actions.map((a2) => {
-    const start = a2.start ?? 0;
-    const end = a2.end ?? start + 1;
-    const durFrames = Math.max(1, Math.floor(fps * (end - start)));
-    return /* @__PURE__ */ (0, import_jsx_runtime81.jsx)(
-      Sequence,
-      {
-        durationInFrames: durFrames,
-        from: Math.floor(fps * start),
-        layout: "none",
-        children: /* @__PURE__ */ (0, import_jsx_runtime81.jsx)(
-          EventAwareComponent,
-          {
-            jsx: stream2.jsx,
-            components,
-            data: bindings,
-            action: a2,
-            durFrames,
-            on: stream2.on
-          }
-        )
-      },
-      a2.id
-    );
-  }) });
+  const start = stream2.start ?? 0;
+  const end = stream2.end ?? start + (stream2.duration ?? 1);
+  const durFrames = Math.max(1, Math.floor(fps * (end - start)));
+  return /* @__PURE__ */ (0, import_jsx_runtime81.jsx)(
+    Sequence,
+    {
+      durationInFrames: durFrames,
+      from: Math.floor(fps * start),
+      layout: "none",
+      children: /* @__PURE__ */ (0, import_jsx_runtime81.jsx)(
+        EventAwareComponent,
+        {
+          jsx: stream2.jsx,
+          components,
+          data: bindings,
+          action: { start, end },
+          durFrames,
+          on: stream2.on
+        }
+      )
+    }
+  );
 }
 function EventAwareComponent({
   jsx: jsx68,
   components,
   data: data2,
-  action: action2,
+  action,
   durFrames,
   on
 }) {
@@ -42106,7 +42167,7 @@ function EventAwareComponent({
       jsx: jsx68,
       components,
       data: data2,
-      action: action2
+      action
     }
   );
 }
@@ -42120,43 +42181,40 @@ function resolveAudioSrc2(src) {
 function RhythmLeaf({ stream: stream2 }) {
   const { fps } = useVideoConfig();
   const environment = useRemotionEnvironment();
-  const totalDur = stream2.durationInSeconds ?? stream2.actions[0]?.end ?? 1;
+  const start = stream2.start ?? 0;
+  const end = stream2.end ?? start + (stream2.duration ?? 1);
+  const totalDur = stream2.durationInSeconds ?? end;
   useFrameEvents(stream2.on, Math.max(1, Math.floor(totalDur * fps)));
   if (!stream2.src || environment.isStudio) return null;
   const resolvedSrc = resolveAudioSrc2(stream2.src);
-  return /* @__PURE__ */ (0, import_jsx_runtime82.jsx)(import_jsx_runtime82.Fragment, { children: stream2.actions.map((a2) => {
-    const start = a2.start ?? 0;
-    const end = a2.end ?? start + 1;
-    const volume = a2.volume ?? stream2.volume ?? 1;
-    return /* @__PURE__ */ (0, import_jsx_runtime82.jsx)(
-      Sequence,
-      {
-        name: stream2.src ?? "rhythm",
-        durationInFrames: Math.max(1, Math.floor(fps * (end - start))),
-        from: Math.floor(fps * start),
-        layout: "none",
-        showInTimeline: false,
-        children: /* @__PURE__ */ (0, import_jsx_runtime82.jsx)(
-          Audio,
-          {
-            src: resolvedSrc,
-            muted: volume === 0,
-            volume,
-            loop: true,
-            showInTimeline: false
-          }
-        )
-      },
-      a2.id
-    );
-  }) });
+  const volume = stream2.volume ?? 1;
+  return /* @__PURE__ */ (0, import_jsx_runtime82.jsx)(
+    Sequence,
+    {
+      name: stream2.src ?? "rhythm",
+      durationInFrames: Math.max(1, Math.floor(fps * (end - start))),
+      from: Math.floor(fps * start),
+      layout: "none",
+      showInTimeline: false,
+      children: /* @__PURE__ */ (0, import_jsx_runtime82.jsx)(
+        Audio,
+        {
+          src: resolvedSrc,
+          muted: volume === 0,
+          volume,
+          loop: true,
+          showInTimeline: false
+        }
+      )
+    }
+  );
 }
 
 // src/types/Map.tsx
 var import_react127 = __toESM(require_react(), 1);
 
 // node_modules/@vis.gl/react-google-maps/dist/index.modern.mjs
-var React30 = __toESM(require_react(), 1);
+var React35 = __toESM(require_react(), 1);
 var import_react126 = __toESM(require_react(), 1);
 var import_react_dom3 = __toESM(require_react_dom(), 1);
 var import_fast_deep_equal = __toESM(require_fast_deep_equal(), 1);
@@ -42343,8 +42401,8 @@ function useMap3DInstances() {
 function useGoogleMapsApiLoader(props) {
   const { onLoad, onError, apiKey, version: version4, libraries = [], region, language, authReferrerPolicy, channel, solutionChannel, fetchAppCheckToken } = props;
   const [status, setStatus] = (0, import_react126.useState)(loadingStatus);
-  const [loadedLibraries, addLoadedLibrary] = (0, import_react126.useReducer)((loadedLibraries2, action2) => {
-    return loadedLibraries2[action2.name] ? loadedLibraries2 : Object.assign(Object.assign({}, loadedLibraries2), { [action2.name]: action2.value });
+  const [loadedLibraries, addLoadedLibrary] = (0, import_react126.useReducer)((loadedLibraries2, action) => {
+    return loadedLibraries2[action.name] ? loadedLibraries2 : Object.assign(Object.assign({}, loadedLibraries2), { [action.name]: action.value });
   }, {});
   const currentSerializedParams = (0, import_react126.useMemo)(() => {
     const params = {
@@ -43100,8 +43158,8 @@ function useMapsLibrary(name) {
   return (ctx === null || ctx === void 0 ? void 0 : ctx.loadedLibraries[name]) || null;
 }
 var _a;
-var { useLayoutEffect: useLayoutEffect16, useRef: useRef31 } = React30;
-var useBeforeEffect = (_a = React30.useInsertionEffect) !== null && _a !== void 0 ? _a : useLayoutEffect16;
+var { useLayoutEffect: useLayoutEffect16, useRef: useRef31 } = React35;
+var useBeforeEffect = (_a = React35.useInsertionEffect) !== null && _a !== void 0 ? _a : useLayoutEffect16;
 function forbiddenInRender() {
   throw new Error("useEffectEvent: invalid call during rendering.");
 }
@@ -44476,55 +44534,52 @@ Rectangle.displayName = "Rectangle";
 
 // src/types/Map.tsx
 var import_jsx_runtime83 = __toESM(require_jsx_runtime(), 1);
-var GM_API_KEY = "AIzaSyC6x4jghg5ZggV5VTThu9JE4DwX9NlbN9U";
+var GM_API_KEY = process.env.GOOGLE_MAPS_API_KEY || "";
 function MapLeaf({ stream: stream2 }) {
   const { fps } = useVideoConfig();
   const waypoints = stream2.waypoints ?? [];
-  const totalDur = stream2.durationInSeconds ?? stream2.actions[0]?.end ?? 1;
+  const start = stream2.start ?? 0;
+  const end = stream2.end ?? start + (stream2.duration ?? 1);
+  const totalDur = stream2.durationInSeconds ?? end;
   useFrameEvents(stream2.on, Math.max(1, Math.floor(totalDur * fps)));
   if (waypoints.length === 0) return null;
-  return /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(import_jsx_runtime83.Fragment, { children: stream2.actions?.map((a2, i3) => {
-    const start = a2.start ?? 0;
-    const end = a2.end ?? start + 1;
-    const durFrames = Math.max(1, Math.floor(fps * (end - start)));
-    const center = stream2.center ?? { lat: waypoints[0].lat, lng: waypoints[0].lng };
-    const zoom = stream2.zoom ?? 10;
-    const mapType = stream2.mapType ?? "roadmap";
-    const travelMode = stream2.travelMode ?? "DRIVING";
-    const markerEmoji = stream2.routeMarker ?? "\u{1F697}";
-    return /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(
-      Sequence,
-      {
-        durationInFrames: durFrames,
-        from: Math.floor(fps * start),
-        layout: "none",
-        children: /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(APIProvider, { apiKey: GM_API_KEY, children: /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(
-          Map2,
-          {
-            mapId: String(stream2.id ?? i3),
-            defaultCenter: center,
-            defaultZoom: zoom,
-            defaultOptions: {
-              mapTypeId: mapType,
-              disableDefaultUI: true,
-              zoomControl: false
-            },
-            style: { width: "100%", height: "100%", position: "absolute" },
-            children: /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(
-              RouteWithMarker,
-              {
-                waypoints,
-                travelMode,
-                markerEmoji,
-                actionDuration: end - start
-              }
-            )
-          }
-        ) })
-      },
-      a2.id ?? i3
-    );
-  }) });
+  const durFrames = Math.max(1, Math.floor(fps * (end - start)));
+  const center = stream2.center ?? { lat: waypoints[0].lat, lng: waypoints[0].lng };
+  const zoom = stream2.zoom ?? 10;
+  const mapType = stream2.mapType ?? "roadmap";
+  const travelMode = stream2.travelMode ?? "DRIVING";
+  const markerEmoji = stream2.routeMarker ?? "\u{1F697}";
+  return /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(
+    Sequence,
+    {
+      durationInFrames: durFrames,
+      from: Math.floor(fps * start),
+      layout: "none",
+      children: /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(APIProvider, { apiKey: GM_API_KEY, children: /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(
+        Map2,
+        {
+          mapId: String(stream2.id ?? "map"),
+          defaultCenter: center,
+          defaultZoom: zoom,
+          defaultOptions: {
+            mapTypeId: mapType,
+            disableDefaultUI: true,
+            zoomControl: false
+          },
+          style: { width: "100%", height: "100%", position: "absolute" },
+          children: /* @__PURE__ */ (0, import_jsx_runtime83.jsx)(
+            RouteWithMarker,
+            {
+              waypoints,
+              travelMode,
+              markerEmoji,
+              actionDuration: end - start
+            }
+          )
+        }
+      ) })
+    }
+  );
 }
 function RouteWithMarker({
   waypoints,
@@ -44647,7 +44702,7 @@ function getCurrentStep(leg, currentInSecond) {
 }
 
 // src/types/Include.tsx
-var React39 = __toESM(require_react(), 1);
+var React41 = __toESM(require_react(), 1);
 var import_jsx_runtime84 = __toESM(require_jsx_runtime(), 1);
 var ASPECT_DIMS = {
   "16x9": { width: 1920, height: 1080 },
@@ -44666,10 +44721,10 @@ function resolveIncludeSrc(src) {
   return staticFile(src);
 }
 function useSubVideoRegistry(importsUrl) {
-  const [registry2, setRegistry] = React39.useState(null);
-  const [loaded, setLoaded] = React39.useState(false);
-  const handleRef = React39.useRef(null);
-  React39.useEffect(() => {
+  const [registry2, setRegistry] = React41.useState(null);
+  const [loaded, setLoaded] = React41.useState(false);
+  const handleRef = React41.useRef(null);
+  React41.useEffect(() => {
     if (!importsUrl) {
       setRegistry(null);
       setLoaded(true);
@@ -44701,18 +44756,21 @@ function useSubVideoRegistry(importsUrl) {
 }
 function IncludeLeaf({ stream: stream2 }) {
   const { fps: parentFps, width: parentWidth, height: parentHeight } = useVideoConfig();
-  const parentCompose = React39.useContext(ComposeContext);
+  const parentCompose = React41.useContext(ComposeContext);
   const { Container } = parentCompose;
-  const parentAudio = React39.useContext(AudioContext2);
-  const totalDur = stream2.durationInSeconds ?? stream2.actions[0]?.end ?? 1;
+  const parentAudio = React41.useContext(AudioContext2);
+  const start = stream2.start ?? 0;
+  const end = stream2.end ?? (stream2.durationInSeconds ?? start + (stream2.duration ?? 1));
+  const totalDur = stream2.durationInSeconds ?? end;
   useFrameEvents(stream2.on, Math.max(1, Math.floor(totalDur * parentFps)));
-  if (!stream2.actions?.length) return null;
-  const [externalData, setExternalData] = React39.useState(null);
-  const [loadError, setLoadError] = React39.useState(null);
-  const [handle] = React39.useState(
+  const hasContent = !!stream2.src || (stream2.children?.length ?? 0) > 0;
+  if (!hasContent) return null;
+  const [externalData, setExternalData] = React41.useState(null);
+  const [loadError, setLoadError] = React41.useState(null);
+  const [handle] = React41.useState(
     () => stream2.src ? delayRender(`Loading include: ${stream2.src}`) : null
   );
-  React39.useEffect(() => {
+  React41.useEffect(() => {
     if (!stream2.src || !handle) return;
     let active = true;
     const url2 = resolveIncludeSrc(stream2.src);
@@ -44736,18 +44794,18 @@ function IncludeLeaf({ stream: stream2 }) {
       active = false;
     };
   }, [stream2.src, handle]);
-  React39.useMemo(() => {
+  React41.useMemo(() => {
     if (!stream2.src) {
       getDurationInSeconds(stream2, true);
     }
   }, [stream2, stream2.src]);
-  const subImportsUrl = React39.useMemo(() => {
+  const subImportsUrl = React41.useMemo(() => {
     if (!externalData) return void 0;
     const root2 = externalData.root ?? externalData;
     return root2?.imports;
   }, [externalData]);
   const { registry: subRegistry, loaded: subRegistryLoaded } = useSubVideoRegistry(subImportsUrl);
-  const mergedCompose = React39.useMemo(() => {
+  const mergedCompose = React41.useMemo(() => {
     const parentComponents = parentCompose.components;
     if (!subRegistry) return parentCompose;
     return {
@@ -44758,11 +44816,11 @@ function IncludeLeaf({ stream: stream2 }) {
       }
     };
   }, [parentCompose, subRegistry]);
-  const audioCtx = React39.useMemo(
+  const audioCtx = React41.useMemo(
     () => ({ id: stream2.id, foreground: true, parent: parentAudio }),
     [stream2.id, parentAudio]
   );
-  const renderExternalContent = React39.useCallback(() => {
+  const renderExternalContent = React41.useCallback(() => {
     if (!externalData) return null;
     if (loadError) {
       return /* @__PURE__ */ (0, import_jsx_runtime84.jsxs)("div", { style: { color: "#ff4444", fontSize: 24, padding: 40 }, children: [
@@ -44779,12 +44837,12 @@ function IncludeLeaf({ stream: stream2 }) {
         vj.bgm && /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(Audio, { src: vj.bgm.src, volume: vj.bgm.baseVolume }),
         vj.scenes.map((scene2) => {
           const startFrame = Math.round((scene2.start ?? 0) * vjFps);
-          const durFrames = Math.round((scene2.duration ?? 1) * vjFps);
+          const durFrames2 = Math.round((scene2.duration ?? 1) * vjFps);
           return /* @__PURE__ */ (0, import_jsx_runtime84.jsxs)(
             Sequence,
             {
               from: startFrame,
-              durationInFrames: durFrames,
+              durationInFrames: durFrames2,
               name: `${scene2.id}:${scene2.component}`,
               children: [
                 /* @__PURE__ */ (0, import_jsx_runtime84.jsxs)(
@@ -44855,82 +44913,72 @@ function IncludeLeaf({ stream: stream2 }) {
       }
     );
   }, [externalData, loadError, parentFps, parentWidth, parentHeight]);
-  const renderAction = (a2) => {
-    const start = a2.start ?? 0;
-    const end = a2.end ?? (stream2.durationInSeconds ?? start + 1);
-    const dur = Math.max(0.1, end - start);
-    const durFrames = Math.max(1, Math.floor(parentFps * dur));
-    if (!stream2.src && stream2.children?.length) {
-      return /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(
-        Sequence,
-        {
-          durationInFrames: durFrames,
-          from: Math.floor(parentFps * start),
-          layout: "none",
-          showInTimeline: false,
-          children: /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(
-            Container,
-            {
-              id: stream2.id,
-              type: "include",
-              style: {
-                ...cssJS(stream2.style),
-                width: parentWidth,
-                height: parentHeight,
-                overflow: "hidden",
-                position: "relative"
-              },
-              className: `include ${toClassName(stream2.id ?? "")}`,
-              children: /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(FolderLeaf, { stream: stream2 })
-            }
-          )
-        },
-        a2.id
-      );
-    }
-    return /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(
-      Sequence,
+  const dur = Math.max(0.1, end - start);
+  const durFrames = Math.max(1, Math.floor(parentFps * dur));
+  let innerNode;
+  if (!stream2.src && stream2.children?.length) {
+    innerNode = /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(
+      Container,
       {
-        durationInFrames: durFrames,
-        from: Math.floor(parentFps * start),
-        layout: "none",
-        showInTimeline: false,
-        children: externalData || loadError ? /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(
-          "div",
-          {
-            style: {
-              width: parentWidth,
-              height: parentHeight,
-              overflow: "hidden",
-              position: "relative"
-            },
-            children: renderExternalContent()
-          }
-        ) : /* @__PURE__ */ (0, import_jsx_runtime84.jsxs)(
-          "div",
-          {
-            style: {
-              width: parentWidth,
-              height: parentHeight,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#666",
-              fontSize: 20,
-              fontFamily: "monospace"
-            },
-            children: [
-              "Loading\u2026 ",
-              stream2.src
-            ]
-          }
-        )
-      },
-      a2.id
+        id: stream2.id,
+        type: "include",
+        style: {
+          ...cssJS(stream2.style),
+          width: parentWidth,
+          height: parentHeight,
+          overflow: "hidden",
+          position: "relative"
+        },
+        className: `include ${toClassName(stream2.id ?? "")}`,
+        children: /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(FolderLeaf, { stream: stream2 })
+      }
     );
-  };
+  } else if (externalData || loadError) {
+    innerNode = /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(
+      "div",
+      {
+        style: {
+          width: parentWidth,
+          height: parentHeight,
+          overflow: "hidden",
+          position: "relative"
+        },
+        children: renderExternalContent()
+      }
+    );
+  } else {
+    innerNode = /* @__PURE__ */ (0, import_jsx_runtime84.jsxs)(
+      "div",
+      {
+        style: {
+          width: parentWidth,
+          height: parentHeight,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "#666",
+          fontSize: 20,
+          fontFamily: "monospace"
+        },
+        children: [
+          "Loading\u2026 ",
+          stream2.src
+        ]
+      }
+    );
+  }
+  const sequence = /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(
+    Sequence,
+    {
+      durationInFrames: durFrames,
+      from: Math.floor(parentFps * start),
+      layout: "none",
+      showInTimeline: false,
+      children: innerNode
+    }
+  );
   const needsNestedContext = subRegistry !== null && subRegistry !== parentCompose.components;
-  const inner2 = /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(AudioContext2.Provider, { value: audioCtx, children: stream2.actions.map(renderAction) });
+  const inner2 = /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(AudioContext2.Provider, { value: audioCtx, children: sequence });
   if (needsNestedContext && subRegistryLoaded) {
     return /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(ComposeContext.Provider, { value: mergedCompose, children: inner2 });
   }
@@ -44938,14 +44986,14 @@ function IncludeLeaf({ stream: stream2 }) {
 }
 
 // src/types/Scene.tsx
-var React41 = __toESM(require_react(), 1);
+var React43 = __toESM(require_react(), 1);
 var import_jsx_runtime85 = __toESM(require_jsx_runtime(), 1);
 function SceneLeaf({ stream: stream2 }) {
-  const { Container } = React41.useContext(ComposeContext);
-  const parentAudio = React41.useContext(AudioContext2);
+  const { Container } = React43.useContext(ComposeContext);
+  const parentAudio = React43.useContext(AudioContext2);
   const totalDur = stream2.durationInSeconds ?? 1;
   useFrameEvents(stream2.on, Math.max(1, Math.floor(totalDur * 30)));
-  const audioCtx = React41.useMemo(
+  const audioCtx = React43.useMemo(
     () => ({ id: stream2.id, parent: parentAudio }),
     [stream2.id, parentAudio]
   );
@@ -44962,7 +45010,7 @@ function SceneLeaf({ stream: stream2 }) {
 }
 
 // src/types/Effect.tsx
-var React43 = __toESM(require_react(), 1);
+var React44 = __toESM(require_react(), 1);
 
 // src/types/keyframes.ts
 function parseKeyframeData(data2) {
@@ -45355,47 +45403,42 @@ function EffectWrapper({
 }) {
   const frame = useCurrentFrame();
   const { fps, width, height } = useVideoConfig();
-  const totalDur = stream2.durationInSeconds ?? stream2.actions[0]?.end ?? 1;
+  const startSec = stream2.start ?? 0;
+  const endSec = stream2.end ?? startSec + (stream2.duration ?? 1);
+  const totalDur = stream2.durationInSeconds ?? endSec;
   useFrameEvents(stream2.on, Math.max(1, Math.floor(totalDur * fps)));
-  const actions = stream2.actions ?? [];
-  const styles = React43.useMemo(() => {
-    const result = [];
-    for (const action2 of actions) {
-      const start = Math.ceil(action2.start * fps);
-      const end = Math.ceil(action2.end * fps);
-      const durationInFrames = end - start;
-      if (durationInFrames <= 0) continue;
-      const animation = stream2.animation;
-      const timingFn = stream2.animationTimingFunction;
-      const iterCount = stream2.animationIterationCount ?? 1;
-      const style2 = cssJS(action2.style) ?? {};
-      let currentFrame = frame;
-      if (iterCount > 0 && durationInFrames > 0) {
-        const iteration = Math.floor((frame - start) / durationInFrames);
-        if (iteration < iterCount) {
-          currentFrame = start + (frame - start) % durationInFrames;
-        }
+  const styles = React44.useMemo(() => {
+    const start = Math.ceil(startSec * fps);
+    const end = Math.ceil(endSec * fps);
+    const durationInFrames = end - start;
+    if (durationInFrames <= 0) return [];
+    const animation = stream2.animation;
+    const timingFn = stream2.animationTimingFunction;
+    const iterCount = stream2.animationIterationCount ?? 1;
+    const style2 = cssJS(stream2.style) ?? {};
+    let currentFrame = frame;
+    if (iterCount > 0 && durationInFrames > 0) {
+      const iteration = Math.floor((frame - start) / durationInFrames);
+      if (iteration < iterCount) {
+        currentFrame = start + (frame - start) % durationInFrames;
       }
-      if (currentFrame >= start && currentFrame < end) {
-        const actionFrame = currentFrame - start;
-        if (animation) {
-          const config2 = resolveAnimation(animation, stream2.customKeyframes);
-          if (config2) {
-            const animStyle = interpolateKeyframes(config2, actionFrame, {
-              fps,
-              durationInSeconds: durationInFrames / fps,
-              timingFunction: timingFn
-            });
-            if (animStyle) Object.assign(style2, animStyle);
-          }
-        }
-        if (Object.keys(style2).length > 0) {
-          result.push(style2);
+    }
+    if (currentFrame >= start && currentFrame < end) {
+      const actionFrame = currentFrame - start;
+      if (animation) {
+        const config2 = resolveAnimation(animation, stream2.customKeyframes);
+        if (config2) {
+          const animStyle = interpolateKeyframes(config2, actionFrame, {
+            fps,
+            durationInSeconds: durationInFrames / fps,
+            timingFunction: timingFn
+          });
+          if (animStyle) Object.assign(style2, animStyle);
         }
       }
     }
-    return result;
-  }, [frame, fps, actions, stream2.animation, stream2.animationTimingFunction, stream2.animationIterationCount, stream2.customKeyframes]);
+    return Object.keys(style2).length > 0 ? [style2] : [];
+  }, [frame, fps, startSec, endSec, stream2.animation, stream2.animationTimingFunction, stream2.animationIterationCount, stream2.customKeyframes, stream2.style]);
   if (styles.length === 0) return /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(import_jsx_runtime86.Fragment, { children });
   return /* @__PURE__ */ (0, import_jsx_runtime86.jsx)(
     "div",
@@ -45430,8 +45473,8 @@ var NotSeries = ({ children }) => /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(
 NotSeries.Sequence = ({ children }) => /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(import_jsx_runtime87.Fragment, { children });
 function FolderLeaf({ stream: stream2 }) {
   const { fps, width, height } = useVideoConfig();
-  const { Container } = React44.useContext(ComposeContext);
-  const parentAudio = React44.useContext(AudioContext2);
+  const { Container } = React45.useContext(ComposeContext);
+  const parentAudio = React45.useContext(AudioContext2);
   const totalDur = stream2.durationInSeconds ?? 1;
   useFrameEvents(stream2.on, Math.max(1, Math.floor(totalDur * fps)));
   const isSeries = !!stream2.isSeries;
@@ -45443,11 +45486,11 @@ function FolderLeaf({ stream: stream2 }) {
   const seriesChildren = isSeries ? visibleChildren.filter((c3) => !c3.isBackground) : visibleChildren;
   const allAudio = seriesChildren.length > 0 && seriesChildren.every((c3) => c3.type === "audio");
   const effectiveTransition = allAudio ? void 0 : transition;
-  const TypedSeries = React44.useMemo(() => {
+  const TypedSeries = React45.useMemo(() => {
     if (!isSeries) return NotSeries;
     return effectiveTransition ? TransitionSeries : Series;
   }, [isSeries, effectiveTransition]);
-  const transEl = React44.useMemo(() => {
+  const transEl = React45.useMemo(() => {
     if (!isSeries || !effectiveTransition) return null;
     const presentation = TransitionPresets[transition]?.(
       transition === "clockWipe" ? { width, height } : void 0
@@ -45465,7 +45508,7 @@ function FolderLeaf({ stream: stream2 }) {
     const durFrames = Math.max(1, Math.floor(dur * fps));
     const SequenceWrap = TypedSeries.Sequence ?? Sequence;
     const isLeaf = child.type !== "folder" && child.type !== "root" && child.type !== "effect";
-    const childContent = isLeaf ? React44.createElement(Leaves[child.type] ?? (() => null), { stream: child }) : child.type === "effect" ? /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(EffectWrapper, { stream: child, children: /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(FolderLeaf, { stream: child }) }) : React44.createElement(FolderLeaf, { stream: child });
+    const childContent = isLeaf ? React45.createElement(Leaves[child.type] ?? (() => null), { stream: child }) : child.type === "effect" ? /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(EffectWrapper, { stream: child, children: /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(FolderLeaf, { stream: child }) }) : React45.createElement(FolderLeaf, { stream: child });
     return /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(SequenceWrap, { durationInFrames: durFrames, layout: "none", children: /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(
       Container,
       {
@@ -45481,7 +45524,7 @@ function FolderLeaf({ stream: stream2 }) {
     const dur = child.durationInSeconds ?? 0;
     const durFrames = Math.max(1, Math.floor(dur * fps));
     const isLeaf = child.type !== "folder" && child.type !== "root" && child.type !== "effect";
-    const childContent = isLeaf ? React44.createElement(Leaves[child.type] ?? (() => null), { stream: child }) : child.type === "effect" ? /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(EffectWrapper, { stream: child, children: /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(FolderLeaf, { stream: child }) }) : React44.createElement(FolderLeaf, { stream: child });
+    const childContent = isLeaf ? React45.createElement(Leaves[child.type] ?? (() => null), { stream: child }) : child.type === "effect" ? /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(EffectWrapper, { stream: child, children: /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(FolderLeaf, { stream: child }) }) : React45.createElement(FolderLeaf, { stream: child });
     const wrapped = /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(
       Container,
       {
@@ -45497,10 +45540,10 @@ function FolderLeaf({ stream: stream2 }) {
   }) });
   if (isSeries && transEl) {
     for (let i3 = 1; i3 < sequences.length; i3 += 2) {
-      sequences.splice(i3, 0, React44.cloneElement(transEl, { key: `t${i3}` }));
+      sequences.splice(i3, 0, React45.cloneElement(transEl, { key: `t${i3}` }));
     }
   }
-  const audioCtx = React44.useMemo(
+  const audioCtx = React45.useMemo(
     () => stream2.type !== "folder" ? { id: stream2.id, parent: parentAudio } : parentAudio,
     [stream2.id, stream2.type, parentAudio]
   );
@@ -45523,7 +45566,7 @@ function FolderLeaf({ stream: stream2 }) {
 }
 
 // src/types/Subtitle.tsx
-var React45 = __toESM(require_react(), 1);
+var React46 = __toESM(require_react(), 1);
 
 // node_modules/remotion-subtitle/dist/index.esm.js
 var index_esm_exports = {};
@@ -45849,8 +45892,8 @@ function CueFrame({
 }) {
   const durationInFrames = Math.max(1, Math.floor((cue.endAt - cue.startFrom) * fps));
   const from = Math.floor(cue.startFrom * fps);
-  const captionText = React45.useMemo(() => supportHtml(cue.text), [cue.text]);
-  const textStyle = React45.useMemo(
+  const captionText = React46.useMemo(() => supportHtml(cue.text), [cue.text]);
+  const textStyle = React46.useMemo(
     () => ({
       ...DEFAULT_TEXT_STYLE,
       fontSize: subtitle.fontSize ?? DEFAULT_TEXT_STYLE.fontSize,
@@ -45863,12 +45906,12 @@ function CueFrame({
 }
 function SubtitleOverlay({ subtitle }) {
   const { fps } = useVideoConfig();
-  const [cues, setCues] = React45.useState(null);
-  const CaptionComponent = React45.useMemo(
+  const [cues, setCues] = React46.useState(null);
+  const CaptionComponent = React46.useMemo(
     () => resolveCaption(subtitle.type),
     [subtitle.type]
   );
-  React45.useEffect(() => {
+  React46.useEffect(() => {
     const { src } = subtitle;
     if (src.includes("-->")) {
       setCues(parseVTT(src));
@@ -59686,17 +59729,6 @@ function date4(params) {
 config(en_default());
 
 // src/schema/index.ts
-var action = external_exports.object({
-  id: external_exports.string().default(() => uid()),
-  start: external_exports.number().min(0).default(0).describe("seconds, relative to parent"),
-  end: external_exports.number().min(0).default(1).describe("seconds, relative to parent"),
-  startFrom: external_exports.number().optional().describe("trim seconds from source start"),
-  endAt: external_exports.number().optional().describe("trim seconds at source end"),
-  loop: external_exports.number().int().min(1).optional().describe(">1 = loop count"),
-  effectId: external_exports.string().optional(),
-  style: external_exports.string().optional().describe("inline css"),
-  volume: external_exports.number().min(0).max(1).optional()
-});
 var eventSpec = external_exports.object({
   when: external_exports.string().describe("'start' | 'end' | '50%' | '2.5s'"),
   state: external_exports.string().describe("JS expression evaluated with registered components in scope")
@@ -59708,6 +59740,11 @@ var BaseShape = {
   style: external_exports.string().optional().describe("inline css"),
   visible: external_exports.boolean().default(true),
   isBackground: external_exports.boolean().optional(),
+  start: external_exports.number().min(0).default(0).describe("seconds, relative to parent timeline (0 inside series parents)"),
+  end: external_exports.number().min(0).optional().describe("seconds, relative to parent timeline \u2014 source of truth for duration"),
+  duration: external_exports.number().min(0).optional().describe("convenience; normalized to end = start + duration when end is absent"),
+  startFrom: external_exports.number().min(0).optional().describe("trim seconds from source start (video/audio)"),
+  endAt: external_exports.number().min(0).optional().describe("trim seconds at source end (video/audio)"),
   durationInSeconds: external_exports.number().optional().describe("set by engine; do not edit by hand"),
   on: eventSpec.optional().describe("event that fires at a specific frame, mutating registered component state")
 };
@@ -59760,26 +59797,24 @@ var video = base.extend({
   playbackRate: external_exports.number().optional(),
   width: external_exports.number().default(1080),
   height: external_exports.number().default(1920),
-  actions: external_exports.array(action).min(1).default(() => [action.parse({})])
+  loop: external_exports.number().int().min(1).optional().describe(">1 = loop count")
 });
 var audio = base.extend({
   type: external_exports.literal("audio").default("audio"),
   src: external_exports.string().optional(),
   volume: external_exports.number().min(0).max(1).default(1),
   foreground: external_exports.boolean().optional().describe("ducks parent video audio while playing"),
-  actions: external_exports.array(action).min(1).default(() => [action.parse({})])
+  loop: external_exports.number().int().min(1).optional().describe(">1 = loop count")
 });
 var image = base.extend({
   type: external_exports.literal("image").default("image"),
   src: external_exports.string().optional(),
-  fit: external_exports.enum(["contain", "cover", "fill"]).default("contain"),
-  actions: external_exports.array(action).min(1).default(() => [action.parse({})])
+  fit: external_exports.enum(["contain", "cover", "fill"]).default("contain")
 });
 var component = base.extend({
   type: external_exports.literal("component").default("component"),
   jsx: external_exports.string().describe("usage JSX expression compiled at runtime; tag names resolved from imports"),
-  data: external_exports.record(external_exports.string(), external_exports.union([external_exports.string(), external_exports.number(), external_exports.boolean()])).optional().describe("extra variables (e.g. from ~~~md source code fences) available in JSX scope"),
-  actions: external_exports.array(action).min(1).default(() => [action.parse({})])
+  data: external_exports.record(external_exports.string(), external_exports.union([external_exports.string(), external_exports.number(), external_exports.boolean()])).optional().describe("extra variables (e.g. from ~~~md source code fences) available in JSX scope")
 });
 var effect = base.extend({
   type: external_exports.literal("effect").default("effect"),
@@ -59787,23 +59822,20 @@ var effect = base.extend({
   animationTimingFunction: external_exports.enum(["linear", "ease", "ease-in", "ease-out", "ease-in-out"]).optional(),
   animationIterationCount: external_exports.number().default(1),
   customKeyframes: external_exports.record(external_exports.string(), external_exports.record(external_exports.string(), external_exports.string())).optional().describe('inline keyframes: { "0": { opacity: "0" }, "100": { opacity: "1" } }'),
-  children: external_exports.array(external_exports.lazy(() => stream)).default(() => []),
-  actions: external_exports.array(action).min(1).default(() => [action.parse({})])
+  children: external_exports.array(external_exports.lazy(() => stream)).default(() => [])
 });
 var rhythm = base.extend({
   type: external_exports.literal("rhythm").default("rhythm"),
   src: external_exports.string().optional().describe("audio file for beat playback"),
   volume: external_exports.number().min(0).max(1).default(1),
   spots: external_exports.array(external_exports.number()).optional().describe("pre-computed beat timestamps in seconds"),
-  children: external_exports.array(external_exports.lazy(() => stream)).default(() => []),
-  actions: external_exports.array(action).min(1).default(() => [action.parse({})])
+  children: external_exports.array(external_exports.lazy(() => stream)).default(() => [])
 });
 var include = base.extend({
   type: external_exports.literal("include").default("include"),
   src: external_exports.string().optional().describe("path or URL to video JSON file (stream tree or scene-based)"),
   volume: external_exports.number().min(0).max(1).default(1),
   children: external_exports.array(external_exports.lazy(() => stream)).default(() => []),
-  actions: external_exports.array(action).min(1).default(() => [action.parse({})]),
   imports: external_exports.string().optional().describe("component bundle URL for sub-video (set by engine)")
 });
 var scene = base.extend({
@@ -59829,8 +59861,7 @@ var mapStream = base.extend({
   center: external_exports.object({ lat: external_exports.number(), lng: external_exports.number() }).optional().describe("map view center (defaults to first waypoint)"),
   mapType: external_exports.enum(["roadmap", "satellite", "hybrid", "terrain"]).default("roadmap").describe("Google Maps style"),
   travelMode: external_exports.enum(["DRIVING", "WALKING", "BICYCLING", "TRANSIT"]).default("DRIVING").describe("Directions API travel mode"),
-  routeMarker: external_exports.string().default("\u{1F697}").describe("emoji/character for the animated traveling marker"),
-  actions: external_exports.array(action).min(1).default(() => [action.parse({})])
+  routeMarker: external_exports.string().default("\u{1F697}").describe("emoji/character for the animated traveling marker")
 });
 var stream = external_exports.discriminatedUnion("type", [
   root,
@@ -59850,9 +59881,9 @@ var stream = external_exports.discriminatedUnion("type", [
 var import_jsx_runtime89 = __toESM(require_jsx_runtime(), 1);
 var DefaultContainer2 = ({ children, style: style2, className: className2 }) => /* @__PURE__ */ (0, import_jsx_runtime89.jsx)("div", { className: className2, style: { position: "absolute", inset: 0, ...style2 }, children });
 function useComponentRegistry(imports) {
-  const [registry2, setRegistry] = React46.useState(null);
-  const handleRef = React46.useRef(null);
-  React46.useEffect(() => {
+  const [registry2, setRegistry] = React47.useState(null);
+  const handleRef = React47.useRef(null);
+  React47.useEffect(() => {
     if (!imports) {
       setRegistry(null);
       return;
@@ -59865,9 +59896,11 @@ function useComponentRegistry(imports) {
       if (!handleRef.current) {
         handleRef.current = delayRender("Loading component registry: " + imports);
       }
+      const moduleUrl = /^(https?:|data:|blob:|\/)/.test(imports) ? imports : staticFile(imports);
+      ensureSharedImportMap();
       import(
         /* webpackIgnore: true */
-        imports
+        moduleUrl
       ).then((mod) => {
         setRegistry(mod.default ?? mod);
         if (handleRef.current) {
@@ -59889,7 +59922,7 @@ function useComponentRegistry(imports) {
   return registry2;
 }
 function MarkCut({ root: root2, compose, background = "#000" }) {
-  const parsed = React46.useMemo(() => {
+  const parsed = React47.useMemo(() => {
     if (!root2) {
       return {
         id: "root",
@@ -59906,8 +59939,8 @@ function MarkCut({ root: root2, compose, background = "#000" }) {
     return root.parse(root2);
   }, [root2]);
   const registry2 = useComponentRegistry(parsed.imports);
-  React46.useMemo(() => getDurationInSeconds(parsed, true), [parsed]);
-  const value = React46.useMemo(
+  React47.useMemo(() => getDurationInSeconds(parsed, true), [parsed]);
+  const value = React47.useMemo(
     () => ({
       Container: compose?.Container ?? DefaultContainer2,
       onError: compose?.onError,
@@ -59925,8 +59958,8 @@ function MarkCut({ root: root2, compose, background = "#000" }) {
 // src/player/browser.tsx
 if (typeof window !== "undefined") {
   globalThis.__remotionShared = {
-    "react": React47,
-    "react-dom": ReactDOM,
+    "react": React48,
+    "react-dom": ReactDOM2,
     "remotion": esm_exports,
     "@remotion/player": { Player }
   };
@@ -59988,22 +60021,22 @@ if (typeof window !== "undefined") {
   }
 }
 function PlayerApp() {
-  const playerRef = React47.useRef(null);
-  const [ready, setReady] = React47.useState(false);
-  const [error49, setError] = React47.useState(null);
-  const [data2, setData] = React47.useState(null);
-  const [refreshKey, setRefreshKey] = React47.useState(0);
-  const [muted, setMuted] = React47.useState(false);
-  const [volume, setVolume] = React47.useState(1);
-  const seekAttemptedRef = React47.useRef(false);
-  const mountedRef = React47.useRef(true);
+  const playerRef = React48.useRef(null);
+  const [ready, setReady] = React48.useState(false);
+  const [error49, setError] = React48.useState(null);
+  const [data2, setData] = React48.useState(null);
+  const [refreshKey, setRefreshKey] = React48.useState(0);
+  const [muted, setMuted] = React48.useState(false);
+  const [volume, setVolume] = React48.useState(1);
+  const seekAttemptedRef = React48.useRef(false);
+  const mountedRef = React48.useRef(true);
   const urlParams = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
   const autoPlay = urlParams.get("autoplay") === "true";
   const startAt = parseFloat(urlParams.get("start") || urlParams.get("t") || "0") || 0;
   const fps = data2?.fps ?? 30;
   const durationInSeconds = data2 ? getDurationInSeconds(data2, true) || 5 : 5;
   const durationInFrames = Math.max(1, Math.ceil(durationInSeconds * fps));
-  const loadData = React47.useCallback(() => {
+  const loadData = React48.useCallback(() => {
     setReady(false);
     const variant = window.VARIANT || "default";
     const url2 = variant !== "default" ? `/api/video-data?variant=${variant}` : "/api/video-data";
@@ -60013,7 +60046,7 @@ function PlayerApp() {
       setReady(true);
     }).catch((e) => setError(e.message));
   }, []);
-  React47.useEffect(() => {
+  React48.useEffect(() => {
     loadData();
     const handler = () => {
       setRefreshKey((k2) => k2 + 1);
@@ -60024,10 +60057,10 @@ function PlayerApp() {
       window.removeEventListener("refresh-player", handler);
     };
   }, [loadData]);
-  React47.useEffect(() => {
+  React48.useEffect(() => {
     if (refreshKey > 0) loadData();
   }, [refreshKey, loadData]);
-  React47.useEffect(() => {
+  React48.useEffect(() => {
     if (!ready || !data2 || seekAttemptedRef.current) return;
     if (startAt > 0 && playerRef.current) {
       const timer = setTimeout(() => {
@@ -60040,7 +60073,7 @@ function PlayerApp() {
     }
     seekAttemptedRef.current = true;
   }, [ready, data2, startAt, fps]);
-  React47.useEffect(() => {
+  React48.useEffect(() => {
     if (!ready || !playerRef.current) return;
     const FWD_SECONDS = 5;
     const BACK_SECONDS = 5;
@@ -60150,7 +60183,7 @@ function PlayerApp() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [ready, data2, fps, durationInFrames, volume]);
-  React47.useEffect(() => {
+  React48.useEffect(() => {
     if (!data2) return;
     window.__remotionSeekTo = (timeInSeconds) => {
       const frame = Math.round(timeInSeconds * fps);
@@ -60158,23 +60191,23 @@ function PlayerApp() {
     };
   });
   if (error49) {
-    return React47.createElement("div", {
+    return React48.createElement("div", {
       style: { color: "red", padding: 40, fontFamily: "sans-serif" }
     }, "Error: " + error49);
   }
   if (!ready) {
-    return React47.createElement("div", {
+    return React48.createElement("div", {
       style: { color: "#888", padding: 40, fontFamily: "sans-serif" }
     }, "Loading...");
   }
   const width = data2.width || 1080;
   const height = data2.height || 1920;
-  return React47.createElement(
+  return React48.createElement(
     "div",
     {
       style: { width: "100%", height: "100%", background: "#000" }
     },
-    React47.createElement(Player, {
+    React48.createElement(Player, {
       ref: playerRef,
       component: MarkCut,
       inputProps: {
@@ -60198,7 +60231,7 @@ function PlayerApp() {
 var container2 = document.getElementById("root");
 if (container2) {
   const root2 = (0, import_client.createRoot)(container2);
-  root2.render(React47.createElement(PlayerApp));
+  root2.render(React48.createElement(PlayerApp));
 }
 /*! Bundled license information:
 

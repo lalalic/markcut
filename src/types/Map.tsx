@@ -15,7 +15,7 @@
  *     travelMode: "DRIVING",        // DRIVING | WALKING | BICYCLING
  *     mapType: "roadmap",           // roadmap | satellite | hybrid | terrain
  *     routeMarker: "🚗",            // emoji/char for animated pin
- *     actions: [{ start: 0, end: 5 }]
+ *     start: 0, end: 5
  *   }
  */
 import React from "react";
@@ -35,52 +35,45 @@ const GM_API_KEY = process.env.GOOGLE_MAPS_API_KEY || "";
 export function MapLeaf({ stream }: { stream: MapStream }) {
   const { fps } = useVideoConfig();
   const waypoints = stream.waypoints ?? [];
-  const totalDur = stream.durationInSeconds ?? stream.actions[0]?.end ?? 1;
+  const start = stream.start ?? 0;
+  const end = stream.end ?? start + (stream.duration ?? 1);
+  const totalDur = stream.durationInSeconds ?? end;
   useFrameEvents(stream.on, Math.max(1, Math.floor(totalDur * fps)));
   if (waypoints.length === 0) return null;
 
+  const durFrames = Math.max(1, Math.floor(fps * (end - start)));
+  const center = stream.center ?? { lat: waypoints[0].lat, lng: waypoints[0].lng };
+  const zoom = stream.zoom ?? 10;
+  const mapType = stream.mapType ?? "roadmap";
+  const travelMode = stream.travelMode ?? "DRIVING";
+  const markerEmoji = stream.routeMarker ?? "🚗";
   return (
-    <>
-      {stream.actions?.map((a, i) => {
-        const start = a.start ?? 0;
-        const end = a.end ?? start + 1;
-        const durFrames = Math.max(1, Math.floor(fps * (end - start)));
-        const center = stream.center ?? { lat: waypoints[0].lat, lng: waypoints[0].lng };
-        const zoom = stream.zoom ?? 10;
-        const mapType = stream.mapType ?? "roadmap";
-        const travelMode = stream.travelMode ?? "DRIVING";
-        const markerEmoji = stream.routeMarker ?? "🚗";
-        return (
-          <Sequence
-            key={a.id ?? i}
-            durationInFrames={durFrames}
-            from={Math.floor(fps * start)}
-            layout="none"
-          >
-            <APIProvider apiKey={GM_API_KEY}>
-              <GoogleMap
-                mapId={String(stream.id ?? i)}
-                defaultCenter={center}
-                defaultZoom={zoom}
-                defaultOptions={{
-                  mapTypeId: mapType,
-                  disableDefaultUI: true,
-                  zoomControl: false,
-                }}
-                style={{ width: "100%", height: "100%", position: "absolute" }}
-              >
-                <RouteWithMarker
-                  waypoints={waypoints}
-                  travelMode={travelMode}
-                  markerEmoji={markerEmoji}
-                  actionDuration={end - start}
-                />
-              </GoogleMap>
-            </APIProvider>
-          </Sequence>
-        );
-      })}
-    </>
+    <Sequence
+      durationInFrames={durFrames}
+      from={Math.floor(fps * start)}
+      layout="none"
+    >
+      <APIProvider apiKey={GM_API_KEY}>
+        <GoogleMap
+          mapId={String(stream.id ?? "map")}
+          defaultCenter={center}
+          defaultZoom={zoom}
+          defaultOptions={{
+            mapTypeId: mapType,
+            disableDefaultUI: true,
+            zoomControl: false,
+          }}
+          style={{ width: "100%", height: "100%", position: "absolute" }}
+        >
+          <RouteWithMarker
+            waypoints={waypoints}
+            travelMode={travelMode}
+            markerEmoji={markerEmoji}
+            actionDuration={end - start}
+          />
+        </GoogleMap>
+      </APIProvider>
+    </Sequence>
   );
 }
 

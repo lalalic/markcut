@@ -788,14 +788,14 @@ const server = createServer(async (req, res) => {
                 line += ` src:"${(node.src || "").slice(0, 50)}"${dur}`;
               }
 
-              // Add timing info for leaf actions
-              if (node.actions && node.actions.length > 0) {
-                const act = node.actions[0];
-                line += ` [${act.start}→${act.end}s`;
+              // Add timing info for leaf spans (start/end live on the base node)
+              if (typeof node.start === "number" || typeof node.end === "number") {
+                const sStart = node.start ?? 0;
+                const sEnd = node.end ?? sStart;
+                line += ` [${sStart}→${sEnd}s`;
                 if (node.isBackground) line += ", bg";
-                if (act.volume !== undefined) line += `, vol:${act.volume}`;
-                if (act.style) line += `, style:"${act.style.slice(0, 40)}"`;
-                if (act.loop) line += `, loop:${act.loop}`;
+                if (node.volume !== undefined) line += `, vol:${node.volume}`;
+                if (node.loop) line += `, loop:${node.loop}`;
                 line += `]`;
               } else if (node.isBackground) {
                 line += ` [bg]`;

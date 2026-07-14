@@ -376,10 +376,10 @@ export function getExpectedDuration(fixtureData: any): number {
     }
   }
 
-  // Leaf action duration
-  if (fixtureData.actions?.length) {
-    return Math.max(...fixtureData.actions.map((a: any) => a.end ?? 1));
-  }
+  // Leaf duration from base timing fields (end is source of truth)
+  const leafStart = fixtureData.start ?? 0;
+  if (typeof fixtureData.end === "number") return fixtureData.end;
+  if (typeof fixtureData.duration === "number") return leafStart + fixtureData.duration;
 
   return 1;
 }

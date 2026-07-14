@@ -12,40 +12,33 @@ function resolveImageSrc(src: string): string {
 
 export function ImageLeaf({ stream }: { stream: Image }) {
   const { fps } = useVideoConfig();
-  const totalDur = stream.durationInSeconds ?? stream.actions[0]?.end ?? 1;
+  const start = stream.start ?? 0;
+  const end = stream.end ?? start + (stream.duration ?? 1);
+  const totalDur = stream.durationInSeconds ?? end;
   useFrameEvents(stream.on, Math.max(1, Math.floor(totalDur * fps)));
   if (!stream.src) return null;
   const resolvedSrc = resolveImageSrc(stream.src);
 
   return (
-    <>
-      {stream.actions.map((a) => {
-        const start = a.start ?? 0;
-        const end = a.end ?? start + 1;
-        return (
-          <Sequence
-            key={a.id}
-            durationInFrames={Math.max(1, Math.floor(fps * (end - start)))}
-            from={Math.floor(fps * start)}
-            layout="none"
-          >
-            <FrameSyncStyle style={cssJS(a.style)}>
-              <Img
-                src={resolvedSrc}
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: stream.fit,
-                }}
-                onDragStart={(e) => {
-                  e.stopPropagation();
-                  return false;
-                }}
-              />
-            </FrameSyncStyle>
-          </Sequence>
-        );
-      })}
-    </>
+    <Sequence
+      durationInFrames={Math.max(1, Math.floor(fps * (end - start)))}
+      from={Math.floor(fps * start)}
+      layout="none"
+    >
+      <FrameSyncStyle style={cssJS(stream.style)}>
+        <Img
+          src={resolvedSrc}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: stream.fit,
+          }}
+          onDragStart={(e) => {
+            e.stopPropagation();
+            return false;
+          }}
+        />
+      </FrameSyncStyle>
+    </Sequence>
   );
 }

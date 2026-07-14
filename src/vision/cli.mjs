@@ -662,7 +662,7 @@ function buildPreviewTree(folder, metadata) {
         id: `${e.name}-media`,
         type: e.isVideo ? "video" : "image",
         src: e.relSrc, fit: "cover",
-        actions: [{ start: 0, end: e.dur }],
+        start: 0, end: e.dur,
         // Preserve existing labels from metadata so re-labeling shows them
         userHints: e.userHints || undefined,
       }],
