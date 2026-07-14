@@ -202,14 +202,13 @@ src/
 │   └── tts.ts             ← TTS via CLI template + variable substitution
 ├── player/
 │   ├── server.mjs         ← Unified server (--edit, --label, preview)
-│   ├── ui/                ← Mode-specific UI control components
-│   │   ├── index.mjs
-│   │   ├── base.mjs
-│   │   ├── label.mjs
-│   │   ├── edit.mjs
-│   │   └── preview.mjs
+│   ├── components/        ← React control components for all modes
+│   │   ├── index.ts
+│   │   ├── EditControls.tsx
+│   │   ├── LabelControls.tsx
+│   │   └── VariantBar.tsx
 │   ├── pipeline.ts        ← Pipeline entry (bundled to pipeline.mjs)
-│   └── browser.tsx        ← Browser player (bundled with esbuild)
+│   └── browser.tsx        ← Browser player (React, bundled to player.js)
 ├── utils/                 ← Duration calc, VTT parser, helpers
 └── tests/                 ← Vitest integration tests
 ```

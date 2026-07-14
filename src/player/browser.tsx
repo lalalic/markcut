@@ -2,6 +2,11 @@
  * Browser player entry point.
  * Bundled with esbuild and served by the player server.
  * Renders stream tree JSON using @remotion/player with MarkCut.
+ *
+ * Supports three modes passed via window.MODE:
+ *   "label"  — label annotation overlay
+ *   "edit"   — edit input with AI auto-reload
+ *   (default) — plain preview with optional variant bar
  */
 import * as React from "react";
 import { createRoot } from "react-dom/client";
@@ -9,6 +14,7 @@ import * as ReactDOM from "react-dom";
 import * as Remotion from "remotion";
 import { Player } from "@remotion/player";
 import { MarkCut, getDurationInSeconds } from "../entry";
+import { HeaderBar, EditControls, LabelControls, SceneThumbnails, VariantBar } from "./components/index";
 
 /**
  * Register all player-bundled packages on a global registry so the import map
@@ -106,11 +112,16 @@ function PlayerApp() {
   const [ready, setReady] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [data, setData] = React.useState<any>(null);
-  const [refreshKey, setRefreshKey] = React.useState(0);
   const [muted, setMuted] = React.useState(false);
   const [volume, setVolume] = React.useState(1);
-  const seekAttemptedRef = React.useRef(false);
   const mountedRef = React.useRef(true);
+
+  // ── Track current player frame without re-renders ───────────────────
+  const currentFrameRef = React.useRef(0);
+  const [currentTime, setCurrentTime] = React.useState(0);
+
+  // ── Save/restore position across reloads ────────────────────────────
+  const pendingSeekRef = React.useRef<number | null>(null);
 
   // Parse URL params
   const urlParams = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
@@ -118,13 +129,13 @@ function PlayerApp() {
   const startAt = parseFloat(urlParams.get("start") || urlParams.get("t") || "0") || 0;
 
   // Derive player config from data early so effects can reference them safely.
-  // These are computed on every render but only meaningful when data is set.
   const fps = data?.fps ?? 30;
   const durationInSeconds = data ? (getDurationInSeconds(data, true) || 5) : 5;
   const durationInFrames = Math.max(1, Math.ceil(durationInSeconds * fps));
 
-  const loadData = React.useCallback(() => {
-    setReady(false);
+  // ── Load data (does NOT set ready=false to avoid player unmount) ─────
+  const loadData = React.useCallback((initial = false) => {
+    if (initial) setReady(false);
     const variant = (window as any).VARIANT || "default";
     const url = variant !== "default" ? `/api/video-data?variant=${variant}` : "/api/video-data";
     fetch(url)
@@ -132,37 +143,54 @@ function PlayerApp() {
       .then((json) => {
         const root = json.root || json;
         setData(root);
-        setReady(true);
+        if (initial) setReady(true);
       })
       .catch((e) => setError(e.message));
   }, []);
 
+  // ── Initial load ────────────────────────────────────────────────────
   React.useEffect(() => {
-    loadData();
-    const handler = () => { setRefreshKey(k => k + 1); };
-    window.addEventListener("refresh-player", handler);
-    return () => { mountedRef.current = false; window.removeEventListener("refresh-player", handler); };
+    loadData(true);
+    return () => { mountedRef.current = false; };
   }, [loadData]);
 
+  // ── SSE reload: save position, load new data, restore position ──────
   React.useEffect(() => {
-    if (refreshKey > 0) loadData();
-  }, [refreshKey, loadData]);
+    const handler = () => {
+      // Save current position before reload
+      if (playerRef.current) {
+        pendingSeekRef.current = playerRef.current.getCurrentFrame();
+      }
+      loadData(false);
+    };
+    window.addEventListener("refresh-player", handler);
+    return () => window.removeEventListener("refresh-player", handler);
+  }, [loadData]);
 
-  // Seek to startAt once player is mounted
+  // ── After data loads, seek to saved position or startAt ─────────────
   React.useEffect(() => {
-    if (!ready || !data || seekAttemptedRef.current) return;
-    if (startAt > 0 && playerRef.current) {
-      // Small delay to let the player fully initialize
+    if (!ready || !data || !playerRef.current) return;
+    const targetFrame = pendingSeekRef.current ?? Math.round(startAt * fps);
+    if (targetFrame > 0) {
       const timer = setTimeout(() => {
         if (!mountedRef.current || !playerRef.current) return;
-        const frame = Math.round(startAt * fps);
-        playerRef.current.seekTo(frame);
-        seekAttemptedRef.current = true;
+        playerRef.current.seekTo(targetFrame);
+        pendingSeekRef.current = null;
       }, 100);
       return () => clearTimeout(timer);
     }
-    seekAttemptedRef.current = true;
+    pendingSeekRef.current = null;
   }, [ready, data, startAt, fps]);
+
+  // ── onFrameUpdate: track current time ───────────────────────────────
+  const handleFrameUpdate = React.useCallback((frame: number) => {
+    currentFrameRef.current = frame;
+    // Throttle state updates to ~2fps for scene tracking
+    setCurrentTime(prev => {
+      const newTime = frame / (data?.fps ?? 30);
+      return Math.abs(newTime - prev) > 0.5 ? newTime : prev;
+    });
+  }, [data?.fps]);
 
   // Keyboard shortcuts
   React.useEffect(() => {
@@ -300,52 +328,118 @@ function PlayerApp() {
     return () => window.removeEventListener("keydown", onKey);
   }, [ready, data, fps, durationInFrames, volume]);
 
-  // Expose seek API for external scripts
+  // Determine mode from global (set via HTML by the server)
+  const mode: string =
+    (typeof window !== "undefined" ? (window as any).MODE : null) || "preview";
+
+  // Shared state for header info
+  const [editStatus, setEditStatus] = React.useState("");
+  const [sseConnected, setSseConnected] = React.useState(false);
+  const [labelSceneInfo, setLabelSceneInfo] = React.useState("");
+
+  // SSE connection — shared across all modes as a server-liveness monitor
+  // Edit mode also listens for "reload" messages (auto-refresh on file change)
+  const suppressReloadRef = React.useRef(false);
   React.useEffect(() => {
-    if (!data) return;
-    (window as any).__remotionSeekTo = (timeInSeconds: number) => {
-      const frame = Math.round(timeInSeconds * fps);
-      playerRef.current?.seekTo(frame);
+    let evtSource: EventSource | null = null;
+    try {
+      evtSource = new EventSource("/api/events");
+      evtSource.onopen = () => setSseConnected(true);
+      evtSource.onmessage = (e: MessageEvent) => {
+        try {
+          const msg = JSON.parse(e.data);
+          if (msg.type === "reload" && !suppressReloadRef.current) {
+            window.dispatchEvent(new Event("refresh-player"));
+          }
+        } catch {}
+      };
+      evtSource.onerror = () => setSseConnected(false);
+    } catch {
+      setSseConnected(false);
+    }
+    return () => {
+      evtSource?.close();
+      setSseConnected(false);
     };
-  });
+  }, []);
 
   if (error) {
-    return React.createElement("div", {
-      style: { color: "red", padding: 40, fontFamily: "sans-serif" },
-    }, "Error: " + error);
+    return <div style={{ color: "red", padding: 40, fontFamily: "sans-serif" }}>Error: {error}</div>;
   }
 
   if (!ready) {
-    return React.createElement("div", {
-      style: { color: "#888", padding: 40, fontFamily: "sans-serif" },
-    }, "Loading...");
+    return <div style={{ color: "#888", padding: 40, fontFamily: "sans-serif" }}>Loading...</div>;
   }
 
   const width = data.width || 1080;
   const height = data.height || 1920;
 
-  return React.createElement("div", {
-    style: { width: "100%", height: "100%", background: "#000" },
-  },
-    React.createElement(Player, {
-      ref: playerRef,
-      component: MarkCut,
-      inputProps: {
-        root: data,
-        compose: {},
-      },
-      durationInFrames,
-      fps,
-      compositionWidth: width,
-      compositionHeight: height,
-      style: { width: "100%", height: "100%" },
-      controls: true,
-      showPlaybackRateControl: true,
-      allowFullscreen: true,
-      clickToPlay: false,
-      doubleClickToFullscreen: true,
-      autoPlay: autoPlay,
-    })
+  return (
+    <div
+      style={{
+        width: "100%", height: "100%", background: "#0a0a0a",
+        display: "flex", flexDirection: "column", alignItems: "center",
+      }}
+    >
+      {/* ── Header (close button + mode info) ── */}
+      <HeaderBar
+        mode={mode}
+        editStatus={editStatus}
+        sseConnected={sseConnected}
+        sceneInfo={mode === "label" ? labelSceneInfo : undefined}
+      />
+
+      {/* ── Variant switcher ── */}
+      <VariantBar />
+
+      {/* ── Player frame ── */}
+      <div id="player-frame" style={{ flex: 1, width: "100%", maxWidth: 480, minHeight: 0 }}>
+        <Player
+          ref={playerRef}
+          component={MarkCut}
+          inputProps={{ root: data, compose: {} }}
+          durationInFrames={durationInFrames}
+          fps={fps}
+          compositionWidth={width}
+          compositionHeight={height}
+          style={{ width: "100%", height: "100%" }}
+          controls={true}
+          showPlaybackRateControl={true}
+          allowFullscreen={true}
+          clickToPlay={false}
+          doubleClickToFullscreen={true}
+          autoPlay={autoPlay}
+          onFrameUpdate={handleFrameUpdate}
+        />
+      </div>
+
+      {/* ── Scene thumbnails (shared across all modes) ── */}
+      <SceneThumbnails
+        currentTime={currentTime}
+        onSeek={(t) => {
+          if (playerRef.current) {
+            const frame = Math.round(t * (data?.fps ?? 30));
+            playerRef.current.seekTo(frame);
+          }
+        }}
+      />
+
+      {/* ── Mode-specific controls ── */}
+      {mode === "edit" && (
+        <EditControls
+          onStatusChange={setEditStatus}
+          suppressReloadRef={suppressReloadRef}
+        />
+      )}
+      {mode === "label" && (
+        <LabelControls
+          playerRef={playerRef}
+          currentTime={currentTime}
+          onSceneChange={setLabelSceneInfo}
+        />
+      )}
+      {/* Preview mode: no extra controls */}
+    </div>
   );
 }
 

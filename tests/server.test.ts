@@ -275,16 +275,18 @@ describe("HTML page variant injection", () => {
     }
   });
 
-  it("shows variant switcher bar with all variant links", async () => {
-    const fixture = makeFixture("html-bar");
+  it("sets mode and variant in globals for client-side rendering", async () => {
+    const fixture = makeFixture("html-mode");
     const port = nextPort();
     const stop = await startServer(fixture, ["default", "zh-tiktok", "youtube"], port);
     try {
       const res = await fetchUrl(`http://localhost:${port}/`);
       expect(res.status).toBe(200);
-      expect(res.text).toContain('href="/"');
-      expect(res.text).toContain('href="/zh-tiktok"');
-      expect(res.text).toContain('href="/youtube"');
+      // Variant bar is now rendered client-side by React (VariantBar.tsx).
+      // Server only provides the config globals and loads player.js.
+      expect(res.text).toContain('window.VARIANT = "default"');
+      expect(res.text).toContain('window.MODE = "preview"');
+      expect(res.text).toContain('src="/player.js"');
     } finally {
       stop();
     }

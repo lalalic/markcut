@@ -64,12 +64,11 @@ src/
 ├── render/tts.ts          → TTS via CLI template + variable substitution
 ├── player/pipeline.mjs    → Bundled pipeline (server imports this)
 ├── player/server.mjs      → Unified server (--edit, --label, preview)
-├── player/ui/              → Mode-specific UI control components
-│   ├── index.mjs
-│   ├── base.mjs
-│   ├── label.mjs
-│   ├── edit.mjs
-│   └── preview.mjs
+├── player/components/      → React control components (edit, label, variant bar)
+│   ├── index.ts
+│   ├── EditControls.tsx
+│   ├── LabelControls.tsx
+│   └── VariantBar.tsx
 └── tests/                 → Vitest integration tests
 ```
 
@@ -188,7 +187,7 @@ node src/render/cli.mjs templates
 - `--edit` flag starts a live-reload loop: edit JSON → player auto-refreshes
 - `--label` flag starts a labeling UI for selecting and annotating media
 - `--port` flag sets the server port (default 3001)
-- Unified server: `server.mjs` serves all modes (preview, edit, label). UI control components in `ui/`.
+- Unified server: `server.mjs` serves all modes (preview, edit, label). React control components in `components/`.
 
 ## Testing
 

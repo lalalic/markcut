@@ -778,7 +778,7 @@ var require_scheduler = __commonJS({
 var require_react_dom_production = __commonJS({
   "node_modules/react-dom/cjs/react-dom.production.js"(exports) {
     "use strict";
-    var React49 = require_react();
+    var React56 = require_react();
     function formatProdErrorMessage(code) {
       var url2 = "https://react.dev/errors/" + code;
       if (1 < arguments.length) {
@@ -818,7 +818,7 @@ var require_react_dom_production = __commonJS({
         implementation
       };
     }
-    var ReactSharedInternals = React49.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
+    var ReactSharedInternals = React56.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
     function getCrossOriginStringAs(as, input) {
       if ("font" === as) return "";
       if ("string" === typeof input)
@@ -954,7 +954,7 @@ var require_react_dom_client_production = __commonJS({
   "node_modules/react-dom/cjs/react-dom-client.production.js"(exports) {
     "use strict";
     var Scheduler = require_scheduler();
-    var React49 = require_react();
+    var React56 = require_react();
     var ReactDOM3 = require_react_dom();
     function formatProdErrorMessage(code) {
       var url2 = "https://react.dev/errors/" + code;
@@ -1145,7 +1145,7 @@ var require_react_dom_client_production = __commonJS({
       return null;
     }
     var isArrayImpl = Array.isArray;
-    var ReactSharedInternals = React49.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
+    var ReactSharedInternals = React56.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
     var ReactDOMSharedInternals = ReactDOM3.__DOM_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
     var sharedNotPendingObject = {
       pending: false,
@@ -12591,7 +12591,7 @@ var require_react_dom_client_production = __commonJS({
         0 === i3 && attemptExplicitHydrationTarget(target);
       }
     };
-    var isomorphicReactPackageVersion$jscomp$inline_1840 = React49.version;
+    var isomorphicReactPackageVersion$jscomp$inline_1840 = React56.version;
     if ("19.2.5" !== isomorphicReactPackageVersion$jscomp$inline_1840)
       throw Error(
         formatProdErrorMessage(
@@ -12794,7 +12794,7 @@ var require_fast_deep_equal = __commonJS({
 });
 
 // src/player/browser.tsx
-var React48 = __toESM(require_react(), 1);
+var React55 = __toESM(require_react(), 1);
 var import_client = __toESM(require_client(), 1);
 var ReactDOM2 = __toESM(require_react_dom(), 1);
 
@@ -41680,11 +41680,11 @@ var JsxParser = class extends import_react125.default.Component {
   constructor() {
     super(...arguments);
     __publicField(this, "ParsedChildren", null);
-    __privateAdd(this, _parseJSX, (jsx68) => {
+    __privateAdd(this, _parseJSX, (jsx76) => {
       const parser = Parser.extend(AcornJSX.default({
         autoCloseVoidElements: this.props.autoCloseVoidElements
       }));
-      const wrappedJsx = `<root>${jsx68}</root>`;
+      const wrappedJsx = `<root>${jsx76}</root>`;
       let parsed = [];
       try {
         parsed = parser.parse(wrappedJsx, { ecmaVersion: "latest" });
@@ -41982,8 +41982,8 @@ var JsxParser = class extends import_react125.default.Component {
     });
   }
   render() {
-    const jsx68 = (this.props.jsx || "").trim().replace(/<!DOCTYPE([^>]*)>/g, "");
-    this.ParsedChildren = __privateGet(this, _parseJSX).call(this, jsx68);
+    const jsx76 = (this.props.jsx || "").trim().replace(/<!DOCTYPE([^>]*)>/g, "");
+    this.ParsedChildren = __privateGet(this, _parseJSX).call(this, jsx76);
     const className2 = [.../* @__PURE__ */ new Set(["jsx-parser", ...String(this.props.className).split(" ")])].filter(Boolean).join(" ");
     return this.props.renderInWrapper ? /* @__PURE__ */ import_react125.default.createElement("div", {
       className: className2
@@ -42091,7 +42091,7 @@ function useTweenBindings(action) {
 // src/types/Component.tsx
 var import_jsx_runtime81 = __toESM(require_jsx_runtime(), 1);
 function TweenedJsxParser({
-  jsx: jsx68,
+  jsx: jsx76,
   components,
   data: data2,
   action
@@ -42102,7 +42102,7 @@ function TweenedJsxParser({
     {
       components,
       bindings: React30.useMemo(() => ({ ...data2, ...tweenBindings }), [data2, tweenBindings]),
-      jsx: jsx68,
+      jsx: jsx76,
       renderInWrapper: false,
       blacklistedAttrs: [],
       disableKeyGeneration: true,
@@ -42153,7 +42153,7 @@ function ComponentLeaf({ stream: stream2 }) {
   );
 }
 function EventAwareComponent({
-  jsx: jsx68,
+  jsx: jsx76,
   components,
   data: data2,
   action,
@@ -42164,7 +42164,7 @@ function EventAwareComponent({
   return /* @__PURE__ */ (0, import_jsx_runtime81.jsx)(
     TweenedJsxParser,
     {
-      jsx: jsx68,
+      jsx: jsx76,
       components,
       data: data2,
       action
@@ -59811,7 +59811,8 @@ var audio = base.extend({
   src: external_exports.string().optional(),
   volume: external_exports.number().min(0).max(1).default(1),
   foreground: external_exports.boolean().optional().describe("ducks parent video audio while playing"),
-  loop: external_exports.number().int().min(1).optional().describe(">1 = loop count")
+  loop: external_exports.number().int().min(1).optional().describe(">1 = loop count"),
+  speaker: external_exports.string().optional().describe("speaker name for multi-turn dialogue; set by resolveDialogue")
 });
 var image = base.extend({
   type: external_exports.literal("image").default("image"),
@@ -59963,10 +59964,470 @@ function MarkCut({ root: root2, compose, background = "#000" }) {
   ] }) }) });
 }
 
+// src/player/components/HeaderBar.tsx
+var React48 = __toESM(require_react(), 1);
+var import_jsx_runtime90 = __toESM(require_jsx_runtime(), 1);
+function HeaderBar({ mode, sceneInfo, editStatus, sseConnected }) {
+  const handleClose = React48.useCallback(() => {
+    navigator.sendBeacon("/api/shutdown", "{}");
+    document.body.innerHTML = "<div style='display:flex;align-items:center;justify-content:center;height:100vh;background:#0a0a0a;color:#555;font-family:sans-serif;font-size:16px'>\u2B61 player closed \u2014 return to terminal</div>";
+  }, []);
+  return /* @__PURE__ */ (0, import_jsx_runtime90.jsxs)("div", { id: "header", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime90.jsxs)("span", { style: { flex: 1, display: "flex", alignItems: "center", gap: 8 }, children: [
+      mode === "label" && sceneInfo && /* @__PURE__ */ (0, import_jsx_runtime90.jsx)("span", { id: "scene-info", children: sceneInfo }),
+      mode === "edit" && editStatus && /* @__PURE__ */ (0, import_jsx_runtime90.jsx)("span", { id: "edit-status", children: editStatus }),
+      /* @__PURE__ */ (0, import_jsx_runtime90.jsx)(
+        "span",
+        {
+          id: "sse-indicator",
+          title: sseConnected ? "Connected \u2014 auto-reload ready" : "Disconnected",
+          style: {
+            display: "inline-block",
+            width: 8,
+            height: 8,
+            borderRadius: "50%",
+            background: sseConnected ? "#4ade80" : "#555",
+            flexShrink: 0
+          }
+        }
+      )
+    ] }),
+    /* @__PURE__ */ (0, import_jsx_runtime90.jsx)("div", { id: "header-actions", children: /* @__PURE__ */ (0, import_jsx_runtime90.jsx)("button", { id: "close-btn", title: "Close player and return to terminal", onClick: handleClose, children: "\u2715" }) })
+  ] });
+}
+
+// src/player/components/EditControls.tsx
+var React49 = __toESM(require_react(), 1);
+var import_jsx_runtime91 = __toESM(require_jsx_runtime(), 1);
+function EditControls({ onStatusChange, suppressReloadRef }) {
+  const [busy, setBusy] = React49.useState(false);
+  const inputRef = React49.useRef(null);
+  const handleApplyEdit = React49.useCallback(
+    async (text) => {
+      if (!text || busy) return;
+      setBusy(true);
+      onStatusChange?.("\u231B editing...");
+      if (inputRef.current) inputRef.current.value = "";
+      if (suppressReloadRef) suppressReloadRef.current = true;
+      try {
+        const res = await fetch("/api/edit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text })
+        });
+        const data2 = await res.json();
+        if (res.ok) {
+          const summary = (data2.output || "done").split("\n")[0].slice(0, 65);
+          onStatusChange?.(summary);
+          setTimeout(() => {
+            if (suppressReloadRef) suppressReloadRef.current = false;
+            window.dispatchEvent(new Event("refresh-player"));
+          }, 4e3);
+        } else {
+          onStatusChange?.("\u274C " + (data2.error || "failed"));
+          if (suppressReloadRef) suppressReloadRef.current = false;
+        }
+      } catch {
+        onStatusChange?.("\u274C error");
+        if (suppressReloadRef) suppressReloadRef.current = false;
+      }
+      setBusy(false);
+    },
+    [busy, onStatusChange, suppressReloadRef]
+  );
+  const handleKeyDown = React49.useCallback(
+    (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        handleApplyEdit(e.target.value);
+      }
+    },
+    [handleApplyEdit]
+  );
+  return /* @__PURE__ */ (0, import_jsx_runtime91.jsxs)("div", { id: "bottom-bar", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime91.jsx)(
+      "input",
+      {
+        ref: inputRef,
+        id: "edit-input",
+        placeholder: "What should change? e.g. make text bigger",
+        onKeyDown: handleKeyDown
+      }
+    ),
+    /* @__PURE__ */ (0, import_jsx_runtime91.jsx)(
+      "button",
+      {
+        id: "edit-btn",
+        title: "Apply edit",
+        disabled: busy,
+        onClick: () => handleApplyEdit(inputRef.current?.value || ""),
+        children: "\u2728"
+      }
+    )
+  ] });
+}
+
+// src/player/components/LabelControls.tsx
+var React50 = __toESM(require_react(), 1);
+var import_jsx_runtime92 = __toESM(require_jsx_runtime(), 1);
+var VIDEO_EXT = {
+  ".mov": 1,
+  ".mp4": 1,
+  ".avi": 1,
+  ".mkv": 1,
+  ".webm": 1,
+  ".m4v": 1,
+  ".wmv": 1
+};
+function escHtml(s2) {
+  return s2.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+function formatTime2(sec) {
+  const mm = Math.floor(sec / 60);
+  const ss = Math.floor(sec % 60);
+  return mm + ":" + String(ss).padStart(2, "0");
+}
+function LabelControls({ playerRef, currentTime, onSceneChange }) {
+  const [videoInfo, setVideoInfo] = React50.useState(null);
+  const [labelData, setLabelData] = React50.useState({});
+  const [currentSceneIdx, setCurrentSceneIdx] = React50.useState(0);
+  const [selectedOverride, setSelectedOverride] = React50.useState(-1);
+  const [inputText, setInputText] = React50.useState("");
+  const [saving, setSaving] = React50.useState(false);
+  const inputRef = React50.useRef(null);
+  React50.useEffect(() => {
+    fetch("/api/video-info").then((r) => r.json()).then((info2) => {
+      setVideoInfo(info2);
+      if (info2.scenes?.[0]) {
+        onSceneChange?.(info2.scenes[0].name + " (0.0s)");
+      }
+    }).catch(() => {
+    });
+    fetch("/api/labels").then((r) => r.ok ? r.json() : null).then((tree) => {
+      if (!tree) return;
+      const root2 = tree.root || tree;
+      const children = root2.children || [];
+      const loaded = {};
+      for (let i3 = 0; i3 < children.length; i3++) {
+        const media = (children[i3].children || [])[0];
+        if (media && media.userHints) {
+          loaded[i3] = {
+            overall: media.userHints.overall || "",
+            timed: media.userHints.timed || {}
+          };
+        } else if (media && media.description) {
+          loaded[i3] = { overall: media.description, timed: {} };
+        }
+      }
+      setLabelData(loaded);
+    }).catch(() => {
+    });
+  }, [onSceneChange]);
+  const scenes = videoInfo?.scenes || [];
+  const effectiveIdx = selectedOverride >= 0 ? selectedOverride : currentSceneIdx;
+  const currentScene = scenes[effectiveIdx];
+  React50.useEffect(() => {
+    if (selectedOverride >= 0) return;
+    for (let i3 = 0; i3 < scenes.length; i3++) {
+      if (currentTime >= scenes[i3].start && currentTime < scenes[i3].end) {
+        setCurrentSceneIdx(i3);
+        break;
+      }
+    }
+  }, [currentTime, scenes, selectedOverride]);
+  React50.useEffect(() => {
+    if (selectedOverride >= 0 && currentScene) {
+      const scene2 = scenes[selectedOverride];
+      if (scene2 && (currentTime < scene2.start || currentTime >= scene2.end)) {
+        setSelectedOverride(-1);
+      }
+    }
+  }, [currentTime, selectedOverride, scenes, currentScene]);
+  React50.useEffect(() => {
+    if (!currentScene) {
+      onSceneChange?.(currentTime.toFixed(1) + "s");
+    } else if (selectedOverride >= 0) {
+      onSceneChange?.(currentScene.name + " (selected)");
+    } else {
+      onSceneChange?.(currentScene.name + " (" + currentTime.toFixed(1) + "s)");
+    }
+  }, [currentScene, currentTime, selectedOverride, onSceneChange]);
+  const seekToScene = React50.useCallback(
+    (index) => {
+      setSelectedOverride(index);
+      setCurrentSceneIdx(index);
+      const scene2 = scenes[index];
+      if (scene2 && playerRef.current) {
+        const frame = Math.round(scene2.start * 30);
+        playerRef.current.seekTo(frame);
+      }
+    },
+    [scenes, playerRef]
+  );
+  React50.useEffect(() => {
+    const entry = labelData[effectiveIdx];
+    setInputText(entry && entry.overall || "");
+  }, [effectiveIdx, labelData]);
+  const saveLabel = React50.useCallback(() => {
+    const text = inputText.trim();
+    if (!text || saving) return;
+    setSaving(true);
+    const sceneIdx = effectiveIdx;
+    const timeMs = Math.round(currentTime * 1e3);
+    const scene2 = scenes[sceneIdx];
+    const isImage = scene2 && scene2.mediaType === "image";
+    const sceneStart = scene2 ? scene2.start * 1e3 : 0;
+    const isOverall = isImage || timeMs - sceneStart < 1e3;
+    setLabelData((prev) => {
+      const next = { ...prev };
+      if (!next[sceneIdx]) next[sceneIdx] = { overall: "", timed: {} };
+      if (isOverall) {
+        next[sceneIdx] = { ...next[sceneIdx], overall: text };
+      } else {
+        next[sceneIdx] = {
+          ...next[sceneIdx],
+          timed: { ...next[sceneIdx].timed, ["at_" + timeMs]: text }
+        };
+      }
+      return next;
+    });
+    fetch("/api/labels", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sceneIndex: sceneIdx,
+        description: text,
+        time: currentTime,
+        overall: isOverall || void 0
+      })
+    }).then(() => {
+      setInputText("");
+      const toast = document.getElementById("saved-toast");
+      if (toast) {
+        toast.classList.add("show");
+        setTimeout(() => toast.classList.remove("show"), 2e3);
+      }
+    }).catch(() => {
+    }).finally(() => setSaving(false));
+  }, [inputText, saving, effectiveIdx, currentTime, scenes]);
+  const deleteTimed = React50.useCallback(
+    (key) => {
+      const sceneIdx = effectiveIdx;
+      setLabelData((prev) => {
+        const entry = prev[sceneIdx];
+        if (!entry || !entry.timed[key]) return prev;
+        const next = { ...prev };
+        const nextEntry = { ...entry, timed: { ...entry.timed } };
+        delete nextEntry.timed[key];
+        next[sceneIdx] = nextEntry;
+        return next;
+      });
+      fetch("/api/labels", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sceneIndex: sceneIdx,
+          description: "",
+          removeTimed: key
+        })
+      }).catch(() => {
+      });
+    },
+    [effectiveIdx]
+  );
+  const renderThumbnails = () => {
+    return /* @__PURE__ */ (0, import_jsx_runtime92.jsx)("div", { id: "thumbnails", children: scenes.map((scene2, i3) => {
+      const isActive = i3 === effectiveIdx;
+      const entry = labelData[i3];
+      const hasLabel = entry && (entry.overall || Object.keys(entry.timed).length > 0);
+      let thumbContent;
+      const ext = scene2.src.substring(scene2.src.lastIndexOf(".")).toLowerCase();
+      const isVideo = !!VIDEO_EXT[ext];
+      if (scene2.src && !isVideo) {
+        thumbContent = /* @__PURE__ */ (0, import_jsx_runtime92.jsx)("img", { src: scene2.src, alt: "", loading: "lazy" });
+      } else if (scene2.src && isVideo) {
+        thumbContent = /* @__PURE__ */ (0, import_jsx_runtime92.jsx)(
+          "video",
+          {
+            src: scene2.src,
+            muted: true,
+            preload: "metadata",
+            style: { width: "100%", height: "100%", objectFit: "cover" }
+          }
+        );
+      } else {
+        thumbContent = /* @__PURE__ */ (0, import_jsx_runtime92.jsx)(
+          "div",
+          {
+            style: {
+              width: "100%",
+              height: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "rgba(255,255,255,.08)",
+              color: "rgba(255,255,255,.3)",
+              fontSize: 16,
+              fontWeight: 600
+            },
+            children: (scene2.name || "S" + (i3 + 1)).slice(0, 2).toUpperCase()
+          }
+        );
+      }
+      return /* @__PURE__ */ (0, import_jsx_runtime92.jsxs)(
+        "div",
+        {
+          className: "thumb-item" + (isActive ? " active" : ""),
+          "data-index": i3,
+          onClick: () => seekToScene(i3),
+          children: [
+            thumbContent,
+            /* @__PURE__ */ (0, import_jsx_runtime92.jsx)("div", { className: "thumb-badge" + (hasLabel ? " has-label" : "") })
+          ]
+        },
+        i3
+      );
+    }) });
+  };
+  const renderTimedLabels = () => {
+    const entry = labelData[effectiveIdx];
+    const timed = entry && entry.timed || {};
+    const keys = Object.keys(timed).sort();
+    return /* @__PURE__ */ (0, import_jsx_runtime92.jsx)("div", { id: "timed-labels", children: keys.map((k2) => {
+      const sec = parseInt(k2.replace("at_", "")) / 1e3;
+      return /* @__PURE__ */ (0, import_jsx_runtime92.jsxs)("div", { className: "timed-label", "data-key": k2, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime92.jsx)("span", { className: "tl-time", children: formatTime2(sec) }),
+        /* @__PURE__ */ (0, import_jsx_runtime92.jsx)("span", { className: "tl-text", dangerouslySetInnerHTML: { __html: escHtml(timed[k2]) } }),
+        /* @__PURE__ */ (0, import_jsx_runtime92.jsx)("button", { className: "tl-del", title: "Remove", onClick: () => deleteTimed(k2), children: "\xD7" })
+      ] }, k2);
+    }) });
+  };
+  let sceneInfoText = currentTime.toFixed(1) + "s";
+  if (currentScene) {
+    if (selectedOverride >= 0) {
+      sceneInfoText = currentScene.name + " (selected)";
+    } else {
+      sceneInfoText = currentScene.name + " (" + currentTime.toFixed(1) + "s)";
+    }
+  }
+  return /* @__PURE__ */ (0, import_jsx_runtime92.jsxs)(import_jsx_runtime92.Fragment, { children: [
+    renderThumbnails(),
+    renderTimedLabels(),
+    /* @__PURE__ */ (0, import_jsx_runtime92.jsx)("div", { id: "saved-toast", children: "\u2713 Label saved" }),
+    /* @__PURE__ */ (0, import_jsx_runtime92.jsxs)("div", { id: "bottom-bar", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime92.jsx)(
+        "input",
+        {
+          ref: inputRef,
+          id: "label-input",
+          placeholder: "Add label for current scene\u2026",
+          value: inputText,
+          onChange: (e) => setInputText(e.target.value),
+          onKeyDown: (e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              saveLabel();
+            }
+          }
+        }
+      ),
+      /* @__PURE__ */ (0, import_jsx_runtime92.jsx)(
+        "button",
+        {
+          id: "label-btn",
+          title: "Save label",
+          disabled: saving || !inputText.trim(),
+          onClick: saveLabel,
+          children: "\u{1F4DD}"
+        }
+      )
+    ] })
+  ] });
+}
+
+// src/player/components/SceneThumbnails.tsx
+var React51 = __toESM(require_react(), 1);
+var import_jsx_runtime93 = __toESM(require_jsx_runtime(), 1);
+var VIDEO_EXT2 = {
+  ".mov": 1,
+  ".mp4": 1,
+  ".avi": 1,
+  ".mkv": 1,
+  ".webm": 1,
+  ".m4v": 1,
+  ".wmv": 1
+};
+function SceneThumbnails({ currentTime, onSeek }) {
+  const [scenes, setScenes] = React51.useState([]);
+  React51.useEffect(() => {
+    fetch("/api/video-info").then((r) => r.json()).then((info2) => {
+      if (info2.scenes) setScenes(info2.scenes);
+    }).catch(() => {
+    });
+  }, []);
+  if (scenes.length === 0) return null;
+  let activeIdx = -1;
+  for (let i3 = 0; i3 < scenes.length; i3++) {
+    if (currentTime >= scenes[i3].start && currentTime < scenes[i3].end) {
+      activeIdx = i3;
+      break;
+    }
+  }
+  return /* @__PURE__ */ (0, import_jsx_runtime93.jsx)("div", { id: "scene-thumbnails", children: scenes.map((scene2, i3) => {
+    const isActive = i3 === activeIdx;
+    const ext = scene2.src.substring(scene2.src.lastIndexOf(".")).toLowerCase();
+    const isVideo = !!VIDEO_EXT2[ext];
+    const hasMedia = !!scene2.src;
+    return /* @__PURE__ */ (0, import_jsx_runtime93.jsxs)(
+      "div",
+      {
+        className: "sthumb-item" + (isActive ? " active" : ""),
+        onClick: () => onSeek?.(scene2.start),
+        children: [
+          /* @__PURE__ */ (0, import_jsx_runtime93.jsxs)("div", { className: "sthumb-media", children: [
+            hasMedia && !isVideo && /* @__PURE__ */ (0, import_jsx_runtime93.jsx)("img", { src: scene2.src, alt: "", loading: "lazy" }),
+            hasMedia && isVideo && /* @__PURE__ */ (0, import_jsx_runtime93.jsx)("video", { src: scene2.src, muted: true, preload: "metadata" }),
+            !hasMedia && /* @__PURE__ */ (0, import_jsx_runtime93.jsx)("span", { className: "sthumb-fallback", children: (scene2.name || "S" + (i3 + 1)).slice(0, 2).toUpperCase() })
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime93.jsx)("span", { className: "sthumb-name", children: scene2.name || "Scene " + (i3 + 1) })
+        ]
+      },
+      i3
+    );
+  }) });
+}
+
+// src/player/components/VariantBar.tsx
+var React54 = __toESM(require_react(), 1);
+var import_jsx_runtime94 = __toESM(require_jsx_runtime(), 1);
+function VariantBar() {
+  const [variants, setVariants] = React54.useState([]);
+  const currentVariant = (typeof window !== "undefined" ? window.VARIANT : null) || "default";
+  React54.useEffect(() => {
+    fetch("/api/video-info").then((r) => r.json()).then((info2) => {
+      if (info2.variants && info2.variants.length > 1) {
+        setVariants(info2.variants);
+      }
+    }).catch(() => {
+    });
+  }, []);
+  if (variants.length <= 1) return null;
+  return /* @__PURE__ */ (0, import_jsx_runtime94.jsx)("div", { id: "variant-bar", children: variants.map((v2) => /* @__PURE__ */ (0, import_jsx_runtime94.jsx)(
+    "a",
+    {
+      href: `/${v2 === "default" ? "" : v2}`,
+      className: "variant-link" + (v2 === currentVariant ? " active" : ""),
+      children: v2
+    },
+    v2
+  )) });
+}
+
 // src/player/browser.tsx
+var import_jsx_runtime95 = __toESM(require_jsx_runtime(), 1);
 if (typeof window !== "undefined") {
   globalThis.__remotionShared = {
-    "react": React48,
+    "react": React55,
     "react-dom": ReactDOM2,
     "remotion": esm_exports,
     "@remotion/player": { Player }
@@ -60029,59 +60490,69 @@ if (typeof window !== "undefined") {
   }
 }
 function PlayerApp() {
-  const playerRef = React48.useRef(null);
-  const [ready, setReady] = React48.useState(false);
-  const [error49, setError] = React48.useState(null);
-  const [data2, setData] = React48.useState(null);
-  const [refreshKey, setRefreshKey] = React48.useState(0);
-  const [muted, setMuted] = React48.useState(false);
-  const [volume, setVolume] = React48.useState(1);
-  const seekAttemptedRef = React48.useRef(false);
-  const mountedRef = React48.useRef(true);
+  const playerRef = React55.useRef(null);
+  const [ready, setReady] = React55.useState(false);
+  const [error49, setError] = React55.useState(null);
+  const [data2, setData] = React55.useState(null);
+  const [muted, setMuted] = React55.useState(false);
+  const [volume, setVolume] = React55.useState(1);
+  const mountedRef = React55.useRef(true);
+  const currentFrameRef = React55.useRef(0);
+  const [currentTime, setCurrentTime] = React55.useState(0);
+  const pendingSeekRef = React55.useRef(null);
   const urlParams = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
   const autoPlay = urlParams.get("autoplay") === "true";
   const startAt = parseFloat(urlParams.get("start") || urlParams.get("t") || "0") || 0;
   const fps = data2?.fps ?? 30;
   const durationInSeconds = data2 ? getDurationInSeconds(data2, true) || 5 : 5;
   const durationInFrames = Math.max(1, Math.ceil(durationInSeconds * fps));
-  const loadData = React48.useCallback(() => {
-    setReady(false);
+  const loadData = React55.useCallback((initial = false) => {
+    if (initial) setReady(false);
     const variant = window.VARIANT || "default";
     const url2 = variant !== "default" ? `/api/video-data?variant=${variant}` : "/api/video-data";
     fetch(url2).then((r) => r.json()).then((json2) => {
       const root2 = json2.root || json2;
       setData(root2);
-      setReady(true);
+      if (initial) setReady(true);
     }).catch((e) => setError(e.message));
   }, []);
-  React48.useEffect(() => {
-    loadData();
-    const handler = () => {
-      setRefreshKey((k2) => k2 + 1);
-    };
-    window.addEventListener("refresh-player", handler);
+  React55.useEffect(() => {
+    loadData(true);
     return () => {
       mountedRef.current = false;
-      window.removeEventListener("refresh-player", handler);
     };
   }, [loadData]);
-  React48.useEffect(() => {
-    if (refreshKey > 0) loadData();
-  }, [refreshKey, loadData]);
-  React48.useEffect(() => {
-    if (!ready || !data2 || seekAttemptedRef.current) return;
-    if (startAt > 0 && playerRef.current) {
+  React55.useEffect(() => {
+    const handler = () => {
+      if (playerRef.current) {
+        pendingSeekRef.current = playerRef.current.getCurrentFrame();
+      }
+      loadData(false);
+    };
+    window.addEventListener("refresh-player", handler);
+    return () => window.removeEventListener("refresh-player", handler);
+  }, [loadData]);
+  React55.useEffect(() => {
+    if (!ready || !data2 || !playerRef.current) return;
+    const targetFrame = pendingSeekRef.current ?? Math.round(startAt * fps);
+    if (targetFrame > 0) {
       const timer = setTimeout(() => {
         if (!mountedRef.current || !playerRef.current) return;
-        const frame = Math.round(startAt * fps);
-        playerRef.current.seekTo(frame);
-        seekAttemptedRef.current = true;
+        playerRef.current.seekTo(targetFrame);
+        pendingSeekRef.current = null;
       }, 100);
       return () => clearTimeout(timer);
     }
-    seekAttemptedRef.current = true;
+    pendingSeekRef.current = null;
   }, [ready, data2, startAt, fps]);
-  React48.useEffect(() => {
+  const handleFrameUpdate = React55.useCallback((frame) => {
+    currentFrameRef.current = frame;
+    setCurrentTime((prev) => {
+      const newTime = frame / (data2?.fps ?? 30);
+      return Math.abs(newTime - prev) > 0.5 ? newTime : prev;
+    });
+  }, [data2?.fps]);
+  React55.useEffect(() => {
     if (!ready || !playerRef.current) return;
     const FWD_SECONDS = 5;
     const BACK_SECONDS = 5;
@@ -60191,55 +60662,122 @@ function PlayerApp() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [ready, data2, fps, durationInFrames, volume]);
-  React48.useEffect(() => {
-    if (!data2) return;
-    window.__remotionSeekTo = (timeInSeconds) => {
-      const frame = Math.round(timeInSeconds * fps);
-      playerRef.current?.seekTo(frame);
+  const mode = (typeof window !== "undefined" ? window.MODE : null) || "preview";
+  const [editStatus, setEditStatus] = React55.useState("");
+  const [sseConnected, setSseConnected] = React55.useState(false);
+  const [labelSceneInfo, setLabelSceneInfo] = React55.useState("");
+  const suppressReloadRef = React55.useRef(false);
+  React55.useEffect(() => {
+    let evtSource = null;
+    try {
+      evtSource = new EventSource("/api/events");
+      evtSource.onopen = () => setSseConnected(true);
+      evtSource.onmessage = (e) => {
+        try {
+          const msg = JSON.parse(e.data);
+          if (msg.type === "reload" && !suppressReloadRef.current) {
+            window.dispatchEvent(new Event("refresh-player"));
+          }
+        } catch {
+        }
+      };
+      evtSource.onerror = () => setSseConnected(false);
+    } catch {
+      setSseConnected(false);
+    }
+    return () => {
+      evtSource?.close();
+      setSseConnected(false);
     };
-  });
+  }, []);
   if (error49) {
-    return React48.createElement("div", {
-      style: { color: "red", padding: 40, fontFamily: "sans-serif" }
-    }, "Error: " + error49);
+    return /* @__PURE__ */ (0, import_jsx_runtime95.jsxs)("div", { style: { color: "red", padding: 40, fontFamily: "sans-serif" }, children: [
+      "Error: ",
+      error49
+    ] });
   }
   if (!ready) {
-    return React48.createElement("div", {
-      style: { color: "#888", padding: 40, fontFamily: "sans-serif" }
-    }, "Loading...");
+    return /* @__PURE__ */ (0, import_jsx_runtime95.jsx)("div", { style: { color: "#888", padding: 40, fontFamily: "sans-serif" }, children: "Loading..." });
   }
   const width = data2.width || 1080;
   const height = data2.height || 1920;
-  return React48.createElement(
+  return /* @__PURE__ */ (0, import_jsx_runtime95.jsxs)(
     "div",
     {
-      style: { width: "100%", height: "100%", background: "#000" }
-    },
-    React48.createElement(Player, {
-      ref: playerRef,
-      component: MarkCut,
-      inputProps: {
-        root: data2,
-        compose: {}
+      style: {
+        width: "100%",
+        height: "100%",
+        background: "#0a0a0a",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center"
       },
-      durationInFrames,
-      fps,
-      compositionWidth: width,
-      compositionHeight: height,
-      style: { width: "100%", height: "100%" },
-      controls: true,
-      showPlaybackRateControl: true,
-      allowFullscreen: true,
-      clickToPlay: false,
-      doubleClickToFullscreen: true,
-      autoPlay
-    })
+      children: [
+        /* @__PURE__ */ (0, import_jsx_runtime95.jsx)(
+          HeaderBar,
+          {
+            mode,
+            editStatus,
+            sseConnected,
+            sceneInfo: mode === "label" ? labelSceneInfo : void 0
+          }
+        ),
+        /* @__PURE__ */ (0, import_jsx_runtime95.jsx)(VariantBar, {}),
+        /* @__PURE__ */ (0, import_jsx_runtime95.jsx)("div", { id: "player-frame", style: { flex: 1, width: "100%", maxWidth: 480, minHeight: 0 }, children: /* @__PURE__ */ (0, import_jsx_runtime95.jsx)(
+          Player,
+          {
+            ref: playerRef,
+            component: MarkCut,
+            inputProps: { root: data2, compose: {} },
+            durationInFrames,
+            fps,
+            compositionWidth: width,
+            compositionHeight: height,
+            style: { width: "100%", height: "100%" },
+            controls: true,
+            showPlaybackRateControl: true,
+            allowFullscreen: true,
+            clickToPlay: false,
+            doubleClickToFullscreen: true,
+            autoPlay,
+            onFrameUpdate: handleFrameUpdate
+          }
+        ) }),
+        /* @__PURE__ */ (0, import_jsx_runtime95.jsx)(
+          SceneThumbnails,
+          {
+            currentTime,
+            onSeek: (t) => {
+              if (playerRef.current) {
+                const frame = Math.round(t * (data2?.fps ?? 30));
+                playerRef.current.seekTo(frame);
+              }
+            }
+          }
+        ),
+        mode === "edit" && /* @__PURE__ */ (0, import_jsx_runtime95.jsx)(
+          EditControls,
+          {
+            onStatusChange: setEditStatus,
+            suppressReloadRef
+          }
+        ),
+        mode === "label" && /* @__PURE__ */ (0, import_jsx_runtime95.jsx)(
+          LabelControls,
+          {
+            playerRef,
+            currentTime,
+            onSceneChange: setLabelSceneInfo
+          }
+        )
+      ]
+    }
   );
 }
 var container2 = document.getElementById("root");
 if (container2) {
   const root2 = (0, import_client.createRoot)(container2);
-  root2.render(React48.createElement(PlayerApp));
+  root2.render(React55.createElement(PlayerApp));
 }
 /*! Bundled license information:
 

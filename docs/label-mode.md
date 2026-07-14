@@ -95,12 +95,13 @@ Stream tree JSON (labels.json)
 ## Implementation
 
 Source: `src/player/server.mjs` (unified server, use `--label` flag)
-UI controls: `src/player/ui/label.mjs` (label-specific HTML + client JS)
+UI controls: `src/player/components/LabelControls.tsx` (React component)
 
 - Built on Node.js `http` module (no Express dependency)
 - Serves bundled `player.js` (esbuild output from `src/player/browser.tsx`)
 - Labels saved atomically to disk on each POST
 - Supports stream tree JSON, descriptive JSON, and markdown input
+- React components in `src/player/components/` replace the old HTML-based `ui/` directory
 
 ## Reference
 

@@ -17,7 +17,7 @@ import { fileURLToPath } from "node:url";
 import { isDescriptiveRoot, resolveAndCompile, resolveAndCompileMarkdown, parseImportsBlock, extractDependencySpecs } from "./pipeline.mjs";
 import { bundleFromEntries } from "./bundler.mjs";
 import { extractScenes, MIME, serveFile, handleShutdown } from "./server-shared.mjs";
-import { getHtmlForMode } from "./ui/index.mjs";
+
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, "..", "..");
@@ -560,13 +560,81 @@ function resolveAsset(urlPath, variantLabel) {
 }
 
 // ─── HTML page ───────────────────────────────────────────────────────────
+// Minimal HTML shell. All UI is rendered by React (player.js bundle).
+// Mode-specific controls are in src/player/components/.
 function getHtml(variantLabel) {
   const label = variantLabel || "default";
   const mode = MODE_LABEL ? "label" : MODE_EDIT ? "edit" : "preview";
-  return getHtmlForMode(mode, {
-    variantLabel: label,
-    variantConfigs: VARIANT_CONFIGS,
-  });
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Remotion Player${mode !== "preview" ? " — " + mode.charAt(0).toUpperCase() + mode.slice(1) : ""}</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a0a; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; flex-direction: column; align-items: center; }
+  #header { display: flex; align-items: center; justify-content: flex-end; width: 100%; max-width: 500px; padding: 8px 12px; flex-shrink: 0; gap: 8px; }
+  #header-status, #edit-status { font-size: 11px; color: rgba(255,255,255,.4); flex: 1; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #scene-info { font-size: 11px; color: rgba(255,255,255,.4); flex: 1; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #header-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+  #close-btn { width: 22px; height: 22px; border-radius: 50%; border: 1px solid rgba(255,255,255,.15); background: rgba(0,0,0,.3); color: rgba(255,255,255,.4); font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all .15s; }
+  #close-btn:hover { background: rgba(255,60,60,.4); border-color: rgba(255,60,60,.5); color: #fff; }
+  #variant-bar { display: flex; gap: 4px; align-items: center; width: 100%; max-width: 500px; padding: 6px 12px; flex-shrink: 0; overflow-x: auto; }
+  .variant-link { font-size: 11px; padding: 3px 10px; border-radius: 12px; background: rgba(255,255,255,.06); color: rgba(255,255,255,.4); text-decoration: none; white-space: nowrap; transition: all .15s; }
+  .variant-link:hover { background: rgba(255,255,255,.12); color: rgba(255,255,255,.7); }
+  .variant-link.active { background: rgba(74,158,255,.2); color: #4a9eff; }
+  #player-frame { flex: 1; width: 100%; max-width: 480px; min-height: 0; border-radius: 16px; overflow: hidden; border: 1px solid rgba(255,255,255,.08); background: #000; box-shadow: 0 4px 40px rgba(0,0,0,.6); margin: 0 12px; }
+  #root { width: 100%; height: 100%; }
+  #reload-toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(74,158,255,.9); color: #fff; padding: 12px 24px; border-radius: 10px; font-size: 14px; font-weight: 600; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 200; backdrop-filter: blur(8px); }
+  #reload-toast.show { opacity: 1; }
+  #bottom-bar { display: flex; gap: 6px; align-items: center; width: 100%; max-width: 500px; padding: 8px 12px; flex-shrink: 0; }
+  #edit-input, #label-input { flex: 1; padding: 8px 12px; border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.05); color: #eee; border-radius: 8px; font-size: 13px; outline: none; transition: border-color .15s; }
+  #edit-input:focus, #label-input:focus { border-color: rgba(74,158,255,.5); }
+  #edit-input::placeholder, #label-input::placeholder { color: rgba(255,255,255,.25); }
+  #edit-btn, #label-btn { width: 32px; height: 32px; padding: 0; background: rgba(255,255,255,.06); color: rgba(255,255,255,.5); border: 1px solid rgba(255,255,255,.1); border-radius: 8px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; transition: all .15s; flex-shrink: 0; }
+  #edit-btn:hover, #label-btn:hover { background: rgba(74,158,255,.2); border-color: rgba(74,158,255,.4); color: #4a9eff; }
+  #edit-btn:disabled, #label-btn:disabled { opacity: 0.3; cursor: wait; }
+  #thumbnails { display: flex; gap: 6px; width: 100%; max-width: 500px; padding: 4px 12px; flex-shrink: 0; overflow-x: auto; scrollbar-width: thin; }
+  #thumbnails::-webkit-scrollbar { height: 4px; }
+  #thumbnails::-webkit-scrollbar-thumb { background: rgba(255,255,255,.15); border-radius: 2px; }
+  .thumb-item { flex-shrink: 0; width: 64px; height: 48px; border-radius: 6px; overflow: hidden; cursor: pointer; border: 2px solid transparent; transition: all .15s; position: relative; background: rgba(255,255,255,.05); }
+  .thumb-item:hover { border-color: rgba(74,158,255,.4); }
+  .thumb-item.active { border-color: #4a9eff; box-shadow: 0 0 8px rgba(74,158,255,.3); }
+  .thumb-item img { width: 100%; height: 100%; object-fit: cover; }
+  .thumb-badge { position: absolute; top: 2px; right: 2px; width: 10px; height: 10px; border-radius: 50%; background: #4ade80; border: 1px solid rgba(0,0,0,.4); display: none; }
+  .thumb-badge.has-label { display: block; }
+  #timed-labels { width: 100%; max-width: 500px; padding: 2px 12px; flex-shrink: 0; display: flex; flex-direction: column; gap: 2px; max-height: 80px; overflow-y: auto; }
+  .timed-label { display: flex; align-items: center; gap: 6px; padding: 3px 6px; border-radius: 4px; background: rgba(255,255,255,.04); font-size: 11px; color: rgba(255,255,255,.6); }
+  .timed-label .tl-time { flex-shrink: 0; font-family: monospace; font-size: 10px; color: rgba(74,158,255,.7); min-width: 32px; }
+  .timed-label .tl-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .timed-label .tl-del { width: 16px; height: 16px; border: none; background: rgba(255,60,60,.15); color: rgba(255,60,60,.5); border-radius: 3px; cursor: pointer; font-size: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; padding: 0; line-height: 1; }
+  .timed-label .tl-del:hover { background: rgba(255,60,60,.3); color: #fff; }
+  #saved-toast { position: fixed; bottom: 70px; left: 50%; transform: translateX(-50%); background: rgba(74,222,128,.9); color: #fff; padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 500; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 200; backdrop-filter: blur(8px); }
+  #saved-toast.show { opacity: 1; }
+  #scene-thumbnails { display: flex; gap: 6px; width: 100%; max-width: 500px; padding: 4px 12px; flex-shrink: 0; overflow-x: auto; scrollbar-width: thin; }
+  #scene-thumbnails::-webkit-scrollbar { height: 4px; }
+  #scene-thumbnails::-webkit-scrollbar-thumb { background: rgba(255,255,255,.15); border-radius: 2px; }
+  .sthumb-item { flex-shrink: 0; width: 72px; cursor: pointer; border-radius: 6px; overflow: hidden; border: 2px solid transparent; transition: all .15s; background: rgba(255,255,255,.05); display: flex; flex-direction: column; }
+  .sthumb-item:hover { border-color: rgba(74,158,255,.4); }
+  .sthumb-item.active { border-color: #4a9eff; box-shadow: 0 0 8px rgba(74,158,255,.3); }
+  .sthumb-media { width: 100%; height: 48px; overflow: hidden; position: relative; }
+  .sthumb-media img, .sthumb-media video { width: 100%; height: 100%; object-fit: cover; }
+  .sthumb-fallback { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,.08); color: rgba(255,255,255,.3); font-size: 16px; font-weight: 600; }
+  .sthumb-name { font-size: 9px; color: rgba(255,255,255,.45); text-align: center; padding: 2px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+</style>
+</head>
+<body>
+<script>
+  window.VARIANT = "${label}";
+  window.MODE = "${mode}";
+</script>
+<div id="root"></div>
+<script src="/player.js" type="module"></script>
+</body>
+</html>`;
 }
 
 // ─── HTTP Server ──────────────────────────────────────────────────────────
@@ -855,7 +923,7 @@ IMPORTANT: Read the full existing JSON file before editing. Only edit the JSON f
       return;
     }
 
-    // API: SSE stream for reload notifications
+    // API: SSE stream for reload notifications + server-liveness monitor
     // When the browser tab closes, this connection drops → server shuts down
     // Grace period: wait 3s for reconnection (page reload), then exit
     if (path === "/api/events") {
@@ -864,6 +932,8 @@ IMPORTANT: Read the full existing JSON file before editing. Only edit the JSON f
         "Cache-Control": "no-cache",
         "Connection": "keep-alive",
       });
+      // Flush headers to client so EventSource.onopen fires
+      res.write(":ok\n\n");
       sseClients.add(res);
       if (shutdownTimer) {
         clearTimeout(shutdownTimer);
