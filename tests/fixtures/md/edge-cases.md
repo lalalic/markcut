@@ -31,3 +31,12 @@ layout:parallel
 - image src:a.jpg duration:3 start:1
 - image src:b.jpg duration:2 start:0
 - image src:c.jpg duration:4 start:2
+## ScriptCodeFence
+layout:series
+- script
+  ~~~script
+  This is a longer narration
+  that goes across multiple lines
+  and uses a code fence instead of inline text.
+  ~~~
+- script "Inline text also works"

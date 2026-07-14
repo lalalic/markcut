@@ -174,7 +174,9 @@ For compatibility, `import { Name } from "spec"` also works and produces the sam
 | `title` | display title | scene |
 | `instruction` | visual intent / style / any prompt; NOT rendered | any |
 | `script` | narration/dialogue text; TTS source; NOT rendered directly | audio | Only on audio nodes — see Narration section below |
-| `tts` | CLI template string; per-scene TTS override (overrides root `tts`) | root, scene |
+| `speaker` | speaker name for multi-turn dialogue; set automatically by dialogue expansion | audio | Used for per-speaker voice lookup and subtitle prefix |
+| `voices` | JSON object mapping speaker names to extra TTS CLI flags e.g. `{"Ray":"--voice en-US-GuyNeural"}` | root | Flags are appended to the resolved TTS CLI template |
+| `tts` | CLI template string e.g. `"edge-tts --voice en-US-GuyNeural --text {input} --write-media {output}"` | root | Set once at the root level; all TTS uses this template |
 | `metadata` | arbitrary metadata string | root |
 | `stylesheet` | global CSS string; selectors use `.className` on elements | root |
 | `style` | inline CSS applied to the node's container div e.g. `"border-radius:12px"` | any |
@@ -253,6 +255,37 @@ For longer text, use an indented code fence:
 ```
 
 All three patterns produce an `audio` node with a `script` field. The pipeline's TTS resolver (`resolveScripts`) picks up these nodes, generates speech audio files, and sets the `src` field to the output path. The `script` field is consumed by the resolver and is not present in the compiled stream tree.
+
+#### Multi-turn Dialogue
+
+When a `script` contains multiple lines matching `SpeakerName: text` format, the pipeline automatically expands it into a multi-turn dialogue where each line becomes a separate audio node with its own TTS generation. This allows different speakers to have different voices.
+
+```md
+- script "Ray: Hello everyone and welcome
+Alice: Good day to you all
+Ray: Let's get started"
+```
+
+The dialogue lines play sequentially. Each line is transcribed separately, and subtitles include the speaker prefix (e.g., `Ray: Hello everyone and welcome`).
+
+##### Per-Speaker Voices
+
+Configure different TTS voices for each speaker via the root `voices` config. Each value is **extra CLI flags** appended to the TTS template:
+
+```md
+# video
+voices:{"Ray":"--voice en-US-GuyNeural","Alice":"--voice en-US-JennyNeural"}
+- script "Ray: Tell us about your project
+Alice: I'm working on something exciting"
+```
+
+Since values are raw CLI flags, they naturally support voice cloning, rate, pitch, and any edge-tts feature:
+
+```md
+voices:{"Ray":"--voice en-US-GuyNeural --rate +20%","Clone":"--voice clone-xxx --pitch +5Hz"}
+```
+
+The final TTS command for a speaker: `<root tts cli> <speaker voice flags>`.
 
 ### `subtitle` (root-level overlay)
 

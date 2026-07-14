@@ -101,7 +101,7 @@ function preserveVariantAttrs(node: Record<string, unknown>, attrs: Record<strin
     "spots", "waypoints", "routeColor", "routeWeight", "routeMarker",
     "travelMode", "zoom", "center", "mapType", "data", "prompt",
     "name", "title", "transition", "transitionTime", "layout",
-    "componentName", "props",
+    "componentName", "props", "speaker",
   ]);
   for (const [k, v] of Object.entries(attrs)) {
     if (!STANDARD.has(k)) {
@@ -214,6 +214,7 @@ function parseNodeLine(content: string, lineNum?: number): DescriptiveNode {
         type: "audio",
         id: attrs.id as any,
         src,
+        speaker: attrs.speaker as string | undefined,
         duration: attrs.duration as any,
         start: attrs.start as any,
         startFrom: attrs.startFrom as any,
@@ -292,14 +293,14 @@ function parseNodeLine(content: string, lineNum?: number): DescriptiveNode {
     }
     case "script": {
       const raw = firstPositional ?? (attrs.script ? String(attrs.script) : undefined);
-      if (!raw) throw new DslError("script requires text content", ctx);
-      // Unquote if needed (standalone `- script "..."` preserves quotes in the token)
-      const text = isQuoted(raw) ? unquote(raw) : raw;
+      // Text may be empty — ~~~script code fence will provide it later
+      const text = raw ? (isQuoted(raw) ? unquote(raw) : raw) : undefined;
       // Script is an alias for audio — creates an audio node with TTS-needed marker.
       const scriptNode: any = {
         type: "audio",
         id: attrs.id as any,
         script: text,
+        speaker: attrs.speaker as string | undefined,
         volume: (attrs.volume as number | undefined) ?? 1,
         start: attrs.start as any,
         duration: attrs.duration as any,
@@ -667,6 +668,9 @@ function applyRootAttrs(root: DescriptiveRoot, attrs: Record<string, unknown>): 
         }
         break;
       }
+      case "voices":
+        root.voices = v as Record<string, string>;
+        break;
       default:
         throw new Error(`unknown root key: ${k}`);
     }

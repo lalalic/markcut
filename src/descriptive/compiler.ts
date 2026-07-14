@@ -67,6 +67,10 @@ export interface DescriptiveAudio extends DescriptiveBaseNode {
   src?: string;
   /** Narration text for TTS generation. When set without src, triggers TTS pipeline. */
   script?: string;
+  /** Speaker name for multi-turn dialogue. Set by resolveDialogue when expanding
+   *  `SpeakerName: text` format scripts. Used for per-speaker voice selection and
+   *  subtitle prefix. */
+  speaker?: string;
   volume?: number;
   foreground?: boolean;
   startFrom?: number;
@@ -185,6 +189,12 @@ export interface DescriptiveRoot {
   imports?: never;
   /** Raw imports block source (from \`\`\`imports code fence). Parsed by parseImportsBlock. */
   importsBlock?: string;
+  /** Per-speaker voice mapping for multi-turn dialogue.
+   *  Keys are speaker names (e.g. "Ray", "Alice"), values are TTS voice names
+   *  (e.g. "en-US-GuyNeural", "en-US-JennyNeural").
+   *  When a dialogue node has a matching `speaker` field, its TTS voice is
+   *  substituted from this map. */
+  voices?: Record<string, string>;
   children: DescriptiveNode[];
 }
 
@@ -513,6 +523,7 @@ function compileLeaf(node: Exclude<DescriptiveNode, DescriptiveContainer | Descr
         volume: node.volume ?? 1,
         foreground: node.foreground,
         loop: node.loop,
+        speaker: node.speaker,
       };
       return { stream, duration: end };
     }

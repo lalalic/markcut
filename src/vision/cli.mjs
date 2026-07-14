@@ -943,9 +943,9 @@ async function runFullPipeline(folder, prompts, ittCli, vttCli, sttCli, context,
   const previewJsonPath = join(folder, ".preview.json");
   writeFileSync(previewJsonPath, JSON.stringify(previewTree, null, 2), "utf-8");
 
-  const labelServer = join(__dirname, "..", "player", "label-server.mjs");
-  if (!existsSync(labelServer)) {
-    emitError(`Label server not found at ${labelServer}`);
+  const playerServer = join(__dirname, "..", "player", "server.mjs");
+  if (!existsSync(playerServer)) {
+    emitError(`Player server not found at ${playerServer}`);
     process.exit(1);
   }
 
@@ -954,7 +954,7 @@ async function runFullPipeline(folder, prompts, ittCli, vttCli, sttCli, context,
   emitInfo(`  Labels will be merged into metadata.json as user hints.\n`);
 
   const port = 3031;
-  const child = spawn("node", [labelServer, previewJsonPath, `--port=${port}`], {
+  const child = spawn("node", [playerServer, previewJsonPath, "--label", `--port=${port}`], {
     cwd: resolve(__dirname, "..", ".."),
     stdio: ["ignore", "pipe", "inherit"],
   });
@@ -963,7 +963,7 @@ async function runFullPipeline(folder, prompts, ittCli, vttCli, sttCli, context,
   if (child.stdout) {
     child.stdout.on("data", (chunk) => {
       process.stdout.write(chunk);
-      if (!serverReady && chunk.toString().includes("Label Preview")) {
+      if (!serverReady && chunk.toString().includes("Player ready")) {
         serverReady = true;
         try { execSync(`open http://localhost:${port}`, { stdio: "ignore" }); } catch {}
       }

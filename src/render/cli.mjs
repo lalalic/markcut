@@ -243,21 +243,19 @@ async function main() {
     }
 
     if (args.label || args.edit) {
-      const playerServer = args.label
-        ? join(__dirname, "..", "player", "label-server.mjs")
-        : join(__dirname, "..", "player", "server.mjs");
+      const playerServer = join(__dirname, "..", "player", "server.mjs");
       if (!existsSync(playerServer)) {
         console.error("Player server not found at", playerServer);
         process.exit(1);
       }
-      const modeFlags = args.noBrowser ? "--no-browser" : "";
+      const labelFlag = args.label ? "--label" : "";
       const editFlag = args.edit ? "--edit" : "";
       const portFlag = `--port=${args.port || 3001}`;
       const fileFlag = args.file || join(ROOT, "video.json");
       const port = args.port || 3001;
       // Pass variant flags to the server
       const variantFlags = args.variant.map(v => `--variant=${v}`);
-      const serverArgs = [playerServer, resolve(fileFlag), modeFlags, editFlag, `--port=${port}`, ...variantFlags].filter(Boolean);
+      const serverArgs = [playerServer, resolve(fileFlag), labelFlag, editFlag, portFlag, ...variantFlags].filter(Boolean);
       const child = spawn("node", serverArgs, { cwd: ROOT, stdio: ["ignore", "pipe", "inherit"] });
       let serverReady = false;
       let stdoutBuffer = "";
@@ -267,7 +265,7 @@ async function main() {
           process.stdout.write(chunk);
           if (!serverReady && !args.noBrowser) {
             stdoutBuffer += chunk.toString();
-            if (stdoutBuffer.includes("Player ready") || stdoutBuffer.includes("Label Preview")) {
+            if (stdoutBuffer.includes("Player ready")) {
               serverReady = true;
 
               try {

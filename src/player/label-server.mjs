@@ -1,129 +1,30 @@
 #!/usr/bin/env node
 /**
- * Label preview server — player for scene labeling.
+ * ⚠️  DEPRECATED — This file has been merged into server.mjs.
  *
- * Usage:
- *   node src/player/label-server.mjs <input.json|.md> [--port 3031]
+ * Use the unified player server with --label flag instead:
+ *   node src/player/server.mjs <input.json|.md> --label [--port 3031]
  *
- * Supports compiled stream trees, descriptive JSON, and markdown.
- * Labels are saved to labels.json alongside the source.
+ * All functionality (label, edit, preview modes) is now in server.mjs.
+ * See src/player/ui/ for the separated UI control components.
  */
-import { createServer } from "node:http";
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { spawn } from "node:child_process";
 import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { isDescriptiveRoot, resolveAndCompile, resolveAndCompileMarkdown } from "./pipeline.mjs";
-import { extractScenes, MIME, serveFile, handleShutdown } from "./server-shared.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, "..", "..");
-const PORT = parseInt(process.argv.find(a => a.startsWith("--port="))?.split("=")[1] || "3031", 10);
 
-// Determine source: JSON or MD file (3rd+ arg, skip --flags)
-const sourceArg = process.argv.slice(2).find(a => !a.startsWith("--"));
-const SOURCE = sourceArg ? resolve(sourceArg) : resolve(".");
-const IS_MARKDOWN = SOURCE.endsWith(".md");
+const args = process.argv.slice(2);
+console.warn("\n⚠️  label-server.mjs is deprecated. Use server.mjs --label instead.\n");
 
-// ─── extractScenes imported from ./server-shared.mjs ────────────────────
-
-// ─── Load + compile (handles compiled JSON, descriptive JSON, markdown) ──
-async function loadSource() {
-  const raw = readFileSync(SOURCE, "utf-8");
-
-  if (IS_MARKDOWN) {
-    console.log("  📝 Detected markdown — parsing + compiling...");
-    return await resolveAndCompileMarkdown(raw, {
-      baseDir: dirname(SOURCE),
-    });
-  }
-
-  const parsed = JSON.parse(raw);
-  const root = parsed.root || parsed;
-
-  if (isDescriptiveRoot(root)) {
-    console.log("  🔍 Detected descriptive JSON — running pipeline...");
-    return await resolveAndCompile(root, {
-      baseDir: dirname(SOURCE),
-    });
-  }
-
-  return root;
-}
-
-// ─── Scene parsing ─────────────────────────────────────────────────────
-let scenes = [];
-let totalDuration = 0;
-let videoData = null;
-const LABELS_PATH = join(dirname(SOURCE), "labels.json");
-/** Promise that resolves when the initial pipeline (TTS, STT, media) completes */
-let bootstrap = Promise.resolve();
-
-if (existsSync(SOURCE)) {
-  try {
-    // async bootstrap — we inline the promise since the server starts synchronously
-    bootstrap = loadSource().then((compiled) => {
-      videoData = compiled;
-      const extracted = extractScenes(compiled);
-      scenes = extracted.scenes;
-      totalDuration = extracted.totalDuration;
-
-      // If only scenes metadata (no compiled tree from labels.json), build a player tree
-      if (scenes.length > 0 && (!videoData.type || videoData.type !== "root")) {
-        videoData = {
-          id: "root",
-          type: "root",
-          width: 1080,
-          height: 1920,
-          fps: 30,
-          isSeries: true,
-          transition: "fade",
-          theme: "cinematic",
-          children: scenes.map((s, i) => ({
-            id: s.name || ("scene-" + (i+1)),
-            name: s.name || ("scene-" + (i+1)),
-            type: "folder",
-            isSeries: false,
-            children: [{
-              id: (s.name || "scene-"+(i+1)) + "-media",
-              type: s.mediaType === "video" ? "video" : "image",
-              src: s.src,
-              fit: "cover",
-              start: 0,
-              end: s.duration,
-            }],
-          })),
-        };
-      }
-
-      // Merge existing labels from labels.json into videoData
-      try {
-        const labelsRaw = readFileSync(LABELS_PATH, "utf-8");
-        const labelsData = JSON.parse(labelsRaw);
-        const labelsRoot = labelsData.root || labelsData;
-        if (labelsRoot.children) {
-          for (let i = 0; i < Math.min(labelsRoot.children.length, videoData.children.length); i++) {
-            const labelMedia = labelsRoot.children[i]?.children?.[0];
-            const targetMedia = videoData.children[i]?.children?.[0];
-            if (labelMedia && targetMedia && labelMedia.description) {
-              targetMedia.description = labelMedia.description;
-            }
-          }
-        }
-      } catch {
-        // No existing labels file — that's fine
-      }
-    }).catch(e => {
-      console.error("Failed to load source:", e.message);
-      // Fallback: minimal data so the server starts
-      videoData = { id: "root", type: "root", width: 1080, height: 1920, fps: 30, isSeries: false, children: [] };
-    });
-  } catch (e) {
-    console.error("Warning: could not parse source:", e.message);
-  }
-} else {
-  console.error(`Source not found: ${SOURCE}`);
-  process.exit(1);
-}
+// Forward to the unified server with --label flag
+const serverPath = join(__dirname, "server.mjs");
+const child = spawn("node", [serverPath, ...args, "--label"], {
+  cwd: ROOT,
+  stdio: "inherit",
+});
+child.on("exit", (code) => process.exit(code ?? 0));
 // ─── MIME imported from ./server-shared.mjs ──────────────────────────────
 
 // ─── HTML page ─────────────────────────────────────────────────────────

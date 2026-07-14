@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 /**
- * Shared utilities for markcut player servers.
+ * Shared utilities for the markcut player server.
  *
- * Extracts common code between server.mjs (edit/preview) and
- * label-server.mjs (label annotation) into one place.
+ * Common code used by server.mjs across all modes (preview, edit, label).
  */
 
 import { statSync, createReadStream, readFileSync, existsSync } from "node:fs";

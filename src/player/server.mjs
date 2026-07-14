@@ -17,6 +17,7 @@ import { fileURLToPath } from "node:url";
 import { isDescriptiveRoot, resolveAndCompile, resolveAndCompileMarkdown, parseImportsBlock, extractDependencySpecs } from "./pipeline.mjs";
 import { bundleFromEntries } from "./bundler.mjs";
 import { extractScenes, MIME, serveFile, handleShutdown } from "./server-shared.mjs";
+import { getHtmlForMode } from "./ui/index.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, "..", "..");
@@ -448,6 +449,29 @@ async function compileAndExtractScenes() {
       console.error(`  ⚠ Could not extract scenes for "${config.label}":`, e.message);
     }
   }
+
+  // Merge existing labels from labels.json into the compiled root (label mode)
+  if (MODE_LABEL) {
+    const labelsPath = join(dirname(VIDEO_JSON), "labels.json");
+    try {
+      const labelsRaw = readFileSync(labelsPath, "utf-8");
+      const labelsData = JSON.parse(labelsRaw);
+      const labelsRoot = labelsData.root || labelsData;
+      const root = compiledRootCache.get("default");
+      if (labelsRoot.children && root?.children) {
+        for (let i = 0; i < Math.min(labelsRoot.children.length, root.children.length); i++) {
+          const labelMedia = labelsRoot.children[i]?.children?.[0];
+          const targetMedia = root.children[i]?.children?.[0];
+          if (labelMedia && targetMedia && labelMedia.description) {
+            targetMedia.description = labelMedia.description;
+          }
+        }
+      }
+      console.log(`  🏷️  Merged ${Object.keys(labelsRoot.children || {}).length} existing labels from labels.json`);
+    } catch {
+      // No existing labels file — that's fine
+    }
+  }
 }
 
 function getScenes(label) {
@@ -538,125 +562,11 @@ function resolveAsset(urlPath, variantLabel) {
 // ─── HTML page ───────────────────────────────────────────────────────────
 function getHtml(variantLabel) {
   const label = variantLabel || "default";
-  const hasLabel = MODE_LABEL ? "true" : "false";
-  const hasWatch = MODE_EDIT ? "true" : "false";
-  const title = label !== "default" ? ` — ${label}` : MODE_LABEL ? " — Label" : MODE_EDIT ? " — Edit" : "";
-
-  // Build variant switcher links
-  const variantLinks = VARIANT_CONFIGS.map(c =>
-    `<a href="/${c.label === "default" ? "" : c.label}" class="variant-link${c.label === label ? " active" : ""}">${c.label}</a>`
-  ).join("");
-
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Remotion Player${title}</title>
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a0a; }
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; flex-direction: column; align-items: center; }
-  #header { display: flex; align-items: center; justify-content: flex-end; width: 100%; max-width: 500px; padding: 8px 12px; flex-shrink: 0; gap: 8px; }
-  #header-status { font-size: 11px; color: rgba(255,255,255,.4); flex: 1; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  #header-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
-  #close-btn { width: 22px; height: 22px; border-radius: 50%; border: 1px solid rgba(255,255,255,.15); background: rgba(0,0,0,.3); color: rgba(255,255,255,.4); font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all .15s; }
-  #close-btn:hover { background: rgba(255,60,60,.4); border-color: rgba(255,60,60,.5); color: #fff; }
-  #variant-bar { display: flex; gap: 4px; align-items: center; width: 100%; max-width: 500px; padding: 6px 12px; flex-shrink: 0; overflow-x: auto; }
-  .variant-link { font-size: 11px; padding: 3px 10px; border-radius: 12px; background: rgba(255,255,255,.06); color: rgba(255,255,255,.4); text-decoration: none; white-space: nowrap; transition: all .15s; }
-  .variant-link:hover { background: rgba(255,255,255,.12); color: rgba(255,255,255,.7); }
-  .variant-link.active { background: rgba(74,158,255,.2); color: #4a9eff; }
-  #player-frame { flex: 1; width: 100%; max-width: 480px; min-height: 0; border-radius: 16px; overflow: hidden; border: 1px solid rgba(255,255,255,.08); background: #000; box-shadow: 0 4px 40px rgba(0,0,0,.6); margin: 0 12px; }
-  #root { width: 100%; height: 100%; }
-  #reload-toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(74,158,255,.9); color: #fff; padding: 12px 24px; border-radius: 10px; font-size: 14px; font-weight: 600; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 200; backdrop-filter: blur(8px); }
-  #reload-toast.show { opacity: 1; }
-  #bottom-bar { display: flex; gap: 6px; align-items: center; width: 100%; max-width: 500px; padding: 8px 12px; flex-shrink: 0; }
-  #edit-input { flex: 1; padding: 8px 12px; border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.05); color: #eee; border-radius: 8px; font-size: 13px; outline: none; transition: border-color .15s; }
-  #edit-input:focus { border-color: rgba(74,158,255,.5); }
-  #edit-input::placeholder { color: rgba(255,255,255,.25); }
-  #edit-btn { width: 32px; height: 32px; padding: 0; background: rgba(255,255,255,.06); color: rgba(255,255,255,.5); border: 1px solid rgba(255,255,255,.1); border-radius: 8px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; transition: all .15s; flex-shrink: 0; }
-  #edit-btn:hover { background: rgba(74,158,255,.2); border-color: rgba(74,158,255,.4); color: #4a9eff; }
-  #edit-btn:disabled { opacity: 0.3; cursor: wait; }
-</style>
-</head>
-<body>
-<script>window.VARIANT = "${label}";</script>
-${MODE_EDIT ? `<div id="header">
-  <span id="header-status"></span>
-  <div id="header-actions">
-    <button id="close-btn" title="Close player and return to terminal">✕</button>
-  </div>
-</div>` : ""}
-<div id="variant-bar">${variantLinks}</div>
-<div id="player-frame">
-  <div id="root"></div>
-</div>
-<div id="reload-toast">🔄 JSON changed — reloading...</div>
-${MODE_EDIT ? `<div id="bottom-bar">
-  <input id="edit-input" placeholder="What should change? e.g. make text bigger" />
-  <button id="edit-btn" title="Apply edit">&#x2728;</button>
-</div>` : ""}
-<script src="/player.js" type="module"></script>
-${MODE_EDIT ? `<script>
-// ─── SSE reload ───────────────────────────────────────────────────────
-const evtSource = new EventSource("/api/events");
-evtSource.onmessage = (e) => {
-  const msg = JSON.parse(e.data);
-  if (msg.type === "reload" && !suppressReload) {
-    window.dispatchEvent(new Event("refresh-player"));
-  }
-};
-
-// ─── Close button ─────────────────────────────────────────────────────
-document.getElementById("close-btn")?.addEventListener("click", () => {
-  navigator.sendBeacon("/api/shutdown", "{}");
-  document.body.innerHTML = "<div style='display:flex;align-items:center;justify-content:center;height:100vh;background:#0a0a0a;color:#555;font-family:sans-serif;font-size:16px'>\u2B61 player closed \u2014 return to terminal</div>";
-});
-
-// ─── Edit input ───────────────────────────────────────────────────────
-const editInput = document.getElementById("edit-input");
-const editBtn = document.getElementById("edit-btn");
-const headerStatus = document.getElementById("header-status");
-
-let suppressReload = false;
-
-async function applyEdit() {
-  const text = editInput.value.trim();
-  if (!text) return;
-  editBtn.disabled = true;
-  headerStatus.textContent = "\u231B editing...";
-  editInput.value = "";
-  suppressReload = true;
-  try {
-    const res = await fetch("/api/edit", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text }),
-    });
-    const data = await res.json();
-    if (res.ok) {
-      const summary = (data.output || "done").split("\\n")[0].slice(0, 65);
-      headerStatus.textContent = summary;
-      setTimeout(() => { suppressReload = false; window.dispatchEvent(new Event("refresh-player")); }, 4000);
-    } else {
-      headerStatus.textContent = "\u274C " + (data.error || "failed");
-      suppressReload = false;
-    }
-  } catch (e) {
-    headerStatus.textContent = "\u274C error";
-    suppressReload = false;
-  }
-  editBtn.disabled = false;
-}
-
-editBtn?.addEventListener("click", applyEdit);
-editInput?.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") { e.preventDefault(); applyEdit(); }
-});
-</script>` : ""}
-
-</body>
-</html>`;
+  const mode = MODE_LABEL ? "label" : MODE_EDIT ? "edit" : "preview";
+  return getHtmlForMode(mode, {
+    variantLabel: label,
+    variantConfigs: VARIANT_CONFIGS,
+  });
 }
 
 // ─── HTTP Server ──────────────────────────────────────────────────────────
@@ -684,13 +594,25 @@ const server = createServer(async (req, res) => {
     if (path === "/api/labels") {
       const labelsPath = join(dirname(VIDEO_JSON), "labels.json");
       if (req.method === "GET") {
+        // Return the stream tree — descriptions on children are the labels
         try {
           const data = readFileSync(labelsPath, "utf-8");
+          const parsed = JSON.parse(data);
+          if (parsed.type || parsed.root) {
+            res.writeHead(200, { "Content-Type": "application/json" });
+            res.end(data);
+            return;
+          }
+        } catch { /* labels.json missing or invalid — fall through */ }
+        // Fall back to compiled root for the default variant
+        try {
+          const root = await loadCompiledRoot("default");
+          const tree = resolveAssetPaths(root);
           res.writeHead(200, { "Content-Type": "application/json" });
-          res.end(data);
-        } catch (e) {
+          res.end(JSON.stringify(tree));
+        } catch {
           res.writeHead(200, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ labels: [], scenes: [] }));
+          res.end(JSON.stringify({ type: "root", children: [] }));
         }
         return;
       }
@@ -699,7 +621,38 @@ const server = createServer(async (req, res) => {
         req.on("data", c => body += c);
         req.on("end", () => {
           try {
-            writeFileSync(labelsPath, body, "utf-8");
+            const data = JSON.parse(body);
+
+            // Granular label update: { sceneIndex, description, time, overall, removeTimed }
+            if (typeof data.sceneIndex === "number") {
+              // Load the compiled root to apply labels to the live tree
+              loadCompiledRoot("default").then((root) => {
+                const child = root?.children?.[data.sceneIndex];
+                const media = child?.children?.[0];
+                if (media) {
+                  media.userHints = media.userHints || { overall: "", timed: {} };
+                  if (data.removeTimed) {
+                    delete media.userHints.timed[data.removeTimed];
+                  } else if (typeof data.description === "string") {
+                    if (data.overall) {
+                      media.userHints.overall = data.description;
+                    } else {
+                      const timeMs = Math.round((data.time || 0) * 1000);
+                      media.userHints.timed["at_" + timeMs] = data.description;
+                    }
+                  }
+                  media.description = media.userHints.overall || Object.values(media.userHints.timed)[0] || undefined;
+                }
+                // Save the full tree to labels.json
+                writeFileSync(labelsPath, JSON.stringify(root, null, 2), "utf-8");
+              }).catch(() => {
+                // If no compiled root, save the update as minimal labels.json
+                writeFileSync(labelsPath, body, "utf-8");
+              });
+            } else {
+              // Full labels.json body — save directly
+              writeFileSync(labelsPath, body, "utf-8");
+            }
             res.writeHead(200, { "Content-Type": "application/json" });
             res.end(JSON.stringify({ saved: true, path: labelsPath }));
           } catch (e) {
@@ -993,6 +946,7 @@ server.listen(PORT, async () => {
   } catch {
     // Pipeline failed — still announce ready so the player can show an error state
   }
+
   const mode = MODE_LABEL ? " --label" : MODE_EDIT ? " --edit" : "";
   console.log(`\n🎬 Player ready at http://localhost:${PORT}${mode}`);
   if (VARIANT_CONFIGS.length > 1) {

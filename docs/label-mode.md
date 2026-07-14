@@ -94,12 +94,13 @@ Stream tree JSON (labels.json)
 
 ## Implementation
 
-Source: `src/player/label-server.mjs`
+Source: `src/player/server.mjs` (unified server, use `--label` flag)
+UI controls: `src/player/ui/label.mjs` (label-specific HTML + client JS)
 
 - Built on Node.js `http` module (no Express dependency)
 - Serves bundled `player.js` (esbuild output from `src/player/browser.tsx`)
 - Labels saved atomically to disk on each POST
-- Accepts stream tree JSON only (no media folder mode)
+- Supports stream tree JSON, descriptive JSON, and markdown input
 
 ## Reference
 

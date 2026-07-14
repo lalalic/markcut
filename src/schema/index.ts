@@ -113,6 +113,7 @@ export const audio = base.extend({
   volume: z.number().min(0).max(1).default(1),
   foreground: z.boolean().optional().describe("ducks parent video audio while playing"),
   loop: z.number().int().min(1).optional().describe(">1 = loop count"),
+  speaker: z.string().optional().describe("speaker name for multi-turn dialogue; set by resolveDialogue"),
 });
 export type Audio = z.infer<typeof audio>;
 

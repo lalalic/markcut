@@ -635,6 +635,24 @@ describe("edge-cases fixture", () => {
     );
     expect(compiled.type).toBe("root");
   });
+
+  it("parses script code fence for longer text", () => {
+    const parsed = parseMarkdownDescriptive(fx.source);
+    const fenceScene = parsed.children.find((s: any) => s.name === "ScriptCodeFence");
+    expect(fenceScene).toBeDefined();
+    // First child: script with code fence content
+    expect(fenceScene!.children[0].type).toBe("audio");
+    expect(fenceScene!.children[0].script).toContain("longer narration");
+    expect(fenceScene!.children[0].script).toContain("multiple lines");
+    expect(fenceScene!.children[0].script).toContain("code fence");
+    // Second child: regular inline script
+    expect(fenceScene!.children[1].type).toBe("audio");
+    expect(fenceScene!.children[1].script).toBe("Inline text also works");
+
+    // Compile should succeed
+    const compiled = compileDescriptiveRoot(parsed);
+    expect(compiled.type).toBe("root");
+  });
 });
 
 // ── Full Feature ──────────────────────────────────────────────────────────
@@ -724,6 +742,158 @@ describe("component-imports fixture", () => {
     expect(scene.type).toBe("scene");
     const comps = scene.children.filter((c: any) => c.type === "component");
     expect(comps).toHaveLength(2); // Hello + PieChart
+  });
+});
+
+// ── Dialogue fixture ──────────────────────────────────────────────────────
+// Tests multi-turn dialogue expansion in script fields
+
+describe("dialogue fixture", () => {
+  const fx = loadFixture("dialogue");
+
+  it("parses dialogue scenes with script field", () => {
+    const parsed = parseMarkdownDescriptive(fx.source);
+    const convScene = parsed.children.find((s: any) => s.name === "Conversation");
+    expect(convScene).toBeDefined();
+    expect(convScene.layout).toBe("series");
+    // The dialogue script is a single script node with multi-line content
+    const scriptNode = convScene.children.find((c: any) => c.type === "audio" && c.script);
+    expect(scriptNode).toBeDefined();
+    expect(scriptNode.script).toContain("Ray:");
+    expect(scriptNode.script).toContain("Alice:");
+  });
+
+  it("parses single-line script (not dialogue)", () => {
+    const parsed = parseMarkdownDescriptive(fx.source);
+    const singleScene = parsed.children.find((s: any) => s.name === "SingleLine");
+    expect(singleScene).toBeDefined();
+    const scriptNode = singleScene.children.find((c: any) => c.type === "audio" && c.script);
+    expect(scriptNode).toBeDefined();
+    expect(scriptNode.script).toBe("This is just a single line of narration, not dialogue");
+  });
+});
+
+// ── resolveDialogue unit tests ─────────────────────────────────────────────
+
+import { resolveDialogue, parseDialogueLines } from "../src/descriptive/resolve";
+
+describe("parseDialogueLines", () => {
+  it("detects multi-turn dialogue", () => {
+    const lines = parseDialogueLines("Ray: Hello\nAlice: Good day\nRay: Welcome");
+    expect(lines).toHaveLength(3);
+    expect(lines[0]).toEqual({ speaker: "Ray", text: "Hello" });
+    expect(lines[1]).toEqual({ speaker: "Alice", text: "Good day" });
+    expect(lines[2]).toEqual({ speaker: "Ray", text: "Welcome" });
+  });
+
+  it("returns empty array for single line", () => {
+    expect(parseDialogueLines("Just a single line")).toEqual([]);
+    expect(parseDialogueLines("Ray: Hello")).toEqual([]);
+  });
+
+  it("returns empty array for non-matching format", () => {
+    expect(parseDialogueLines("not a dialogue line")).toEqual([]);
+    expect(parseDialogueLines("No colon here")).toEqual([]);
+  });
+
+  it("handles multi-word speaker names", () => {
+    const lines = parseDialogueLines("Dr Smith: Hello\nMs Johnson: Hi there");
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).toEqual({ speaker: "Dr Smith", text: "Hello" });
+    expect(lines[1]).toEqual({ speaker: "Ms Johnson", text: "Hi there" });
+  });
+
+  it("handles Chinese speaker names", () => {
+    const lines = parseDialogueLines("小王: 你好\n小李: 早上好");
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).toEqual({ speaker: "小王", text: "你好" });
+    expect(lines[1]).toEqual({ speaker: "小李", text: "早上好" });
+  });
+
+  it("trims whitespace", () => {
+    const lines = parseDialogueLines("  Ray:  Hello  \n  Alice:  Hi  ");
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).toEqual({ speaker: "Ray", text: "Hello" });
+    expect(lines[1]).toEqual({ speaker: "Alice", text: "Hi" });
+  });
+
+  it("requires at least 2 matching lines", () => {
+    expect(parseDialogueLines("Ray: One\nNot a dialogue line")).toEqual([]);
+  });
+});
+
+describe("resolveDialogue", () => {
+  it("expands dialogue script into sequential audio nodes wrapped in series", () => {
+    const root = {
+      children: [
+        {
+          type: "scene",
+          name: "Test",
+          children: [
+            {
+              type: "audio",
+              script: "Ray: Hello\nAlice: Good day",
+              volume: 1,
+            },
+          ],
+        },
+      ],
+    } as any;
+
+    const result = resolveDialogue(root);
+
+    const scene = result.children[0];
+    // Original audio node should be replaced with a series container
+    expect(scene.children[0].type).toBe("series");
+    expect(scene.children[0].children).toHaveLength(2);
+    expect(scene.children[0].children[0].script).toBe("Hello");
+    expect(scene.children[0].children[0].speaker).toBe("Ray");
+    expect(scene.children[0].children[1].script).toBe("Good day");
+    expect(scene.children[0].children[1].speaker).toBe("Alice");
+  });
+
+  it("does not modify single-line scripts", () => {
+    const root = {
+      children: [
+        {
+          type: "scene",
+          children: [
+            { type: "audio", script: "Just a single line", volume: 1 },
+          ],
+        },
+      ],
+    } as any;
+
+    const result = resolveDialogue(root);
+    expect(result.children[0].children).toHaveLength(1);
+    expect(result.children[0].children[0].type).toBe("audio");
+    expect(result.children[0].children[0].script).toBe("Just a single line");
+  });
+
+  it("wraps dialogue lines in series without tts/voices", () => {
+    const root = {
+      tts: "edge-tts --voice default --text {input} --write-media {output}",
+      voices: { Ray: "--voice en-US-GuyNeural", Alice: "--voice en-US-JennyNeural" },
+      children: [
+        {
+          type: "scene",
+          children: [
+            {
+              type: "audio",
+              script: "Ray: Hello\nAlice: Good day",
+              volume: 1,
+            },
+          ],
+        },
+      ],
+    } as any;
+
+    const result = resolveDialogue(root);
+    const series = result.children[0].children[0];
+    expect(series.tts).toBeUndefined();
+    expect(series.voices).toBeUndefined();
+    expect(series.type).toBe("series");
+    expect(series.children).toHaveLength(2);
   });
 });
 

@@ -63,8 +63,13 @@ src/
 ├── render/cli.mjs         → CLI entry
 ├── render/tts.ts          → TTS via CLI template + variable substitution
 ├── player/pipeline.mjs    → Bundled pipeline (server imports this)
-├── player/server.mjs      → --edit server
-├── player/label-server.mjs→ --label server
+├── player/server.mjs      → Unified server (--edit, --label, preview)
+├── player/ui/              → Mode-specific UI control components
+│   ├── index.mjs
+│   ├── base.mjs
+│   ├── label.mjs
+│   ├── edit.mjs
+│   └── preview.mjs
 └── tests/                 → Vitest integration tests
 ```
 
@@ -183,7 +188,7 @@ node src/render/cli.mjs templates
 - `--edit` flag starts a live-reload loop: edit JSON → player auto-refreshes
 - `--label` flag starts a labeling UI for selecting and annotating media
 - `--port` flag sets the server port (default 3001)
-- Two implementations: `server.mjs` (Remotion Player) and `label-server.mjs` (label input overlay)
+- Unified server: `server.mjs` serves all modes (preview, edit, label). UI control components in `ui/`.
 
 ## Testing
 
@@ -260,6 +265,24 @@ Every node carries an optional `script` field for narration/dialogue text. The p
 4. **Subtitle** — attach resulting VTT as a `subtitle` child node for final rendering
 
 This separates concerns: `script` = authoring text (human/agent-friendly), `subtitle` = rendered output (timed VTT cues).
+
+### Multi-turn Dialogue
+
+When `script` text contains multiple `SpeakerName: text` lines (2+), the pipeline auto-expands it into a multi-turn dialogue. Each line becomes a separate audio node with `speaker` field, wrapped in a `series` container for sequential playback.
+
+```md
+- script "Ray: Hello everyone
+Alice: Good day to you
+Ray: Let's begin"
+```
+
+Per-speaker voices are configured via `voices` on root. Each value is extra CLI flags appended to the TTS template:
+
+```md
+voices:{"Ray":"--voice en-US-GuyNeural","Alice":"--voice en-US-JennyNeural"}
+```
+
+The speaker name is matched against `voices` map and the extra flags are appended to the TTS CLI template, naturally supporting voice cloning or edge-tts features (rate, pitch, etc.). Subtitles include the speaker prefix (`Ray: Hello everyone`).
 
 ## Dependencies
 

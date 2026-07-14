@@ -261,6 +261,117 @@ export async function resolveMediaDurations(
   return clone;
 }
 
+// ── Dialogue expansion ──────────────────────────────────────────────────────
+
+/**
+ * Detect if a script contains multi-turn dialogue in `SpeakerName: text` format.
+ *
+ * A script is a "dialogue" if at least 2 lines match the pattern `Name: text`.
+ * Single-line `SpeakerName: text` is NOT treated as dialogue — it's just a
+ * regular script with a speaker annotation.
+ *
+ * Example dialogue:
+ * ```
+ * Ray: Hello everyone and welcome
+ * Alice: Good day to you all
+ * Ray: Let's get started
+ * ```
+ *
+ * Each line becomes a separate audio node with:
+ * - `script`: just the text (without the "SpeakerName: " prefix)
+ * - `speaker`: the speaker name
+ *
+ * The dialogue lines are wrapped in a series container so they play sequentially
+ * regardless of the parent scene's layout.
+ */
+export function parseDialogueLines(script: string): Array<{ speaker: string; text: string }> {
+  const lines = script.split("\n").map(l => l.trim()).filter(Boolean);
+  const dialoguePattern = /^([\w\u4e00-\u9fff][\w\s\u4e00-\u9fff]*?):\s*(.+)$/;
+
+  const result: Array<{ speaker: string; text: string }> = [];
+  for (const line of lines) {
+    const match = line.match(dialoguePattern);
+    if (!match) return []; // Any non-matching line invalidates the dialogue format
+    result.push({ speaker: match[1]!.trim(), text: match[2]!.trim() });
+  }
+
+  // Require at least 2 lines to be considered a dialogue
+  return result.length >= 2 ? result : [];
+}
+
+/**
+ * Walk the descriptive tree and expand multi-turn dialogue-formatted scripts
+ * into sequential per-line audio nodes.
+ *
+ * This runs BEFORE resolveScripts so each dialogue line gets its own TTS
+ * generation with the correct per-speaker voice.
+ */
+export function resolveDialogue(root: DescriptiveRoot): DescriptiveRoot {
+  const clone: DescriptiveRoot = JSON.parse(JSON.stringify(root));
+
+  // Collect dialogue nodes for expansion (walking and modifying simultaneously is tricky)
+  const expansions: Array<{
+    parent: any;
+    index: number;
+    originalNode: any;
+    lines: Array<{ speaker: string; text: string }>;
+  }> = [];
+
+  walkDown(clone as any, (node, parent) => {
+    if (node.type !== "audio") return;
+    if (!node.script || typeof node.script !== "string") return;
+    if (node.src) return; // Already has a real source
+
+    const lines = parseDialogueLines(node.script);
+    if (lines.length < 2) return; // Not a dialogue
+
+    if (!parent || !Array.isArray(parent.children)) return;
+    const idx = parent.children.indexOf(node);
+    if (idx === -1) return;
+
+    expansions.push({ parent, index: idx, originalNode: node, lines });
+  });
+
+  if (expansions.length === 0) return root;
+
+  // Apply expansions in reverse index order so splice indices stay valid
+  expansions.sort((a, b) => b.index - a.index);
+
+  for (const { parent, index, originalNode, lines } of expansions) {
+    const dialogueNodes: any[] = [];
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i]!;
+      const { speaker, text } = line;
+      const lineNode: any = {
+        ...originalNode,
+        id: originalNode.id ? `${originalNode.id}-line-${i}` : undefined,
+        script: text,
+        speaker,
+        start: 0,
+        duration: undefined, // Will be set by TTS duration probing
+      };
+      delete lineNode.src;
+      dialogueNodes.push(lineNode);
+    }
+
+    // Wrap dialogue lines in a series container for sequential playback
+    const seriesContainer: any = {
+      type: "series",
+      id: `${originalNode.id ?? "dialogue"}-series`,
+      children: dialogueNodes,
+    };
+
+    // Replace the original node with the series container
+    parent.children.splice(index, 1, seriesContainer);
+  }
+
+  const expanded = expansions.length > 0 ? clone : root;
+  const count = expansions.reduce((sum, e) => sum + e.lines.length, 0);
+  console.log(`  💬 dialogue: expanded ${expansions.length} script${expansions.length > 1 ? "s" : ""} into ${count} lines`);
+  return expanded;
+}
+
 // ── Script → TTS → STT ─────────────────────────────────────────────────────
 
 export interface ResolveScriptOptions {
@@ -292,23 +403,30 @@ export async function resolveScripts(
   let cacheDirty = false;
 
   // Collect all audio nodes that have script text but no src yet
-  // Also store their parent scene for per-scene tts resolution
-  const allScriptNodes: Array<{ node: any; id: string; parent: any }> = [];
-  walkDown(clone as any, (node, parent) => {
+  const allScriptNodes: Array<{ node: any; id: string }> = [];
+  walkDown(clone as any, (node) => {
     if (node.type !== "audio") return;
     if (!node.script || typeof node.script !== "string") return;
     if (node.src) return; // already has real source
     const id = node.id ?? `audio-${allScriptNodes.length}`;
-    allScriptNodes.push({ node, id, parent });
+    allScriptNodes.push({ node, id });
   });
 
   if (allScriptNodes.length > 0) {
     console.log(`  🔊 TTS: generating ${allScriptNodes.length} script${allScriptNodes.length > 1 ? "s" : ""}...`);
   }
 
-  for (const { node, id, parent } of allScriptNodes) {
-    // Resolve TTS config: parent scene tts > root tts > options ttsCli > default
-    const ttsCli = parent?.tts ?? clone.tts ?? options.ttsCli ?? DEFAULT_TTS_CLI;
+  for (const { node, id } of allScriptNodes) {
+    // TTS CLI from root config only
+    let ttsCli = clone.tts ?? options.ttsCli ?? DEFAULT_TTS_CLI;
+
+    // Per-speaker voice appends extra CLI flags from root voices config
+    if (node.speaker && clone.voices) {
+      const speakerVoice = clone.voices[node.speaker];
+      if (speakerVoice) {
+        ttsCli = `${ttsCli} ${speakerVoice}`;
+      }
+    }
 
     // Content-addressed filename: hash of script + CLI, so identical scripts
     // across different source files share the same audio file.
@@ -318,7 +436,8 @@ export async function resolveScripts(
     // Check cache — skip TTS if script + config unchanged AND audio file exists
     const cached = checkCache(cache, `tts:${cacheKey}`, cacheKey);
     let generated: string;
-    const label = firstWords(node.script, 8);
+    const speakerLabel = node.speaker ? `${node.speaker}: ` : "";
+    const label = `${speakerLabel}${firstWords(node.script, 8)}`;
     if (cached) {
       generated = cached;
       console.log(`  ✓ TTS: ${label} (cached)`);
@@ -378,7 +497,7 @@ export async function resolveSubtitles(
   let cacheDirty = false;
 
   // Collect { audioSrc, absoluteOffset } from the compiled tree
-  const clips: Array<{ audioSrc: string; offset: number }> = [];
+  const clips: Array<{ audioSrc: string; offset: number; speaker?: string }> = [];
 
   /**
    * Walk an array of sibling nodes, tracking cumulative offset for series layouts.
@@ -411,7 +530,7 @@ export async function resolveSubtitles(
       const effectiveOffset = nodeStart + actionStart;
 
       if (node.type === "audio" && node.src) {
-        clips.push({ audioSrc: node.src, offset: effectiveOffset });
+        clips.push({ audioSrc: node.src, offset: effectiveOffset, speaker: node.speaker });
       }
 
       // Recurse into children — determine their layout from the node type
@@ -467,7 +586,7 @@ export async function resolveSubtitles(
 
   let sttFailedCount = 0;
 
-  for (const { audioSrc, offset } of clips) {
+  for (const { audioSrc, offset, speaker } of clips) {
     // Cache key: audio hash + STT CLI string
     const audioHash = existsSync(audioSrc)
       ? createHash("sha1").update(readFileSync(audioSrc)).digest("hex").slice(0, 12)
@@ -519,7 +638,11 @@ export async function resolveSubtitles(
         const sec = (s % 60).toFixed(3).padStart(6, "0");
         return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${sec}`;
       };
-      const text = lines.slice(lines.indexOf(tline) + 1).join("\n").trim();
+      let text = lines.slice(lines.indexOf(tline) + 1).join("\n").trim();
+      // Prepend speaker prefix for dialogue cues
+      if (speaker) {
+        text = `${speaker}: ${text}`;
+      }
       mergedLines.push(String(cueIndex++));
       mergedLines.push(`${formatSec(toSec(a) + offset)} --> ${formatSec(toSec(z) + offset)}`);
       mergedLines.push(text, "");
@@ -864,6 +987,10 @@ export async function resolveAll(
     baseDir: options.baseDir,
     skip: options.skip,
   });
+
+  // Step 4.5: Expand multi-turn dialogue (SpeakerName: text format)
+  // Must run before TTS so each dialogue line gets its own audio node
+  result = resolveDialogue(result);
 
   // Step 5: Script → TTS
   if (options.scriptOutputDir) {

@@ -259,7 +259,8 @@ function compileLeaf(node2, ctx, parentKind) {
         src: node2.src,
         volume: node2.volume ?? 1,
         foreground: node2.foreground,
-        loop: node2.loop
+        loop: node2.loop,
+        speaker: node2.speaker
       };
       return { stream, duration: end };
     }
@@ -10117,7 +10118,8 @@ function preserveVariantAttrs(node2, attrs) {
     "transitionTime",
     "layout",
     "componentName",
-    "props"
+    "props",
+    "speaker"
   ]);
   for (const [k, v] of Object.entries(attrs)) {
     if (!STANDARD.has(k)) {
@@ -10214,6 +10216,7 @@ function parseNodeLine(content3, lineNum) {
         type: "audio",
         id: attrs.id,
         src,
+        speaker: attrs.speaker,
         duration: attrs.duration,
         start: attrs.start,
         startFrom: attrs.startFrom,
@@ -10291,12 +10294,12 @@ function parseNodeLine(content3, lineNum) {
     }
     case "script": {
       const raw = firstPositional ?? (attrs.script ? String(attrs.script) : void 0);
-      if (!raw) throw new DslError("script requires text content", ctx);
-      const text3 = isQuoted(raw) ? unquote(raw) : raw;
+      const text3 = raw ? isQuoted(raw) ? unquote(raw) : raw : void 0;
       const scriptNode = {
         type: "audio",
         id: attrs.id,
         script: text3,
+        speaker: attrs.speaker,
         volume: attrs.volume ?? 1,
         start: attrs.start,
         duration: attrs.duration,
@@ -10584,6 +10587,9 @@ function applyRootAttrs(root, attrs) {
         }
         break;
       }
+      case "voices":
+        root.voices = v;
+        break;
       default:
         throw new Error(`unknown root key: ${k}`);
     }
@@ -10724,29 +10730,92 @@ async function resolveMediaDurations(root, options = {}) {
   });
   return clone;
 }
+function parseDialogueLines(script) {
+  const lines = script.split("\n").map((l) => l.trim()).filter(Boolean);
+  const dialoguePattern = /^([\w\u4e00-\u9fff][\w\s\u4e00-\u9fff]*?):\s*(.+)$/;
+  const result = [];
+  for (const line of lines) {
+    const match = line.match(dialoguePattern);
+    if (!match) return [];
+    result.push({ speaker: match[1].trim(), text: match[2].trim() });
+  }
+  return result.length >= 2 ? result : [];
+}
+function resolveDialogue(root) {
+  const clone = JSON.parse(JSON.stringify(root));
+  const expansions = [];
+  walkDown(clone, (node2, parent) => {
+    if (node2.type !== "audio") return;
+    if (!node2.script || typeof node2.script !== "string") return;
+    if (node2.src) return;
+    const lines = parseDialogueLines(node2.script);
+    if (lines.length < 2) return;
+    if (!parent || !Array.isArray(parent.children)) return;
+    const idx = parent.children.indexOf(node2);
+    if (idx === -1) return;
+    expansions.push({ parent, index: idx, originalNode: node2, lines });
+  });
+  if (expansions.length === 0) return root;
+  expansions.sort((a, b) => b.index - a.index);
+  for (const { parent, index: index2, originalNode, lines } of expansions) {
+    const dialogueNodes = [];
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const { speaker, text: text3 } = line;
+      const lineNode = {
+        ...originalNode,
+        id: originalNode.id ? `${originalNode.id}-line-${i}` : void 0,
+        script: text3,
+        speaker,
+        start: 0,
+        duration: void 0
+        // Will be set by TTS duration probing
+      };
+      delete lineNode.src;
+      dialogueNodes.push(lineNode);
+    }
+    const seriesContainer = {
+      type: "series",
+      id: `${originalNode.id ?? "dialogue"}-series`,
+      children: dialogueNodes
+    };
+    parent.children.splice(index2, 1, seriesContainer);
+  }
+  const expanded = expansions.length > 0 ? clone : root;
+  const count = expansions.reduce((sum, e) => sum + e.lines.length, 0);
+  console.log(`  \u{1F4AC} dialogue: expanded ${expansions.length} script${expansions.length > 1 ? "s" : ""} into ${count} lines`);
+  return expanded;
+}
 async function resolveScripts(root, options) {
   const clone = JSON.parse(JSON.stringify(root));
   mkdirSync2(options.outputDir, { recursive: true });
   const cache = readCacheManifest(options.outputDir);
   let cacheDirty = false;
   const allScriptNodes = [];
-  walkDown(clone, (node2, parent) => {
+  walkDown(clone, (node2) => {
     if (node2.type !== "audio") return;
     if (!node2.script || typeof node2.script !== "string") return;
     if (node2.src) return;
     const id = node2.id ?? `audio-${allScriptNodes.length}`;
-    allScriptNodes.push({ node: node2, id, parent });
+    allScriptNodes.push({ node: node2, id });
   });
   if (allScriptNodes.length > 0) {
     console.log(`  \u{1F50A} TTS: generating ${allScriptNodes.length} script${allScriptNodes.length > 1 ? "s" : ""}...`);
   }
-  for (const { node: node2, id, parent } of allScriptNodes) {
-    const ttsCli = parent?.tts ?? clone.tts ?? options.ttsCli ?? DEFAULT_TTS_CLI;
+  for (const { node: node2, id } of allScriptNodes) {
+    let ttsCli = clone.tts ?? options.ttsCli ?? DEFAULT_TTS_CLI;
+    if (node2.speaker && clone.voices) {
+      const speakerVoice = clone.voices[node2.speaker];
+      if (speakerVoice) {
+        ttsCli = `${ttsCli} ${speakerVoice}`;
+      }
+    }
     const cacheKey = computeCacheKey({ script: node2.script, cli: ttsCli });
     const audioPath = join(options.outputDir, `${cacheKey}.mp3`);
     const cached = checkCache(cache, `tts:${cacheKey}`, cacheKey);
     let generated;
-    const label = firstWords(node2.script, 8);
+    const speakerLabel = node2.speaker ? `${node2.speaker}: ` : "";
+    const label = `${speakerLabel}${firstWords(node2.script, 8)}`;
     if (cached) {
       generated = cached;
       console.log(`  \u2713 TTS: ${label} (cached)`);
@@ -10791,7 +10860,7 @@ async function resolveSubtitles(root, options) {
       const actionStart = node2.start ?? 0;
       const effectiveOffset = nodeStart + actionStart;
       if (node2.type === "audio" && node2.src) {
-        clips.push({ audioSrc: node2.src, offset: effectiveOffset });
+        clips.push({ audioSrc: node2.src, offset: effectiveOffset, speaker: node2.speaker });
       }
       if (node2.children && node2.children.length > 0) {
         let childIsSeries = false;
@@ -10827,7 +10896,7 @@ async function resolveSubtitles(root, options) {
   const mergedLines = ["WEBVTT", ""];
   let cueIndex = 1;
   let sttFailedCount = 0;
-  for (const { audioSrc, offset } of clips) {
+  for (const { audioSrc, offset, speaker } of clips) {
     const audioHash = existsSync2(audioSrc) ? createHash("sha1").update(readFileSync(audioSrc)).digest("hex").slice(0, 12) : audioSrc;
     const sttCacheKey = computeCacheKey({ audioHash, cli: sttCli });
     const sttKey = `stt:${audioSrc.split("/").pop()}`;
@@ -10872,7 +10941,10 @@ async function resolveSubtitles(root, options) {
         const sec = (s % 60).toFixed(3).padStart(6, "0");
         return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${sec}`;
       };
-      const text3 = lines.slice(lines.indexOf(tline) + 1).join("\n").trim();
+      let text3 = lines.slice(lines.indexOf(tline) + 1).join("\n").trim();
+      if (speaker) {
+        text3 = `${speaker}: ${text3}`;
+      }
       mergedLines.push(String(cueIndex++));
       mergedLines.push(`${formatSec(toSec(a) + offset)} --> ${formatSec(toSec(z) + offset)}`);
       mergedLines.push(text3, "");
@@ -11045,6 +11117,7 @@ async function resolveAll2(root, options = {}) {
     baseDir: options.baseDir,
     skip: options.skip
   });
+  result = resolveDialogue(result);
   if (options.scriptOutputDir) {
     result = await resolveScripts(result, {
       outputDir: options.scriptOutputDir,

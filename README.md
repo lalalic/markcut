@@ -201,8 +201,13 @@ src/
 │   ├── cli.mjs            ← CLI entry point
 │   └── tts.ts             ← TTS via CLI template + variable substitution
 ├── player/
-│   ├── server.mjs         ← --edit player server
-│   ├── label-server.mjs   ← --label player server
+│   ├── server.mjs         ← Unified server (--edit, --label, preview)
+│   ├── ui/                ← Mode-specific UI control components
+│   │   ├── index.mjs
+│   │   ├── base.mjs
+│   │   ├── label.mjs
+│   │   ├── edit.mjs
+│   │   └── preview.mjs
 │   ├── pipeline.ts        ← Pipeline entry (bundled to pipeline.mjs)
 │   └── browser.tsx        ← Browser player (bundled with esbuild)
 ├── utils/                 ← Duration calc, VTT parser, helpers
