@@ -59999,7 +59999,7 @@ function HeaderBar({ mode, sceneInfo, editStatus, sseConnected }) {
 // src/player/components/EditControls.tsx
 var React49 = __toESM(require_react(), 1);
 var import_jsx_runtime91 = __toESM(require_jsx_runtime(), 1);
-function EditControls({ onStatusChange, suppressReloadRef }) {
+function EditControls({ onStatusChange, suppressReloadRef, currentTime, activeScene }) {
   const [busy, setBusy] = React49.useState(false);
   const inputRef = React49.useRef(null);
   const handleApplyEdit = React49.useCallback(
@@ -60013,7 +60013,7 @@ function EditControls({ onStatusChange, suppressReloadRef }) {
         const res = await fetch("/api/edit", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text })
+          body: JSON.stringify({ text, currentTime, activeScene })
         });
         const data2 = await res.json();
         if (res.ok) {
@@ -60499,6 +60499,27 @@ function PlayerApp() {
   const mountedRef = React55.useRef(true);
   const currentFrameRef = React55.useRef(0);
   const [currentTime, setCurrentTime] = React55.useState(0);
+  const [activeScene, setActiveScene] = React55.useState("");
+  React55.useEffect(() => {
+    fetch("/api/video-info").then((r) => r.json()).then((info2) => {
+      if (info2.scenes) {
+        window.__scenes = info2.scenes;
+      }
+    }).catch(() => {
+    });
+  }, []);
+  React55.useEffect(() => {
+    const scenes = window.__scenes;
+    if (!scenes) return;
+    let found = "";
+    for (const s2 of scenes) {
+      if (currentTime >= s2.start && currentTime < s2.end) {
+        found = s2.name || "";
+        break;
+      }
+    }
+    setActiveScene(found);
+  }, [currentTime]);
   const pendingSeekRef = React55.useRef(null);
   const urlParams = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
   const autoPlay = urlParams.get("autoplay") === "true";
@@ -60759,7 +60780,9 @@ function PlayerApp() {
           EditControls,
           {
             onStatusChange: setEditStatus,
-            suppressReloadRef
+            suppressReloadRef,
+            currentTime,
+            activeScene
           }
         ),
         mode === "label" && /* @__PURE__ */ (0, import_jsx_runtime95.jsx)(

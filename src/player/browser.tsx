@@ -119,6 +119,34 @@ function PlayerApp() {
   // ── Track current player frame without re-renders ───────────────────
   const currentFrameRef = React.useRef(0);
   const [currentTime, setCurrentTime] = React.useState(0);
+  const [activeScene, setActiveScene] = React.useState("");
+
+  // Fetch scenes for active scene tracking
+  React.useEffect(() => {
+    fetch("/api/video-info")
+      .then((r) => r.json())
+      .then((info) => {
+        if (info.scenes) {
+          // Store scenes globally for time-based lookup
+          (window as any).__scenes = info.scenes;
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Update active scene from currentTime
+  React.useEffect(() => {
+    const scenes = (window as any).__scenes;
+    if (!scenes) return;
+    let found = "";
+    for (const s of scenes) {
+      if (currentTime >= s.start && currentTime < s.end) {
+        found = s.name || "";
+        break;
+      }
+    }
+    setActiveScene(found);
+  }, [currentTime]);
 
   // ── Save/restore position across reloads ────────────────────────────
   const pendingSeekRef = React.useRef<number | null>(null);
@@ -429,6 +457,8 @@ function PlayerApp() {
         <EditControls
           onStatusChange={setEditStatus}
           suppressReloadRef={suppressReloadRef}
+          currentTime={currentTime}
+          activeScene={activeScene}
         />
       )}
       {mode === "label" && (

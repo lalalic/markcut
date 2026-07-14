@@ -13,9 +13,13 @@ interface EditControlsProps {
   onStatusChange?: (status: string) => void;
   /** Ref shared with app shell — set true during edit to suppress SSE-triggered reload */
   suppressReloadRef?: React.MutableRefObject<boolean>;
+  /** Current player time in seconds (sent with edit request for context) */
+  currentTime?: number;
+  /** Active scene name (sent with edit request for context) */
+  activeScene?: string;
 }
 
-export function EditControls({ onStatusChange, suppressReloadRef }: EditControlsProps) {
+export function EditControls({ onStatusChange, suppressReloadRef, currentTime, activeScene }: EditControlsProps) {
   const [busy, setBusy] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
 
@@ -32,7 +36,7 @@ export function EditControls({ onStatusChange, suppressReloadRef }: EditControls
         const res = await fetch("/api/edit", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text }),
+          body: JSON.stringify({ text, currentTime, activeScene }),
         });
         const data = await res.json();
         if (res.ok) {

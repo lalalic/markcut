@@ -17,6 +17,7 @@ import { fileURLToPath } from "node:url";
 import { isDescriptiveRoot, resolveAndCompile, resolveAndCompileMarkdown, parseImportsBlock, extractDependencySpecs } from "./pipeline.mjs";
 import { bundleFromEntries } from "./bundler.mjs";
 import { extractScenes, MIME, serveFile, handleShutdown } from "./server-shared.mjs";
+import { DEFAULT_AGENT_CLI } from "../config.mjs";
 
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -758,22 +759,31 @@ const server = createServer(async (req, res) => {
       return;
     }
 
-    // API: Edit — call pi one-shot to edit the JSON, player auto-reloads
+    // API: Edit — call configured agent CLI to edit the .md source file
+    // Only supports markdown-descriptive (.md) files — the primary authoring format
+    // Uses DEFAULT_AGENT_CLI with {sessionid} replaced by sanitized file path for continuity
+    // System prompt: role "video director" + markcut skill + @{docs/markdown-descriptive.md}
+    // User prompt: current timestamp + active scene + edit request
     if (path === "/api/edit" && req.method === "POST") {
       let body = "";
       req.on("data", c => body += c);
       req.on("end", () => {
         try {
-          const { text } = JSON.parse(body);
+          const { text, currentTime, activeScene } = JSON.parse(body);
           if (!text) { res.writeHead(400); res.end(JSON.stringify({ error: "empty text" })); return; }
 
           editHistory.push(text);
 
-          // Build tree structure description from current JSON (recursive, any depth)
+          // Read the current file content for the agent to edit
+          const rawContent = readFileSync(VIDEO_JSON, "utf-8");
+          const fileLabel = VIDEO_JSON.split("/").pop();
+          // Sanitize file path to a valid session ID (alphanumeric, -, _, .)
+          const sessionId = VIDEO_JSON.replace(/[^a-zA-Z0-9\-_.]/g, "_").replace(/^[^a-zA-Z0-9]+/, "").replace(/[^a-zA-Z0-9]+$/, "");
+
+          // Build tree structure description for context
           let treeInfo = "";
           try {
-            const raw = readFileSync(VIDEO_JSON, "utf-8");
-            const parsed = JSON.parse(raw);
+            const parsed = JSON.parse(rawContent);
             const root = parsed.root || parsed;
 
             function describeNode(node, depth) {
@@ -783,119 +793,92 @@ const server = createServer(async (req, res) => {
               const label = name || id;
               const type = node.type || "unknown";
               const dur = node.durationInSeconds !== undefined ? `, ${node.durationInSeconds}s` : "";
-
               let line = `${indent}${type} "${label}"`;
-
-              if (type === "root") {
-                line += ` (${node.width}x${node.height}, ${node.fps}fps${node.isSeries ? ", series" : ""}${node.transition ? `, transition:${node.transition}` : ""}${node.theme ? `, theme:${node.theme}` : ""})`;
-              } else if (type === "folder") {
-                line += ` (${node.isSeries ? "series" : "parallel"}${node.transition ? `, transition:${node.transition}` : ""}${dur})`;
-              } else if (type === "component") {
+              if (type === "root") line += ` (${node.width}x${node.height}, ${node.fps}fps${node.isSeries ? ", series" : ""}${node.transition ? `, transition:${node.transition}` : ""}${node.theme ? `, theme:${node.theme}` : ""})`;
+              else if (type === "folder") line += ` (${node.isSeries ? "series" : "parallel"}${node.transition ? `, transition:${node.transition}` : ""}${dur})`;
+              else if (type === "component") {
                 const props = node.props ? JSON.stringify(Object.fromEntries(Object.entries(node.props).filter(([k]) => !k.startsWith("_")))) : "{}";
                 line += ` ${node.componentName}(${props.slice(0, 100)})${dur}`;
-              } else if (type === "subtitle") {
-                const txt = (node.src || "").slice(0, 60);
-                line += ` "${txt}"${dur}`;
-              } else if (type === "video" || type === "audio" || type === "image") {
-                const src = (node.src || "").slice(0, 50);
-                line += ` "${src}"${dur}`;
-              } else if (type === "effect") {
-                line += ` animation:${node.animation || "custom"}${dur}`;
-              } else if (type === "rhythm") {
-                line += ` src:"${(node.src || "").slice(0, 40)}"${dur}`;
-              } else if (type === "map") {
-                line += ` waypoints:${(node.waypoints || []).length}${dur}`;
-              } else if (type === "include") {
-                line += ` src:"${(node.src || "").slice(0, 50)}"${dur}`;
               }
-
-              // Add timing info for leaf spans (start/end live on the base node)
+              else if (type === "subtitle") { const txt = (node.src || "").slice(0, 60); line += ` "${txt}"${dur}`; }
+              else if (type === "video" || type === "audio" || type === "image") { const src = (node.src || "").slice(0, 50); line += ` "${src}"${dur}`; }
+              else if (type === "effect") line += ` animation:${node.animation || "custom"}${dur}`;
+              else if (type === "rhythm") line += ` src:"${(node.src || "").slice(0, 40)}"${dur}`;
+              else if (type === "map") line += ` waypoints:${(node.waypoints || []).length}${dur}`;
+              else if (type === "include") line += ` src:"${(node.src || "").slice(0, 50)}"${dur}`;
               if (typeof node.start === "number" || typeof node.end === "number") {
-                const sStart = node.start ?? 0;
-                const sEnd = node.end ?? sStart;
-                line += ` [${sStart}→${sEnd}s`;
-                if (node.isBackground) line += ", bg";
-                if (node.volume !== undefined) line += `, vol:${node.volume}`;
-                if (node.loop) line += `, loop:${node.loop}`;
-                line += `]`;
-              } else if (node.isBackground) {
-                line += ` [bg]`;
-              }
-
-              // Add notable fields
+                const sStart = node.start ?? 0; const sEnd = node.end ?? sStart;
+                line += ` [${sStart}→${sEnd}s${node.isBackground ? ", bg" : ""}${node.volume !== undefined ? `, vol:${node.volume}` : ""}${node.loop ? `, loop:${node.loop}` : ""}]`;
+              } else if (node.isBackground) line += ` [bg]`;
               const extras = [];
               if (node.componentName) extras.push(node.componentName);
               if (node.fit) extras.push(`fit:${node.fit}`);
               if (node.fontSize) extras.push(`fontSize:${node.fontSize}`);
               if (node.volume !== undefined && type !== "root") extras.push(`vol:${node.volume}`);
               if (node.playbackRate) extras.push(`rate:${node.playbackRate}`);
-              if (node.style) extras.push(`style:"${node.style.slice(0, 40)}"`);
               if (node.transitionTime !== undefined) extras.push(`transTime:${node.transitionTime}`);
               if (node.visible === false) extras.push("hidden");
               if (extras.length > 0) line += ` {${extras.join(", ")}}`;
-
               return line;
             }
-
             function walkTree(node, depth = 0) {
               const lines = [describeNode(node, depth)];
               if (node.children && node.children.length > 0) {
-                const shown = node.children.filter(c => c.visible !== false || c.visible === undefined);
-                for (const child of shown) {
-                  lines.push(...walkTree(child, depth + 1));
-                }
+                for (const child of node.children.filter(c => c.visible !== false || c.visible === undefined)) lines.push(...walkTree(child, depth + 1));
               }
               return lines;
             }
-
             treeInfo = walkTree(root).join("\n");
           } catch {}
 
           const historyStr = editHistory.length > 1
-            ? "\nPrevious edits on this file (in order):\n" + editHistory.slice(0, -1).map((e, i) => `${i+1}. ${e}`).join("\n") + "\n"
+            ? "Previous edits (in order):\n" + editHistory.slice(0, -1).map((e, i) => `${i+1}. ${e}`).join("\n") + "\n"
             : "";
 
-          const prompt = `You are editing ${VIDEO_JSON.split("/").pop()}, a Remotion stream tree JSON.
+          // Build system prompt from template file (resolves @{path} references)
+          // System prompt is stable — it contains the role, skills, and format docs.
+          // Tree info and history change per-edit, so they go in the user prompt.
+          const promptTemplate = readFileSync(join(ROOT, "docs", "system-prompt-edit.md"), "utf-8");
+          const systemPrompt = promptTemplate
+            .replace(/@\{([^}]+)\}/g, (_, refPath) => {
+              try {
+                return readFileSync(resolve(ROOT, refPath.trim()), "utf-8");
+              } catch {
+                console.warn(`  ⚠ could not read @{${refPath}}`);
+                return `[Missing: ${refPath}]`;
+              }
+            })
+            .replace(/\$\{fileName\}/g, fileLabel)
+            .replace(/\$\{filePath\}/g, VIDEO_JSON);
 
-The stream tree (indentation shows nesting; timing in seconds):
-${treeInfo || "(could not read tree)"}
+          // Build user prompt with current context (changes every edit)
+          const timeStr = currentTime !== undefined ? `Current playback time: ${Number(currentTime).toFixed(1)}s` : "";
+          const sceneStr = activeScene ? `Active scene: ${activeScene}` : "";
+          const contextBlock = [timeStr, sceneStr].filter(Boolean).join("\n");
+
+          const userPrompt = `--- Current stream tree (for reference) ---
+${treeInfo || "(compiled tree)"}
 ${historyStr}
-Edit request: ${text}
+${contextBlock}
+Edit request: ${text}`;
 
---- Knowledge ---
-You can edit ANY field on ANY node in the JSON. Common fields across all types:
-  - id, name, type, style (inline CSS string), visible (boolean)
+          // Resolve agent CLI template with all placeholders
+          // Each placeholder is its own argument in the template (no shell quotes needed)
+          const agentCli = process.env.MARKCUT_AGENT_CLI || DEFAULT_AGENT_CLI;
+          const parts = agentCli.split(/\s+/);
+          const resolvedParts = parts.map(p =>
+            p.replace(/\{sessionid\}/g, sessionId)
+             .replace(/\{systemprompt\}/g, systemPrompt)
+             .replace(/\{prompt\}/g, userPrompt)
+          );
+          const cmd = resolvedParts[0];
+          const cmdArgs = resolvedParts.slice(1);
 
-Stream types:
-  root: {width, height, fps, isSeries, transition, transitionTime, theme, stylesheet, children}
-  folder: {isSeries (parallel if false), transition, transitionTime, children}
-  video: {src, volume, playbackRate, width, height, actions}
-  audio: {src, volume, foreground (ducks parent video), actions}
-  image: {src, fit (contain/cover/fill), actions}
-  subtitle: {src (text or VTT), cues[], fontSize, fontStyle, style, actions}
-  component: {componentName, props:{}, src (remote URL), actions}
-  effect: {animation (builtin name or "custom"), animationTimingFunction, animationIterationCount, customKeyframes, children, actions}
-  rhythm: {src (audio), volume, spots[] (beat timestamps), children, actions}
-  map: {waypoints[{lat,lng,label?,media?}], routeColor, routeWeight, markerSrc, zoom, actions}
-  include: src (video JSON file path/URL), volume, actions — embeds an external video composition referenced by src. Falls back to inline children (legacy).
+          console.log(`  🤖 edit: ${text}  (${currentTime !== undefined ? currentTime.toFixed(1) + "s" : ""} ${activeScene || ""})`);
+          console.log(`  🎬 session: ${sessionId}`);
+          console.log(`  📋 cmd: ${agentCli.split(/\s+/)[0]} ${agentCli.split(/\s+/).slice(1).join(" ").replace(/\{prompt\}/g, "...").substring(0, 120)}`);
 
-Actions (on leaf types): [{start, end, style?, volume?, effectId?, loop?}] — start/end in seconds, relative to parent container
-
-Composition rules:
-  - isSeries=true → children play sequentially (one after another), with optional transition between them
-  - isSeries=false → children play in parallel, max duration wins (default)
-  - isBackground=true → node loops for the full duration of its parent, excluded from duration calc
-  - transition can be: "fade"|"slide"|"wipe"|"flip"|"clockWipe"
-
-Subtitle styling: style field supports CSS (e.g. "color:#fff;font-size:48px"). fontSize field for quick sizing. Supports HTML in src for rich text. For word-highlight karaoke: set className:"karaoke" on cue, or provide words[{text,start,end}] array.
-
-Themes: set root.theme = "cinematic"|"minimal"|"neon"|"corporate" or an inline theme JSON object. Default is "cinematic".
-Global stylesheet: root.stylesheet = "CSS string" — selectors use .type and .name class names on each node.
-
-IMPORTANT: Read the full existing JSON file before editing. Only edit the JSON file. You can change, add, or remove any field on any node. Output ONLY a one-line summary of what specific change you made. Do not add explanations.`;
-
-          console.log(`  🤖 pi edit: ${text}`);
-          const child = spawn("pi", ["-p", prompt], {
+          const child = spawn(cmd, cmdArgs, {
             cwd: ROOT,
             stdio: ["ignore", "pipe", "pipe"],
           });
@@ -906,13 +889,13 @@ IMPORTANT: Read the full existing JSON file before editing. Only edit the JSON f
 
           child.on("exit", (code) => {
             if (code === 0) {
-              console.log(`  ✅ pi edit complete`);
+              console.log(`  ✅ edit complete`);
               res.writeHead(200, { "Content-Type": "application/json" });
               res.end(JSON.stringify({ done: true, output: output.trim() }));
             } else {
-              console.error(`  ❌ pi edit failed (exit ${code}): ${output.trim()}`);
+              console.error(`  ❌ edit failed (exit ${code}): ${output.trim()}`);
               res.writeHead(500, { "Content-Type": "application/json" });
-              res.end(JSON.stringify({ error: `pi exited with code ${code}`, output: output.trim() }));
+              res.end(JSON.stringify({ error: `agent exited with code ${code}`, output: output.trim() }));
             }
           });
         } catch (e) {

@@ -75,11 +75,14 @@ export const DEFAULT_TTS_CLI =
 
 /**
  * Default agent CLI — general-purpose text LLM.
- * Used for text-only tasks like detect-scenes.
- * Placeholders: {prompt}=the prompt text.
+ * Used for text-only tasks like detect-scenes and editing.
+ * Placeholders:
+ *   {systemprompt} = system prompt (role, instructions, knowledge)
+ *   {prompt}       = user prompt (current context + edit request)
+ *   {sessionid}    = unique session ID for conversation continuity
  * Override with MARKCUT_AGENT_CLI env var.
  */
-export const DEFAULT_AGENT_CLI = process.env.MARKCUT_AGENT_CLI || 'npx pi -p {prompt}';
+export const DEFAULT_AGENT_CLI = process.env.MARKCUT_AGENT_CLI || 'npx pi --session-id {sessionid} --system-prompt {systemprompt} -p {prompt}';
 
 // ── Render-only pipeline CLI templates ─────────────────────────────────────
 // These are specific to the render pipeline (no vision pipeline equivalent).
