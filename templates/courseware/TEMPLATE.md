@@ -2,7 +2,7 @@
 name: courseware
 description: Turn a topic or teaching material into a professional slide-based course video with TTS narration, bullet-reveal slides, and a reviewer quality gate.
 when-to-use: lessons, lectures, training, tutorials, explainers — 1-5 minute educational videos built from slides + narration
-engine: "@lalalic/markcut — run via `npx @lalalic/markcut`"
+test: 
 ---
 
 # Courseware Template
@@ -21,7 +21,6 @@ Layout of this template package:
 
 - markcut skill loaded (engine contract: `SKILL.md` + `docs/markdown-descriptive.md`)
 - `npx @lalalic/markcut` runnable
-- TTS CLI available (default: `edge-tts`)
 - For the reviewer gate: `ffmpeg`/`ffprobe`, an STT CLI (e.g. whisper), and image-understanding capability
 
 ## 1. Inputs — collect before starting
@@ -32,7 +31,6 @@ Layout of this template package:
 | Audience level | no | beginner | beginner / intermediate / expert |
 | Language(s) | no | en | extra languages become variants (see §3) |
 | Target duration | no | 2 min | 1–5 min |
-| Voice per language | no | en: `en-US-GuyNeural`, zh: `zh-CN-YunxiNeural` | edge-tts voice names |
 | Accent color | no | `#61dafb` | theme knob, see §4 |
 
 **Rule:** if the topic/material is missing or ambiguous, ask the user. Never invent course content beyond the given material plus well-established knowledge of the topic. Never invent facts, numbers, or citations.
@@ -82,6 +80,13 @@ Scene rules:
 
 - **Duration is TTS-driven**: never set explicit `duration` on scenes that have a script. Only fixed-visual scenes (Hook, Thanks) get `duration:`.
 
+### make expressful slide
+- use chart to explain when making sense
+- group script and images/videos to make slide more expressful
+- select different transition
+- apply effects
+- control tts with emotion,breaks, speed for natural speech
+
 ## 3. Authoring rules — the professional bar
 
 Slide content:
@@ -94,7 +99,7 @@ Slide content:
 
 Narration script:
 
-- **One short paragraph per bullet.** Never merge bullets into a single monolithic script. Each bullet gets its own `- script "..."` node with `on:(start, id.current=N)`.
+- **One paragraph per bullet.** Never merge bullets into a single monolithic script. Each bullet gets its own `- script "..."` node with `on:(start, id.current=N)`.
 - Paragraph length ≈ **15–30 words** per beat (≈6–12 seconds at 2.5 w/s). Total words = target minutes × 150.
 - Each paragraph **expands** that bullet — never reads it verbatim. The paragraph plus all sibling paragraphs must touch every bullet on the slide.
 - The concrete example gets its own bullet and its own script paragraph. Never bury the example in a generic paragraph.
@@ -122,6 +127,7 @@ Copy both blocks into the generated `course.md` unchanged (except the theme knob
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm'
 import mermaid from 'mermaid'
+import React from 'react'
 import { delayRender, continueRender } from 'remotion'
 
 // Initialize mermaid once. Theme matches the slide deck's dark scheme.
@@ -149,12 +155,7 @@ export function Mermaid({ source }) {
       })
   }, [source])
 
-  return (
-    <div
-      ref={ref}
-      style={{ width: '100%', maxWidth: 960, margin: '20px auto' }}
-    />
-  )
+  return (<divref={ref}style={{ width: '100%', maxWidth: 960, margin: '20px auto' }}/>  )
 }
 
 /**
@@ -305,6 +306,11 @@ Done only when ALL hold:
 - [ ] structure matches §2 (hook, title, 3–6 concepts, summary, thanks)
 - [ ] no blank/black frames at scene boundaries; slides legible at target resolution
 - [ ] STT transcript of rendered audio matches scripts (≥90% content match)
+- [ ] each bullet should be narrated
+- [ ] expressful slides applied
+- [ ] 80% slides have charts/image/...
+
+
 
 ## 7. Reference — worked example
 

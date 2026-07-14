@@ -8,17 +8,67 @@ layout:series subtitle:{fontSize:"20px"} width:1920 height:1080 fps:30 tts:"edge
 ~~~js imports
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm'
+import mermaid from 'mermaid'
+import { delayRender, continueRender } from 'remotion'
+import React from "react"
 
+// Initialize mermaid once. Theme matches the slide deck's dark scheme.
+mermaid.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'loose' })
+
+/**
+ * Renders a mermaid diagram as inline SVG.
+ * Uses Remotion's delayRender/continueRender so the diagram is guaranteed
+ * to be ready before the frame is captured.
+ */
+export function Mermaid({ source }) {
+  const ref = React.useRef(null)
+
+  React.useEffect(() => {
+    if (!source || !ref.current) return
+    const handle = delayRender('Mermaid rendering')
+    mermaid.render('mmd-' + Math.random().toString(36).slice(2), source)
+      .then((result) => {
+        if (ref.current) ref.current.innerHTML = result.svg
+        continueRender(handle)
+      })
+      .catch((err) => {
+        console.error('Mermaid error:', err)
+        continueRender(handle)
+      })
+  }, [source])
+
+  return (
+    <div
+      ref={ref}
+      style={{ width: '100%', maxWidth: 960, margin: '20px auto' }}
+    />
+  )
+}
+
+/**
+ * Courseware slide component.
+ * - Renders markdown via react-markdown
+ * - Highlights the Nth bullet when `current=N`
+ * - Renders mermaid code blocks ( ```mermaid ...``` ) as inline diagrams
+ */
 export function Slide({ current = 0, children }) {
-  let idx = 1;
+  let idx = 1
   return (
     <div className="slide">
       <ReactMarkdown remarkPlugins={[remarkGfm]}
         components={{
           li: ({ children }) => {
-            const highlight = idx === current; idx++;
-            return <li className={highlight ? 'highlight' : ''}>{children}</li>;
-          }
+            const highlight = idx === current; idx++
+            return <li className={highlight ? 'highlight' : ''}>{children}</li>
+          },
+          // Fenced code blocks — detect mermaid, render as diagram
+          pre: ({ children }) => {
+            const code = React.Children.toArray(children)[0]
+            if (code?.props?.className === 'language-mermaid') {
+              return <Mermaid source={String(code.props.children)} />
+            }
+            return <pre>{children}</pre>
+          },
         }}>{children}</ReactMarkdown>
     </div>
   )
@@ -128,6 +178,13 @@ layout:parallel
   Introduction to Machine Learning
 
   **Dr. AI** | AI Introductory Course
+  ```mermaid
+    graph TD;
+      A-->B;
+      A-->C;
+      B-->D;
+      C-->D;
+  ```
   ~~~
   ~~~md zh-source
   # 机器学习导论
