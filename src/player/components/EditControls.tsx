@@ -40,7 +40,7 @@ export function EditControls({ onStatusChange, suppressReloadRef, currentTime, a
         });
         const data = await res.json();
         if (res.ok) {
-          const summary = (data.output || "done").split("\n")[0].slice(0, 65);
+          const summary = data.summary || (data.output || "done").split("\n")[0].slice(0, 65);
           onStatusChange?.(summary);
           setTimeout(() => {
             if (suppressReloadRef) suppressReloadRef.current = false;

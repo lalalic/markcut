@@ -78,6 +78,172 @@ let shutdownTimer = null;
 // ─── Label store for label mode ───────────────────────────────────────────
 let labels = [];
 
+// ─── Agent process (text mode) for --edit mode ────────────────────────────
+// A persistent subprocess that receives prompts via stdin and outputs responses
+// to stdout. We detect turn completion via idle timeout on stdout.
+let agentProcess = null;
+let agentBusy = false;
+let agentBuffer = "";
+let agentIdleTimer = null;
+let agentTurnTimer = null;
+/** Resolve/reject for the pending edit API call */
+let pendingEditResolver = null;
+const AGENT_IDLE_TIMEOUT = 1500; // ms of no stdout output after first chunk → turn done
+const AGENT_FIRST_RESPONSE_TIMEOUT = 30000; // 30s max for agent to start producing output
+const AGENT_TURN_TIMEOUT = 300000; // 5min max per turn (safety net)
+
+/**
+ * Start the agent subprocess in text/interactive mode.
+ * Sends the system prompt as the first input.
+ */
+function startAgentProcess() {
+  if (!MODE_EDIT) return;
+
+  // Resolve agent CLI from env or config
+  const agentCli = process.env.MARKCUT_AGENT_CLI || DEFAULT_AGENT_CLI;
+
+  // Read and resolve system prompt template
+  const fileLabel = VIDEO_JSON.split("/").pop();
+  const sessionId = VIDEO_JSON.replace(/[^a-zA-Z0-9\-_.]/g, "_").replace(/^[^a-zA-Z0-9]+/, "").replace(/[^a-zA-Z0-9]+$/, "");
+  const promptTemplate = readFileSync(join(ROOT, "docs", "system-prompt-edit.md"), "utf-8");
+  const systemPrompt = promptTemplate
+    .replace(/@\{([^}]+)\}/g, (_, refPath) => {
+      try { return readFileSync(resolve(ROOT, refPath.trim()), "utf-8"); }
+      catch { console.warn(`  ⚠ could not read @{${refPath}}`); return `[Missing: ${refPath}]`; }
+    })
+    .replace(/\$\{fileName\}/g, fileLabel)
+    .replace(/\$\{filePath\}/g, VIDEO_JSON);
+
+  // Build the CLI command — strip the -p / --prompt flag so it runs interactively
+  // e.g. "npx pi --session-id {sessionid} --system-prompt {systemprompt} -p {prompt}"
+  //   → "npx pi --session-id SID --system-prompt SP"
+  const parts = agentCli.split(/\s+/);
+  const resolvedParts = [];
+  for (let i = 0; i < parts.length; i++) {
+    const p = parts[i];
+    // Skip -p/--prompt and its value argument
+    if (p === "-p" || p === "--prompt") { i++; continue; }
+    const resolved = p
+      .replace(/\{sessionid\}/g, sessionId)
+      .replace(/\{systemprompt\}/g, systemPrompt)
+      .replace(/\{prompt\}/g, "");
+    if (resolved) resolvedParts.push(resolved);
+  }
+  const cmd = resolvedParts[0];
+  const cmdArgs = resolvedParts.slice(1);
+
+  console.log(`  🎬 starting agent: ${cmd} ${cmdArgs.join(" ").substring(0, 120)}...`);
+
+  const child = spawn(cmd, cmdArgs, {
+    cwd: ROOT,
+    stdio: ["pipe", "pipe", "pipe"],
+  });
+  agentProcess = child;
+
+  // Buffer stdout — detect idle to know when a turn is done
+  child.stdout.on("data", (chunk) => {
+    const text = chunk.toString();
+    if (agentBuffer.length === 0 && text.length > 0) {
+      console.log(`  📢 agent stdout: "${text.substring(0, 80).replace(/\n/g, "\\n")}"`);
+    }
+    agentBuffer += text;
+    if (agentBusy && pendingEditResolver) {
+      // On first data output, clear the first-response timeout and switch to
+      // idle detection — each new chunk resets the idle timer.
+      clearTimeout(agentIdleTimer);
+      agentIdleTimer = setTimeout(() => {
+        // No output for AGENT_IDLE_TIMEOUT → turn is done
+        agentBusy = false;
+        clearTimeout(agentTurnTimer);
+        agentTurnTimer = null;
+        const buf = agentBuffer.trim();
+        agentBuffer = "";
+        const resolver = pendingEditResolver;
+        pendingEditResolver = null;
+        if (resolver) resolver({ ok: true, output: buf });
+      }, AGENT_IDLE_TIMEOUT);
+    }
+  });
+
+  child.stderr.on("data", (chunk) => {
+    // stderr is forwarded to server logs only
+    process.stderr.write(chunk);
+  });
+
+  child.on("exit", (code) => {
+    console.log(`  ⚫ agent process exited (code ${code})`);
+    agentProcess = null;
+    agentBusy = false;
+    clearTimeout(agentIdleTimer);
+    clearTimeout(agentTurnTimer);
+    agentIdleTimer = null;
+    agentTurnTimer = null;
+    if (pendingEditResolver) {
+      pendingEditResolver({ ok: false, output: agentBuffer, error: `agent exited with code ${code}` });
+      pendingEditResolver = null;
+    }
+    // Auto-restart on unexpected exit
+    if (code !== 0 && MODE_EDIT) {
+      console.log(`  🔄 restarting agent in 1s...`);
+      setTimeout(() => startAgentProcess(), 1000);
+    }
+  });
+}
+
+/**
+ * Send a prompt to the agent process and wait for the turn to complete.
+ * Detects completion via idle timeout on stdout (no new output for 1.5s).
+ * @param {string} prompt
+ * @returns {Promise<{ok: boolean, output: string, error?: string}>}
+ */
+function sendToAgent(prompt) {
+  return new Promise((resolve) => {
+    if (!agentProcess || agentProcess.killed) {
+      resolve({ ok: false, output: "", error: "agent process not running" });
+      return;
+    }
+    if (agentBusy) {
+      resolve({ ok: false, output: "", error: "agent is busy" });
+      return;
+    }
+
+    agentBusy = true;
+    agentBuffer = "";
+    pendingEditResolver = resolve;
+
+    // Safety timeout — if agent takes too long, abort
+    agentTurnTimer = setTimeout(() => {
+      agentBusy = false;
+      agentBuffer += "\n[TIMEOUT]";
+      clearTimeout(agentIdleTimer);
+      agentIdleTimer = null;
+      const resolver = pendingEditResolver;
+      pendingEditResolver = null;
+      if (resolver) resolver({ ok: false, output: agentBuffer.trim(), error: "agent turn timed out" });
+    }, AGENT_TURN_TIMEOUT);
+
+    // Write the prompt to stdin
+    console.log(`  📤 writing ${prompt.length} chars to agent stdin`);
+    agentProcess.stdin.write(prompt + "\n");
+    agentProcess.stdin.uncork && agentProcess.stdin.uncork();
+
+    // Wait for first response with a longer timeout. Once we get data on
+    // stdout, the data handler switches to idle detection (1500ms between chunks).
+    // If the agent produces no stdout at all (e.g. silently edits file), this
+    // timer fires and we consider the turn complete.
+    agentIdleTimer = setTimeout(() => {
+      agentBusy = false;
+      clearTimeout(agentTurnTimer);
+      agentTurnTimer = null;
+      const buf = agentBuffer.trim();
+      agentBuffer = "";
+      const resolver = pendingEditResolver;
+      pendingEditResolver = null;
+      if (resolver) resolver({ ok: true, output: buf || "(no output — turn assumed complete)" });
+    }, AGENT_FIRST_RESPONSE_TIMEOUT);
+  });
+}
+
 // ─── Edit history for context ─────────────────────────────────────────────
 let editHistory = [];
 
@@ -759,112 +925,46 @@ const server = createServer(async (req, res) => {
       return;
     }
 
-    // API: Edit — call configured agent CLI to edit the .md source file
-    // Only supports markdown-descriptive (.md) files — the primary authoring format
-    // Uses DEFAULT_AGENT_CLI with {sessionid} replaced by sanitized file path for continuity
-    // System prompt: role "video director" + markcut skill + @{docs/markdown-descriptive.md}
-    // User prompt: current timestamp + active scene + edit request
+    // API: Edit — spawn agent CLI to edit the .md source file
+    // Uses the configured agent CLI (DEFAULT_AGENT_CLI) in one-shot mode.
+    // The agent receives the system prompt + edit request and outputs JSON.
     if (path === "/api/edit" && req.method === "POST") {
       let body = "";
       req.on("data", c => body += c);
-      req.on("end", () => {
+      req.on("end", async () => {
         try {
           const { text, currentTime, activeScene } = JSON.parse(body);
           if (!text) { res.writeHead(400); res.end(JSON.stringify({ error: "empty text" })); return; }
 
           editHistory.push(text);
 
-          // Read the current file content for the agent to edit
-          const rawContent = readFileSync(VIDEO_JSON, "utf-8");
+          // Build system prompt from template
           const fileLabel = VIDEO_JSON.split("/").pop();
-          // Sanitize file path to a valid session ID (alphanumeric, -, _, .)
-          const sessionId = VIDEO_JSON.replace(/[^a-zA-Z0-9\-_.]/g, "_").replace(/^[^a-zA-Z0-9]+/, "").replace(/[^a-zA-Z0-9]+$/, "");
-
-          // Build tree structure description for context
-          let treeInfo = "";
-          try {
-            const parsed = JSON.parse(rawContent);
-            const root = parsed.root || parsed;
-
-            function describeNode(node, depth) {
-              const indent = "  ".repeat(depth);
-              const id = node.id || "";
-              const name = node.name || "";
-              const label = name || id;
-              const type = node.type || "unknown";
-              const dur = node.durationInSeconds !== undefined ? `, ${node.durationInSeconds}s` : "";
-              let line = `${indent}${type} "${label}"`;
-              if (type === "root") line += ` (${node.width}x${node.height}, ${node.fps}fps${node.isSeries ? ", series" : ""}${node.transition ? `, transition:${node.transition}` : ""}${node.theme ? `, theme:${node.theme}` : ""})`;
-              else if (type === "folder") line += ` (${node.isSeries ? "series" : "parallel"}${node.transition ? `, transition:${node.transition}` : ""}${dur})`;
-              else if (type === "component") {
-                const props = node.props ? JSON.stringify(Object.fromEntries(Object.entries(node.props).filter(([k]) => !k.startsWith("_")))) : "{}";
-                line += ` ${node.componentName}(${props.slice(0, 100)})${dur}`;
-              }
-              else if (type === "subtitle") { const txt = (node.src || "").slice(0, 60); line += ` "${txt}"${dur}`; }
-              else if (type === "video" || type === "audio" || type === "image") { const src = (node.src || "").slice(0, 50); line += ` "${src}"${dur}`; }
-              else if (type === "effect") line += ` animation:${node.animation || "custom"}${dur}`;
-              else if (type === "rhythm") line += ` src:"${(node.src || "").slice(0, 40)}"${dur}`;
-              else if (type === "map") line += ` waypoints:${(node.waypoints || []).length}${dur}`;
-              else if (type === "include") line += ` src:"${(node.src || "").slice(0, 50)}"${dur}`;
-              if (typeof node.start === "number" || typeof node.end === "number") {
-                const sStart = node.start ?? 0; const sEnd = node.end ?? sStart;
-                line += ` [${sStart}→${sEnd}s${node.isBackground ? ", bg" : ""}${node.volume !== undefined ? `, vol:${node.volume}` : ""}${node.loop ? `, loop:${node.loop}` : ""}]`;
-              } else if (node.isBackground) line += ` [bg]`;
-              const extras = [];
-              if (node.componentName) extras.push(node.componentName);
-              if (node.fit) extras.push(`fit:${node.fit}`);
-              if (node.fontSize) extras.push(`fontSize:${node.fontSize}`);
-              if (node.volume !== undefined && type !== "root") extras.push(`vol:${node.volume}`);
-              if (node.playbackRate) extras.push(`rate:${node.playbackRate}`);
-              if (node.transitionTime !== undefined) extras.push(`transTime:${node.transitionTime}`);
-              if (node.visible === false) extras.push("hidden");
-              if (extras.length > 0) line += ` {${extras.join(", ")}}`;
-              return line;
-            }
-            function walkTree(node, depth = 0) {
-              const lines = [describeNode(node, depth)];
-              if (node.children && node.children.length > 0) {
-                for (const child of node.children.filter(c => c.visible !== false || c.visible === undefined)) lines.push(...walkTree(child, depth + 1));
-              }
-              return lines;
-            }
-            treeInfo = walkTree(root).join("\n");
-          } catch {}
-
-          const historyStr = editHistory.length > 1
-            ? "Previous edits (in order):\n" + editHistory.slice(0, -1).map((e, i) => `${i+1}. ${e}`).join("\n") + "\n"
-            : "";
-
-          // Build system prompt from template file (resolves @{path} references)
-          // System prompt is stable — it contains the role, skills, and format docs.
-          // Tree info and history change per-edit, so they go in the user prompt.
           const promptTemplate = readFileSync(join(ROOT, "docs", "system-prompt-edit.md"), "utf-8");
           const systemPrompt = promptTemplate
             .replace(/@\{([^}]+)\}/g, (_, refPath) => {
-              try {
-                return readFileSync(resolve(ROOT, refPath.trim()), "utf-8");
-              } catch {
-                console.warn(`  ⚠ could not read @{${refPath}}`);
-                return `[Missing: ${refPath}]`;
-              }
+              try { return readFileSync(resolve(ROOT, refPath.trim()), "utf-8"); }
+              catch { console.warn(`  ⚠ could not read @{${refPath}}`); return `[Missing: ${refPath}]`; }
             })
             .replace(/\$\{fileName\}/g, fileLabel)
             .replace(/\$\{filePath\}/g, VIDEO_JSON);
 
-          // Build user prompt with current context (changes every edit)
+          // Build user prompt with context
           const timeStr = currentTime !== undefined ? `Current playback time: ${Number(currentTime).toFixed(1)}s` : "";
           const sceneStr = activeScene ? `Active scene: ${activeScene}` : "";
           const contextBlock = [timeStr, sceneStr].filter(Boolean).join("\n");
-
-          const userPrompt = `--- Current stream tree (for reference) ---
-${treeInfo || "(compiled tree)"}
+          const historyStr = editHistory.length > 1
+            ? "Previous edits (in order):\n" + editHistory.slice(0, -1).map((e, i) => `${i+1}. ${e}`).join("\n") + "\n"
+            : "";
+          const userPrompt = `${contextBlock}
 ${historyStr}
-${contextBlock}
 Edit request: ${text}`;
 
-          // Resolve agent CLI template with all placeholders
-          // Each placeholder is its own argument in the template (no shell quotes needed)
+          console.log(`  🤖 edit: ${text}  (${currentTime !== undefined ? currentTime.toFixed(1) + "s" : ""} ${activeScene || ""})`);
+
+          // Resolve agent CLI with placeholders
           const agentCli = process.env.MARKCUT_AGENT_CLI || DEFAULT_AGENT_CLI;
+          const sessionId = VIDEO_JSON.replace(/[^a-zA-Z0-9\-_.]/g, "_").replace(/^[^a-zA-Z0-9]+/, "").replace(/[^a-zA-Z0-9]+$/, "");
           const parts = agentCli.split(/\s+/);
           const resolvedParts = parts.map(p =>
             p.replace(/\{sessionid\}/g, sessionId)
@@ -874,10 +974,6 @@ Edit request: ${text}`;
           const cmd = resolvedParts[0];
           const cmdArgs = resolvedParts.slice(1);
 
-          console.log(`  🤖 edit: ${text}  (${currentTime !== undefined ? currentTime.toFixed(1) + "s" : ""} ${activeScene || ""})`);
-          console.log(`  🎬 session: ${sessionId}`);
-          console.log(`  📋 cmd: ${agentCli.split(/\s+/)[0]} ${agentCli.split(/\s+/).slice(1).join(" ").replace(/\{prompt\}/g, "...").substring(0, 120)}`);
-
           const child = spawn(cmd, cmdArgs, {
             cwd: ROOT,
             stdio: ["ignore", "pipe", "pipe"],
@@ -885,19 +981,40 @@ Edit request: ${text}`;
 
           let output = "";
           child.stdout.on("data", d => output += d);
-          child.stderr.on("data", d => output += d);
+          child.stderr.on("data", d => {/* ignore stderr */});
 
-          child.on("exit", (code) => {
-            if (code === 0) {
-              console.log(`  ✅ edit complete`);
-              res.writeHead(200, { "Content-Type": "application/json" });
-              res.end(JSON.stringify({ done: true, output: output.trim() }));
-            } else {
-              console.error(`  ❌ edit failed (exit ${code}): ${output.trim()}`);
-              res.writeHead(500, { "Content-Type": "application/json" });
-              res.end(JSON.stringify({ error: `agent exited with code ${code}`, output: output.trim() }));
-            }
+          // Wait for agent with 30s timeout
+          const exitCode = await new Promise((resolve) => {
+            const timer = setTimeout(() => { child.kill(); resolve(null); }, 30000);
+            child.on("exit", (code) => { clearTimeout(timer); resolve(code); });
+            child.on("error", () => { clearTimeout(timer); resolve(null); });
           });
+
+          if (exitCode === 0) {
+            // Parse JSON from agent output
+            let summary = "";
+            let fileChanged = false;
+            const raw = output.trim();
+            const jsonMatch = raw.match(/\{[\s\S]*"summary"[\s\S]*\}/);
+            if (jsonMatch) {
+              try {
+                const parsed = JSON.parse(jsonMatch[0]);
+                summary = parsed.summary || raw.substring(0, 120);
+                fileChanged = parsed.fileChanged === true;
+              } catch { summary = raw.substring(0, 120); }
+            } else {
+              summary = raw.substring(0, 120);
+            }
+            console.log(`  ✅ ${fileChanged ? "edited" : "no change"}: ${summary}`);
+            console.log(`  📤 response summary="${summary}" fileChanged=${fileChanged}`);
+            res.writeHead(200, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ done: true, summary, fileChanged, output: "" }));
+          } else {
+            const msg = exitCode === null ? "timed out" : `exit code ${exitCode}`;
+            console.error(`  ❌ edit ${msg}: ${output.trim().substring(0, 100)}`);
+            res.writeHead(500, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ error: msg, output: output.trim().substring(0, 200) }));
+          }
         } catch (e) {
           res.writeHead(500, { "Content-Type": "application/json" });
           res.end(JSON.stringify({ error: e.message }));
@@ -998,6 +1115,11 @@ server.listen(PORT, async () => {
     await initScenesPromise;
   } catch {
     // Pipeline failed — still announce ready so the player can show an error state
+  }
+
+  // Start persistent agent process for edit mode (after initial compilation)
+  if (MODE_EDIT) {
+    startAgentProcess();
   }
 
   const mode = MODE_LABEL ? " --label" : MODE_EDIT ? " --edit" : "";
