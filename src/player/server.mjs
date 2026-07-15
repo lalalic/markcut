@@ -792,13 +792,9 @@ function getHtml(variantLabel) {
   #scene-thumbnails { display: flex; gap: 6px; width: 100%; max-width: 500px; padding: 4px 12px; flex-shrink: 0; overflow-x: auto; scrollbar-width: thin; }
   #scene-thumbnails::-webkit-scrollbar { height: 4px; }
   #scene-thumbnails::-webkit-scrollbar-thumb { background: rgba(255,255,255,.15); border-radius: 2px; }
-  .sthumb-item { flex-shrink: 0; width: 72px; cursor: pointer; border-radius: 6px; overflow: hidden; border: 2px solid transparent; transition: all .15s; background: rgba(255,255,255,.05); display: flex; flex-direction: column; }
-  .sthumb-item:hover { border-color: rgba(74,158,255,.4); }
-  .sthumb-item.active { border-color: #4a9eff; box-shadow: 0 0 8px rgba(74,158,255,.3); }
-  .sthumb-media { width: 100%; height: 48px; overflow: hidden; position: relative; }
-  .sthumb-media img, .sthumb-media video { width: 100%; height: 100%; object-fit: cover; }
-  .sthumb-fallback { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,.08); color: rgba(255,255,255,.3); font-size: 16px; font-weight: 600; }
-  .sthumb-name { font-size: 9px; color: rgba(255,255,255,.45); text-align: center; padding: 2px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .scene-pill { flex-shrink: 0; padding: 4px 12px; border-radius: 12px; cursor: pointer; border: 1px solid transparent; transition: all .15s; background: rgba(255,255,255,.06); color: rgba(255,255,255,.45); font-size: 11px; white-space: nowrap; }
+  .scene-pill:hover { border-color: rgba(74,158,255,.4); color: rgba(255,255,255,.7); }
+  .scene-pill.active { background: rgba(74,158,255,.2); border-color: #4a9eff; color: #4a9eff; }
 </style>
 </head>
 <body>

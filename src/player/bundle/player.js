@@ -60348,15 +60348,6 @@ function LabelControls({ playerRef, currentTime, onSceneChange }) {
 // src/player/components/SceneThumbnails.tsx
 var React51 = __toESM(require_react(), 1);
 var import_jsx_runtime93 = __toESM(require_jsx_runtime(), 1);
-var VIDEO_EXT2 = {
-  ".mov": 1,
-  ".mp4": 1,
-  ".avi": 1,
-  ".mkv": 1,
-  ".webm": 1,
-  ".m4v": 1,
-  ".wmv": 1
-};
 function SceneThumbnails({ currentTime, onSeek }) {
   const [scenes, setScenes] = React51.useState([]);
   React51.useEffect(() => {
@@ -60375,22 +60366,12 @@ function SceneThumbnails({ currentTime, onSeek }) {
   }
   return /* @__PURE__ */ (0, import_jsx_runtime93.jsx)("div", { id: "scene-thumbnails", children: scenes.map((scene2, i3) => {
     const isActive = i3 === activeIdx;
-    const ext = scene2.src.substring(scene2.src.lastIndexOf(".")).toLowerCase();
-    const isVideo = !!VIDEO_EXT2[ext];
-    const hasMedia = !!scene2.src;
-    return /* @__PURE__ */ (0, import_jsx_runtime93.jsxs)(
-      "div",
+    return /* @__PURE__ */ (0, import_jsx_runtime93.jsx)(
+      "span",
       {
-        className: "sthumb-item" + (isActive ? " active" : ""),
+        className: "scene-pill" + (isActive ? " active" : ""),
         onClick: () => onSeek?.(scene2.start),
-        children: [
-          /* @__PURE__ */ (0, import_jsx_runtime93.jsxs)("div", { className: "sthumb-media", children: [
-            hasMedia && !isVideo && /* @__PURE__ */ (0, import_jsx_runtime93.jsx)("img", { src: scene2.src, alt: "", loading: "lazy" }),
-            hasMedia && isVideo && /* @__PURE__ */ (0, import_jsx_runtime93.jsx)("video", { src: scene2.src, muted: true, preload: "metadata" }),
-            !hasMedia && /* @__PURE__ */ (0, import_jsx_runtime93.jsx)("span", { className: "sthumb-fallback", children: (scene2.name || "S" + (i3 + 1)).slice(0, 2).toUpperCase() })
-          ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime93.jsx)("span", { className: "sthumb-name", children: scene2.name || "Scene " + (i3 + 1) })
-        ]
+        children: scene2.name || "Scene " + (i3 + 1)
       },
       i3
     );
