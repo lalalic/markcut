@@ -17,7 +17,7 @@ import { fileURLToPath } from "node:url";
 import { isDescriptiveRoot, resolveAndCompile, resolveAndCompileMarkdown, parseImportsBlock, extractDependencySpecs } from "./pipeline.mjs";
 import { bundleFromEntries } from "./bundler.mjs";
 import { extractScenes, MIME, serveFile, handleShutdown } from "./server-shared.mjs";
-import { DEFAULT_AGENT_CLI } from "../config.mjs";
+import { DEFAULT_EDIT_CLI } from "../config.mjs";
 
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -149,7 +149,7 @@ function handleAgentLine(obj) {
 function startAgentProcess() {
   if (!MODE_EDIT) return;
 
-  const agentCli = process.env.MARKCUT_AGENT_CLI || DEFAULT_AGENT_CLI;
+  const agentCli = process.env.MARKCUT_EDIT_CLI || DEFAULT_EDIT_CLI;
 
   const fileLabel = VIDEO_JSON.split("/").pop();
   const sessionId = VIDEO_JSON.replace(/[^a-zA-Z0-9\-_.]/g, "_").replace(/^[^a-zA-Z0-9]+/, "").replace(/[^a-zA-Z0-9]+$/, "");
@@ -929,9 +929,7 @@ const server = createServer(async (req, res) => {
       return;
     }
 
-    // API: Edit — spawn agent CLI to edit the .md source file
-    // Uses the configured agent CLI (DEFAULT_AGENT_CLI) in one-shot mode.
-    // The agent receives the system prompt + edit request and outputs JSON.
+    // API: Edit — send prompt to the persistent rpc agent (startAgentProcess)
     if (path === "/api/edit" && req.method === "POST") {
       let body = "";
       req.on("data", c => body += c);

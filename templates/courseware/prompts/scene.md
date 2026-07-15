@@ -27,6 +27,7 @@ Produce, for language(s) {languages}:
 - `>` quote block only for a single memorable takeaway line
 - no bullet may exceed one line at 1.3em / 1920px width (~90 chars)
 - Optional mermaid diagram: add a fenced mermaid code block after the bullet list (` ```mermaid ...``` `) for flowcharts or architecture visuals.
+- **For each bullet, suggest a visual** (image, diagram, screenshot, or icon) that could accompany it. The visual should show something concrete: a screenshot, a diagram step, a photo, etc.
 
 **B. Narration script** (per language, **one paragraph per bullet**):
 
@@ -54,6 +55,11 @@ script (en):
 <p2: describes bullet 2>
 
 <p3: describes bullet 3 — concrete example>
+
+image suggestions:
+<bullet 1: brief description of visual — e.g. GitHub commit diff screenshot>
+<bullet 2: brief description of visual — e.g. unique hash diagram>
+<bullet 3: brief description of visual — e.g. PR timeline graphs>
 
 script (<lang>):
 <p1 translation>

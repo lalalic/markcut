@@ -24,6 +24,7 @@ Requirements:
   - one concrete example (real product, scenario, or story) — gets its own key point
   - whether the content is comparative → table (if yes, name the columns)
   - whether a mermaid diagram would help (flowchart, architecture, timeline)
+  - per-bullet **image/video suggestion** (a concrete visual that illustrates this point)
   - word budget
 - Summary: one comparison table spanning all concepts (name the columns) + a selection/decision guide ("If X → use Y").
 - Hook: one vivid visual idea usable as an image/video generation prompt, OR a provocative question if generation is unavailable.
@@ -39,6 +40,10 @@ Output format (markdown):
 - points:
   - **<key phrase>** — <elaboration>
   - ... (last point = the concrete example)
+- images:
+  - bullet 1: <description of visual — screenshot, diagram, photo, icon>
+  - bullet 2: <description>
+  - ...
 - table: no | yes (<col1>, <col2>, ...)
 - mermaid: no | yes (<type and description of diagram>)
 - words: <n>

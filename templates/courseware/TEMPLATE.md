@@ -80,12 +80,129 @@ Scene rules:
 
 - **Duration is TTS-driven**: never set explicit `duration` on scenes that have a script. Only fixed-visual scenes (Hook, Thanks) get `duration:`.
 
-### make expressful slide
-- use chart to explain when making sense
-- group script and images/videos to make slide more expressful
-- select different transition
-- apply effects
-- control tts with emotion,breaks, speed for natural speech
+### Production polish — optional enhancements
+
+Once the basic structure works, add these to make the video more professional.
+
+#### A. Bullet-level media (image/video/component per bullet)
+
+Each bullet can have its own visual accompaniment that appears only during that beat. Use `#### Beat` sub-scenes inside the concept scene to group the media and script into one transition segment:
+
+```markdown
+### Commits
+layout:transitionSeries transition:fade(0.5)
+- component id:c isBackground:true jsx:"<Slide current={current}>{source}</Slide>"
+  ~~~md source
+  ## Commits
+  - 📸 **Snapshot** — Every commit records changes
+  - 🏷️ **Unique hash** — Each has an ID like a1b2c3d
+  - 🔗 **Real example** — GitHub commit history for a PR
+  ~~~
+
+#### B1-Snapshot
+layout:parallel
+- image src:snapshot.png style:position:absolute;right:60px;top:50%;width:35%;border-radius:12px;transform:translateY(-50%)
+- script "A commit is like a photograph of your project at a moment in time..." start:0.5 on:(start, c.current=1)
+
+#### B2-Hash
+layout:parallel
+- image src:unique-id.png style:position:absolute;right:60px;top:50%;width:35%;border-radius:12px;transform:translateY(-50%)
+- script "Every commit gets a unique hash, like a1b2c3d, so you can always find it later..." start:0.5 on:(start, c.current=2)
+
+#### B3-Example
+layout:parallel
+- image src:pr-history.png style:position:absolute;right:60px;top:50%;width:35%;border-radius:12px;transform:translateY(-50%)
+- script "For example, when reviewing a pull request on GitHub, each commit tells a story..." start:0.5 on:(start, c.current=3)
+```
+
+Rules for bullet-level media:
+- Position the media in the **right third** of the slide (`right:60px;width:35%`) so it doesn't overlap the left-aligned text.
+- Use `border-radius:12px` for images, `border-radius:50%` for circular narrator avatars.
+- The media node and script node are siblings in a `layout:parallel` sub-scene so they play together as one segment.
+- Each beat node name should briefly describe the visual (e.g. `#### B1-Snapshot`).
+- For **video** clips per bullet: use `- video src:...` instead of `- image src:...`. Same positioning.
+- For **component** per bullet: use `- component jsx:"<MyBulletVisual />"` with its own styling.
+
+#### B. Transition-audio timing
+
+In a `transitionSeries`, adjacent segments overlap by the transition duration (default 0.5s). Without adjustment, the next paragraph's TTS audio starts playing during the fade — creating cacophony.
+
+**Fix: add `start:<T>` to every script node in a transitionSeries, where T = your transition time.**
+
+```markdown
+- script "Paragraph..." start:0.5 on:(start, c.current=1)
+```
+
+This delays both the TTS audio AND the bullet-highlight event until after the transition completes. The transition time value must match the `transition:fade(T)` parameter.
+
+> **If using multiple transitionSeries (nested)**: segment overlap compounds. Each script still gets `start:T` relative to its own segment. The engine handles the compound timing.
+
+#### C. Persistent logo overlay
+
+Add a logo that appears throughout the entire video by placing an `- image isBackground:true` at the root level:
+
+```markdown
+# video
+width:1920 height:1080 fps:30 layout:series
+- image isBackground:true src:logo.png style:position:absolute;bottom:24px;right:24px;width:60px;opacity:0.7
+
+## Hook ...
+## Slides ...
+## Thanks ...
+```
+
+The `isBackground:true` flag wraps the image in `<Loop>` so it plays for the full video duration. Position it in a corner so it doesn't cover slide content.
+
+Variations:
+- **Bottom-left**: `bottom:24px;left:24px`
+- **Transparent watermark**: `opacity:0.3;width:160px`
+- **Animated logo**: use `- video loop isBackground:true src:logo-animated.mp4`
+- **Component logo**: use `- component isBackground:true jsx:"<Logo />"` and define `<Logo>` in the imports block for custom styling.
+
+#### D. Narrator overlay (picture-in-picture)
+
+Add a narrator's face or avatar as a persistent overlay in a corner. Two approaches:
+
+**Static image (circular crop):**
+```markdown
+- image isBackground:true src:narrator.png style:position:absolute;bottom:40px;left:40px;width:100px;height:100px;border-radius:50px;border:3px solid #61dafb;object-fit:cover
+```
+
+**Video loop (animated narrator):**
+```markdown
+- video loop isBackground:true src:narrator.mp4 style:position:absolute;bottom:40px;right:40px;width:140px;height:140px;border-radius:70px;object-fit:cover;border:3px solid rgba(255,255,255,.3)
+```
+
+**With name label (using component):**
+```markdown
+- component isBackground:true jsx:"<NarratorBox src='narrator.png' name='Dr. Smith' />"
+```
+
+The `NarratorBox` component is available in the imports block (see §4) and adds a name label + glow effect.
+
+**Placement rules:**
+- Narrator overlay goes in the **opposite corner** from the logo. If logo is bottom-right, narrator goes bottom-left.
+- The overlay should be small enough (≤140px diameter) to not distract from slide content.
+- For video narrators, keep the B-roll simple and well-lit (talking head style).
+
+#### E. Effects (entrance animations)
+
+Apply CSS keyframe animations to images and components for entrance effects:
+```markdown
+- image src:chart.png effect:zoomIn duration:1
+- component jsx:"<Counter />" effect:fadeIn duration:2
+```
+
+See markcut docs for available effect types: `fadeIn`, `zoomIn`, `bounceIn`, `slideInLeft`, `slideInRight`, `flipIn`, or custom keyframes.
+
+#### F. TTS expression control
+
+Guide TTS pronunciation for more natural speech using SSML-style cues in the script text:
+- **Pause**: use `—` (em dash) or `...` for natural breath pauses
+- **Emphasis**: capitalize key terms or use `*asterisks*` (edge-tts interprets these as emphasis)
+- **Rate**: set `tts.rate:+10%` on the root config line for faster pacing, or `tts:{"--rate +10%"}` per scene
+- **Phonetic spelling**: for jargon ("Snyk" = "snik", "Grafana" = "gruh-fah-nuh"), add parenthetical pronunciation on first use: `Snyk (pronounced "snik")` 
+- **Language mix**: for bilingual content, switch edge-tts voice per language using the `# <lang>` variant block
 
 ## 3. Authoring rules — the professional bar
 
@@ -105,6 +222,7 @@ Narration script:
 - The concrete example gets its own bullet and its own script paragraph. Never bury the example in a generic paragraph.
 - Bullet ordering: concepts first (what/why), example last (concrete reinforcement). The example is the final beat before advancing to the next scene.
 - Summary: each row in the comparison table gets one beat. The final beat closes the course ("Thank you for watching…").
+- **Transition-audio timing**: in a `transitionSeries`, add `start:<transitionTime>` to each script node to prevent TTS audio from playing during fade transitions (see §2.b).
 
 Mermaid diagrams:
 
@@ -155,7 +273,7 @@ export function Mermaid({ source }) {
       })
   }, [source])
 
-  return (<divref={ref}style={{ width: '100%', maxWidth: 960, margin: '20px auto' }}/>  )
+  return <div ref={ref} style={{ width: '100%', maxWidth: 960, margin: '20px auto' }} />
 }
 
 /**
@@ -164,6 +282,94 @@ export function Mermaid({ source }) {
  * - Highlights the Nth bullet when `current=N`
  * - Renders mermaid code blocks ( ```mermaid ...``` ) as inline diagrams
  */
+/**
+ * Picture-in-picture narrator overlay with name label.
+ * Place as isBackground:true at root level.
+ */
+export function NarratorBox({ src, name = '', size = 100 }) {
+  return (
+    <div style={{
+      position: 'absolute',
+      bottom: 40,
+      left: 40,
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      gap: 6,
+    }}>
+      <div style={{
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        overflow: 'hidden',
+        border: '3px solid #61dafb',
+        boxShadow: '0 0 20px rgba(97, 218, 251, 0.3)',
+      }}>
+        <img
+          src={src}
+          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+        />
+      </div>
+      {name && (
+        <span style={{
+          fontSize: 14,
+          color: '#a8dadc',
+          textShadow: '0 2px 8px rgba(0,0,0,.6)',
+          whiteSpace: 'nowrap',
+        }}>{name}</span>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Two-column layout: slide text on left, media on right.
+ * Use inside a parallel layout for per-bullet media (see §2.b).
+ */
+export function SplitSlide({ source, mediaSrc, current = 0, mediaPosition = 'right' }) {
+  const mediaContent = mediaSrc && (
+    <img src={mediaSrc} style={{
+      maxWidth: '100%', maxHeight: '100%', objectFit: 'contain',
+      borderRadius: 12, boxShadow: '0 4px 20px rgba(0,0,0,.4)',
+    }} />
+  )
+  let idx = 1
+  return (
+    <div style={{
+      display: 'flex', flexDirection: mediaPosition === 'right' ? 'row' : 'row-reverse',
+      width: '100%', height: '100%', padding: 40, boxSizing: 'border-box', gap: 32,
+    }}>
+      <div style={{
+        flex: 1, display: 'flex', flexDirection: 'column',
+        justifyContent: 'center', minWidth: 0,
+      }}>
+        <div className="slide" style={{ padding: 0, margin: 0, width: '100%' }}>
+          <ReactMarkdown remarkPlugins={[remarkGfm]}
+            components={{
+              li: ({ children }) => {
+                const highlight = idx === current; idx++
+                return <li className={highlight ? 'highlight' : ''}>{children}</li>
+              },
+              pre: ({ children }) => {
+                const code = React.Children.toArray(children)[0]
+                if (code?.props?.className === 'language-mermaid') {
+                  return <Mermaid source={String(code.props.children)} />
+                }
+                return <pre>{children}</pre>
+              },
+            }}>{source}</ReactMarkdown>
+        </div>
+      </div>
+      <div style={{
+        width: '40%', flexShrink: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        {mediaContent}
+      </div>
+    </div>
+  )
+}
+
 export function Slide({ current = 0, children }) {
   let idx = 1
   return (
@@ -293,6 +499,9 @@ Prompts in `prompts/` are fill-in templates: replace every `{placeholder}`, then
 1. **Outline** — fill `prompts/outline.md` → course outline. **Present the outline to the user and get confirmation** before continuing.
 2. **Scenes** — for each outline section, fill `prompts/scene.md` → slide source + narration script (all languages).
 3. **Assemble** — write `course.md`: §2 grammar, §3 rules, §4 blocks verbatim, root config line with the user's width/height/fps/voice.
+   - **Basic**: standard bullet-reveal pattern (one scene, one Slide component, N script nodes per scene).
+   - **With per-bullet media**: use `#### Beat` sub-scenes in `transitionSeries` for each bullet (see §2). Each beat is `layout:parallel` containing the image + script. Add `start:0.5` to each script node.
+   - **Overlays**: add persistent logo/narrator as `- image isBackground:true` at the root level.
 4. **Render** — `npx @lalalic/markcut render course.md`. On engine errors: fix and re-render, max 3 attempts per error, then ask the user.
 5. **Review (quality gate)** — run `agents/reviewer.md` in a fresh separate session. Give it absolute paths to: `course.md`, the rendered MP4, this `TEMPLATE.md`, plus target duration and language(s). It returns `{verdict, findings[]}` and never edits anything.
 6. **Fix loop** — on FAIL: fill `prompts/fix.md` with the findings, apply the edits yourself, go back to step 4. Max **3** review iterations, then escalate to the user with the open findings.
@@ -306,9 +515,10 @@ Done only when ALL hold:
 - [ ] structure matches §2 (hook, title, 3–6 concepts, summary, thanks)
 - [ ] no blank/black frames at scene boundaries; slides legible at target resolution
 - [ ] STT transcript of rendered audio matches scripts (≥90% content match)
-- [ ] each bullet should be narrated
-- [ ] expressful slides applied
-- [ ] 80% slides have charts/image/...
+- [ ] each bullet has a narration beat — beat count = bullet count in every concept scene
+- [ ] ≥80% of slides include a visual element beyond text-only bullets (chart, image, diagram, mermaid)
+- [ ] overlays (logo, narrator) positioned without obstructing slide content
+- [ ] no TTS audio plays during transitions (checked via `start:` offset on transitionSeries scripts)
 
 
 
