@@ -78,31 +78,79 @@ let shutdownTimer = null;
 // ─── Label store for label mode ───────────────────────────────────────────
 let labels = [];
 
-// ─── Agent process (text mode) for --edit mode ────────────────────────────
-// A persistent subprocess that receives prompts via stdin and outputs responses
-// to stdout. We detect turn completion via idle timeout on stdout.
+// ─── Agent process (rpc mode) for --edit mode ─────────────────────────────
+// A persistent `pi --mode rpc` subprocess: ONE cold start, MANY edit turns.
+// The agent keeps conversation memory across edits (fast, no re-spawn).
+//
+// JSON-lines protocol over stdio:
+//   request:  {"id":N,"type":"prompt","message":"..."}
+//   response: {"id":N,"type":"response","command":"prompt","success":true}  (accepted)
+//   events:   streamed; a turn ENDS at {"type":"agent_settled"}
+// We collect assistant text from {"type":"message_end", message:{role:"assistant"}}
+// events and resolve the pending /api/edit call on agent_settled.
 let agentProcess = null;
 let agentBusy = false;
-let agentBuffer = "";
-let agentIdleTimer = null;
+let agentLineBuf = "";          // partial stdout line buffer
+let agentTurnText = "";         // accumulated assistant text for the current turn
 let agentTurnTimer = null;
 /** Resolve/reject for the pending edit API call */
 let pendingEditResolver = null;
-const AGENT_IDLE_TIMEOUT = 1500; // ms of no stdout output after first chunk → turn done
-const AGENT_FIRST_RESPONSE_TIMEOUT = 30000; // 30s max for agent to start producing output
-const AGENT_TURN_TIMEOUT = 300000; // 5min max per turn (safety net)
+const AGENT_TURN_TIMEOUT = 300000; // 5min safety net per turn
+
+/** Pull text out of an assistant message_end event's content blocks. */
+function extractAssistantText(message) {
+  if (!message || message.role !== "assistant") return "";
+  const content = Array.isArray(message.content) ? message.content : [];
+  return content
+    .filter((b) => b && b.type === "text" && typeof b.text === "string")
+    .map((b) => b.text)
+    .join("");
+}
+
+/** Resolve the pending edit call and reset per-turn state. */
+function finishAgentTurn(result) {
+  if (agentTurnTimer) { clearTimeout(agentTurnTimer); agentTurnTimer = null; }
+  agentBusy = false;
+  const turnText = agentTurnText;
+  agentTurnText = "";
+  const resolver = pendingEditResolver;
+  pendingEditResolver = null;
+  if (resolver) resolver({ ...result, output: result.output != null ? result.output : turnText });
+}
+
+/** Dispatch one parsed JSON line emitted on the agent's stdout. */
+function handleAgentLine(obj) {
+  if (!obj || typeof obj !== "object") return;
+  const t = obj.type;
+  if (t === "message_end") {
+    const txt = extractAssistantText(obj.message);
+    if (txt) agentTurnText += (agentTurnText ? "\n" : "") + txt;
+    return;
+  }
+  if (t === "agent_settled" && pendingEditResolver) {
+    finishAgentTurn({ ok: true });
+    return;
+  }
+  if (t === "response" && obj.command === "prompt" && pendingEditResolver) {
+    // Preflight result: success means "accepted, events incoming"; failure aborts.
+    if (obj.success === false) finishAgentTurn({ ok: false, error: obj.error || "prompt rejected" });
+    return;
+  }
+  if (t === "extension_error" && obj.error) {
+    console.warn(`  ⚠ agent extension error: ${String(obj.error).substring(0, 120)}`);
+  }
+}
 
 /**
- * Start the agent subprocess in text/interactive mode.
- * Sends the system prompt as the first input.
+ * Start the persistent agent subprocess in rpc mode.
+ * The system prompt is fixed for the server lifetime (it only references the
+ * constant file path); per-edit context rides on each prompt's message.
  */
 function startAgentProcess() {
   if (!MODE_EDIT) return;
 
-  // Resolve agent CLI from env or config
   const agentCli = process.env.MARKCUT_AGENT_CLI || DEFAULT_AGENT_CLI;
 
-  // Read and resolve system prompt template
   const fileLabel = VIDEO_JSON.split("/").pop();
   const sessionId = VIDEO_JSON.replace(/[^a-zA-Z0-9\-_.]/g, "_").replace(/^[^a-zA-Z0-9]+/, "").replace(/[^a-zA-Z0-9]+$/, "");
   const promptTemplate = readFileSync(join(ROOT, "docs", "system-prompt-edit.md"), "utf-8");
@@ -114,76 +162,55 @@ function startAgentProcess() {
     .replace(/\$\{fileName\}/g, fileLabel)
     .replace(/\$\{filePath\}/g, VIDEO_JSON);
 
-  // Build the CLI command — strip the -p / --prompt flag so it runs interactively
-  // e.g. "npx pi --session-id {sessionid} --system-prompt {systemprompt} -p {prompt}"
-  //   → "npx pi --session-id SID --system-prompt SP"
-  const parts = agentCli.split(/\s+/);
+  // Build the CLI command — strip -p/--prompt (rpc takes prompts via stdin) and
+  // force --mode rpc. e.g.
+  //   "npx pi --session-id {sessionid} --system-prompt {systemprompt} -p {prompt}"
+  //   → "npx pi --session-id SID --system-prompt SP --mode rpc"
+  const parts = agentCli.split(/\s+/).filter(Boolean);
   const resolvedParts = [];
   for (let i = 0; i < parts.length; i++) {
     const p = parts[i];
-    // Skip -p/--prompt and its value argument
-    if (p === "-p" || p === "--prompt") { i++; continue; }
+    if (p === "-p" || p === "--prompt") { i++; continue; } // drop prompt flag + value
     const resolved = p
       .replace(/\{sessionid\}/g, sessionId)
       .replace(/\{systemprompt\}/g, systemPrompt)
       .replace(/\{prompt\}/g, "");
     if (resolved) resolvedParts.push(resolved);
   }
+  if (!resolvedParts.includes("--mode")) resolvedParts.push("--mode", "rpc");
   const cmd = resolvedParts[0];
   const cmdArgs = resolvedParts.slice(1);
 
-  console.log(`  🎬 starting agent: ${cmd} ${cmdArgs.join(" ").substring(0, 120)}...`);
+  console.log(`  🎬 starting persistent agent (rpc): ${cmd} ${cmdArgs.slice(0, -1).join(" ")} --system-prompt <${systemPrompt.length} chars>`);
 
-  const child = spawn(cmd, cmdArgs, {
-    cwd: ROOT,
-    stdio: ["pipe", "pipe", "pipe"],
-  });
+  const child = spawn(cmd, cmdArgs, { cwd: ROOT, stdio: ["pipe", "pipe", "pipe"] });
   agentProcess = child;
+  agentLineBuf = "";
 
-  // Buffer stdout — detect idle to know when a turn is done
+  // stdout is pure JSON-lines in rpc mode (it takes over stdout). Parse line by line.
   child.stdout.on("data", (chunk) => {
-    const text = chunk.toString();
-    if (agentBuffer.length === 0 && text.length > 0) {
-      console.log(`  📢 agent stdout: "${text.substring(0, 80).replace(/\n/g, "\\n")}"`);
-    }
-    agentBuffer += text;
-    if (agentBusy && pendingEditResolver) {
-      // On first data output, clear the first-response timeout and switch to
-      // idle detection — each new chunk resets the idle timer.
-      clearTimeout(agentIdleTimer);
-      agentIdleTimer = setTimeout(() => {
-        // No output for AGENT_IDLE_TIMEOUT → turn is done
-        agentBusy = false;
-        clearTimeout(agentTurnTimer);
-        agentTurnTimer = null;
-        const buf = agentBuffer.trim();
-        agentBuffer = "";
-        const resolver = pendingEditResolver;
-        pendingEditResolver = null;
-        if (resolver) resolver({ ok: true, output: buf });
-      }, AGENT_IDLE_TIMEOUT);
+    agentLineBuf += chunk.toString();
+    let nl;
+    while ((nl = agentLineBuf.indexOf("\n")) >= 0) {
+      const line = agentLineBuf.slice(0, nl).trim();
+      agentLineBuf = agentLineBuf.slice(nl + 1);
+      if (!line) continue;
+      let obj;
+      try { obj = JSON.parse(line); } catch { continue; } // not JSON — ignore
+      handleAgentLine(obj);
     }
   });
 
-  child.stderr.on("data", (chunk) => {
-    // stderr is forwarded to server logs only
-    process.stderr.write(chunk);
-  });
+  child.stderr.on("data", (chunk) => { process.stderr.write(chunk); });
 
   child.on("exit", (code) => {
     console.log(`  ⚫ agent process exited (code ${code})`);
     agentProcess = null;
+    if (pendingEditResolver) finishAgentTurn({ ok: false, error: `agent exited (code ${code})` });
     agentBusy = false;
-    clearTimeout(agentIdleTimer);
-    clearTimeout(agentTurnTimer);
-    agentIdleTimer = null;
-    agentTurnTimer = null;
-    if (pendingEditResolver) {
-      pendingEditResolver({ ok: false, output: agentBuffer, error: `agent exited with code ${code}` });
-      pendingEditResolver = null;
-    }
-    // Auto-restart on unexpected exit
-    if (code !== 0 && MODE_EDIT) {
+    // Keep the session warm: restart on any exit while in edit mode.
+    // The --session-id resumes conversation history from disk.
+    if (MODE_EDIT) {
       console.log(`  🔄 restarting agent in 1s...`);
       setTimeout(() => startAgentProcess(), 1000);
     }
@@ -191,8 +218,9 @@ function startAgentProcess() {
 }
 
 /**
- * Send a prompt to the agent process and wait for the turn to complete.
- * Detects completion via idle timeout on stdout (no new output for 1.5s).
+ * Send an edit prompt to the persistent rpc agent and resolve when the turn
+ * settles. Completion is signalled authoritatively by the `agent_settled`
+ * event — no idle-timeout guessing.
  * @param {string} prompt
  * @returns {Promise<{ok: boolean, output: string, error?: string}>}
  */
@@ -208,39 +236,19 @@ function sendToAgent(prompt) {
     }
 
     agentBusy = true;
-    agentBuffer = "";
+    agentTurnText = "";
     pendingEditResolver = resolve;
 
-    // Safety timeout — if agent takes too long, abort
+    // Safety net — the agent_settled event is the real completion signal.
     agentTurnTimer = setTimeout(() => {
-      agentBusy = false;
-      agentBuffer += "\n[TIMEOUT]";
-      clearTimeout(agentIdleTimer);
-      agentIdleTimer = null;
-      const resolver = pendingEditResolver;
-      pendingEditResolver = null;
-      if (resolver) resolver({ ok: false, output: agentBuffer.trim(), error: "agent turn timed out" });
+      console.warn(`  ⏰ agent turn timed out after ${AGENT_TURN_TIMEOUT / 1000}s`);
+      finishAgentTurn({ ok: false, output: agentTurnText + "\n[TIMEOUT]", error: "agent turn timed out" });
     }, AGENT_TURN_TIMEOUT);
 
-    // Write the prompt to stdin
-    console.log(`  📤 writing ${prompt.length} chars to agent stdin`);
-    agentProcess.stdin.write(prompt + "\n");
-    agentProcess.stdin.uncork && agentProcess.stdin.uncork();
-
-    // Wait for first response with a longer timeout. Once we get data on
-    // stdout, the data handler switches to idle detection (1500ms between chunks).
-    // If the agent produces no stdout at all (e.g. silently edits file), this
-    // timer fires and we consider the turn complete.
-    agentIdleTimer = setTimeout(() => {
-      agentBusy = false;
-      clearTimeout(agentTurnTimer);
-      agentTurnTimer = null;
-      const buf = agentBuffer.trim();
-      agentBuffer = "";
-      const resolver = pendingEditResolver;
-      pendingEditResolver = null;
-      if (resolver) resolver({ ok: true, output: buf || "(no output — turn assumed complete)" });
-    }, AGENT_FIRST_RESPONSE_TIMEOUT);
+    const id = Date.now();
+    const req = JSON.stringify({ id, type: "prompt", message: prompt }) + "\n";
+    console.log(`  📤 rpc prompt (id=${id}): ${prompt.substring(0, 80).replace(/\n/g, " ")}`);
+    agentProcess.stdin.write(req);
   });
 }
 
@@ -938,18 +946,7 @@ const server = createServer(async (req, res) => {
 
           editHistory.push(text);
 
-          // Build system prompt from template
-          const fileLabel = VIDEO_JSON.split("/").pop();
-          const promptTemplate = readFileSync(join(ROOT, "docs", "system-prompt-edit.md"), "utf-8");
-          const systemPrompt = promptTemplate
-            .replace(/@\{([^}]+)\}/g, (_, refPath) => {
-              try { return readFileSync(resolve(ROOT, refPath.trim()), "utf-8"); }
-              catch { console.warn(`  ⚠ could not read @{${refPath}}`); return `[Missing: ${refPath}]`; }
-            })
-            .replace(/\$\{fileName\}/g, fileLabel)
-            .replace(/\$\{filePath\}/g, VIDEO_JSON);
-
-          // Build user prompt with context
+          // Build user prompt with context (system prompt is fixed at agent startup)
           const timeStr = currentTime !== undefined ? `Current playback time: ${Number(currentTime).toFixed(1)}s` : "";
           const sceneStr = activeScene ? `Active scene: ${activeScene}` : "";
           const contextBlock = [timeStr, sceneStr].filter(Boolean).join("\n");
@@ -962,39 +959,14 @@ Edit request: ${text}`;
 
           console.log(`  🤖 edit: ${text}  (${currentTime !== undefined ? currentTime.toFixed(1) + "s" : ""} ${activeScene || ""})`);
 
-          // Resolve agent CLI with placeholders
-          const agentCli = process.env.MARKCUT_AGENT_CLI || DEFAULT_AGENT_CLI;
-          const sessionId = VIDEO_JSON.replace(/[^a-zA-Z0-9\-_.]/g, "_").replace(/^[^a-zA-Z0-9]+/, "").replace(/[^a-zA-Z0-9]+$/, "");
-          const parts = agentCli.split(/\s+/);
-          const resolvedParts = parts.map(p =>
-            p.replace(/\{sessionid\}/g, sessionId)
-             .replace(/\{systemprompt\}/g, systemPrompt)
-             .replace(/\{prompt\}/g, userPrompt)
-          );
-          const cmd = resolvedParts[0];
-          const cmdArgs = resolvedParts.slice(1);
+          // Send to the persistent rpc agent (one cold start; conversation kept in memory)
+          const result = await sendToAgent(userPrompt);
 
-          const child = spawn(cmd, cmdArgs, {
-            cwd: ROOT,
-            stdio: ["ignore", "pipe", "pipe"],
-          });
-
-          let output = "";
-          child.stdout.on("data", d => output += d);
-          child.stderr.on("data", d => {/* ignore stderr */});
-
-          // Wait for agent with 30s timeout
-          const exitCode = await new Promise((resolve) => {
-            const timer = setTimeout(() => { child.kill(); resolve(null); }, 30000);
-            child.on("exit", (code) => { clearTimeout(timer); resolve(code); });
-            child.on("error", () => { clearTimeout(timer); resolve(null); });
-          });
-
-          if (exitCode === 0) {
-            // Parse JSON from agent output
+          if (result.ok) {
+            // Parse JSON summary from the agent's final assistant text
             let summary = "";
             let fileChanged = false;
-            const raw = output.trim();
+            const raw = (result.output || "").trim();
             const jsonMatch = raw.match(/\{[\s\S]*"summary"[\s\S]*\}/);
             if (jsonMatch) {
               try {
@@ -1003,17 +975,17 @@ Edit request: ${text}`;
                 fileChanged = parsed.fileChanged === true;
               } catch { summary = raw.substring(0, 120); }
             } else {
-              summary = raw.substring(0, 120);
+              summary = raw.substring(0, 120) || "done";
             }
             console.log(`  ✅ ${fileChanged ? "edited" : "no change"}: ${summary}`);
             console.log(`  📤 response summary="${summary}" fileChanged=${fileChanged}`);
             res.writeHead(200, { "Content-Type": "application/json" });
             res.end(JSON.stringify({ done: true, summary, fileChanged, output: "" }));
           } else {
-            const msg = exitCode === null ? "timed out" : `exit code ${exitCode}`;
-            console.error(`  ❌ edit ${msg}: ${output.trim().substring(0, 100)}`);
+            const msg = result.error || "failed";
+            console.error(`  ❌ edit ${msg}: ${(result.output || "").trim().substring(0, 100)}`);
             res.writeHead(500, { "Content-Type": "application/json" });
-            res.end(JSON.stringify({ error: msg, output: output.trim().substring(0, 200) }));
+            res.end(JSON.stringify({ error: msg, output: (result.output || "").trim().substring(0, 200) }));
           }
         } catch (e) {
           res.writeHead(500, { "Content-Type": "application/json" });

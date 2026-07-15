@@ -188,6 +188,7 @@ node src/render/cli.mjs templates
 - `--label` flag starts a labeling UI for selecting and annotating media
 - `--port` flag sets the server port (default 3001)
 - Unified server: `server.mjs` serves all modes (preview, edit, label). React control components in `components/`.
+- **Persistent AI agent via `pi --mode rpc`** (one cold start, many edits): at boot, `startAgentProcess()` spawns the configured agent CLI (`DEFAULT_AGENT_CLI`) with `--mode rpc` appended (the `-p/--prompt` flag is stripped — prompts arrive over stdin). Each `/api/edit` POST writes `{"id","type":"prompt","message"}` to stdin and resolves on the streamed `agent_settled` event (NOT idle-timeout guessing — pi's default interactive mode is a TUI, not a stdin REPL, so text/stdin mode does not work). Assistant text is collected from `message_end` events (`message.role==="assistant"`, text content blocks). `--session-id` (derived from the file path) resumes conversation history from disk across restarts. Do not revert to one-shot `spawn` per edit — that re-incurs the full cold-start every request.
 
 ## Testing
 
