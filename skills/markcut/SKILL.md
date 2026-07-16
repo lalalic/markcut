@@ -8,10 +8,10 @@ description: use markdown to describe stream trees, provide CLI to render stream
 Everything video is a **stream tree** described with markdown. see [docs/markdown-descriptive.md](docs/markdown-descriptive.md) for full details.
 
 
-## video design utitlies
+## Video Design Utilities
 
 ### User labels — label media with text, time ranges
-- `uvx @lalalic/markcut preview --label` provides tool to label video and images with text.
+- `npx @lalalic/markcut preview --label` provides tool to label video and images with text.
 
 ### Storyboard — plan video structure with scene nodes
 
@@ -22,6 +22,10 @@ see [docs/markdown-descriptive.md](docs/markdown-descriptive.md) for full detail
 
 ### Video Variants
 - define variants for different video configurations, such as different languages, aspects, platforms
+
+
+### Templates
+- Templates in ``docs/templates/`` provide ready-to-use video structures for `orchestrator` agents, use them as starting point to create your own videos.
 
 
 ## 3. CLI
@@ -50,6 +54,8 @@ some common issues (photo or video can't be displayed, audio missing), take belo
 | Markdown descriptive format (primary authoring format) | [docs/markdown-descriptive.md](docs/markdown-descriptive.md) |
 | Label system (browse, label, export labels.json) | [docs/label-mode.md](docs/label-mode.md) |
 | Player servers (label + edit mode) | [docs/edit-mode.md](docs/edit-mode.md) |
+| How to make video template | [docs/template.md](docs/template.md) |
+| Templates | [docs/templates/](docs/templates/) |
 
 
 ## common used components
