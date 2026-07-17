@@ -982,6 +982,7 @@ var DEFAULT_VTT_CLI = process.env.MARKCUT_VTT_CLI || `uvx --from mlx-vlm mlx_vlm
 var DEFAULT_STT_CLI = process.env.MARKCUT_STT_CLI || 'uvx --from openai-whisper whisper "{input}" --output_format vtt --output_dir "{output}"';
 var DEFAULT_TTS_CLI = process.env.MARKCUT_TTS_CLI || 'uvx edge-tts --voice "en-US-GuyNeural" --text "{input}" --write-media "{output}"';
 var DEFAULT_AGENT_CLI = process.env.MARKCUT_AGENT_CLI || "npx pi -p {prompt}";
+var DEFAULT_EDIT_CLI = process.env.MARKCUT_EDIT_CLI || "npx pi --session-id {sessionid} --system-prompt {systemprompt} -p {prompt}";
 var DEFAULT_TTI_CLI = process.env.MARKCUT_TTI_CLI || 'uvx --from mflux mflux-generate-flux2 --model flux2-klein-4b --steps 5 --prompt "{input}" --output "{output}"';
 var DEFAULT_TTV_CLI = process.env.MARKCUT_TTV_CLI || "";
 
