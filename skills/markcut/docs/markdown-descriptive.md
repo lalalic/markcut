@@ -757,45 +757,49 @@ markcut verify courseware.md
 - `@remotion/shapes` — render shapes like arrows, circles, rectangles, etc
 - `@remotion/starburst` — render starburst animations
 
-## Example
-
-```md
----
-width: 1080
-height: 1920
-fps: 30
----
-# video
-layout:series
-~~~js imports
-export { StatCounter } from "stat-counter"
-export { Logo } from "github:myorg/design-system#Logo"
-
-export function Greeting({ name }) {
-  return <div style={{color: '#fff', fontSize: 28, textAlign: 'center'}}>Hello {name}!</div>
-}
+# best practices
+~~~ example - avoid audio cut
+- parallel
+  - image|video background:true
+  - audio|script 
 ~~~
 
-## Hook
-layout:parallel
-- script "Set location and emotional tone"
-- image src:cover.jpg duration:2
+~~~ example - global streams
+#video
+- audio background:true loop:true src:bgm.mp3
+- component background:true loop:true jsx:"<Logo />" style:"position:fixed;top:10px;left:10px;width:100px;height:100px;"
+- parallel title:"lip sync" style:"position:fixed;bottom:100px;right:100px;width:100px;height:100px;"
+  - video src:background.mp4 loop:true background:true
+  - video src:lip_sync.mp4
+~~~
 
-## Journey
-layout:transitionSeries transition:fade transitionTime:0.4
-- script "Move through moments"
-- video src:clips/arrival.mp4 startFrom:0 endAt:3.5
-- video src:clips/fire.mp4 startFrom:1 endAt:4
+~~~ example - styling VTT captions
+```vtt
+000:00:00.000 --> 00:00:05.000
+It's a <span style="color:#ff6b6b;font-weight:bold">Bear</span>.
 
-## Stat
-layout:parallel
-- component duration:2 jsx:"<StatCounter value={42} label='S-mores' />"
+000:00:05.000 --> 00:00:10.000
+And now it's <span class="emoji-dead">dead</span>.
 
-## Logo
-layout:parallel
-- component duration:1 jsx:"<Logo />"
-
-## Route
-layout:parallel
-- map duration:3 travelMode:DRIVING waypoints:[37.7749,-122.4194,"SF";34.0522,-118.2437,"LA"]
+000:00:10.000 --> 00:00:15.000
+<span class="bong">Bong!</span>
 ```
+
+#root
+```css stylesheet
+.emoji-dead {
+  font-family: "Funny Emoji", sans-serif;
+  font-size: 48px;
+}
+.bong {
+  color: #ff6b6b;
+  font-weight: bold;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation: bong 1s ease-in-out infinite;
+}
+```
+~~~
+

@@ -28,6 +28,14 @@ see [docs/markdown-descriptive.md](docs/markdown-descriptive.md) for full detail
 - Templates in ``docs/templates/`` provide ready-to-use video structures for `orchestrator` agents, use them as starting point to create your own videos.
 
 
+### Viral Story requires
+- **Hooks** : why should the viewer watch this?
+- **Conflict** : what challenges or obstacles do the characters face?
+- **Resolution** : how are the conflicts resolved?
+- **Emotion** : what feelings are evoked in the viewer?
+- **Call to action** : what should the viewer do next?
+- **Open ending** : does the story leave room for interpretation or continuation?
+
 ## 3. CLI
 
 ```bash

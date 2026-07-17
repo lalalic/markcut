@@ -42,6 +42,13 @@ Follow this file top to bottom. Read the markcut skill (`SKILL.md` → `docs/mar
 ### Overview
 
 ```
+---
+storyoutline: # it's your logic to design story.
+  hook:
+  confliction:
+  emotion:
+  open-ending:
+---
 # video                          ← root: width:1920 height:1080 fps:30 layout:series
 │                                  tts:"<edge-tts CLI template>"
 ├── ## Route                     ← (only if GPS data available)
@@ -77,9 +84,11 @@ width:1920 height:1080 fps:30 layout:series
 - Volume: 0.10–0.20 for ambient BGM; 0.05–0.10 for lyrical music.
 - Source BGM from royalty-free libraries (see `prompts/bgm-select.md`).
 
-### Core design: one scene per story beat, media + narration as parallel
+### Core design: one scene per story beat
+- determine **Hook**, **Confliction**, **Emotion**, **Open-ending**
+- the vlog's story arc: hook → chronological story beats → close.
 
-Each scene is a **story beat** — a single moment or idea that stands on its own. Inside a scene, `layout:parallel` means all media and the subtitle narration play simultaneously.
+- Each scene is a **story beat** — a single moment or idea that stands on its own. Inside a scene, `layout:parallel` means all media and the subtitle narration play simultaneously.
 
 ```
 ## Into the Woods
@@ -90,7 +99,7 @@ layout:parallel
 ```
 
 **Rules:**
-
+- determine story arc first, then group clips into scenes. Each scene is a single story beat.
 - **Scene count**: 5–12 scenes. Each 3–20 seconds. Total duration matches target ±15%.
 - **Hook → Core → Vibe → Close arc**: The first scene hooks the viewer (best visual + intriguing line). Middle scenes are chronological story beats. The final scene provides emotional/humorous closure.
 - **Transition between scenes**: The root `layout:series` plays scenes sequentially. For smooth transitions, add `transition:fade(0.5)` to the root config line.
@@ -100,19 +109,6 @@ layout:parallel
 - **BGM is mandatory**: Always add an `- audio isBackground:true foreground:true` at root level (see BGM section above).
 - **No bullet-reveal** — vlogs are linear media, not slides. No `current`/`on:` events needed.
 
-### Scene media node style
-
-For images:
-```markdown
-- image src:<relative-path> duration:<s> start:<s>
-```
-
-For video clips (trimmed):
-```markdown
-- video src:<relative-path> startFrom:<s> endAt:<s> start:<s>
-```
-
-The `src` path is relative to the media folder. During assembly, media is symlinked/copied into the markcut project so `npx markcut render` can serve it.
 
 ## 2.b Production polish — route sync, overlays, effects
 
@@ -154,14 +150,14 @@ Use per-scene map overlays when GPS data is available for that specific clip. Us
 
 ## 3. Authoring rules — the professional bar
 
-### Filter rules (see `prompts/group-clips.md`)
+### Filter rules (use `prompts/group-clips.md`)
 
-- Keep all clips unless: aesthetic score < 0.4, near-duplicate of a better clip, or off-topic.
+- Keep all clips unless: near-duplicate of a better clip, or off-topic.
 - Always keep clips with a positive user label from the interactive labeling step.
 - Max ~20% drops. Never drop below 5 clips total.
 - List every dropped clip with a reason.
 
-### Grouping rules (see `prompts/group-clips.md`)
+### Grouping rules (use `prompts/group-clips.md`)
 
 - **Visual continuity rule**: clips sharing the same background/outfit/subject-state form one scene. Exhaust one scene before moving to the next. No jumping A→B→A.
 - 1–4 clips per scene (a single long take >10s may be its own scene).
@@ -187,7 +183,7 @@ Before writing narration, search for local news, events, or weather for the vlog
 - **Local event**: "Turns out the Gatineau Park was running the fall colours festival that weekend."
 - **Seasonal context**: "Full moon that night, so the trail was brighter than usual."
 
-Rules:
+**Rules:**
 - Only use facts confirmed by at least one search result. Never invent weather/events.
 - Keep it to 1–2 local-context references per vlog. Don't overwhelm the narration.
 - The context should **amplify** the story, not replace it. "Drove up during the fall colours festival so the park was packed" tells us more than just the festival fact.
@@ -207,7 +203,7 @@ Rules:
 - Keep references brief (one line per vlog max). The story should stand alone.
 - Never fabricate a past event. Only what exists in the history file.
 
-### Creator profile
+### User profile
 
 Read `~/.pi/agent/user.md` at the start and weave the creator's identity into narration naturally:
 
@@ -226,44 +222,6 @@ One title, 3–15 words, poetic/suspenseful/summarizing, social-media friendly. 
 - Same pattern as courseware: `# <lang>` variant block at file end with per-language TTS voice.
 - Every `script`/`subtitle` node gets a `<lang>:"..."` twin.
 
-## 4. Components & styles
-
-Vlogs don't need custom JSX components — they use markcut's built-in `image`, `video`, `audio`, `subtitle`, and `map` nodes. However, you may add these optional enhancements:
-
-### Optional: NarratorBox component
-
-If adding a narrator overlay with name label, include this in the `~~~js imports` block:
-
-```jsx
-import { delayRender, continueRender } from 'remotion'
-
-export function NarratorBox({ src, name = '', size = 100 }) {
-  return (
-    <div style={{
-      position: 'absolute', bottom: 40, left: 40,
-      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-    }}>
-      <div style={{
-        width: size, height: size, borderRadius: '50%', overflow: 'hidden',
-        border: '3px solid rgba(255,255,255,.6)',
-        boxShadow: '0 0 20px rgba(0,0,0,.4)',
-      }}>
-        <img src={src} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-      </div>
-      {name && (
-        <span style={{
-          fontSize: 14, color: '#fff', textShadow: '0 2px 8px rgba(0,0,0,.6)',
-          whiteSpace: 'nowrap', fontWeight: 500,
-        }}>{name}</span>
-      )}
-    </div>
-  )
-}
-```
-
-### Stylesheet
-
-No stylesheet needed for standard vlogs. The built-in markcut rendering handles video/image filling, subtitle positioning, and audio mixing. Add one only if you need custom overlays.
 
 ## 5. Workflow
 
@@ -284,7 +242,7 @@ No stylesheet needed for standard vlogs. The built-in markcut rendering handles 
      }
    ]
    ```
-   If the file doesn't exist, start fresh.
+   If the file doesn't exist, try to extract for project folder.
 
 ### Phase 1: Prepare media
 
@@ -303,7 +261,7 @@ No stylesheet needed for standard vlogs. The built-in markcut rendering handles 
 5. **Search local news/events** — Fill `prompts/local-context.md` with the vlog's location, date range, and theme. This searches for relevant weather, events, news, or seasonal information. The result feeds into narration with 1–2 natural references.
 
 6. **Group and filter clips** — Fill `prompts/group-clips.md` with clip data from `metadata.json`. This produces:
-   - Dropped clips with reasons
+   - Speed up less-interesting clips vs Dropped clips
    - Visual-continuity scene groups
    - Trim boundaries for video clips
    - GPS waypoints for per-scene map overlays
@@ -325,16 +283,7 @@ No stylesheet needed for standard vlogs. The built-in markcut rendering handles 
 
 8. **Select BGM** — Choose background music that matches the vlog's mood. Fill `prompts/bgm-select.md` or search using the `audio-sourcing` skill. Download the track and reference it as `src:bgm.mp3` in the root-level audio node.
 
-9. **Assemble course.md** — Write the markcut markdown file using §2 grammar. The root config line includes TTS voice. BGM is at root level (`- audio isBackground:true foreground:true src:bgm.mp3 volume:0.15`). For scenes with GPS data, add per-scene map overlays (see §2.b).
-
-   **Media staging**: Make media accessible to the renderer:
-   ```
-   mkdir -p .markcut/generated/media/
-   cp <media-folder>/clips_normalized/*.mp4 .markcut/generated/media/
-   cp <media-folder>/*.jpg .markcut/generated/media/
-   cp /path/to/bgm.mp3 .markcut/generated/media/bgm.mp3
-   ```
-   Reference as `src:.markcut/generated/media/<file>` in the markdown.
+9. **Assemble .md** — Write the markcut markdown file using §2 grammar. For scenes with GPS data, add per-scene map overlays (see §2.b).
 
 10. **Render** — `npx @lalalic/markcut render course.md`. On engine errors: fix and re-render, max 3 attempts per error, then ask the user.
 
@@ -371,12 +320,7 @@ Done only when ALL hold:
 - [ ] BGM is **present** (ffprobe confirms audio stream or mixed track) and audible (not silent, not clipping)
 - [ ] BGM ducked under voice — TTS audible above music in ≥90% of spoken segments
 - [ ] local context references (if any) verified against search results — no invented weather/events
-- [ ] history references (if any) match actual entries in `vlog_history.json` — no fabricated past events
+- [ ] history references — no fabricated past events
 - [ ] media `src` paths resolve correctly (no broken links in rendered output)
 - [ ] profile used: narration tone matches creator personality, family names from profile appear correctly
-- [ ] per-scene map overlays (if GPS available) positioned without obstructing main content
-
-## 7. Reference — worked examples
-
-- Golden example: See `tests/fixtures/templates/courseware.md` for the template format.
-- Reference vlog storyboard: The bullx vlog project at `free2/bullx/packages/vlog/storyboard.md` shows a real vlog (birthday camping at Lac Philippe) with 13 chronological scenes, route map, clip trimming, and first-person narration. The project's `.pi/agents/story-writer.md` and `.pi/prompts/vlog-storyboard.md` contain the source of truth for the story-writing methodology documented here.
+- [ ] per-scene map overlays (if GPS available) positioned without obstructing main conten
