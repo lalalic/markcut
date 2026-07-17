@@ -35,7 +35,11 @@ The line after `# video` contains all video configuration as space-separated
 
 ```markdown
 # video
-width:1920 height:1080 fps:30 layout:series tts:"edge-tts --voice 'en-US-GuyNeural' --text '{input}' --write-media '{output}'" stylesheet:".bg { background: #000; }" subtitle:captions.vtt
+width:1920 height:1080 fps:30 layout:series 
+~~~css stylesheet
+.bg { background: #000; }
+~~~
+subtitle:captions.vtt
 ```
 
 Supported keys: `width`, `height`, `fps`, `layout`, `tts`, `stt`, `tti`, `ttv`,
@@ -145,8 +149,10 @@ For compatibility, `import { Name } from "spec"` also works and produces the sam
 | `height` | canvas height | root |
 | `fps` | frame rate | root |
 | `theme` | *removed — use `style` on root* | root |
-| `tts` | CLI template string (e.g. `edge-tts --voice "en-US-GuyNeural" --text "{input}" --write-media "{output}"`) | root |
-| `stt` | CLI template string (e.g. `whisper "{input}" --output_format vtt --output_dir "{output}"`) | root |
+| `tts` | text-to-speech CLI template string  | root |
+| `stt` | speech-to-text CLI template string  | root |
+| `tti` | text-to-image CLI template string  | root |
+| `ttv` | text-to-video CLI template string  | root |
 | `layout` | `series\|parallel\|transitionSeries` | root, scene | 
 | `transition` | `fade\|slide\|wipe\|flip\|clockWipe` | transitionSeries |
 | `transitionTime` | seconds | transitionSeries |
@@ -176,7 +182,6 @@ For compatibility, `import { Name } from "spec"` also works and produces the sam
 | `script` | narration/dialogue text; TTS source; NOT rendered directly | audio | Only on audio nodes — see Narration section below |
 | `speaker` | speaker name for multi-turn dialogue; set automatically by dialogue expansion | audio | Used for per-speaker voice lookup and subtitle prefix |
 | `voices` | JSON object mapping speaker names to extra TTS CLI flags e.g. `{"Ray":"--voice en-US-GuyNeural"}` | root | Flags are appended to the resolved TTS CLI template |
-| `tts` | CLI template string e.g. `"edge-tts --voice en-US-GuyNeural --text {input} --write-media {output}"` | root | Set once at the root level; all TTS uses this template |
 | `metadata` | arbitrary metadata string | root |
 | `stylesheet` | global CSS string; selectors use `.className` on elements | root |
 | `style` | inline CSS applied to the node's container div e.g. `"border-radius:12px"` | any |

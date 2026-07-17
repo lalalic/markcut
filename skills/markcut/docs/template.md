@@ -59,7 +59,6 @@ What tools/skills the agent needs before starting. Always include:
 
 - The engine itself: `npx @lalalic/markcut` runnable
 - Required markcut skill (`SKILL.md` + `docs/markdown-descriptive.md`) — the agent must read these
-- Required CLIs: `edge-tts`, `ffmpeg`/`ffprobe`, whisper, image-understanding (for reviewer)
 - Any domain-specific tools
 
 ### §1 Inputs — the contract with the user

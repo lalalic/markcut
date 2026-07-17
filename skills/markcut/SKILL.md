@@ -67,3 +67,10 @@ some common issues (photo or video can't be displayed, audio missing), take belo
 
 - `@remotion/shapes` — render shapes like arrows, circles, rectangles, etc
 - `@remotion/starburst` — render starburst animations
+
+## Golden rule
+- always check stream start and duration to avoid
+  - audio cut off
+  - video cut off
+  - subtitle mismatch
+  - sync issues between audio, video, and subtitles

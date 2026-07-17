@@ -9,26 +9,6 @@ engine: "@lalalic/markcut — run via `npx @lalalic/markcut`"
 
 Follow this file top to bottom. Read the markcut skill (`SKILL.md` → `docs/markdown-descriptive.md`) first if you have not.
 
-```mermaid
-flowchart LR
-    Profile[👤 user.md<br/>profile] --> Writer
-    History[📜 vlog_history.json<br/>past entries] --> Writer
-    Media[📁 Media folder] --> Vision[🧠 markcut vision --label]
-    Vision --> Labels[📝 metadata.json]
-    Labels --> Group[🔍 group-clips.md<br/>filter + group]
-    Group --> Groups[📋 grouped scenes]
-    Locale[🌍 local-context.md<br/>weather, events, news] --> Groups
-    Groups --> Writer[✍️ story-writer agent<br/>narration + title]
-    Writer --> Storyboard[📄 course.md]
-    BGM[🎵 bgm-select.md<br/>mandatory BGM] --> Assemble[📦 assemble + render]
-    Storyboard --> Assemble
-    Assemble --> MP4[📺 final.mp4]
-    MP4 --> Reviewer[🔍 reviewer agent]
-    Reviewer -->|FAIL| Fix[🔧 fix]
-    Fix --> Assemble
-    Reviewer -->|PASS| HistoryUpdate[📝 append to<br/>vlog_history.json]
-```
-
 | Path | Runs in | Purpose |
 |---|---|---|
 | `TEMPLATE.md` | your context | everything |
@@ -38,10 +18,7 @@ flowchart LR
 ## 0. Prerequisites
 
 - `npx @lalalic/markcut` runnable
-- TTS CLI (default: `edge-tts`)
-- `ffmpeg`/`ffprobe` on PATH
-- For vision pipeline: ITT/VTT/STT CLIs configured (see `docs/markdown-descriptive.md` for env vars)
-- For reviewer: image-understanding capability, STT CLI
+- `ffmpeg`/`ffprobe`/`exiftool` on PATH
 
 ## 1. Inputs — collect before starting
 
@@ -50,13 +27,13 @@ flowchart LR
 | Media folder | **yes** | — | absolute path to folder of photos/videos |
 | Theme / event name | **yes** | — | e.g. "birthday camping", "Tokyo trip", "product unboxing" |
 | Date range | no | from media EXIF | — |
-| Language | no | en | narrator's language |
+| Language | no | zh | narrator's language |
 | Style | no | `daily` | `daily` (casual), `lyrical` (cinematic), `humorous` (funny) |
 | Target duration | no | 60s | 15–120s for short vlogs |
-| Profile | **parse from** | `~/.pi/agent/user.md` | user's personality, region, family members, voice ref, life context. Read this file at the start — it's the authoritative source for who the creator is. The creator's name, region, family, and regular activities feed into narration naturally ("my daughter", "drove up from Ottawa", "my third camping trip this year"). |
+| Profile | **parse from** | context | user's personality, region, family members, voice ref, life context. Read this file at the start — it's the authoritative source for who the creator is. The creator's name, region, family, and regular activities feed into narration naturally ("my daughter", "drove up from Ottawa", "my third camping trip this year"). |
 | Voice | no | en: `en-US-GuyNeural` | edge-tts voice. If profile has a voice reference URL, use TTS voice cloning instead |
 | BGM style | no | `ambient` | mood/genre for background music. BGM is **mandatory** — see §2 for root-level audio node |
-| Vlog history | **read from** | `vlog_history.json` | JSON array of past vlogs in the project. Used for story continuity ("last time I was here...", "my third camping trip this year"). If the file doesn't exist, start fresh. See §3 for history rules. |
+| Vlog history | **read from** | `vlog_history.json` or folder | JSON array of past vlogs in the project. Used for story continuity ("last time I was here...", "my third camping trip this year"). If the file doesn't exist, start fresh. See §3 for history rules. |
 
 **Rule:** The golden rule of vlogs — **every word in narration, title, or captions must be traceable to real data**: (1) user-stated facts, (2) clip VLM descriptions, (3) GPS/timestamp metadata, (4) user labels from interactive labeling, (5) local news/searched events for the date/location. Never invent people, dialogue, events, or place names. When unsure, paraphrase conservatively ("a path", "someone") rather than guessing.
 
