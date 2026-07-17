@@ -153,7 +153,7 @@ function startAgentProcess() {
 
   const fileLabel = VIDEO_JSON.split("/").pop();
   const sessionId = VIDEO_JSON.replace(/[^a-zA-Z0-9\-_.]/g, "_").replace(/^[^a-zA-Z0-9]+/, "").replace(/[^a-zA-Z0-9]+$/, "");
-  const promptTemplate = readFileSync(join(ROOT, "docs", "system-prompt-edit.md"), "utf-8");
+  const promptTemplate = readFileSync(join(ROOT, "skills/markcut/docs", "system-prompt-edit.md"), "utf-8");
   const systemPrompt = promptTemplate
     .replace(/@\{([^}]+)\}/g, (_, refPath) => {
       try { return readFileSync(resolve(ROOT, refPath.trim()), "utf-8"); }
