@@ -59780,6 +59780,7 @@ var root = folder.extend({
   fps: external_exports.number().int().positive().default(30),
   instruction: external_exports.string().optional(),
   metadata: external_exports.string().optional(),
+  seed: external_exports.number().optional().describe("global seed for TTI/TTV generation; substituted into CLI {seed} placeholder"),
   stylesheet: external_exports.string().optional().describe("global css; selectors use .type and .name"),
   subtitle: subtitleOverlay.optional().describe("global subtitle overlay; src is a VTT file with absolute timestamps"),
   /**
@@ -60351,7 +60352,9 @@ var import_jsx_runtime93 = __toESM(require_jsx_runtime(), 1);
 function SceneThumbnails({ currentTime, onSeek }) {
   const [scenes, setScenes] = React51.useState([]);
   React51.useEffect(() => {
-    fetch("/api/video-info").then((r) => r.json()).then((info2) => {
+    const variant = window.VARIANT || "default";
+    const url2 = variant !== "default" ? `/api/video-info?variant=${variant}` : "/api/video-info";
+    fetch(url2).then((r) => r.json()).then((info2) => {
       if (info2.scenes) setScenes(info2.scenes);
     }).catch(() => {
     });
@@ -60482,7 +60485,9 @@ function PlayerApp() {
   const [currentTime, setCurrentTime] = React55.useState(0);
   const [activeScene, setActiveScene] = React55.useState("");
   React55.useEffect(() => {
-    fetch("/api/video-info").then((r) => r.json()).then((info2) => {
+    const variant = window.VARIANT || "default";
+    const url2 = variant !== "default" ? `/api/video-info?variant=${variant}` : "/api/video-info";
+    fetch(url2).then((r) => r.json()).then((info2) => {
       if (info2.scenes) {
         window.__scenes = info2.scenes;
       }

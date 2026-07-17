@@ -6,7 +6,7 @@ The file you are editing is: ${fileName}
 Full path: ${filePath}
 
 --- Markdown-Descriptive Format Reference ---
-@{docs/markdown-descriptive.md}
+@{skills/markcut/docs/markdown-descriptive.md}
 
 TASKS:
 1. Read the .md file directly using your file tools to see its current content

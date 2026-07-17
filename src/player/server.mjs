@@ -181,7 +181,7 @@ function startAgentProcess() {
   const cmd = resolvedParts[0];
   const cmdArgs = resolvedParts.slice(1);
 
-  console.log(`  🎬 starting persistent agent (rpc): ${cmd} ${cmdArgs.slice(0, -1).join(" ")} --system-prompt <${systemPrompt.length} chars>`);
+  console.log(`  🎬 starting edit agent`);
 
   const child = spawn(cmd, cmdArgs, { cwd: ROOT, stdio: ["pipe", "pipe", "pipe"] });
   agentProcess = child;
@@ -1055,8 +1055,17 @@ Edit request: ${text}`;
 
     // Serve the main HTML page (variant-aware)
     if (path === "/" || path === "/index.html") {
+      // If the resolved variant isn't compiled, fall back to the first
+      // available variant. This handles the common case where the user
+      // passes only --variant zh (no "default" variant exists) and opens
+      // the root URL — the player will fetch the zh variant data instead
+      // of failing on a non-existent "default" variant.
+      let htmlVariant = variantLabel;
+      if (!compiledRootCache.has(variantLabel) && VARIANT_CONFIGS.length > 0) {
+        htmlVariant = VARIANT_CONFIGS[0].label;
+      }
       res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-      res.end(getHtml(variantLabel));
+      res.end(getHtml(htmlVariant));
       return;
     }
 

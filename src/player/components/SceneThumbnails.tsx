@@ -23,7 +23,9 @@ export function SceneThumbnails({ currentTime, onSeek }: SceneThumbnailsProps) {
   const [scenes, setScenes] = React.useState<Scene[]>([]);
 
   React.useEffect(() => {
-    fetch("/api/video-info")
+    const variant = (window as any).VARIANT || "default";
+    const url = variant !== "default" ? `/api/video-info?variant=${variant}` : "/api/video-info";
+    fetch(url)
       .then((r) => r.json())
       .then((info) => {
         if (info.scenes) setScenes(info.scenes);
