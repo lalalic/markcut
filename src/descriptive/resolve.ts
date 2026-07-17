@@ -678,6 +678,10 @@ export interface ResolveGeneratedMediaOptions {
   ttiCli?: string;
   /** Default TTV CLI template (overrides root.ttv) */
   ttvCli?: string;
+  /** Global seed for reproducible TTI/TTV generation. Applied when the CLI
+   *  template contains {seed}. All generated media share this seed for
+   *  visual consistency across scenes. */
+  seed?: number;
 }
 
 /**
@@ -723,9 +727,13 @@ export async function resolveGeneratedMedia(
       ? (clone.tti ?? options.ttiCli ?? DEFAULT_TTI_CLI)
       : (clone.ttv ?? options.ttvCli ?? DEFAULT_TTV_CLI);
 
-    // Content-addressed filename: hash of prompt + CLI + type, so identical
-    // prompts across different source files share the same generated media.
-    const cacheKey = computeCacheKey({ prompt, cli, type });
+    // Use root.seed for reproducible generation (applied when CLI template has {seed}).
+    // seed is part of the cache key so different seeds produce different cached outputs.
+    const seed = options.seed;
+
+    // Content-addressed filename: hash of prompt + CLI + type + seed, so identical
+    // prompts with different seeds produce distinct cached media.
+    const cacheKey = computeCacheKey({ prompt, cli, type, seed });
     const outputPath = join(options.outputDir, `${cacheKey}.${ext}`);
 
     const cached = checkCache(cache, `gen:${cacheKey}`, cacheKey);
@@ -742,8 +750,8 @@ export async function resolveGeneratedMedia(
       console.log(`  🔊 ${label}: ${labelText}...`);
       const ttiCmd = clone.tti ?? options.ttiCli ?? DEFAULT_TTI_CLI;
       const result = type === "image"
-        ? generateTTI(prompt, outputPath, cli)
-        : generateTTV(prompt, outputPath, cli, ttiCmd);
+        ? generateTTI(prompt, outputPath, cli, seed)
+        : generateTTV(prompt, outputPath, cli, ttiCmd, seed);
       if (result) {
         node.src = outputPath;
         updateCache(cache, `gen:${cacheKey}`, cacheKey, outputPath);
@@ -782,6 +790,8 @@ export interface ResolveAllOptions extends ResolveMediaOptions {
   ttiCli?: string;
   /** TTV CLI template override (default: pi agent). Overrides root.ttv. */
   ttvCli?: string;
+  /** Global seed for reproducible TTI/TTV generation. Inherited by includes. */
+  seed?: number;
   /** If set, resolve includes. Directory where pre-compiled include JSON files are stored. */
   includeOutputDir?: string;
   /** Separate output dir for the merged subtitles.vtt.
@@ -973,12 +983,15 @@ export async function resolveAll(
   // (e.g. photo_${width}x${height}.jpg), find the closest existing file.
   result = await resolveMediaSrcs(result, { baseDir: options.baseDir });
 
-  // Step 3: Generate images/videos from prompts before probing durations
+  // Step 3: Generate images/videos from prompts before probing durations.
+  // Use root.seed if set; otherwise inherit from options (for includes).
+  const generationSeed = result.seed ?? options.seed;
   if (options.mediaOutputDir) {
     result = await resolveGeneratedMedia(result, {
       outputDir: options.mediaOutputDir,
       ttiCli: options.ttiCli,
       ttvCli: options.ttvCli,
+      seed: generationSeed,
     });
   }
 

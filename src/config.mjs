@@ -94,8 +94,10 @@ export const DEFAULT_EDIT_CLI = process.env.MARKCUT_EDIT_CLI || 'npx pi --sessio
 
 // ── Render-only pipeline CLI templates ─────────────────────────────────────
 // These are specific to the render pipeline (no vision pipeline equivalent).
+// All templates support {input}, {output}, and {seed} placeholders.
+// {seed} is substituted with root.seed (or empty string if not set).
 
 export const DEFAULT_TTI_CLI =
   process.env.MARKCUT_TTI_CLI ||
-  'uvx --from mflux mflux-generate-flux2 --model flux2-klein-4b --steps 5 --prompt "{input}" --output "{output}"';
+  'uvx --from mflux mflux-generate-flux2 --model flux2-klein-4b --steps 5 --prompt "{input}" --output "{output}" --seed {seed}';
 export const DEFAULT_TTV_CLI = process.env.MARKCUT_TTV_CLI || '';

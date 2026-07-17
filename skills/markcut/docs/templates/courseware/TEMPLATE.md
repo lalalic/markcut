@@ -39,7 +39,7 @@ Layout of this template package:
 
 ```
 # video                          ← root: width:1920 height:1080 fps:30 layout:series
-│                                  subtitle:{fontSize:"20px"} tts:"<edge-tts CLI template>"
+│                                  subtitle:{fontSize:"20px"}
 ├── ## Hook                      ← 3–5s attention grabber, fixed duration
 ├── ## Slides                    ← layout:transitionSeries transition:fade(0.5)
 │   ├── ### TitleSlide           ← transitionSeries, bullet-reveal (1 beat)
@@ -199,10 +199,9 @@ See markcut docs for available effect types: `fadeIn`, `zoomIn`, `bounceIn`, `sl
 
 Guide TTS pronunciation for more natural speech using SSML-style cues in the script text:
 - **Pause**: use `—` (em dash) or `...` for natural breath pauses
-- **Emphasis**: capitalize key terms or use `*asterisks*` (edge-tts interprets these as emphasis)
 - **Rate**: set `tts.rate:+10%` on the root config line for faster pacing, or `tts:{"--rate +10%"}` per scene
 - **Phonetic spelling**: for jargon ("Snyk" = "snik", "Grafana" = "gruh-fah-nuh"), add parenthetical pronunciation on first use: `Snyk (pronounced "snik")` 
-- **Language mix**: for bilingual content, switch edge-tts voice per language using the `# <lang>` variant block
+- **Language mix**: for bilingual content, switch tts voice per language using the `# <lang>` variant block
 
 ## 3. Authoring rules — the professional bar
 

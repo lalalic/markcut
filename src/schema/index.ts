@@ -74,6 +74,7 @@ export const root = folder.extend({
   fps: z.number().int().positive().default(30),
   instruction: z.string().optional(),
   metadata: z.string().optional(),
+  seed: z.number().optional().describe("global seed for TTI/TTV generation; substituted into CLI {seed} placeholder"),
   stylesheet: z.string().optional().describe("global css; selectors use .type and .name"),
   subtitle: subtitleOverlay.optional().describe("global subtitle overlay; src is a VTT file with absolute timestamps"),
   /**

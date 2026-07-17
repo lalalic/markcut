@@ -284,7 +284,7 @@ voices:{"Ray":"--voice en-US-GuyNeural","Alice":"--voice en-US-JennyNeural"}
 Alice: I'm working on something exciting"
 ```
 
-Since values are raw CLI flags, they naturally support voice cloning, rate, pitch, and any edge-tts feature:
+Since values are raw CLI flags, they naturally support voice cloning, rate, pitch:
 
 ```md
 voices:{"Ray":"--voice en-US-GuyNeural --rate +20%","Clone":"--voice clone-xxx --pitch +5Hz"}

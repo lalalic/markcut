@@ -34,10 +34,7 @@ flowchart LR
 ## 0. Prerequisites
 
 - `npx @lalalic/markcut` runnable
-- TTS CLI (default: `edge-tts`) — narration voice, warm and expressive
-- ITT CLI (for `src:auto` illustration generation) — **strongly recommended**, illustrations are the core of this format
-- `ffmpeg`/`ffprobe` on PATH
-- For reviewer: image-understanding capability, STT CLI
+- `ffmpeg`/`ffprobe`/`exiftool` on PATH
 
 ## 1. Inputs — collect before starting
 
@@ -49,7 +46,7 @@ flowchart LR
 | Art style | **yes** | — | the illustration style for ALL pages. Must be consistent. Examples: "watercolor, soft pastels, children's book illustration style", "ink wash painting, traditional Chinese style", "digital painting, studio Ghibli inspired, warm lighting", "woodcut print style, high contrast black and white", "vintage botanical illustration, sepia tones". This single style string is injected into every TTI prompt. |
 | Language | no | en | narration and on-screen text language |
 | Reading pace | no | `moderate` | `slow` (3-4s per line, ~10s per spread), `moderate` (2-3s per line, ~7s per spread), `fast` (1.5-2s per line, ~5s per spread) |
-| Voice | no | en: `en-US-JennyNeural` | edge-tts voice. Prefer warm, expressive voices for storytelling |
+| Voice | no |  | mlx-audio voice. Prefer warm, expressive voices for storytelling |
 | BGM mood | no | `ambient` | optional background music. "soft piano", "ambient nature", "lullaby", or "none" |
 | Pages | no | auto | target number of spreads/pages. Auto-calculated from text if not set |
 
@@ -62,7 +59,6 @@ flowchart LR
 ```
 # video                          ← root: width:1920 height:1080 fps:30 layout:series
 │                                  subtitle:{fontSize:"40px",fontFamily:"Georgia,serif"}
-│                                  tts:"<edge-tts CLI>"
 │                                  transition:fade(0.5)
 ├── - audio isBackground:true src:bgm.mp3 volume:0.08 (optional)
 │

@@ -33,9 +33,7 @@ flowchart LR
 ## 0. Prerequisites
 
 - `npx @lalalic/markcut` runnable
-- TTS CLI (default: `edge-tts`) — voiceover narration or character voices
-- ITT CLI (for `src:auto` scene generation) — **critical**, every scene is AI-generated
-- `ffmpeg`/`ffprobe` on PATH
+- `ffmpeg`/`ffprobe`/`exiftool` on PATH
 - For reviewer: image-understanding capability, STT CLI
 
 ## 1. Inputs — collect before starting
@@ -48,7 +46,7 @@ flowchart LR
 | Tone | no | `serious` | `serious` (somber, weighty), `noir` (dark, mysterious), `melancholic` (sad, reflective), `hopeful` (bittersweet, uplifting) |
 | Language | no | en | narration and on-screen text language |
 | Target duration | no | 7 min | 5–10 min |
-| Voice(s) | no | en: `en-US-GuyNeural` | edge-tts voice(s). For multiple characters, provide a list: {narrator, character1, character2} |
+| Voice(s) | no |  | mlx-audio voice(s). For multiple characters, provide a list: {narrator, character1, character2} |
 | Music mood | no | `cinematic` | score style: cinematic, ambient, noir jazz, minimal piano, tense. BGM is **recommended but not mandatory** — silence is a valid cinematic choice |
 | Aspect ratio | no | `16:9` | `16:9` (standard), `2.35:1` (cinemascope — add black bars in stylesheet), `4:3` (vintage) |
 
@@ -60,7 +58,7 @@ flowchart LR
 
 ```
 # video                          ← root: width:1920 height:1080 fps:30 layout:series
-│                                  tts:"<edge-tts CLI — narrator voice>"
+│                                 
 │                                  transition:fade(0.5)
 ├── - audio isBackground:true foreground:true src:score.mp3 volume:0.12
 ├── - audio isBackground:true src:ambient.mp3 volume:0.05  (optional, diegetic ambience)

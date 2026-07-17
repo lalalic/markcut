@@ -164,6 +164,7 @@ describe("resolveGeneratedMedia", () => {
       "sunset",
       expect.stringMatching(/\.png$/),
       "gen-img --prompt {input} --out {output}",
+      undefined,
     );
   });
 
@@ -186,6 +187,7 @@ describe("resolveGeneratedMedia", () => {
       expect.stringMatching(/\.mp4$/),
       "gen-vid --prompt {input} --out {output}",
       expect.any(String), // ttiCmd defaults to DEFAULT_TTI_CLI
+      undefined,
     );
   });
 
@@ -235,6 +237,7 @@ describe("resolveGeneratedMedia", () => {
       "override test",
       expect.stringMatching(/\.png$/),
       "root-tti {input} --out {output}",
+      undefined,
     );
   });
 
@@ -253,6 +256,7 @@ describe("resolveGeneratedMedia", () => {
       "test",
       expect.stringMatching(/\.png$/),
       "custom-tti --prompt {input} --out {output}",
+      undefined,
     );
   });
 
@@ -642,6 +646,7 @@ describe("resolveGeneratedMedia — TTV additional", () => {
       expect.stringMatching(/\.mp4$/),
       "root-ttv {input} --out {output}",
       expect.any(String),
+      undefined,
     );
   });
 
@@ -661,6 +666,7 @@ describe("resolveGeneratedMedia — TTV additional", () => {
       expect.stringMatching(/\.mp4$/),
       "custom-ttv {input} --out {output}",
       expect.any(String),
+      undefined,
     );
   });
 

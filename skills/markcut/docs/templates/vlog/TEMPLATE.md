@@ -31,7 +31,7 @@ Follow this file top to bottom. Read the markcut skill (`SKILL.md` → `docs/mar
 | Style | no | `daily` | `daily` (casual), `lyrical` (cinematic), `humorous` (funny) |
 | Target duration | no | 60s | 15–120s for short vlogs |
 | Profile | **parse from** | context | user's personality, region, family members, voice ref, life context. Read this file at the start — it's the authoritative source for who the creator is. The creator's name, region, family, and regular activities feed into narration naturally ("my daughter", "drove up from Ottawa", "my third camping trip this year"). |
-| Voice | no | en: `en-US-GuyNeural` | edge-tts voice. If profile has a voice reference URL, use TTS voice cloning instead |
+| Voice | no |  | mlx-audio voice. If profile has a voice reference URL, use TTS voice cloning instead |
 | BGM style | no | `ambient` | mood/genre for background music. BGM is **mandatory** — see §2 for root-level audio node |
 | Vlog history | **read from** | `vlog_history.json` or folder | JSON array of past vlogs in the project. Used for story continuity ("last time I was here...", "my third camping trip this year"). If the file doesn't exist, start fresh. See §3 for history rules. |
 
@@ -50,7 +50,7 @@ storyoutline: # it's your logic to design story.
   open-ending:
 ---
 # video                          ← root: width:1920 height:1080 fps:30 layout:series
-│                                  tts:"<edge-tts CLI template>"
+│                                  
 ├── ## Route                     ← (only if GPS data available)
 │                                  layout:parallel
 │                                  - map waypoints:[...]
@@ -211,7 +211,7 @@ Read `~/.pi/agent/user.md` at the start and weave the creator's identity into na
 - **Region**: name-drop the city/area ("drove up from Ottawa", "my favourite spot in the Outaouais").
 - **Family**: use real names/roles ("my daughter", "my wife") as shown in the profile and visible in clips.
 - **Regular activities**: if the user hikes regularly, frame this as one of many hikes ("another trail checked off the list").
-- **Voice reference**: if the profile has a voice URL for TTS cloning, use that instead of default edge-tts voices.
+- **Voice reference**: if the profile has a voice URL for TTS cloning.
 
 ### Title
 

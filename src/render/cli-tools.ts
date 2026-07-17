@@ -40,8 +40,13 @@ export { DEFAULT_TTS_CLI, DEFAULT_STT_CLI, DEFAULT_TTI_CLI, DEFAULT_TTV_CLI };
  *
  *   template: --text '{input}'     input: it's "great"
  *     →       --text 'it'\''s "great"'
+ *
+ * Placeholders:
+ *   {input}  — user text/path (quote-aware escaped)
+ *   {output} — output file path (simple escaped)
+ *   {seed}   — integer seed for reproducible generation (or empty string)
  */
-function substituteCli(template: string, input: string, output: string): string {
+function substituteCli(template: string, input: string, output: string, seed?: number): string {
   // Escape the output value (file paths rarely have quotes, but be safe)
   const safeOutput = output;
 
@@ -63,9 +68,15 @@ function substituteCli(template: string, input: string, output: string): string 
     safeInput = input.replace(/"/g, '\\"').replace(/'/g, "'\\''");
   }
 
+  // {seed} is always a simple integer — no escaping needed beyond providing
+  // a sensible default. If not set, emit empty string so CLI flags like
+  // "--seed {seed}" become "--seed " (harmless for tools that ignore empty flags).
+  const safeSeed = seed !== undefined ? String(seed) : "";
+
   return template
     .replace(/\{input\}/g, safeInput)
-    .replace(/\{output\}/g, safeOutput);
+    .replace(/\{output\}/g, safeOutput)
+    .replace(/\{seed\}/g, safeSeed);
 }
 
 // ── Exported functions ────────────────────────────────────────────────────
@@ -101,11 +112,12 @@ export async function generateSTT(audioPath: string, outputDir: string, cli?: st
 
 /**
  * Generate an image from a text prompt.
+ * @param seed Optional seed for reproducible generation. Substituted into {seed} in the CLI template.
  * @returns output path on success, empty string on failure.
  */
-export function generateTTI(prompt: string, outputPath: string, cli?: string): string {
+export function generateTTI(prompt: string, outputPath: string, cli?: string, seed?: number): string {
   mkdirSync(dirname(outputPath), { recursive: true });
-  const cmd = substituteCli(cli ?? DEFAULT_TTI_CLI, prompt, outputPath);
+  const cmd = substituteCli(cli ?? DEFAULT_TTI_CLI, prompt, outputPath, seed);
   try {
     execSync(cmd, {
       encoding: "utf-8",
@@ -128,6 +140,7 @@ export function generateTTI(prompt: string, outputPath: string, cli?: string): s
  * to create an image from the prompt, then uses ffmpeg to produce a 3-second MP4.
  *
  * @param ttiCmd Optional TTI CLI template for the image step (defaults to DEFAULT_TTI_CLI).
+ * @param seed Optional seed for reproducible generation. Substituted into {seed} in the CLI template.
  * @returns output path on success, empty string on failure.
  */
 export function generateTTV(
@@ -135,13 +148,14 @@ export function generateTTV(
   outputPath: string,
   cli?: string,
   ttiCmd?: string,
+  seed?: number,
 ): string {
   mkdirSync(dirname(outputPath), { recursive: true });
 
   if (!cli) {
     // Default: use generateTTI to create an image, then ffmpeg to make a 3s MP4
     const pngPath = outputPath.replace(/\.mp4$/, ".png");
-    const imageResult = generateTTI(prompt, pngPath, ttiCmd);
+    const imageResult = generateTTI(prompt, pngPath, ttiCmd, seed);
     if (!imageResult || !existsSync(imageResult)) {
       console.error(`  ✗ TTV: TTI step produced no image for "${prompt.slice(0, 50)}..."`);
       return "";
@@ -161,7 +175,7 @@ export function generateTTV(
   }
 
   // Custom CLI mode: substitute template and run
-  const cmd = substituteCli(cli, prompt, outputPath);
+  const cmd = substituteCli(cli, prompt, outputPath, seed);
   try {
     execSync(cmd, {
       encoding: "utf-8",

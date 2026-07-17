@@ -180,6 +180,11 @@ export interface DescriptiveRoot {
   stt?: string;
   tti?: string;
   ttv?: string;
+  /** Global seed for TTI/TTV generation. When the CLI template contains {seed},
+   *  this value is substituted in to make generation reproducible.
+   *  All generated media in this video share the same seed, ensuring visual
+   *  consistency across scenes. Default: no seed (random generation). */
+  seed?: number;
   layout?: "series" | "parallel" | "transitionSeries";
   transition?: string;
   transitionTime?: number;

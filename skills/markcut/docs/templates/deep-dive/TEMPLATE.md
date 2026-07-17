@@ -34,8 +34,7 @@ flowchart LR
 ## 0. Prerequisites
 
 - `npx @lalalic/markcut` runnable
-- TTS CLI (default: `edge-tts`)
-- `ffmpeg`/`ffprobe` on PATH
+- `ffmpeg`/`ffprobe/exiftool` on PATH
 - Web search capability (for research phase)
 - ITT/TTV CLI (for `src:auto` visuals) — optional but recommended
 - For reviewer: image-understanding capability, STT CLI
@@ -50,7 +49,7 @@ flowchart LR
 | Tone | no | `analytical` | `analytical` (neutral, evidence-driven), `opinionated` (strong thesis, persuasive), `philosophical` (open-ended, reflective), `investigative` (detective-like, reveals) |
 | Target duration | no | 8 min | 3–20 min. Longer formats need deeper scene breakdown |
 | Depth | no | `moderate` | `overview` (surface-level, broad), `moderate` (some depth, 3-5 angles), `deep` (thorough, 5-10 angles, academic-level) |
-| Voice | no | en: `en-US-GuyNeural` | edge-tts voice per language |
+| Voice | no |  | mlx-audio voice per language |
 | BGM style | no | `ambient` | background music mood. Optional — deep dives can work without BGM |
 
 **Core rule: Every factual claim must be supported by a source.** If you cannot find a source for a claim, either qualify it ("some argue that...", "it's believed that...") or remove it. Cite sources on screen (see §3).
@@ -63,7 +62,7 @@ A deep dive is not a lecture and not a highlight reel — it's a **narrative jou
 
 ```
 # video                          ← root: width:1920 height:1080 fps:30 layout:series
-│                                  subtitle:{fontSize:"24px"} tts:"<edge-tts CLI>"
+│                                  subtitle:{fontSize:"24px"}
 │                                  transition:fade(0.5)
 ├── ## Hook                      ← 15–30s. The question, the contradiction, the mystery
 ├── ## Context                   ← 30–60s. Background the audience needs

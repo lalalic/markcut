@@ -34,7 +34,6 @@ flowchart LR
 ## 0. Prerequisites
 
 - `npx @lalalic/markcut` runnable
-- TTS CLI (default: `edge-tts`)
 - `ffmpeg`/`ffprobe` on PATH
 - ITT/TTV CLI (for `src:auto` background generation) — optional but recommended
 - For reviewer: image-understanding capability, STT CLI
@@ -49,7 +48,7 @@ flowchart LR
 | Language | no | en | narration language |
 | Style | no | `cinematic` | `cinematic` (dramatic), `energetic` (fast cuts, bright), `minimal` (clean, slow), `trendy` (meme-aware, casual) |
 | Target duration | no | 30s | 15–60s |
-| Voice | no | en: `en-US-GuyNeural` | edge-tts voice |
+| Voice | no |  | mlx-audio voice |
 | BGM mood | no | `upbeat` | mood for background music. BGM is **mandatory**. |
 
 **Rule:** For explainer/quote/storytime formats, generate all visuals via `src:auto prompt:"..."` — describe vivid, cinematic scenes. For showcase/highlight formats, use the provided source media and let the narration describe it.
@@ -61,7 +60,7 @@ flowchart LR
 ```
 # video                          ← root: width:1080 height:1920 fps:30 layout:series
 │                                  subtitle:{fontSize:"56px",type:"Typewriter",fontFamily:"Arial Black"}
-│                                  tts:"<edge-tts CLI>"
+│                                  
 │                                  transition:fade(0.3)
 ├── - audio isBackground:true foreground:true src:bgm.mp3 volume:0.1
 │
