@@ -713,8 +713,9 @@ export async function resolveGeneratedMedia(
   walkDown(clone as any, (node) => {
     if ((node.type !== "image" && node.type !== "video")) return;
     if (!node.prompt || typeof node.prompt !== "string") return;
-    // Skip if src is already set (prompt is just metadata)
-    if (node.src) return;
+    // Skip if src is already set to a real path (prompt is just metadata).
+    // "auto" is a placeholder meaning "auto-generate via TTI/TTV".
+    if (node.src && node.src !== "auto") return;
     const id = node.id ?? `${node.type}-${genNodes.length}`;
     genNodes.push({ node, id, type: node.type as "image" | "video", prompt: node.prompt });
   });

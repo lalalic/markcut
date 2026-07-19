@@ -529,7 +529,7 @@ layout:series width:1920 height:1080 fps:30
 tts:"edge-tts --voice 'en-US-GuyNeural' --text '{input}' --write-media '{output}'"
 
 ## Hook
-- image duration:3 prompt:"..."
+- image prompt:"..."
 
 ## Title
 - script "Welcome to the course"

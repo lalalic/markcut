@@ -20,11 +20,7 @@
  *      f) Save complete metadata.json with metadata + userHint + perception
  *
  * Options:
- *   --label            Run full pipeline: preview → label → normalize → percept → segments
- *   --agent <tmpl>     Custom text LLM CLI for detect-scenes ({prompt})
- *   --itt <tmpl>       Custom ITT CLI template with {input}, {prompt}
- *   --vtt <tmpl>       Custom VTT CLI template with {input}, {prompt}
- *   --stt <tmpl>       Custom STT CLI template with {input}, {output}
+ *   --label            Open label preview → then continue with full AI pipeline
  *   --prompts-file <path> Path to prompts markdown file (default: vision_prompts.md)
  *   --vtt-sample-interval <n> Sample one video frame every N seconds (default: 5)
  *   --context "text"   Background context about people/places (injected into prompts)
@@ -32,7 +28,6 @@
  *   --skip-stt         Skip speech-to-text for videos
  *   --dry-run          Show what would be processed without running AI
  *   --show-prompts     Print the prompts file and exit
- *   --show-clis        Print the default ITT/VTT/STT CLI templates
  *   --help             Show this help
  *
  * Prompt overrides:
@@ -716,13 +711,13 @@ function mergeLabelsIntoMetadata(folder, metadata) {
 
 // ── Perception helpers ────────────────────────────────────────────────────
 
-function analyzeImage(imagePath, normPath, prompts, ittCli, context = "", userHint = "", userHints = null) {
+function analyzeImage(imagePath, normPath, prompts, context = "", userHint = "", userHints = null) {
   let ctxParts = [];
   if (context) ctxParts.push(`Context: ${context}`);
   if (userHint) ctxParts.push(`User hint: ${userHint}`);
   const ctx = ctxParts.length > 0 ? ctxParts.join("\n") + "\n\n" : "";
   const prompt = ctx + getPrompt(prompts, "image-perception");
-  const raw = runITT(normPath, prompt, ittCli);
+  const raw = runITT(normPath, prompt, DEFAULT_ITT_CLI);
   const parsed = looseJSONParse(raw);
   const rawText = stripThinkBlocks(extractRawText(raw));
   return normalizePerception({
@@ -790,7 +785,7 @@ function buildMergedCues(userHint, cues, sceneChangesMs, totalDurationMs) {
   return merged;
 }
 
-function analyzeVideo(videoPath, normInfo, normDir, prompts, vttCli, sttCli, context = "", userHint = "", ittCli = null, sampleInterval = DEFAULT_VTT_SAMPLE_INTERVAL, agentCli = null, userHints = null) {
+function analyzeVideo(videoPath, normInfo, normDir, prompts, context = "", userHint = "", sampleInterval = DEFAULT_VTT_SAMPLE_INTERVAL, userHints = null) {
   let ctxParts = [];
   if (context) ctxParts.push(`Context: ${context}`);
   if (userHint && typeof userHint === "string") ctxParts.push(`User hint: ${userHint}`);
@@ -800,13 +795,13 @@ function analyzeVideo(videoPath, normInfo, normDir, prompts, vttCli, sttCli, con
   // 1. VTT → overall video description
   emitInfo(`  Running video understanding...`);
   const descPrompt = ctx + getPrompt(prompts, "video-perception");
-  const descRaw = runVTT(normInfo.path, descPrompt, vttCli, ittCli, sampleInterval);
+  const descRaw = runVTT(normInfo.path, descPrompt, DEFAULT_VTT_CLI, DEFAULT_ITT_CLI, sampleInterval);
   const descText = stripThinkBlocks(extractRawText(descRaw));
   perception.desc = descText.slice(0, 500) || looseJSONParse(descRaw)?.desc || descRaw.slice(0, 500);
 
   // 2. STT → VTT subtitle
   emitInfo(`  Running speech-to-text...`);
-  perception.subtitle = runSTT(videoPath, normDir, sttCli);
+  perception.subtitle = runSTT(videoPath, normDir, DEFAULT_STT_CLI);
 
   // 3. Build merged cue timeline from VTT + user hints + ffprobe
   emitInfo(`  Building merged segment boundaries...`);
@@ -843,7 +838,7 @@ function analyzeVideo(videoPath, normInfo, normDir, prompts, vttCli, sttCli, con
     if (!existsSync(dummyInput)) {
       writeFileSync(dummyInput, Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==", "base64"));
     }
-    const segRaw = runAgent(dummyInput, `${segPrompt}\n\nInput:\n${segInput}`, agentCli || ittCli);
+    const segRaw = runAgent(dummyInput, `${segPrompt}\n\nInput:\n${segInput}`, DEFAULT_AGENT_CLI || DEFAULT_ITT_CLI);
     const segParsed = looseJSONParse(segRaw);
 
     if (segParsed && typeof segParsed === "object" && Object.keys(segParsed).length > 0) {
@@ -903,7 +898,7 @@ function analyzeVideo(videoPath, normInfo, normDir, prompts, vttCli, sttCli, con
       } else { clipPath = clipOut; }
 
       // Use runVTT for video clips (extracts frames, then runs ITT)
-      const segRawVis = runVTT(clipPath, visSegPrompt, vttCli, ittCli, sampleInterval);
+      const segRawVis = runVTT(clipPath, visSegPrompt, DEFAULT_VTT_CLI, DEFAULT_ITT_CLI, sampleInterval);
       const segVisText = extractRawText(segRawVis);
       seg.vision = stripThinkBlocks(looseJSONParse(segRawVis)?.desc || segVisText.slice(0, 300) || segRawVis.slice(0, 300));
       try { if (clipPath !== normInfo.path) rmSync(clipPath, { force: true }); } catch {}
@@ -917,7 +912,7 @@ function analyzeVideo(videoPath, normInfo, normDir, prompts, vttCli, sttCli, con
 
 // ── Full pipeline runner (step 2: label → normalize → percept → segments) ──
 
-async function runFullPipeline(folder, prompts, ittCli, vttCli, sttCli, context, pickSet, vttSampleInterval, skipSTT, dryRun, agentCli = null) {
+async function runFullPipeline(folder, prompts, context, pickSet, vttSampleInterval, skipSTT, dryRun) {
   const metadataPath = join(folder, "metadata.json");
 
   // ── Ensure metadata exists ──────────────────────────────────────────
@@ -987,12 +982,12 @@ async function runFullPipeline(folder, prompts, ittCli, vttCli, sttCli, context,
     return;
   }
 
-  await runNormalizeAndPercept(folder, metadataPath, prompts, ittCli, vttCli, sttCli, context, pickSet, vttSampleInterval, skipSTT, agentCli);
+  await runNormalizeAndPercept(folder, metadataPath, prompts, context, pickSet, vttSampleInterval, skipSTT);
 }
 
 // ── Normalize + Percept (internal step) ───────────────────────────────────
 
-async function runNormalizeAndPercept(folder, metadataPath, prompts, ittCli, vttCli, sttCli, context, pickSet, vttSampleInterval, skipSTT, agentCli = null) {
+async function runNormalizeAndPercept(folder, metadataPath, prompts, context, pickSet, vttSampleInterval, skipSTT) {
   const { results, cacheMap } = loadMetadata(folder);
   const cache = { ...cacheMap };
   const normDir = join(folder, ".normalized");
@@ -1022,14 +1017,14 @@ async function runNormalizeAndPercept(folder, metadataPath, prompts, ittCli, vtt
     let cacheKey = "";
     const ctx = context ? `Context: ${context}\n\n` : "";
     const imgPrompt = (userHint ? `User hint: ${userHint}\n\n` : "") + ctx + getPrompt(prompts, "image-perception");
-    const imgInput = `${ittCli ? "" : "@"}${shQuote(normPath)}`;
-    const imgCmd = substituteTemplate(ittCli || DEFAULT_ITT_CLI, { input: imgInput, prompt: imgPrompt });
+    const imgInput = `@${shQuote(normPath)}`;
+    const imgCmd = substituteTemplate(DEFAULT_ITT_CLI, { input: imgInput, prompt: imgPrompt });
     cacheKey = perceptionCacheKey(imgPath, imgCmd, "image");
     if (cache[cacheKey]) {
       perception = cache[cacheKey];
       emitInfo(`  (cached)`);
     } else {
-      perception = analyzeImage(imgPath, normPath, prompts, ittCli, context, userHint, userHints);
+      perception = analyzeImage(imgPath, normPath, prompts, context, userHint, userHints);
       if (perception.desc) cache[cacheKey] = perception;
       emitInfo(`  ${perception.desc?.slice(0, 80)}...`);
     }
@@ -1057,27 +1052,25 @@ async function runNormalizeAndPercept(folder, metadataPath, prompts, ittCli, vtt
     emitInfo(`\n🎬 Video: ${base}${userHint ? ` (hint: "${userHint}")` : ""}`);
     const vidPath = join(folder, fileName);
     const normInfo = normalizeVideo(vidPath, normDir, meta.duration);
-    const stt = skipSTT ? null : sttCli;
-
     let perception = {};
     let cacheKey = "";
     const ctxV = context ? `Context: ${context}\n\n` : "";
     const vidPrompt = (userHint ? `User hint: ${userHint}\n\n` : "") + ctxV + getPrompt(prompts, "video-perception");
     let vttActualCmd;
-    if (vttCli) {
-      vttActualCmd = substituteTemplate(vttCli, { input: shQuote(normInfo.path), prompt: vidPrompt });
+    if (DEFAULT_VTT_CLI) {
+      vttActualCmd = substituteTemplate(DEFAULT_VTT_CLI, { input: shQuote(normInfo.path), prompt: vidPrompt });
     } else {
       const dur = meta.duration || 0;
       const n = Math.max(5, Math.min(10, Math.ceil(dur / vttSampleInterval)));
       const framePaths = Array.from({ length: n }, (_, i) => `${basename(normInfo.path, extname(normInfo.path))}_${String(i + 1).padStart(3, "0")}.jpg`);
-      vttActualCmd = substituteTemplate(ittCli || DEFAULT_ITT_CLI, { input: framePaths.map(p => `@${p}`).join(" "), prompt: vidPrompt });
+      vttActualCmd = substituteTemplate(DEFAULT_ITT_CLI, { input: framePaths.map(p => `@${p}`).join(" "), prompt: vidPrompt });
     }
     cacheKey = perceptionCacheKey(vidPath, vttActualCmd, "video");
     if (cache[cacheKey]) {
       perception = cache[cacheKey];
       emitInfo(`  (cached)`);
     } else {
-      perception = analyzeVideo(vidPath, normInfo, normDir, prompts, vttCli, stt, context, userHint, ittCli, vttSampleInterval, agentCli, userHints);
+      perception = analyzeVideo(vidPath, normInfo, normDir, prompts, context, userHint, vttSampleInterval, userHints);
       if (perception.desc) cache[cacheKey] = perception;
     }
 
@@ -1105,10 +1098,6 @@ Usage:
 
 Options:
   --label              Open label preview → then continue with full AI pipeline
-  --agent <template>   Custom text LLM CLI for detect-scenes ({prompt})
-  --itt <template>     Custom ITT CLI template with {input}, {prompt}
-  --vtt <template>     Custom VTT CLI template with {input}, {prompt}
-  --stt <template>     Custom STT CLI template with {input}, {output}
   --prompts-file <path> Path to prompts markdown file (default: vision_prompts.md)
   --vtt-sample-interval <n> Sample one video frame every N seconds (default: 5)
   --context "text"     Background context about people/places (injected into prompts)
@@ -1116,7 +1105,6 @@ Options:
   --skip-stt           Skip speech-to-text for videos
   --dry-run            Show what would be processed without running AI
   --show-prompts       Print the prompts file and exit
-  --show-clis          Print the default ITT/VTT/STT CLI templates
   --help               Show this help
 
 Prompt overrides:
@@ -1126,10 +1114,6 @@ Prompt overrides:
 
 export async function main(args) {
   let folder = "";
-  let agentCli = null;
-  let ittCli = null;
-  let vttCli = null;
-  let sttCli = null;
   let promptsFile = PROMPTS_FILE;
   let context = "";
   let vttSampleInterval = DEFAULT_VTT_SAMPLE_INTERVAL;
@@ -1147,20 +1131,12 @@ export async function main(args) {
     const flag = args[i++];
     if (flag === "--help") { printUsage(); return; }
     else if (flag === "--label") { doLabel = true; }
-    else if (flag === "--agent" && args[i]) { agentCli = args[i++]; }
-    else if (flag === "--itt" && args[i]) { ittCli = args[i++]; }
-    else if (flag === "--vtt" && args[i]) { vttCli = args[i++]; }
-    else if (flag === "--stt" && args[i]) { sttCli = args[i++]; }
+
     else if (flag === "--prompts-file" && args[i]) { promptsFile = resolve(args[i++]); }
     else if (flag === "--vtt-sample-interval" && args[i]) { vttSampleInterval = parseInt(args[i++], 10) || DEFAULT_VTT_SAMPLE_INTERVAL; }
     else if (flag === "--context" && args[i]) { context = args[i++]; }
     else if (flag === "--show-prompts") { console.log(readFileSync(promptsFile, "utf-8")); return; }
-    else if (flag === "--show-clis") {
-      console.log(`DEFAULT_ITT_CLI:\n${DEFAULT_ITT_CLI}\n`);
-      console.log(`DEFAULT_VTT_CLI: (empty — uses ITT via frame extraction, sample every ${DEFAULT_VTT_SAMPLE_INTERVAL}s)\n`);
-      console.log(`DEFAULT_STT_CLI:\n${DEFAULT_STT_CLI}`);
-      return;
-    }
+
     else if (flag === "--skip-stt") { skipSTT = true; }
     else if (flag === "--pick" && args[i]) { for (const f of args[i++].split(",")) pickSet.add(f.trim()); }
     else if (flag === "--dry-run") { dryRun = true; }
@@ -1175,7 +1151,7 @@ export async function main(args) {
   for (const [name, value] of promptOverrides) prompts.set(name, value);
 
   if (doLabel) {
-    await runFullPipeline(folder, prompts, ittCli, vttCli, sttCli, context, pickSet, vttSampleInterval, skipSTT, dryRun, agentCli);
+    await runFullPipeline(folder, prompts, context, pickSet, vttSampleInterval, skipSTT, dryRun);
   } else {
     await runMetadataMode(folder, pickSet, dryRun);
   }

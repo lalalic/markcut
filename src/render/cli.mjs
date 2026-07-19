@@ -11,6 +11,11 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync, copyFileSync } from
 import { createHash } from "node:crypto";
 import { resolve, dirname, join, extname } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  DEFAULT_TTS_CLI, DEFAULT_STT_CLI, DEFAULT_TTI_CLI, DEFAULT_TTV_CLI,
+  DEFAULT_ITT_CLI, DEFAULT_VTT_CLI, DEFAULT_AGENT_CLI, DEFAULT_EDIT_CLI,
+  args,
+} from "../config.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -44,13 +49,27 @@ function usage() {
   console.log(`
 markcut CLI — Markdown/JSON → video pipeline
 
+npx @lalalic/markcut <command> [options]
+
+global options:
+  --show-clis                          Print all default CLI templates and exit
+
+  --tti <template>                     Override default TTI CLI template
+  --tts <template>                     Override default TTS CLI template
+  --stt <template>                     Override default STT CLI template
+  --ttv <template>                     Override default TTV CLI template
+  --itt <template>                     Override default ITT CLI template
+  --vtt <template>                     Override default VTT CLI template
+  --agent <template>                   Override default agent CLI template
+  --edit-cli <template>                Override default edit agent CLI template
+
+  --help                               Show this help
+
 Commands:
 
   verify <file>                         Parse + validate descriptive file
-    --cli                             Check required CLI tools are installed
 
   preview <file.json|.md>               Open player with live preview
-    --edit                             Auto-reload on file change
     --label                           Open label input overlay
     --no-browser                      Skip opening browser automatically
     --port <num>                        Port for the player server (default: 3001)
@@ -61,47 +80,16 @@ Commands:
 
   vision <folder>                      Extract metadata into metadata.json
     --label                            Full pipeline: preview → label → normalize → percept → segments
-    --agent <template>                 Custom text LLM CLI for detect-scenes ({prompt})
-    --itt <template>                   Custom ITT CLI template with {input}, {prompt}
-    --vtt <template>                   Custom VTT CLI template with {input}, {prompt}
-    --stt <template>                   Custom STT CLI template with {input}, {output}
     --prompts-file <path>              Path to prompts markdown file (default: vision_prompts.md)
     --vtt-sample-interval <n>          Sample one video frame every N seconds (default: 5)
     --context "text"                   Background context about people/places (injected into prompts)
-    --pick <files>                     Comma-separated filenames to process
     --skip-stt                         Skip speech-to-text for videos
     --dry-run                          Show what would be processed without running AI
     --show-prompts                     Print the prompts file and exit
-    --show-clis                        Print the default ITT/VTT/STT CLI templates
-    --help                             Show this help
     --<prompt-name> "text"             Override any prompt template from vision_prompts.md
 `);
 }
 
-export function parseArgs(argv) {
-  const args = { command: "", file: "", output: "", forceNew: false, verbose: false, label: false, edit: false, noBrowser: false, chat: false, port: 3001, compile: false, cli: false, scriptOutputDir: "", mediaOutputDir: "", variant: [] };
-  let i = 2;
-  if (argv[i]) args.command = argv[i++];
-  if (argv[i] && !argv[i].startsWith("--")) args.file = argv[i++];
-  while (i < argv.length) {
-    const flag = argv[i++];
-    if (flag === "--output" && argv[i]) args.output = argv[i++];
-    else if (flag === "--script-output-dir" && argv[i]) args.scriptOutputDir = argv[i++];
-    else if (flag === "--media-output-dir" && argv[i]) args.mediaOutputDir = argv[i++];
-    else if (flag === "--cli") args.cli = true;
-    else if (flag === "--compile") args.compile = true;
-    else if (flag === "--force-new") args.forceNew = true;
-    else if (flag === "--verbose") args.verbose = true;
-    else if (flag === "--label") args.label = true;
-    else if (flag === "--edit") args.edit = true;
-    else if (flag === "--no-browser") args.noBrowser = true;
-    else if (flag === "--port" && argv[i]) args.port = parseInt(argv[i], 10);
-    else if (flag.startsWith("--port=")) args.port = parseInt(flag.split("=")[1], 10);
-    else if (flag === "--variant" && argv[i]) args.variant.push(argv[i++]);
-    else if (flag.startsWith("--variant=")) args.variant.push(flag.split("=")[1]);
-  }
-  return args;
-}
 
 /**
  * Render one aspect ratio with compact progress output.
@@ -222,10 +210,29 @@ function renderOne(streamTree, aspect, outputPath, verbose) {
 }
 
 async function main() {
-  const args = parseArgs(process.argv);
-
   if (!args.command || args.command === "help" || args.command === "--help") {
     usage();
+    process.exit(0);
+  }
+
+  // --show-clis works as a command or a flag
+  if (args.showClis || args.command === "--show-clis") {
+    console.log(`Default CLI 
+tti=${DEFAULT_TTI_CLI}
+
+ttv=${DEFAULT_TTV_CLI || "(empty — falls back to TTI + ffmpeg to produce a 3s MP4)"}
+
+tts=${DEFAULT_TTS_CLI}
+
+stt=${DEFAULT_STT_CLI}
+
+itt=${DEFAULT_ITT_CLI}
+
+vtt=${DEFAULT_VTT_CLI || "(empty — uses ITT via frame extraction)"}
+
+agent=${DEFAULT_AGENT_CLI}
+
+edit=${DEFAULT_EDIT_CLI}`);
     process.exit(0);
   }
 
@@ -486,40 +493,6 @@ function hasScript(root) {
         }
       }
       walkMedia(descriptive.children);
-
-      // ── Check 2: CLI tool availability (--cli flag) ────────────────────
-      if (args.cli) {
-        function extractCmd(configStr) {
-          if (!configStr) return null;
-          return configStr.trim().split(/\s+/)[0] || null;
-        }
-
-        const pipelineConfigs = [
-          { type: "TTS", config: descriptive.tts, defaultCmd: "edge-tts", needsCheck: hasScript(descriptive) },
-          { type: "STT", config: descriptive.stt, defaultCmd: "whisper", needsCheck: hasScript(descriptive) },
-          { type: "TTI", config: descriptive.tti, defaultCmd: "pi", needsCheck: needsTti },
-          { type: "TTV", config: descriptive.ttv, defaultCmd: "pi", needsCheck: needsTtv },
-        ];
-
-        const checked = new Set();
-        for (const p of pipelineConfigs) {
-          if (!p.needsCheck) continue;
-          const cmd = extractCmd(p.config) || p.defaultCmd;
-          if (checked.has(cmd)) continue;
-          checked.add(cmd);
-          const { execSync } = await import("node:child_process");
-          try {
-            execSync(`which ${cmd}`, { stdio: "ignore" });
-          } catch {
-            const hints = {
-              "pi": " (pip install pi-sdk)",
-              "edge-tts": " (pip install edge-tts)",
-              "whisper": " (pip install openai-whisper)",
-            };
-            errors.push(`CLI tool "${cmd}" not found${hints[cmd] || ""}. Required by ${p.type}`);
-          }
-        }
-      }
 
       // ── Results ─────────────────────────────────────────────────────────
       for (const w of warnings) emitWarn(w);

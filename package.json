@@ -1,6 +1,6 @@
 {
   "name": "@lalalic/markcut",
-  "version": "2.2.8",
+  "version": "2.2.9",
   "description": "Markdown-to-video engine. Describe scenes in markdown, get a rendered video.",
   "bin": {
     "markcut": "bin/markcut"
@@ -31,6 +31,7 @@
     "test:watch": "vitest --config tests/vitest.config.ts",
     "build": "scripts/build-pipeline.sh && scripts/build-player.sh",
     "vision": "node src/render/cli.mjs vision",
+    "markcut": "bin/markcut",
     "push": "GIT_SSH_COMMAND=\"ssh -i ~/.ssh/id_ed25519_1 -o IdentitiesOnly=yes\" git push"
   },
   "dependencies": {

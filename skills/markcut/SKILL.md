@@ -62,8 +62,6 @@ some common issues (photo or video can't be displayed, audio missing), take belo
 | Markdown descriptive format (primary authoring format) | [docs/markdown-descriptive.md](docs/markdown-descriptive.md) |
 | Label system (browse, label, export labels.json) | [docs/label-mode.md](docs/label-mode.md) |
 | Player servers (label + edit mode) | [docs/edit-mode.md](docs/edit-mode.md) |
-| How to make video template | [docs/template.md](docs/template.md) |
-| Templates | [docs/templates/](docs/templates/) |
 
 
 ## common used components

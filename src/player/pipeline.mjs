@@ -883,8 +883,8 @@ var require_format = __commonJS({
         return format.apply(null, [fmt].concat(replacements));
       }
       function format(fmt) {
-        var argIndex = 1, args = [].slice.call(arguments), i = 0, n = fmt.length, result = "", c, escaped = false, arg, tmp, leadingZero = false, precision, nextArg = function() {
-          return args[argIndex++];
+        var argIndex = 1, args2 = [].slice.call(arguments), i = 0, n = fmt.length, result = "", c, escaped = false, arg, tmp, leadingZero = false, precision, nextArg = function() {
+          return args2[argIndex++];
         }, slurpNumber = function() {
           var digits = "";
           while (/\d/.test(fmt[i])) {
@@ -972,22 +972,61 @@ import { existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 
 // src/config.mjs
+var args = (function parseArgs(argv) {
+  const CLI_OVERRIDE_FLAGS = {
+    "--itt": "itt",
+    "--vtt": "vtt",
+    "--stt": "stt",
+    "--tts": "tts",
+    "--agent": "agent",
+    "--edit-cli": "editCli",
+    "--tti": "tti",
+    "--ttv": "ttv"
+  };
+  const args2 = { command: "", file: "", output: "", forceNew: false, verbose: false, label: false, edit: false, noBrowser: false, chat: false, port: 3001, compile: false, cli: false, showClis: false, scriptOutputDir: "", mediaOutputDir: "", variant: [], cliOverrides: {} };
+  let i = 2;
+  if (argv[i]) args2.command = argv[i++];
+  if (argv[i] && !argv[i].startsWith("--")) args2.file = argv[i++];
+  while (i < argv.length) {
+    const flag = argv[i++];
+    if (flag === "--output" && argv[i]) args2.output = argv[i++];
+    else if (flag === "--script-output-dir" && argv[i]) args2.scriptOutputDir = argv[i++];
+    else if (flag === "--media-output-dir" && argv[i]) args2.mediaOutputDir = argv[i++];
+    else if (flag === "--cli") args2.cli = true;
+    else if (flag === "--show-clis") args2.showClis = true;
+    else if (flag === "--compile") args2.compile = true;
+    else if (flag === "--force-new") args2.forceNew = true;
+    else if (flag === "--verbose") args2.verbose = true;
+    else if (flag === "--label") args2.label = true;
+    else if (flag === "--edit") args2.edit = true;
+    else if (flag === "--no-browser") args2.noBrowser = true;
+    else if (flag === "--port" && argv[i]) args2.port = parseInt(argv[i], 10);
+    else if (flag.startsWith("--port=")) args2.port = parseInt(flag.split("=")[1], 10);
+    else if (flag === "--variant" && argv[i]) args2.variant.push(argv[i++]);
+    else if (flag.startsWith("--variant=")) args2.variant.push(flag.split("=")[1]);
+    else if (CLI_OVERRIDE_FLAGS[flag] && argv[i]) {
+      const key = CLI_OVERRIDE_FLAGS[flag];
+      args2.cliOverrides[key] = argv[i++];
+    }
+  }
+  return args2;
+})(process.argv);
 var MAX_IMAGE_DIMENSION = Number(process.env.MARKCUT_MAX_IMAGE_DIMENSION) || 384;
 var MAX_VIDEO_DURATION = Number(process.env.MARKCUT_MAX_VIDEO_DURATION) || 60;
 var MAX_VIDEO_DIMENSION = Number(process.env.MARKCUT_MAX_VIDEO_DIMENSION) || 360;
-var DEFAULT_ITT_CLI = process.env.MARKCUT_ITT_CLI || 'uvx --from mlx-vlm mlx_vlm.generate --model mlx-community/MiniCPM-V-4.6-bf16 --max-tokens 2048 --prompt "{prompt}" --image {input} --temperature 0.0 --thinking-mode disabled';
 var GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY || "";
 var DEFAULT_VTT_SAMPLE_INTERVAL = Number(process.env.MARKCUT_VTT_SAMPLE_INTERVAL) || 5;
-var DEFAULT_VTT_CLI = process.env.MARKCUT_VTT_CLI || `uvx --from mlx-vlm mlx_vlm.generate --model mlx-community/MiniCPM-V-4.6-bf16 --max-tokens 2048 --prompt "{prompt}" --video {input} --temperature 0.0 --processor-kwargs '{"max_num_frames": 32, "stack_frames": 1, "max_slice_nums": 1, "use_image_id": false}'`;
-var DEFAULT_STT_CLI = process.env.MARKCUT_STT_CLI || 'uvx --from openai-whisper whisper "{input}" --output_format vtt --output_dir "{output}"';
-var DEFAULT_TTS_CLI = process.env.MARKCUT_TTS_CLI || 'uvx edge-tts --voice "en-US-GuyNeural" --text "{input}" --write-media "{output}"';
-var DEFAULT_AGENT_CLI = process.env.MARKCUT_AGENT_CLI || "npx pi -p {prompt}";
-var DEFAULT_EDIT_CLI = process.env.MARKCUT_EDIT_CLI || "npx pi --session-id {sessionid} --system-prompt {systemprompt} -p {prompt}";
-var DEFAULT_TTI_CLI = process.env.MARKCUT_TTI_CLI || 'uvx --from mflux mflux-generate-flux2 --model flux2-klein-4b --steps 5 --prompt "{input}" --output "{output}"';
-var DEFAULT_TTV_CLI = process.env.MARKCUT_TTV_CLI || "";
+var DEFAULT_STT_CLI = args.cliOverrides.stt || process.env.MARKCUT_STT_CLI || 'uvx --from openai-whisper whisper "{input}" --output_format vtt --output_dir "{output}"';
+var DEFAULT_TTS_CLI = args.cliOverrides.tts || process.env.MARKCUT_TTS_CLI || 'uvx edge-tts --voice "en-US-GuyNeural" --text "{input}" --write-media "{output}"';
+var DEFAULT_AGENT_CLI = args.cliOverrides.agent || process.env.MARKCUT_AGENT_CLI || "npx pi -p {prompt}";
+var DEFAULT_EDIT_CLI = args.cliOverrides.editCli || process.env.MARKCUT_EDIT_CLI || "npx pi --session-id {sessionid} --system-prompt {systemprompt} -p {prompt}";
+var DEFAULT_TTI_CLI = args.cliOverrides.tti || process.env.MARKCUT_TTI_CLI || 'uvx --from mflux mflux-generate-flux2 --model flux2-klein-4b --steps 5 --prompt "{input}" --output "{output}" --seed {seed}';
+var DEFAULT_TTV_CLI = args.cliOverrides.ttv || process.env.MARKCUT_TTV_CLI || "";
+var DEFAULT_ITT_CLI = args.cliOverrides.itt || process.env.MARKCUT_ITT_CLI || 'uvx --from mlx-vlm mlx_vlm.generate --model mlx-community/MiniCPM-V-4.6-bf16 --max-tokens 2048 --prompt "{prompt}" --image {input} --temperature 0.0 --thinking-mode disabled';
+var DEFAULT_VTT_CLI = args.cliOverrides.vtt || process.env.MARKCUT_VTT_CLI || `uvx --from mlx-vlm mlx_vlm.generate --model mlx-community/MiniCPM-V-4.6-bf16 --max-tokens 2048 --prompt "{prompt}" --video {input} --temperature 0.0 --processor-kwargs '{"max_num_frames": 32, "stack_frames": 1, "max_slice_nums": 1, "use_image_id": false}'`;
 
 // src/render/cli-tools.ts
-function substituteCli(template, input, output) {
+function substituteCli(template, input, output, seed) {
   const safeOutput = output;
   let safeInput;
   const inputMatch = template.match(/(['"])\{input\}/);
@@ -1001,7 +1040,8 @@ function substituteCli(template, input, output) {
   } else {
     safeInput = input.replace(/"/g, '\\"').replace(/'/g, "'\\''");
   }
-  return template.replace(/\{input\}/g, safeInput).replace(/\{output\}/g, safeOutput);
+  const safeSeed = seed !== void 0 ? String(seed) : "";
+  return template.replace(/\{input\}/g, safeInput).replace(/\{output\}/g, safeOutput).replace(/\{seed\}/g, safeSeed);
 }
 function generateTTS(text3, outputPath, cli) {
   mkdirSync(dirname(outputPath), { recursive: true });
@@ -1022,9 +1062,9 @@ async function generateSTT(audioPath, outputDir, cli) {
     console.warn(`  \u26A0 STT failed: ${e.message}`);
   }
 }
-function generateTTI(prompt, outputPath, cli) {
+function generateTTI(prompt, outputPath, cli, seed) {
   mkdirSync(dirname(outputPath), { recursive: true });
-  const cmd = substituteCli(cli ?? DEFAULT_TTI_CLI, prompt, outputPath);
+  const cmd = substituteCli(cli ?? DEFAULT_TTI_CLI, prompt, outputPath, seed);
   try {
     execSync(cmd, {
       encoding: "utf-8",
@@ -1038,11 +1078,11 @@ function generateTTI(prompt, outputPath, cli) {
   }
   return existsSync(outputPath) ? outputPath : "";
 }
-function generateTTV(prompt, outputPath, cli, ttiCmd) {
+function generateTTV(prompt, outputPath, cli, ttiCmd, seed) {
   mkdirSync(dirname(outputPath), { recursive: true });
   if (!cli) {
     const pngPath = outputPath.replace(/\.mp4$/, ".png");
-    const imageResult = generateTTI(prompt, pngPath, ttiCmd);
+    const imageResult = generateTTI(prompt, pngPath, ttiCmd, seed);
     if (!imageResult || !existsSync(imageResult)) {
       console.error(`  \u2717 TTV: TTI step produced no image for "${prompt.slice(0, 50)}..."`);
       return "";
@@ -1062,7 +1102,7 @@ function generateTTV(prompt, outputPath, cli, ttiCmd) {
     }
     return existsSync(outputPath) ? outputPath : "";
   }
-  const cmd = substituteCli(cli, prompt, outputPath);
+  const cmd = substituteCli(cli, prompt, outputPath, seed);
   try {
     execSync(cmd, {
       encoding: "utf-8",
@@ -10977,14 +11017,15 @@ async function resolveGeneratedMedia(root, options) {
   walkDown(clone, (node2) => {
     if (node2.type !== "image" && node2.type !== "video") return;
     if (!node2.prompt || typeof node2.prompt !== "string") return;
-    if (node2.src) return;
+    if (node2.src && node2.src !== "auto") return;
     const id = node2.id ?? `${node2.type}-${genNodes.length}`;
     genNodes.push({ node: node2, id, type: node2.type, prompt: node2.prompt });
   });
   for (const { node: node2, id, type, prompt } of genNodes) {
     const ext = type === "image" ? "png" : "mp4";
     const cli = type === "image" ? clone.tti ?? options.ttiCli ?? DEFAULT_TTI_CLI : clone.ttv ?? options.ttvCli ?? DEFAULT_TTV_CLI;
-    const cacheKey = computeCacheKey({ prompt, cli, type });
+    const seed = options.seed;
+    const cacheKey = computeCacheKey({ prompt, cli, type, seed });
     const outputPath = join(options.outputDir, `${cacheKey}.${ext}`);
     const cached = checkCache(cache, `gen:${cacheKey}`, cacheKey);
     const label = type === "image" ? "TTI" : "TTV";
@@ -10997,7 +11038,7 @@ async function resolveGeneratedMedia(root, options) {
     try {
       console.log(`  \u{1F50A} ${label}: ${labelText}...`);
       const ttiCmd = clone.tti ?? options.ttiCli ?? DEFAULT_TTI_CLI;
-      const result = type === "image" ? generateTTI(prompt, outputPath, cli) : generateTTV(prompt, outputPath, cli, ttiCmd);
+      const result = type === "image" ? generateTTI(prompt, outputPath, cli, seed) : generateTTV(prompt, outputPath, cli, ttiCmd, seed);
       if (result) {
         node2.src = outputPath;
         updateCache(cache, `gen:${cacheKey}`, cacheKey, outputPath);
@@ -11107,11 +11148,13 @@ async function resolveAll2(root, options = {}) {
     variant: options.variants?.[0] ?? "video"
   });
   result = await resolveMediaSrcs(result, { baseDir: options.baseDir });
+  const generationSeed = result.seed ?? options.seed;
   if (options.mediaOutputDir) {
     result = await resolveGeneratedMedia(result, {
       outputDir: options.mediaOutputDir,
       ttiCli: options.ttiCli,
-      ttvCli: options.ttvCli
+      ttvCli: options.ttvCli,
+      seed: generationSeed
     });
   }
   result = await resolveMediaDurations(result, {
