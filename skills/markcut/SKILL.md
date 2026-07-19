@@ -23,11 +23,6 @@ see [docs/markdown-descriptive.md](docs/markdown-descriptive.md) for full detail
 ### Video Variants
 - define variants for different video configurations, such as different languages, aspects, platforms
 
-
-### Templates
-- Templates in ``docs/templates/`` provide ready-to-use video structures for `orchestrator` agents, use them as starting point to create your own videos.
-
-
 ### Viral Story requires
 - **Hooks** : why should the viewer watch this?
 - **Conflict** : what challenges or obstacles do the characters face?
@@ -36,11 +31,22 @@ see [docs/markdown-descriptive.md](docs/markdown-descriptive.md) for full detail
 - **Call to action** : what should the viewer do next?
 - **Open ending** : does the story leave room for interpretation or continuation?
 
+### TTS, TTI, TTV, STT media generation
+markcut implements a **media generation pipeline** to generate TTS, TTI, TTV, STT media automatically. 
+- `npx @lalalic/markcut --show-clis` to see the default CLIs for TTS, TTI, TTV, STT media generation.
+- `orchestrator` agent DONT generate media directly
+
 ## 3. CLI
 
 ```bash
 npx @lalalic/markcut <command> [options]
 npx @lalalic/markcut --help # get overall information
+npx @lalalic/markcut --show-clis # get command specific information
+npx @lalalic/markcut preview <file> # assemble and preview the video with a local server, and chat to edit the video and auto refresh
+npx @lalalic/markcut render <file> # render the video to mp4
+npx @lalalic/markcut vision <folder> # vision understanding medias in folder
+npx @lalalic/markcut vision <folder> --label # full pipeline vision understanding medias in folder, and provide ui to label the medias with text, time ranges
+
 ```
 
 ---
@@ -60,8 +66,6 @@ some common issues (photo or video can't be displayed, audio missing), take belo
 | Topic | File |
 |-------|------|
 | Markdown descriptive format (primary authoring format) | [docs/markdown-descriptive.md](docs/markdown-descriptive.md) |
-| Label system (browse, label, export labels.json) | [docs/label-mode.md](docs/label-mode.md) |
-| Player servers (label + edit mode) | [docs/edit-mode.md](docs/edit-mode.md) |
 
 
 ## common used components
