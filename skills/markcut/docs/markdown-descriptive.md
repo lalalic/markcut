@@ -39,7 +39,7 @@ width:1920 height:1080 fps:30 layout:series
 ~~~css stylesheet
 .bg { background: #000; }
 ~~~
-subtitle:captions.vtt
+subtitle:{src:"captions.vtt",type:"Bounce"}
 ```
 
 Supported keys: `width`, `height`, `fps`, `layout`, `tts`, `stt`, `tti`, `ttv`,
@@ -49,12 +49,14 @@ Values containing spaces must be quoted with double or single quotes.
 
 ### Subtitle on the config line
 
+Set subtitle via `subtitle:` on the root config line:
+
 ```markdown
 # video
-width:640 height:480 subtitle:captions.vtt
+width:640 height:480 subtitle:{src:"captions.vtt",type:"Bounce",fontSize:48}
 ```
 
-Currently only `src` (a VTT file path) is supported via the config line.
+See the [Subtitle](#subtitle) section below for all supported fields.
 
 ## Template Variables
 
@@ -73,16 +75,18 @@ width:1920 height:1080
 
 > Template variables are NOT resolved in root config keys, jsx, script, style,
 > or other string fields — only in `src`, `prompt`, and `stylesheet`.
-  style: "color: yellow;"
-```
+
+### Subtitle
+
+Subtitles are configured at the root level as a VTT overlay. Set via `subtitle:` on the root config line, or `root.subtitle` in JSON.
 
 | Field | Required | Type | Notes |
 |---|---|---|---|
 | `src` | yes | string | VTT path/URL, inline VTT body, or plain text |
-| `type` | opt | string | caption animation: `Bounce`, `Fade`, `Typewriter`, `Colorful`, etc. Default: plain static caption |
-| `fontSize` | opt | number | default 56 |
+| `type` | opt | string | caption animation: `Bounce`, `Fade`, `Typewriter`, `Colorful`, `Glowing`, `Neon`, `Zoom`. Default: plain static caption |
+| `fontSize` | opt | number \| string | default 56 (accepts CSS value like `"2em"` or number) |
 | `fontFamily` | opt | string | font family |
-| `fontStyle` | opt | string | `normal`, `italic`, `bold`, etc. |
+| `fontStyle` | opt | string | `normal`, `italic`, `bold`, `bold italic` |
 | `style` | opt | string | inline CSS for the overlay container |
 
 > **HTML in cue text**: Cue text supports HTML tags with inline CSS, so you can style individual words:
