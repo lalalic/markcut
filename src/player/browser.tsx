@@ -136,14 +136,16 @@ function PlayerApp() {
       .catch(() => {});
   }, []);
 
-  // Update active scene from currentTime
+  // Update active scene from currentTime.
+  // Iterate backward so the latest scene whose start <= currentTime wins —
+  // during transition overlaps, the newer scene takes precedence.
   React.useEffect(() => {
     const scenes = (window as any).__scenes;
     if (!scenes) return;
     let found = "";
-    for (const s of scenes) {
-      if (currentTime >= s.start && currentTime < s.end) {
-        found = s.name || "";
+    for (let i = scenes.length - 1; i >= 0; i--) {
+      if (currentTime >= scenes[i].start) {
+        found = scenes[i].name || "";
         break;
       }
     }
@@ -213,6 +215,8 @@ function PlayerApp() {
   }, [ready, data, startAt, fps]);
 
   // ── onFrameUpdate: track current time ───────────────────────────────
+  // Remotion Player 4.x dispatches `frameupdate` events via the player ref's
+  // EventTarget API — there is no `onFrameUpdate` prop. Subscribe in an effect.
   const handleFrameUpdate = React.useCallback((frame: number) => {
     currentFrameRef.current = frame;
     // Throttle state updates lightly for scene tracking
@@ -221,6 +225,18 @@ function PlayerApp() {
       return Math.abs(newTime - prev) > 0.1 ? newTime : prev;
     });
   }, [fps]);
+
+  // Subscribe to frameupdate events on the player ref (after it mounts)
+  React.useEffect(() => {
+    const p = playerRef.current;
+    if (!p || typeof (p as any).addEventListener !== "function") return;
+    const listener = (e: any) => {
+      const frame = e?.detail?.frame;
+      if (typeof frame === "number") handleFrameUpdate(frame);
+    };
+    (p as any).addEventListener("frameupdate", listener);
+    return () => (p as any).removeEventListener("frameupdate", listener);
+  }, [ready, data, handleFrameUpdate]);
 
   // Keyboard shortcuts
   React.useEffect(() => {
@@ -442,7 +458,6 @@ function PlayerApp() {
           clickToPlay={false}
           doubleClickToFullscreen={true}
           autoPlay={autoPlay}
-          onFrameUpdate={handleFrameUpdate}
         />
       </div>
 

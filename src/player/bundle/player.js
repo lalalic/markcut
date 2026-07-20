@@ -60361,8 +60361,8 @@ function SceneThumbnails({ currentTime, onSeek }) {
   }, []);
   if (scenes.length === 0) return null;
   let activeIdx = -1;
-  for (let i3 = 0; i3 < scenes.length; i3++) {
-    if (currentTime >= scenes[i3].start && currentTime < scenes[i3].end) {
+  for (let i3 = scenes.length - 1; i3 >= 0; i3--) {
+    if (currentTime >= scenes[i3].start) {
       activeIdx = i3;
       break;
     }
@@ -60498,9 +60498,9 @@ function PlayerApp() {
     const scenes = window.__scenes;
     if (!scenes) return;
     let found = "";
-    for (const s2 of scenes) {
-      if (currentTime >= s2.start && currentTime < s2.end) {
-        found = s2.name || "";
+    for (let i3 = scenes.length - 1; i3 >= 0; i3--) {
+      if (currentTime >= scenes[i3].start) {
+        found = scenes[i3].name || "";
         break;
       }
     }
@@ -60559,6 +60559,16 @@ function PlayerApp() {
       return Math.abs(newTime - prev) > 0.1 ? newTime : prev;
     });
   }, [fps]);
+  React55.useEffect(() => {
+    const p2 = playerRef.current;
+    if (!p2 || typeof p2.addEventListener !== "function") return;
+    const listener = (e) => {
+      const frame = e?.detail?.frame;
+      if (typeof frame === "number") handleFrameUpdate(frame);
+    };
+    p2.addEventListener("frameupdate", listener);
+    return () => p2.removeEventListener("frameupdate", listener);
+  }, [ready, data2, handleFrameUpdate]);
   React55.useEffect(() => {
     if (!ready || !playerRef.current) return;
     const FWD_SECONDS = 5;
@@ -60749,8 +60759,7 @@ function PlayerApp() {
             allowFullscreen: true,
             clickToPlay: false,
             doubleClickToFullscreen: true,
-            autoPlay,
-            onFrameUpdate: handleFrameUpdate
+            autoPlay
           }
         ) }),
         /* @__PURE__ */ (0, import_jsx_runtime95.jsx)(

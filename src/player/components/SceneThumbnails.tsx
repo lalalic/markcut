@@ -35,9 +35,12 @@ export function SceneThumbnails({ currentTime, onSeek }: SceneThumbnailsProps) {
 
   if (scenes.length === 0) return null;
 
+  // With transition overlaps, scenes can overlap in time (scene[i].end > scene[i+1].start).
+  // Iterate backward so the latest scene whose start <= currentTime wins — i.e., as
+  // soon as the next scene starts (during a transition), it becomes the active one.
   let activeIdx = -1;
-  for (let i = 0; i < scenes.length; i++) {
-    if (currentTime >= scenes[i].start && currentTime < scenes[i].end) {
+  for (let i = scenes.length - 1; i >= 0; i--) {
+    if (currentTime >= scenes[i].start) {
       activeIdx = i;
       break;
     }
