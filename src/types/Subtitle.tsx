@@ -1,5 +1,5 @@
 import * as React from "react";
-import { cancelRender, continueRender, delayRender, Sequence, staticFile, useVideoConfig } from "remotion";
+import { cancelRender, continueRender, delayRender, Sequence, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import * as Subtitles from "remotion-subtitle";
 import { cssJS, parseVTT, type Cue } from "../utils/index";
 import type { SubtitleOverlay as SubtitleOverlayConfig } from "../schema/index";
@@ -90,27 +90,78 @@ function supportHtml(text: string): any {
 }
 
 /**
+ * Strip HTML tags from text, returning the plain text content.
+ * Used to compare cue texts ignoring word-level highlighting markup.
+ */
+function stripHtml(text: string): string {
+  return text.replace(/<[^>]*>/g, "").trim();
+}
+
+/**
+ * Group consecutive cues that share the same plain-text content.
+ * This is the pattern used by word-level highlighting VTT where each
+ * cue contains the full sentence but wraps a different word in HTML
+ * (e.g. `<u>` or `<span style="...">`).
+ *
+ * Grouping them into a single CueFrame keeps the caption component
+ * mounted across word transitions, eliminating the flash that occurs
+ * when each cue unmounts/remounts its own Sequence.
+ */
+function groupConsecutiveCues(cues: Cue[]): Cue[][] {
+  const groups: Cue[][] = [];
+  let current: Cue[] = [];
+
+  for (const cue of cues) {
+    const plain = stripHtml(cue.text);
+    if (current.length === 0) {
+      current.push(cue);
+    } else {
+      const prevPlain = stripHtml(current[current.length - 1]!.text);
+      if (plain === prevPlain) {
+        current.push(cue);
+      } else {
+        groups.push(current);
+        current = [cue];
+      }
+    }
+  }
+  if (current.length > 0) groups.push(current);
+  return groups;
+}
+
+/**
  * Renders a single cue inside a <Sequence> so Remotion only evaluates it
  * during the cue's active time window — matching the qili-ai pattern.
  * This avoids per-frame cue lookups and lets the caption component mount
  * once per cue rather than re-creating on every frame.
+ *
+ * When a cue group has multiple entries (same plain text, different HTML
+ * highlighting), the component uses useCurrentFrame() to select the
+ * active cue's text dynamically — keeping the caption component mounted
+ * across word transitions and preventing flash.
  */
 function CueFrame({
   cue,
   fps,
   CaptionComponent,
   subtitle,
+  cueGroup,
 }: {
   cue: Cue;
   fps: number;
   CaptionComponent: React.FC<{ text: any; style?: React.CSSProperties }>;
   subtitle: SubtitleOverlayConfig;
+  /** Optional full group of cues sharing the same plain text. When provided,
+   * the Sequence spans the entire group and highlights change dynamically. */
+  cueGroup?: Cue[];
 }) {
-  const durationInFrames = Math.max(1, Math.floor((cue.endAt - cue.startFrom) * fps));
-  const from = Math.floor(cue.startFrom * fps);
+  const group = cueGroup ?? [cue];
+  const startFrom = group[0]!.startFrom;
+  const endAt = group[group.length - 1]!.endAt;
 
-  // Stable reference: compute once per cue, not every frame
-  const captionText = React.useMemo(() => supportHtml(cue.text), [cue.text]);
+  const durationInFrames = Math.max(1, Math.floor((endAt - startFrom) * fps));
+  const from = Math.floor(startFrom * fps);
+
   const textStyle: React.CSSProperties = React.useMemo(
     () => ({
       ...DEFAULT_TEXT_STYLE,
@@ -123,9 +174,48 @@ function CueFrame({
 
   return (
     <Sequence layout="none" durationInFrames={durationInFrames} from={from}>
-      <CaptionComponent text={captionText} style={textStyle} />
+      <GroupedCueInner
+        group={group}
+        fps={fps}
+        CaptionComponent={CaptionComponent}
+        textStyle={textStyle}
+      />
     </Sequence>
   );
+}
+
+/**
+ * Inner component that renders inside the single Sequence.
+ * Uses useCurrentFrame() to pick which cue's HTML text to display
+ * based on the current time, keeping the caption component mounted
+ * across word transitions.
+ */
+function GroupedCueInner({
+  group,
+  fps,
+  CaptionComponent,
+  textStyle,
+}: {
+  group: Cue[];
+  fps: number;
+  CaptionComponent: React.FC<{ text: any; style?: React.CSSProperties }>;
+  textStyle: React.CSSProperties;
+}) {
+  const frame = useCurrentFrame();
+  const currentTime = frame / fps;
+
+  // Find the active cue based on current time
+  let activeCue = group[group.length - 1]!;
+  for (const c of group) {
+    if (currentTime >= c.startFrom && currentTime < c.endAt) {
+      activeCue = c;
+      break;
+    }
+  }
+
+  const captionText = React.useMemo(() => supportHtml(activeCue.text), [activeCue.text]);
+
+  return <CaptionComponent text={captionText} style={textStyle} />;
 }
 
 /**
@@ -133,7 +223,7 @@ function CueFrame({
  * the entire video. VTT cue timestamps are absolute (seconds from video start),
  * matching useCurrentFrame() / fps directly.
  *
- * Each cue is rendered as a separate <Sequence> (qili-ai pattern) so Remotion
+ * Each cue is rendered as a separate <Sequence> so Remotion
  * only mounts/evaluates the caption component during its active time window.
  * This avoids per-frame computation for inactive cues.
  *
@@ -202,12 +292,17 @@ export function SubtitleOverlay({ subtitle }: { subtitle: SubtitleOverlayConfig 
 
   const boxCss = subtitle.style ? (cssJS(subtitle.style) as React.CSSProperties) : {};
 
+  // Group consecutive cues with same plain text (word-level highlighting pattern)
+  // so the caption component stays mounted across word transitions — no flash.
+  const cueGroups = React.useMemo(() => groupConsecutiveCues(cues), [cues]);
+
   return (
     <div className={`${subtitle.type || "default"} subtitle-overlay`} style={{ ...DEFAULT_BOX_STYLE, ...boxCss }}>
-      {cues.map((cue, i) => (
+      {cueGroups.map((group, gi) => (
         <CueFrame
-          key={`${i}-${cue.startFrom}-${cue.endAt}`}
-          cue={cue}
+          key={`g${gi}-${group[0]!.startFrom}-${group[group.length - 1]!.endAt}`}
+          cue={group[0]!}
+          cueGroup={group}
           fps={fps}
           CaptionComponent={CaptionComponent}
           subtitle={subtitle}
