@@ -1,6 +1,6 @@
 {
   "name": "@lalalic/markcut",
-  "version": "2.4.0",
+  "version": "2.4.1",
   "description": "Markdown-to-video engine. Describe scenes in markdown, get a rendered video.",
   "bin": {
     "markcut": "bin/markcut"
