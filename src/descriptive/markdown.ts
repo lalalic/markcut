@@ -633,6 +633,9 @@ function applyRootAttrs(root: DescriptiveRoot, attrs: Record<string, unknown>): 
       case "metadata":
         root.metadata = String(v);
         break;
+      case "seed":
+        root.seed = Number(v);
+        break;
       case "stylesheet":
         root.stylesheet = String(v);
         break;

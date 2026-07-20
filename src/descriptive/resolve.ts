@@ -986,7 +986,8 @@ export async function resolveAll(
 
   // Step 3: Generate images/videos from prompts before probing durations.
   // Use root.seed if set; otherwise inherit from options (for includes).
-  const generationSeed = result.seed ?? options.seed;
+  // Auto-generate a random seed so {seed} in the CLI template always gets a value.
+  const generationSeed = result.seed ?? options.seed ?? Math.floor(Math.random() * 2_147_483_647);
   if (options.mediaOutputDir) {
     result = await resolveGeneratedMedia(result, {
       outputDir: options.mediaOutputDir,

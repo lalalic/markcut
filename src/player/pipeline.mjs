@@ -10597,6 +10597,9 @@ function applyRootAttrs(root, attrs) {
       case "metadata":
         root.metadata = String(v);
         break;
+      case "seed":
+        root.seed = Number(v);
+        break;
       case "stylesheet":
         root.stylesheet = String(v);
         break;
@@ -11151,7 +11154,7 @@ async function resolveAll2(root, options = {}) {
     variant: options.variants?.[0] ?? "video"
   });
   result = await resolveMediaSrcs(result, { baseDir: options.baseDir });
-  const generationSeed = result.seed ?? options.seed;
+  const generationSeed = result.seed ?? options.seed ?? Math.floor(Math.random() * 2147483647);
   if (options.mediaOutputDir) {
     result = await resolveGeneratedMedia(result, {
       outputDir: options.mediaOutputDir,
@@ -11208,6 +11211,7 @@ async function resolveAndCompile(data, options = {}) {
     ttsCli: options.ttsCli,
     sttCli: options.sttCli,
     subtitleOutputDir: options.subtitleOutputDir,
+    seed: options.seed,
     variants: options.variants
   });
   const compiled = compileDescriptiveRoot(resolved, {

@@ -36,6 +36,9 @@ export interface ResolveAndCompileOptions {
   /** Separate output dir for the merged subtitles.vtt (e.g., per-variant).
    *  Per-clip VTTs stay in scriptOutputDir; defaults to scriptOutputDir. */
   subtitleOutputDir?: string;
+  /** Global seed for reproducible TTI/TTV generation. Applied when the CLI
+   *  template contains {seed}. Overrides root.seed if set. */
+  seed?: number;
   /** Variant chain to apply to include nodes (e.g. ["zh", "tiktok"]).
    *  When set, included .md files are parsed with variant awareness. */
   variants?: string[];
@@ -90,6 +93,7 @@ export async function resolveAndCompile(
     ttsCli: options.ttsCli,
     sttCli: options.sttCli,
     subtitleOutputDir: options.subtitleOutputDir,
+    seed: options.seed,
     variants: options.variants,
   });
 
