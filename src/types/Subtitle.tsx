@@ -288,9 +288,9 @@ export function SubtitleOverlay({ subtitle }: { subtitle: SubtitleOverlayConfig 
     };
   }, [subtitle.src]);
 
-  if (!cues) return null;
+  if (!cues) return null;@
 
-  const boxCss = subtitle.style ? (cssJS(subtitle.style) as React.CSSProperties) : {};
+  const boxCss = subtitle.style ? (cssJS(subtitle.style) as React.CSSProperties) : {};@
 
   // Group consecutive cues with same plain text (word-level highlighting pattern)
   // so the caption component stays mounted across word transitions — no flash.
