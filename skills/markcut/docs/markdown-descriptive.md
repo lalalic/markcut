@@ -760,16 +760,16 @@ markcut verify courseware.md
 # best practices
 ~~~ example - avoid audio cut
 - parallel
-  - image|video background:true
+  - image|video isBackground:true
   - audio|script 
 ~~~
 
 ~~~ example - global streams
 #video
-- audio background:true loop:true src:bgm.mp3
-- component background:true loop:true jsx:"<Logo />" style:"position:fixed;top:10px;left:10px;width:100px;height:100px;"
+- audio isBackground:true src:bgm.mp3
+- component isBackground:true jsx:"<Logo />" style:"position:fixed;top:10px;left:10px;width:100px;height:100px;"
 - parallel title:"lip sync" style:"position:fixed;bottom:100px;right:100px;width:100px;height:100px;"
-  - video src:background.mp4 loop:true background:true
+  - video src:background.mp4 isBackground:true
   - video src:lip_sync.mp4
 ~~~
 
@@ -803,3 +803,13 @@ And now it's <span class="emoji-dead">dead</span>.
 ```
 ~~~
 
+~~~ example - sync vision and audio, taking care of transition timing, dynamic audio duration
+#video
+layout:series transition:fade transitionTime:1.2
+
+## hello layout:parallel
+  - image src:vision.jpg isBackground:true  # set vision as background let script/audio play in front determine the duration of the scene
+  - script "..."                            # don't set duration for script/audio, markcut resolver will determine the duration of the scene based on the final audio length
+    start:1.2                               # let vision play for 1.2s before the script/audio start, so that the transition effect can be completed
+
+~~~

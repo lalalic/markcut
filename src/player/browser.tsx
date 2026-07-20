@@ -215,12 +215,12 @@ function PlayerApp() {
   // ── onFrameUpdate: track current time ───────────────────────────────
   const handleFrameUpdate = React.useCallback((frame: number) => {
     currentFrameRef.current = frame;
-    // Throttle state updates to ~2fps for scene tracking
+    // Throttle state updates lightly for scene tracking
     setCurrentTime(prev => {
-      const newTime = frame / (data?.fps ?? 30);
-      return Math.abs(newTime - prev) > 0.5 ? newTime : prev;
+      const newTime = frame / fps;
+      return Math.abs(newTime - prev) > 0.1 ? newTime : prev;
     });
-  }, [data?.fps]);
+  }, [fps]);
 
   // Keyboard shortcuts
   React.useEffect(() => {
@@ -233,14 +233,17 @@ function PlayerApp() {
     function seekRelative(deltaSec: number) {
       const p = playerRef.current;
       if (!p) return;
-      const frame = p.getCurrentFrame() + Math.round(deltaSec * fps);
-      p.seekTo(Math.max(0, frame));
+      const frame = Math.max(0, p.getCurrentFrame() + Math.round(deltaSec * fps));
+      p.seekTo(frame);
+      setCurrentTime(frame / fps);
     }
 
     function seekPercent(pct: number) {
       const p = playerRef.current;
       if (!p) return;
-      p.seekTo(Math.round(pct * durationInFrames));
+      const frame = Math.round(pct * durationInFrames);
+      p.seekTo(frame);
+      setCurrentTime(frame / fps);
     }
 
     function showHelp() {
@@ -448,8 +451,9 @@ function PlayerApp() {
         currentTime={currentTime}
         onSeek={(t) => {
           if (playerRef.current) {
-            const frame = Math.round(t * (data?.fps ?? 30));
+            const frame = Math.round(t * fps);
             playerRef.current.seekTo(frame);
+            setCurrentTime(t);
           }
         }}
       />

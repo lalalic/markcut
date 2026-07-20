@@ -60555,10 +60555,10 @@ function PlayerApp() {
   const handleFrameUpdate = React55.useCallback((frame) => {
     currentFrameRef.current = frame;
     setCurrentTime((prev) => {
-      const newTime = frame / (data2?.fps ?? 30);
-      return Math.abs(newTime - prev) > 0.5 ? newTime : prev;
+      const newTime = frame / fps;
+      return Math.abs(newTime - prev) > 0.1 ? newTime : prev;
     });
-  }, [data2?.fps]);
+  }, [fps]);
   React55.useEffect(() => {
     if (!ready || !playerRef.current) return;
     const FWD_SECONDS = 5;
@@ -60567,13 +60567,16 @@ function PlayerApp() {
     function seekRelative(deltaSec) {
       const p2 = playerRef.current;
       if (!p2) return;
-      const frame = p2.getCurrentFrame() + Math.round(deltaSec * fps);
-      p2.seekTo(Math.max(0, frame));
+      const frame = Math.max(0, p2.getCurrentFrame() + Math.round(deltaSec * fps));
+      p2.seekTo(frame);
+      setCurrentTime(frame / fps);
     }
     function seekPercent(pct) {
       const p2 = playerRef.current;
       if (!p2) return;
-      p2.seekTo(Math.round(pct * durationInFrames));
+      const frame = Math.round(pct * durationInFrames);
+      p2.seekTo(frame);
+      setCurrentTime(frame / fps);
     }
     function showHelp() {
       console.log(`%c\u{1F3AC} MarkCut Player Shortcuts
@@ -60756,8 +60759,9 @@ function PlayerApp() {
             currentTime,
             onSeek: (t) => {
               if (playerRef.current) {
-                const frame = Math.round(t * (data2?.fps ?? 30));
+                const frame = Math.round(t * fps);
                 playerRef.current.seekTo(frame);
+                setCurrentTime(t);
               }
             }
           }

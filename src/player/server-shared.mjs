@@ -35,24 +35,33 @@ export function extractScenes(root) {
 
   // Format 1: scenes as direct children of root
   if (root.children?.length && !root.children.find(c => c.name === "scenes" || c.id === "scenes")) {
-    let offset = 0;
+    const overlap = root.transition ? (root.transitionTime ?? 0.5) : 0;
+    let offset = 0; // cumulative scene durations (without transition overlap)
     for (const s of root.children) {
       if (!(s.type === "folder" || s.type === "scene" || s.children?.length)) continue;
       if (s.isBackground) continue;
+      // Use durationInSeconds (set by compiler) as the definitive duration.
+      // Fall back to leaf end-start for backward compatibility.
       const leaf = (s.children || []).find(c => c.src && (c.type === "image" || c.type === "video"));
-      const src2 = leaf || s;
-      const dur = (src2.end ?? 5) - (src2.start ?? 0);
+      let dur = s.durationInSeconds;
+      if (!dur || dur <= 0) {
+        const src2 = leaf || s;
+        dur = (src2.end ?? 5) - (src2.start ?? 0);
+      }
+      // Account for transition overlap: scene i starts at offset - i*overlap
+      const transitionOffset = scenes.length * overlap;
+      const start = Math.max(0, offset - transitionOffset);
       scenes.push({
         name: s.name || s.id || "scene",
-        start: offset,
-        end: offset + dur,
+        start,
+        end: start + dur,
         duration: dur,
         src: leaf?.src || "",
         mediaType: leaf?.type || "unknown",
       });
       offset += dur;
     }
-    totalDuration = offset;
+    totalDuration = offset - Math.max(0, (scenes.length - 1)) * overlap;
   }
 
   // Format 2: scenes wrapped in a "scenes" folder

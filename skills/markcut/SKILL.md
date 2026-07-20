@@ -84,3 +84,5 @@ some common issues (photo or video can't be displayed, audio missing), take belo
   - video cut off
   - subtitle mismatch
   - sync issues between audio, video, and subtitles
+- don't set duration for script or stream's duration depending on audio script
+  - markcut resolver will automatically calculate the duration based on the audio script length

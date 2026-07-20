@@ -709,8 +709,11 @@ function resolveVariantOverrides(root, variantChain) {
 }
 function compileDescriptiveRoot(input, options = {}) {
   const root = typeof input === "string" ? JSON.parse(input) : input;
-  const resolved = resolveTransition(root.layout ? root.transition ?? root.layout : root.transition, root.transitionTime);
-  const rootKind = root.layout === "parallel" ? "parallel" : "series";
+  const resolved = resolveTransition(
+    root.layout === "transitionSeries" ? root.transition ?? "fade" : root.transition,
+    root.transitionTime
+  );
+  const rootKind = root.layout === "parallel" ? "parallel" : root.layout === "transitionSeries" ? "transitionSeries" : "series";
   const googleMapsApiKey = options.googleMapsApiKey ?? "";
   const ctx = {
     defaults: {
@@ -736,8 +739,8 @@ function compileDescriptiveRoot(input, options = {}) {
     stylesheet: input.stylesheet,
     subtitle: input.subtitle,
     isSeries: rootKind !== "parallel",
-    transition: rootKind === "transitionSeries" ? resolved.name : void 0,
-    transitionTime: rootKind === "transitionSeries" ? resolved.time : 0.5,
+    transition: root.transition || root.layout === "transitionSeries" ? resolved.name : void 0,
+    transitionTime: root.transition || root.layout === "transitionSeries" ? resolved.time : 0.5,
     children: children.map((c) => c.stream),
     durationInSeconds: duration
   };
