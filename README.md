@@ -4,7 +4,7 @@ Write a storyboard in markdown, get a rendered video with TTS narration and subt
 
 ```bash
 # Render a storyboard to MP4
-npx markcut render storyboard.md --aspect 9x16
+npx markcut render storyboard.md
 
 # Preview with live edit (edit .md file, player auto-reloads)
 npx markcut preview storyboard.md --edit

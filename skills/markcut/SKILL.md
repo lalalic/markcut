@@ -86,3 +86,5 @@ some common issues (photo or video can't be displayed, audio missing), take belo
   - sync issues between audio, video, and subtitles
 - don't set duration for script or stream's duration depending on audio script
   - markcut resolver will automatically calculate the duration based on the audio script length
+- **don't** rm `.markcut` directory, which served as cache for all generated content. cache will auto update according to the content change. rm `.markcut` will cause all content to be regenerated, which is time consuming and wasteful.
+- put all manual assets in `assets` folder, such as bgm, logo, watermark, etc. don't put them in `.markcut` folder, which is auto generated and will be deleted when `markcut clean` command is run.

@@ -473,11 +473,11 @@ describe("Audio STT Verification", () => {
 });
 
 // ───────────────────────────────────────────────────────────────────────────
-// 11. Multiple Aspect Ratios
+// 11. Dimensions from Stream File
 // ───────────────────────────────────────────────────────────────────────────
 
-describe("Multiple Aspect Ratios", () => {
-  it("renders same fixture at 16x9, 9x16, and 1x1", async () => {
+describe("Dimensions from Stream File", () => {
+  it("respects width/height defined in the stream tree root", async () => {
     const fixture = {
       root: {
         id: "root",
@@ -490,7 +490,7 @@ describe("Multiple Aspect Ratios", () => {
           {
             id: "bg",
             type: "image",
-            src: "https://picsum.photos/seed/aspect-test/1920/1080",
+            src: "https://picsum.photos/seed/dim-test/1920/1080",
             fit: "cover",
             start: 0,
             end: 2,
@@ -498,7 +498,7 @@ describe("Multiple Aspect Ratios", () => {
           {
             id: "title",
             type: "image",
-            src: "https://picsum.photos/seed/aspect-title/1920/1080",
+            src: "https://picsum.photos/seed/dim-title/1920/1080",
             fit: "cover",
             start: 0.3,
             end: 1.7,
@@ -508,18 +508,16 @@ describe("Multiple Aspect Ratios", () => {
     };
 
     const { writeFileSync } = await import("node:fs");
-    const tmpFixture = outPath("_aspects.json");
+    const tmpFixture = outPath("_dims.json");
     writeFileSync(tmpFixture, JSON.stringify(fixture));
 
-    // Render with different aspect ratios via --props adaptation
-    // Note: Aspect adaptation happens in the CLI, so we test with the default
+    // Dimensions come from the stream file root, not from a CLI --aspect flag
     const output = renderFixture(tmpFixture, {
-      outputName: "aspect-default.mp4",
+      outputName: "dims-default.mp4",
       timeout: RENDER_TIMEOUT,
     });
 
     const info = getVideoInfo(output);
-    // Default aspect is whatever the fixture says (1920x1080)
     expect(info.width).toBe(1920);
     expect(info.height).toBe(1080);
 

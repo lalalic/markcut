@@ -6,7 +6,7 @@ Complete reference for LLM-driven video generation. The parser uses **remark** (
 
 A markdown document compiled into a renderable scene tree.
 
-- Top heading `# <name>` (heading text ignored, just marks document root; `# video`, `# sub-video`, `# anything` all work)
+- Top heading `# video` marks the document root. (Only `# video` is treated as the main section — `# anything_else` creates a **variant** section for alternate configs, see [Variants](#variants-language--platform--any-override).)
 - Optional YAML frontmatter block `---\n...\n---\n` at the very top
 - Root config line: `width:<n> height:<n> fps:<n> layout:<mode>` (key:value pairs on the line after `# video`)
 - Scenes via `##`/`###`/`####` headings

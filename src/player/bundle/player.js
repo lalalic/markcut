@@ -44710,11 +44710,6 @@ function getCurrentStep(leg, currentInSecond) {
 // src/types/Include.tsx
 var React41 = __toESM(require_react(), 1);
 var import_jsx_runtime84 = __toESM(require_jsx_runtime(), 1);
-var ASPECT_DIMS = {
-  "16x9": { width: 1920, height: 1080 },
-  "9x16": { width: 1080, height: 1920 },
-  "1x1": { width: 1080, height: 1080 }
-};
 function isSceneBased(data2) {
   if (!data2 || typeof data2 !== "object") return false;
   const d2 = data2;
@@ -44837,8 +44832,7 @@ function IncludeLeaf({ stream: stream2 }) {
     if (isSceneBased(externalData)) {
       const vj = externalData;
       const vjFps = vj.meta.fps ?? parentFps;
-      const aspectKey = vj.meta.aspects?.[0] ?? "16x9";
-      const dims = ASPECT_DIMS[aspectKey] ?? { width: parentWidth, height: parentHeight };
+      const dims = { width: parentWidth, height: parentHeight };
       return /* @__PURE__ */ (0, import_jsx_runtime84.jsxs)(AbsoluteFill, { style: { backgroundColor: "#0a0a0a", width: dims.width, height: dims.height }, children: [
         vj.bgm && /* @__PURE__ */ (0, import_jsx_runtime84.jsx)(Audio, { src: vj.bgm.src, volume: vj.bgm.baseVolume }),
         vj.scenes.map((scene2) => {

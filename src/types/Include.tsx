@@ -5,15 +5,8 @@ import { cssJS, toClassName, getDurationInSeconds, type DurationStream } from ".
 import type { Include as IncludeStream, Root } from "../schema/index";
 import { FolderLeaf } from "./Folder";
 
-// Aspect dimensions for scene-based video content
-const ASPECT_DIMS: Record<string, { width: number; height: number }> = {
-  "16x9": { width: 1920, height: 1080 },
-  "9x16": { width: 1080, height: 1920 },
-  "1x1": { width: 1080, height: 1080 },
-};
-
 interface SceneBasedVideo {
-  meta: { title: string; fps: number; aspects?: string[] };
+  meta: { title: string; fps: number };
   voiceover?: { tts: string; voice: string };
   bgm?: { src: string; baseVolume: number };
   scenes: Array<{
@@ -207,9 +200,8 @@ export function IncludeLeaf({ stream }: { stream: IncludeStream }) {
       // ── Scene-based video.json ──────────────────────────────────
       const vj = externalData;
       const vjFps = vj.meta.fps ?? parentFps;
-      // Use first aspect's dimensions (default to 16x9)
-      const aspectKey = (vj.meta.aspects?.[0] ?? "16x9") as keyof typeof ASPECT_DIMS;
-      const dims = ASPECT_DIMS[aspectKey] ?? { width: parentWidth, height: parentHeight };
+      // Use parent composition dimensions (dimensions come from the stream file)
+      const dims = { width: parentWidth, height: parentHeight };
 
       return (
         <AbsoluteFill style={{ backgroundColor: "#0a0a0a", width: dims.width, height: dims.height }}>

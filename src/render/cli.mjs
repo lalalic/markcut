@@ -21,12 +21,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const ROOT = resolve(__dirname, "../..");
 
-const ASPECTS = {
-  "16x9": { width: 1920, height: 1080 },
-  "9x16": { width: 1080, height: 1920 },
-  "1x1": { width: 1080, height: 1080 },
-};
-
 /**
  * How many "Rendered X/Y" lines to skip before printing one.
  * E.g. 50 means print every 50th frame — for 1860 frames that's ~37 lines.
@@ -52,6 +46,7 @@ markcut CLI — Markdown/JSON → video pipeline
 npx @lalalic/markcut <command> [options]
 
 global options:
+  --dev                                Use development build (unminified React error messages)
   --show-clis                          Print all default CLI templates and exit
 
   --tti <template>                     Override default TTI CLI template
@@ -92,7 +87,7 @@ Commands:
 
 
 /**
- * Render one aspect ratio with compact progress output.
+ * Render a stream tree to an MP4 video with compact progress output.
  *
  * In compact mode (default), "Rendered X/Y" lines are shown only every
  * PROGRESS_INTERVAL frames and at the final frame, drastically reducing
@@ -100,28 +95,49 @@ Commands:
  *
  * Use --verbose to see every frame line (original behavior).
  */
+
 /**
- * Stage local absolute-path assets (TTS audio, TTI/TTV media, subtitles from
- * .markcut/) into ROOT/public/.render-assets/ and rewrite srcs to relative
- * paths, so `npx remotion render` (publicDir = ROOT/public) can serve them.
- * The preview server handles these paths via multi-root serving; the render
- * CLI needs them staged into the one public dir Remotion knows about.
+ * Resolve a potentially relative source path against baseDir, skipping
+ * absolute paths, URLs, and data URIs.
  */
-function stageLocalAssets(tree) {
+function resolveAssetPath(src, baseDir) {
+  if (!src || typeof src !== "string") return null;
+  // Already absolute on disk
+  if (src.startsWith("/")) return src;
+  // URL or data URI — can't stage locally
+  if (/^(https?:|data:|blob:)/.test(src)) return null;
+  // Relative path: resolve against the input file's directory
+  const abs = resolve(baseDir, src);
+  if (existsSync(abs)) return abs;
+  return null;
+}
+
+/**
+ * Stage all local src files (absolute and relative) into
+ * ROOT/public/.render-assets/ so `npx remotion render` (publicDir = ROOT/public)
+ * can serve them. Relative paths are resolved against `baseDir` (the input
+ * file's directory). The preview server handles these paths via multi-root
+ * serving; the render CLI needs them staged into the one public dir Remotion
+ * knows about.
+ */
+function stageLocalAssets(tree, baseDir) {
   const assetsDir = join(ROOT, "public", ".render-assets");
   const seen = new Map();
   const walk = (node) => {
     if (!node || typeof node !== "object") return;
-    if (typeof node.src === "string" && node.src.startsWith("/") && !node.src.startsWith("//") && existsSync(node.src)) {
-      let staged = seen.get(node.src);
-      if (!staged) {
-        const name = createHash("md5").update(node.src).digest("hex").slice(0, 12) + extname(node.src);
-        mkdirSync(assetsDir, { recursive: true });
-        copyFileSync(node.src, join(assetsDir, name));
-        staged = `.render-assets/${name}`;
-        seen.set(node.src, staged);
+    if (typeof node.src === "string") {
+      const absPath = resolveAssetPath(node.src, baseDir);
+      if (absPath) {
+        let staged = seen.get(absPath);
+        if (!staged) {
+          const name = createHash("md5").update(absPath).digest("hex").slice(0, 12) + extname(absPath);
+          mkdirSync(assetsDir, { recursive: true });
+          copyFileSync(absPath, join(assetsDir, name));
+          staged = `.render-assets/${name}`;
+          seen.set(absPath, staged);
+        }
+        node.src = staged;
       }
-      node.src = staged;
     }
     for (const value of Object.values(node)) {
       if (value && typeof value === "object") walk(value);
@@ -131,21 +147,24 @@ function stageLocalAssets(tree) {
   return tree;
 }
 
-function renderOne(streamTree, aspect, outputPath, verbose) {
-  const dims = ASPECTS[aspect];
-  if (!dims) throw new Error(`Unknown aspect: ${aspect}`);
-
-  const adapted = stageLocalAssets(JSON.parse(JSON.stringify({ ...streamTree, width: dims.width, height: dims.height })));
-  const tmpProps = join(ROOT, ".tmp", `render-${aspect}.json`);
+function renderOne(streamTree, outputPath, verbose, baseDir) {
+  const adapted = stageLocalAssets(JSON.parse(JSON.stringify(streamTree)), baseDir);
+  const tmpProps = join(ROOT, ".tmp", "render-stream.json");
   mkdirSync(dirname(tmpProps), { recursive: true });
   writeFileSync(tmpProps, JSON.stringify({ root: adapted }));
 
   mkdirSync(dirname(outputPath), { recursive: true });
 
-  console.log(`\n▶ Rendering ${aspect} → ${outputPath}`);
+console.log(`\n▶ Rendering → ${outputPath}`);
 
   return new Promise((resolvePromise, reject) => {
-    const proc = spawn("npx", ["remotion", "render", "Root", outputPath, "--props", tmpProps, "--config", "remotion.config.ts"], { cwd: ROOT, stdio: ["ignore", "inherit", "pipe"] });
+    // Pass NODE_ENV=development to get unminified React error messages (--dev flag)
+    const spawnOpts = { cwd: ROOT, stdio: ["ignore", "inherit", "pipe"] };
+    // args is imported from config.mjs — check dev flag there
+    if (args.dev) {
+      spawnOpts.env = { ...process.env, NODE_ENV: "development" };
+    }
+    const proc = spawn("npx", ["remotion", "render", "Root", outputPath, "--props", tmpProps, "--config", "remotion.config.ts"], spawnOpts);
 
     let lastLoggedFrame = 0;
     let totalFrames = 0;
@@ -401,7 +420,8 @@ edit=${DEFAULT_EDIT_CLI}`);
     }
 
     const output = args.output ? resolve(args.output) : join(ROOT, "out", "video.mp4");
-    await renderOne(streamTree, "16x9", output, args.verbose);
+    const fileDir = dirname(resolve(args.file));
+    await renderOne(streamTree, output, args.verbose, fileDir);
 
     console.log("\n✅ Render complete.");
     process.exit(0);
@@ -441,12 +461,27 @@ function hasScript(root) {
     emitInfo(`File: ${filePath}`);
     emitInfo(`Format: ${isMarkdown ? "Markdown" : "JSON"}`);
 
-    const { compileDescriptiveRoot, parseMarkdownDescriptive, parseImportsBlock } = await import("../player/pipeline.mjs");
+    const { compileDescriptiveRoot, parseMarkdownDescriptive, parseMarkdownVariants, parseImportsBlock } = await import("../player/pipeline.mjs");
 
     try {
       let descriptive, needsTti, needsTtv;
       if (isMarkdown) {
         descriptive = parseMarkdownDescriptive(raw);
+
+        // Check if content accidentally went into a variant section
+        // (happens when root heading is e.g. "# My Movie" instead of "# video")
+        const hasChildren = (descriptive.children?.length ?? 0) > 0;
+        if (!hasChildren) {
+          const variantResult = parseMarkdownVariants(raw);
+          const variantNames = [...variantResult.variants.keys()];
+          const variantChildren = variantNames.filter(n => (variantResult.variants.get(n)?.children?.length ?? 0) > 0);
+          if (variantChildren.length > 0) {
+            warnings.push(
+              `No scenes found in the main section (use '# video' as the root heading). ` +
+              `Content appears in variant section(s): ${variantChildren.join(", ")}`,
+            );
+          }
+        }
       } else {
         const parsed = JSON.parse(raw);
         const root = parsed.root ?? parsed;

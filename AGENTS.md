@@ -47,7 +47,7 @@ See [docs/markdown-strict-descriptive.md](docs/markdown-strict-descriptive.md) f
 ## CLI
 
 ```bash
-markcut render <file.json|.md> [--aspect 16x9|9x16|1x1|all] [--output path]
+markcut render <file.json|.md> [--output path]
 markcut preview <file.json|.md> [--edit] [--label] [--port 3001]
 ```
 
@@ -176,7 +176,7 @@ All types share base fields from `BaseShape`: `id`, `name`, `title`, `descriptio
 ### CLI Usage
 
 ```bash
-node src/render/cli.mjs render <file.json> [--aspect 16x9|9x16|1x1|all] [--output path]
+node src/render/cli.mjs render <file.json> [--output path]
 node src/render/cli.mjs render --template <id> --data <data.json>
 node src/render/cli.mjs preview <file.json> [--edit] [--label] [--port 3001]
 node src/render/cli.mjs templates

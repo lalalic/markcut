@@ -412,11 +412,17 @@ export async function resolveScripts(
     allScriptNodes.push({ node, id });
   });
 
-  if (allScriptNodes.length > 0) {
-    console.log(`  🔊 TTS: generating ${allScriptNodes.length} script${allScriptNodes.length > 1 ? "s" : ""}...`);
+  const totalScripts = allScriptNodes.length;
+  let scriptsDone = 0;
+  let cacheHits = 0;
+  const ttsStart = Date.now();
+
+  if (totalScripts > 0) {
+    console.log(`  🔊 TTS: generating ${totalScripts} script${totalScripts > 1 ? "s" : ""}...`);
   }
 
   for (const { node, id } of allScriptNodes) {
+    scriptsDone++;
     // TTS CLI from root config only
     let ttsCli = clone.tts ?? options.ttsCli ?? DEFAULT_TTS_CLI;
 
@@ -440,13 +446,15 @@ export async function resolveScripts(
     const label = `${speakerLabel}${firstWords(node.script, 8)}`;
     if (cached) {
       generated = cached;
+      cacheHits++;
       console.log(`  ✓ TTS: ${label} (cached)`);
     } else {
+      console.log(`  🔊 TTS (${scriptsDone}/${totalScripts}): ${label}...`);
       generated = generateTTS(node.script, audioPath, ttsCli);
       if (generated) {
         updateCache(cache, `tts:${cacheKey}`, cacheKey, generated);
         cacheDirty = true;
-        console.log(`  ✓ TTS: ${label}`);
+        console.log(`  ✓ TTS (${scriptsDone}/${totalScripts}): ${label}`);
       } else {
         console.warn(`  ⚠ TTS produced no audio for "${label}". Audio will have no source. Check root.tts config.`);
       }
@@ -459,10 +467,11 @@ export async function resolveScripts(
   }
 
   if (cacheDirty) writeCacheManifest(options.outputDir, cache);
-  if (allScriptNodes.length > 0) {
+  if (totalScripts > 0) {
     try { writeFileSync(join(options.outputDir, ".cache.json"), JSON.stringify(cache, null, 2), "utf-8"); } catch {}
+    const ttsElapsed = Math.round((Date.now() - ttsStart) / 1000);
     const unique = new Set(allScriptNodes.filter(s => s.node.src).map(s => s.node.src)).size;
-    console.log(`  ✅ TTS: ${unique} unique audio file${unique > 1 ? "s" : ""} (${allScriptNodes.length} node${allScriptNodes.length > 1 ? "s" : ""})`);
+    console.log(`  ✅ TTS: ${unique} unique audio${unique > 1 ? "s" : ""} (${scriptsDone} nodes) in ${ttsElapsed}s (${cacheHits} cached)`);
   }
   return clone;
 }
@@ -713,27 +722,38 @@ export async function resolveGeneratedMedia(
   walkDown(clone as any, (node) => {
     if ((node.type !== "image" && node.type !== "video")) return;
     if (!node.prompt || typeof node.prompt !== "string") return;
-    // Skip if src is already set to a real path (prompt is just metadata).
-    // "auto" is a placeholder meaning "auto-generate via TTI/TTV".
     if (node.src && node.src !== "auto") return;
     const id = node.id ?? `${node.type}-${genNodes.length}`;
     genNodes.push({ node, id, type: node.type as "image" | "video", prompt: node.prompt });
   });
 
+  const total = genNodes.length;
+  let done = 0;
+  let cacheHits = 0;
+  const startTime = Date.now();
+
+  function progressLine() {
+    const elapsed = (Date.now() - startTime) / 1000;
+    const rate = done / Math.max(elapsed, 0.1);
+    const remaining = total - done;
+    const eta = rate > 0 ? Math.round(remaining / rate) : "?";
+    const etaStr = eta === "?" ? "" : `, ~${eta}s remaining`;
+    return `  ${done}/${total} generated (${cacheHits} cached)${etaStr}`;
+  }
+
+  if (total > 0) {
+    console.log(`  🎨 Generating ${total} media item${total > 1 ? "s" : ""}...`);
+  }
+
   for (const { node, id, type, prompt } of genNodes) {
+    done++;
     const ext = type === "image" ? "png" : "mp4";
 
-    // Resolve TTI/TTV config: root-level config overrides CLI defaults
     const cli = type === "image"
       ? (clone.tti ?? options.ttiCli ?? DEFAULT_TTI_CLI)
       : (clone.ttv ?? options.ttvCli ?? DEFAULT_TTV_CLI);
 
-    // Use root.seed for reproducible generation (applied when CLI template has {seed}).
-    // seed is part of the cache key so different seeds produce different cached outputs.
     const seed = options.seed;
-
-    // Content-addressed filename: hash of prompt + CLI + type + seed, so identical
-    // prompts with different seeds produce distinct cached media.
     const cacheKey = computeCacheKey({ prompt, cli, type, seed });
     const outputPath = join(options.outputDir, `${cacheKey}.${ext}`);
 
@@ -743,12 +763,13 @@ export async function resolveGeneratedMedia(
 
     if (cached) {
       node.src = resolvePath(cached);
-      console.log(`  ✓ ${label}: ${labelText} (cached)`);
+      cacheHits++;
+      if (done % 5 === 0 || done === total) console.log(progressLine());
       continue;
     }
 
     try {
-      console.log(`  🔊 ${label}: ${labelText}...`);
+      console.log(`  🔊 ${label} (${done}/${total}): ${labelText}...`);
       const ttiCmd = clone.tti ?? options.ttiCli ?? DEFAULT_TTI_CLI;
       const result = type === "image"
         ? generateTTI(prompt, outputPath, cli, seed)
@@ -757,7 +778,8 @@ export async function resolveGeneratedMedia(
         node.src = outputPath;
         updateCache(cache, `gen:${cacheKey}`, cacheKey, outputPath);
         cacheDirty = true;
-        console.log(`  ✓ ${label}: ${labelText}`);
+        console.log(`  ✓ ${label} (${done}/${total}): ${labelText}`);
+        if (done % 3 === 0 || done === total) console.log(progressLine());
       } else {
         const hint = cli.includes("echo")
           ? `No ${label} tool installed. The default CLI just echoes a message — set root.${type === "image" ? "tti" : "ttv"} to a real generation command.`
@@ -772,6 +794,11 @@ export async function resolveGeneratedMedia(
     }
   }
 
+  if (total > 0) {
+    const elapsed = Math.round((Date.now() - startTime) / 1000);
+    const mediaType = genNodes[0]?.type === "video" ? "TTV" : "TTI";
+    console.log(`  ✅ ${mediaType} complete: ${done} items in ${elapsed}s (${cacheHits} cached)`);
+  }
   if (cacheDirty) writeCacheManifest(options.outputDir, cache);
   return clone;
 }
