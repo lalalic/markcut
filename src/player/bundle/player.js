@@ -30520,7 +30520,7 @@ function VideoLeaf({ stream: stream2 }) {
   const startFrom = stream2.startFrom ?? 0;
   const endAt = stream2.endAt ?? totalDur;
   const volume = stream2.volume ?? 1;
-  const playbackRate = stream2.loop ? 1 : Math.min(1, toPlaybackRate((endAt - startFrom) / (end - start)));
+  const playbackRate = Math.min(1, toPlaybackRate((endAt - startFrom) / (end - start)));
   const streamStyle = cssJS(stream2.style);
   const hasAnimation = "animation" in streamStyle;
   return /* @__PURE__ */ (0, import_jsx_runtime78.jsx)(
@@ -30580,7 +30580,7 @@ function AudioLeaf({ stream: stream2 }) {
   const startFrom = stream2.startFrom ?? 0;
   const endAt = stream2.endAt ?? totalDur;
   const volume = stream2.volume ?? 1;
-  const playbackRate = stream2.loop ? 1 : toPlaybackRate((endAt - startFrom) / (end - start));
+  const playbackRate = toPlaybackRate((endAt - startFrom) / (end - start));
   return /* @__PURE__ */ (0, import_jsx_runtime79.jsx)(
     Sequence,
     {
@@ -30597,7 +30597,6 @@ function AudioLeaf({ stream: stream2 }) {
           endAt: Math.floor(startFrom * fps) + Math.floor((endAt - startFrom) * fps / playbackRate),
           muted: volume === 0 || !!ctx?.foreground,
           volume,
-          loop: (stream2.loop ?? 1) > 1,
           playbackRate,
           showInTimeline: false
         }
@@ -45891,15 +45890,41 @@ function supportHtml(text) {
   });
   return el;
 }
+function stripHtml(text) {
+  return text.replace(/<[^>]*>/g, "").trim();
+}
+function groupConsecutiveCues(cues) {
+  const groups = [];
+  let current2 = [];
+  for (const cue of cues) {
+    const plain = stripHtml(cue.text);
+    if (current2.length === 0) {
+      current2.push(cue);
+    } else {
+      const prevPlain = stripHtml(current2[current2.length - 1].text);
+      if (plain === prevPlain) {
+        current2.push(cue);
+      } else {
+        groups.push(current2);
+        current2 = [cue];
+      }
+    }
+  }
+  if (current2.length > 0) groups.push(current2);
+  return groups;
+}
 function CueFrame({
   cue,
   fps,
   CaptionComponent,
-  subtitle
+  subtitle,
+  cueGroup
 }) {
-  const durationInFrames = Math.max(1, Math.floor((cue.endAt - cue.startFrom) * fps));
-  const from = Math.floor(cue.startFrom * fps);
-  const captionText = React46.useMemo(() => supportHtml(cue.text), [cue.text]);
+  const group = cueGroup ?? [cue];
+  const startFrom = group[0].startFrom;
+  const endAt = group[group.length - 1].endAt;
+  const durationInFrames = Math.max(1, Math.floor((endAt - startFrom) * fps));
+  const from = Math.floor(startFrom * fps);
   const textStyle = React46.useMemo(
     () => ({
       ...DEFAULT_TEXT_STYLE,
@@ -45909,7 +45934,33 @@ function CueFrame({
     }),
     [subtitle.fontSize, subtitle.fontFamily, subtitle.fontStyle]
   );
-  return /* @__PURE__ */ (0, import_jsx_runtime88.jsx)(Sequence, { layout: "none", durationInFrames, from, children: /* @__PURE__ */ (0, import_jsx_runtime88.jsx)(CaptionComponent, { text: captionText, style: textStyle }) });
+  return /* @__PURE__ */ (0, import_jsx_runtime88.jsx)(Sequence, { layout: "none", durationInFrames, from, children: /* @__PURE__ */ (0, import_jsx_runtime88.jsx)(
+    GroupedCueInner,
+    {
+      group,
+      fps,
+      CaptionComponent,
+      textStyle
+    }
+  ) });
+}
+function GroupedCueInner({
+  group,
+  fps,
+  CaptionComponent,
+  textStyle
+}) {
+  const frame = useCurrentFrame();
+  const currentTime = frame / fps;
+  let activeCue = group[group.length - 1];
+  for (const c3 of group) {
+    if (currentTime >= c3.startFrom && currentTime < c3.endAt) {
+      activeCue = c3;
+      break;
+    }
+  }
+  const captionText = React46.useMemo(() => supportHtml(activeCue.text), [activeCue.text]);
+  return /* @__PURE__ */ (0, import_jsx_runtime88.jsx)(CaptionComponent, { text: captionText, style: textStyle });
 }
 function SubtitleOverlay({ subtitle }) {
   const { fps } = useVideoConfig();
@@ -45955,15 +46006,17 @@ function SubtitleOverlay({ subtitle }) {
   }, [subtitle.src]);
   if (!cues) return null;
   const boxCss = subtitle.style ? cssJS(subtitle.style) : {};
-  return /* @__PURE__ */ (0, import_jsx_runtime88.jsx)("div", { className: `${subtitle.type || "default"} subtitle-overlay`, style: { ...DEFAULT_BOX_STYLE, ...boxCss }, children: cues.map((cue, i3) => /* @__PURE__ */ (0, import_jsx_runtime88.jsx)(
+  const cueGroups = React46.useMemo(() => groupConsecutiveCues(cues), [cues]);
+  return /* @__PURE__ */ (0, import_jsx_runtime88.jsx)("div", { className: `${subtitle.type || "default"} subtitle-overlay`, style: { ...DEFAULT_BOX_STYLE, ...boxCss }, children: cueGroups.map((group, gi) => /* @__PURE__ */ (0, import_jsx_runtime88.jsx)(
     CueFrame,
     {
-      cue,
+      cue: group[0],
+      cueGroup: group,
       fps,
       CaptionComponent,
       subtitle
     },
-    `${i3}-${cue.startFrom}-${cue.endAt}`
+    `g${gi}-${group[0].startFrom}-${group[group.length - 1].endAt}`
   )) });
 }
 
@@ -59804,15 +59857,13 @@ var video = base.extend({
   volume: external_exports.number().min(0).max(1).default(1),
   playbackRate: external_exports.number().optional(),
   width: external_exports.number().default(1080),
-  height: external_exports.number().default(1920),
-  loop: external_exports.number().int().min(1).optional().describe(">1 = loop count")
+  height: external_exports.number().default(1920)
 });
 var audio = base.extend({
   type: external_exports.literal("audio").default("audio"),
   src: external_exports.string().optional(),
   volume: external_exports.number().min(0).max(1).default(1),
   foreground: external_exports.boolean().optional().describe("ducks parent video audio while playing"),
-  loop: external_exports.number().int().min(1).optional().describe(">1 = loop count"),
   speaker: external_exports.string().optional().describe("speaker name for multi-turn dialogue; set by resolveDialogue")
 });
 var image = base.extend({

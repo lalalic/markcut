@@ -104,7 +104,6 @@ export const video = base.extend({
   playbackRate: z.number().optional(),
   width: z.number().default(1080),
   height: z.number().default(1920),
-  loop: z.number().int().min(1).optional().describe(">1 = loop count"),
 });
 export type Video = z.infer<typeof video>;
 
@@ -113,7 +112,6 @@ export const audio = base.extend({
   src: z.string().optional(),
   volume: z.number().min(0).max(1).default(1),
   foreground: z.boolean().optional().describe("ducks parent video audio while playing"),
-  loop: z.number().int().min(1).optional().describe(">1 = loop count"),
   speaker: z.string().optional().describe("speaker name for multi-turn dialogue; set by resolveDialogue"),
 });
 export type Audio = z.infer<typeof audio>;

@@ -39,7 +39,7 @@ See [docs/markdown-strict-descriptive.md](docs/markdown-strict-descriptive.md) f
 | `folder` | Internal container (series/parallel) |
 | `image` | Still photo with fit mode |
 | `video` | Video clip with startFrom/endAt trimming, playbackRate |
-| `audio` | Soundtrack/SFX with foreground ducking, loop |
+| `audio` | Soundtrack/SFX with foreground ducking |
 | `component` | External React component by componentName + props |
 | `effect` | CSS keyframe animation wrapper (fadeIn, zoomIn, bounceIn, etc.) |
 | `include` | Embed external video JSON (file, URL, or data URI) |
@@ -134,8 +134,8 @@ All types share base fields from `BaseShape`: `id`, `name`, `title`, `descriptio
 | `folder` | Group children | `isSeries`, `transition`, `children[]` |
 | `scene` | Storyboard node (alias for folder) | `name`, `description`, `script`, `children[]` |
 | `image` | Still photo | `src`, `fit` (contain/cover/fill) |
-| `video` | Video clip | `src`, `volume`, `playbackRate`, `loop` |
-| `audio` | Soundtrack/SFX | `src`, `volume`, `foreground` (ducks parent), `loop` |
+| `video` | Video clip | `src`, `volume`, `playbackRate` |
+| `audio` | Soundtrack/SFX | `src`, `volume`, `foreground` (ducks parent) |
 | `subtitle` | Text overlay | `src` (text/VTT) or `cues[]`, `fontSize`, `style` |
 | `component` | React component | `componentName`, `props`, `src` (remote ESM) |
 | `effect` | CSS animation wrapper | `animation`, `customKeyframes`, `children[]` |

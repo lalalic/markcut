@@ -165,7 +165,6 @@ For compatibility, `import { Name } from "spec"` also works and produces the sam
 | `foreground` | bool; ducks parent video audio while playing | audio |
 | `spots` | number[] beat timestamps | rhythm |
 | `fit` | `contain\|cover\|fill` | image |
-| `loop` | int >1 | audio |
 | `playbackRate` | number | video |
 | `jsx` | usage JSX expression (`"<ComA value={42} />"`); compiled at runtime with registered imports in scope | component |
 | `effects` | `[name, name(params...)]` e.g. `[fadeIn, bounceIn(1, ease-out, 2)]` | any leaf/container | Apply animations directly — no wrapper node needed |
@@ -226,7 +225,7 @@ When: moving footage. Required: `src` + (`duration` or `endAt`).
 
 When: voiceover, BGM, SFX, TTS narration. Required: `src` + (`duration` or `endAt`).
 
-`- audio src:bgm.mp3 duration:6 volume:0.4 loop:2`
+`- audio src:bgm.mp3 duration:6 volume:0.4 isBackground`
 
 ### Narration / TTS
 

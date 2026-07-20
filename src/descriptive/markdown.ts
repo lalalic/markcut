@@ -221,7 +221,6 @@ function parseNodeLine(content: string, lineNum?: number): DescriptiveNode {
         endAt: attrs.endAt as any,
         volume: attrs.volume as any,
         foreground: attrs.foreground as any,
-        loop: attrs.loop as any,
         instruction: attrs.instruction as any,
         script: attrs.script as any,
         visible: attrs.visible as any,

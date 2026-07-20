@@ -24,7 +24,7 @@ export function AudioLeaf({ stream }: { stream: Audio }) {
   const startFrom = stream.startFrom ?? 0;
   const endAt = stream.endAt ?? totalDur;
   const volume = stream.volume ?? 1;
-  const playbackRate = stream.loop ? 1 : toPlaybackRate((endAt - startFrom) / (end - start));
+  const playbackRate = toPlaybackRate((endAt - startFrom) / (end - start));
   return (
     <Sequence
       name={stream.src ?? "audio"}
@@ -39,7 +39,6 @@ export function AudioLeaf({ stream }: { stream: Audio }) {
         endAt={Math.floor(startFrom * fps) + Math.floor(((endAt - startFrom) * fps) / playbackRate)}
         muted={volume === 0 || !!ctx?.foreground}
         volume={volume}
-        loop={(stream.loop ?? 1) > 1}
         playbackRate={playbackRate}
         showInTimeline={false}
       />

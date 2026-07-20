@@ -259,7 +259,6 @@ function compileLeaf(node2, ctx, parentKind) {
         src: node2.src,
         volume: node2.volume ?? 1,
         foreground: node2.foreground,
-        loop: node2.loop,
         speaker: node2.speaker
       };
       return { stream, duration: end };
@@ -10134,7 +10133,6 @@ function preserveVariantAttrs(node2, attrs) {
     "duration",
     "startFrom",
     "endAt",
-    "loop",
     "width",
     "height",
     "fit",
@@ -10267,7 +10265,6 @@ function parseNodeLine(content3, lineNum) {
         endAt: attrs.endAt,
         volume: attrs.volume,
         foreground: attrs.foreground,
-        loop: attrs.loop,
         instruction: attrs.instruction,
         script: attrs.script,
         visible: attrs.visible,

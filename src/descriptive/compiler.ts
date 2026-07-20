@@ -527,7 +527,6 @@ function compileLeaf(node: Exclude<DescriptiveNode, DescriptiveContainer | Descr
         src: node.src,
         volume: node.volume ?? 1,
         foreground: node.foreground,
-        loop: node.loop,
         speaker: node.speaker,
       };
       return { stream, duration: end };

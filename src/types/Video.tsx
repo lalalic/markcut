@@ -23,7 +23,7 @@ export function VideoLeaf({ stream }: { stream: Video }) {
   const startFrom = stream.startFrom ?? 0;
   const endAt = stream.endAt ?? totalDur;
   const volume = stream.volume ?? 1;
-  const playbackRate = stream.loop ? 1 : Math.min(1, toPlaybackRate((endAt - startFrom) / (end - start)));
+  const playbackRate = Math.min(1, toPlaybackRate((endAt - startFrom) / (end - start)));
   const streamStyle = cssJS(stream.style);
   const hasAnimation = "animation" in streamStyle;
   return (
