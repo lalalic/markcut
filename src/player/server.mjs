@@ -1009,7 +1009,7 @@ Edit request: ${text}`;
       }
       req.on("close", () => {
         sseClients.delete(res);
-        if (MODE_EDIT && sseClients.size === 0) {
+        if (sseClients.size === 0) {
           shutdownTimer = setTimeout(() => {
             console.error("\n  🚪 Browser tab closed — shutting down\n");
             process.exit(0);
