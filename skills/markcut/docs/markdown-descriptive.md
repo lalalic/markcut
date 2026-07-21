@@ -1,62 +1,265 @@
-# Markdown Descriptive (Agent Contract)
+# markcut Markdown Descriptive Spec
+markcut Markdown Descriptive is a markdown-based authoring format for markcut. It is designed to be human-readable and writable, while also being machine-parsable. It is the primary authoring format for markcut, and is used for both interactive and non-interactive workflows.
 
-Complete reference for LLM-driven video generation. The parser uses **remark** (`unified` + `remark-parse` + `remark-frontmatter`) for structural parsing (headings, lists, code fences) and extracts raw text from source positions, so JSX values with `<`/`>` are preserved correctly.
 
-## Output Contract
+## DSL — Complete Grammar Reference
 
-A markdown document compiled into a renderable scene tree.
+This section defines the markcut Markdown Descriptive grammar. An agent should read this to understand the exact syntax rules for constructing or parsing a `.md` video document.
 
-- Top heading `# video` marks the document root. (Only `# video` is treated as the main section — `# anything_else` creates a **variant** section for alternate configs, see [Variants](#variants-language--platform--any-override).)
-- Optional YAML frontmatter block `---\n...\n---\n` at the very top
-- Root config line: `width:<n> height:<n> fps:<n> layout:<mode>` (key:value pairs on the line after `# video`)
-- Scenes via `##`/`###`/`####` headings
-- Leaf nodes via `- typeToken ...` bullets
-- Component registrations via `` ~~~js imports `` code fence (or inline JSX definitions)
-- Properties via indented code fences (`~~~<lang> <propName>`); `~~~script` only valid on audio nodes
+### 1. Document Structure (top to bottom)
 
-## Frontmatter (metadata only)
+```
+┌─ YAML Frontmatter (optional)
+├─ ───...───
+│   hook: My Video
+│   emotion: ...
+│   ───...───
+├─ # video                    ← Root node (REQUIRED, heading level 1)
+│   width:1080 height:1920 fps:30 layout:series
+│   subtitle:{src:"captions.vtt",type:"Typewriter"}
+│   ~~~css stylesheet           ← root.stylesheet
+│   .bg { background: #000; }
+│   ~~~
+├─  ~~~js imports                ← Imports block
+│   export { PieChart } from "recharts"
+│   ~~~
+├─ ## scene1                  ← Scene nodes (heading level 2+)
+│   layout:parallel
+│   - image src:bg.jpg duration:3
+│   - script "Hello world"
+│   ### sub-scene             ← Nested scene (heading level 3)
+│       - component duration:2 jsx:"<Title />"
+├─ ## scene2
+│   - video src:clip.mp4 effects:[fadeIn]
+├─ # zh                       ← Variant sections (h1 headings OTHER than `video`)
+│   tts:"edge-tts --voice zh-CN-YunxiNeural..."  ← override root.tts for zh variant
+├─ # youtube                  ← Variant sections
+    width:1920 height:1080
+```
 
-A YAML block at the top of the document, delimited by `---`. Frontmatter is
-**metadata only** — it does NOT affect video configuration. All video config
-(width, height, fps, layout, tts, stt, stylesheet, etc.) comes from the
-**root config line** (key:value pairs on the line after `# video`).
+### 2. Heading Levels & Their Roles
+
+| Level | Pattern | Role | Rules |
+|---|---|---|---|
+| H1 | `# video` | **Root** — video canvas definition | Exactly one `# video` required. Everything else is nested inside this section. |
+| H1 | `# zh`, `# youtube`, `# portrait` etc. | **Variant** — override section for alternate versions | Any `# <name>` other than `video`. Only contains override configs + variant-prefixed overrides on base nodes. |
+| H2 | `## <name>` | **Scene** — top-level scene container | `name` = single token (no spaces). Optional `title` via ` - ` separator: `## Chapter1 - The Beginning` → name=`Chapter1`, title=`The Beginning`. |
+| H3 | `### <name>` | **Nested scene** — sub-scene inside parent | Same rules as H2. Creates nesting: parent scene's children array includes this as a sub-container. |
+| H4+ | `#### <name>` | **Deeply nested** — further nesting | Works identically; depth reflects nesting level. |
+
+### 3. Leaf Nodes — Bullet Syntax
+
+Every leaf (media, component, rhythm, map, effect, include) is a **markdown bullet** (`- `) containing space-separated tokens:
+
+```
+- <typeToken> [key:value ...] [bareFlag ...]
+```
+
+Where:
+- **`typeToken`** — the node type (see table below). Required as first token.
+- **`key:value`** — property assignments. Space-separated. Values with spaces must be quoted: `title:"Long Title"`, `instruction:"make it cinematic"`.
+- **`bareFlag`** — boolean property that defaults to `true` when present (no `:value` needed). Examples: `isBackground`, `foreground`, `visible`.
+
+#### Type Token Reference
+
+| Token | Stream Type | When | Required Keys |
+|---|---|---|---|
+| `image` | `image` | Still photos, title cards | `src`, `duration` |
+| `video` | `video` | Video clips | `src` + (`duration` or `endAt`) |
+| `audio` | `audio` | Voiceover, BGM, SFX | `src` + (`duration` or `endAt`) |
+| `script "..."` | `audio` | Narration/TTS (shorthand for audio with script) | `script` text (the `"..."` is the primary content) |
+| `component` | `component` | JSX React component | `jsx` (inline or code fence) + `duration` (unless `isBackground`) |
+| `rhythm` | `rhythm` | Beat-synced audio with timed children | `src`, `spots`, `children` |
+| `map` | `map` | Animated route visualization | `duration`, `waypoints` |
+| `include` | `include` | Embed external `.md` sub-video | `src` (path to another `.md` file) |
+| `parallel` | *container* | Parallel layout container | `children` (indented bullets below) |
+| `series` | *container* | Sequential layout container | `children` (indented bullets below) |
+| `transitionSeries` | *container* | Sequential with transitions | `children`, `transition` (e.g. `transition:fade`) |
+
+### 4. Property Value Formats
+
+| Format | Example | Description |
+|---|---|---|
+| `key:number` | `duration:3`, `width:1080`, `volume:0.8` | Numeric values (int or float). Seconds for time values. |
+| `key:string` | `src:cover.jpg`, `fit:cover`, `animation:fadeIn` | Unquoted single-word string. |
+| `key:"quoted string"` | `title:"Long Title"`, `jsx:"<StatCounter value={42} />"` | Quoted string for values containing spaces or special chars. Supports double `"` and single `'` quotes. |
+| `bareFlag` | `isBackground`, `foreground` | Boolean flag — sets the key to `true` when present. |
+| `key:JSON` | `spots:[0.5,1.2,1.9]`, `on:(start, slide.current=0)`, `effects:[fadeIn, bounceIn]` | Structured values using brackets/parens. See subsections below. |
+| `key:<mode>` | `layout:series` | Enum-like mode selection. |
+| `~~~<lang> [propName=lang]` | `~~~jsx jsx`, `~~~script script` | Indented code fence for long-form property values (JSX, script, prompt, etc.). See section 6. |
+
+### 5. Structured Property Patterns
+
+#### Effects — `effects:[name, name(params...)]`
+
+Apply animations on any leaf or container. No wrapper node needed.
+Built-in `animation` values:
+`fadeIn fadeOut fadeInDown fadeInUp fadeInLeft fadeInRight fadeOutDown fadeOutUp fadeOutLeft fadeOutRight slideInDown slideInUp slideInLeft slideInRight slideOutDown slideOutUp slideOutLeft slideOutRight zoomIn zoomOut zoomInDown zoomInUp zoomInLeft zoomInRight bounce bounceIn rotateIn rotateOut rotateInDownLeft rotateInDownRight rotateInUpLeft rotateInUpRight flipInX flipInY pulse flash heartBeat rubberBand shakeX shakeY swing tada wobble jello rollIn rollOut jackInTheBox lightSpeedIn lightSpeedOut`
+
+`- effect animation:fadeIn duration:2` then indented children.
+
+```
+- image src:hero.jpg duration:3 effects:[fadeIn(1.5, ease-out, 2)]
+- image src:hero.jpg duration:3 effects:[fadeIn, bounceIn(1, ease-out)]
+```
+
+Params: `(duration=1s, timingFunction=linear, iterationCount=1)` — all optional, comma-separated.
+
+#### Events — `on:(when, state)`
+
+Fire JS expression at a specific frame to mutate component state.
+
+```
+- script "Narration" on:(start, slide.current=0)
+- script "Beat" on:(50%, slide.current++)
+```
+
+`when`: `start`/`end`/`50%` (percent) / `2.5s` (seconds value). `state`: any JS expression.
+
+#### Lists — `spots:[n,n,n]`, `start:n`
+
+```
+- rhythm src:beat.mp3 spots:[0.5,1.2,1.9]
+```
+
+#### Waypoints — `waypoints:[lat,lng,"label"; lat,lng,"label"]`
+
+Semicolons separate waypoints, commas separate fields within one waypoint.
+
+```
+- map duration:3 waypoints:[37.77,-122.41,"SF";34.05,-118.24,"LA"]
+```
+
+#### Duration shorthand
+
+`duration:n` is syntactic sugar for `end:start+duration` (both `start` and `end` default to 0 when absent). If `end` is set explicitly, `duration` is ignored.
+
+### 6. Long-Form Properties — Indented Code Fences
+
+When a property value is too long for a single line (JSX, prompts, scripts, markdown source), use an **indented code fence** under the bullet:
+
+```md
+- component duration:4
+  ~~~jsx jsx
+  <StatCounter value={42} />
+  ~~~
+- video start:5 volume:0
+  ~~~prompt prompt
+  animation of a robot learning to walk, cinematic lighting
+  ~~~
+- audio src:bg.mp3 duration:10
+  ~~~script
+  This is a longer narration that spans multiple lines.
+  ~~~
+```
+
+**Syntax**: `~~~<lang> [propertyName=lang]`. If `propertyName` is omitted, it defaults to `lang`.
+
+| Fence | Sets property | Use case |
+|---|---|---|
+| `~~~jsx jsx` or `~~~jsx` | `jsx` | Component JSX expression |
+| `~~~prompt prompt` | `prompt` | TTI/TTV generation prompt |
+| `~~~script script` or `~~~script` | `script` | Narration text on audio nodes |
+| `~~~css stylesheet` | `stylesheet` | Global CSS (only valid at root level) |
+| `~~~md <key>` | arbitrary | Markdown content for a specific key (e.g., `source` for `react-markdown`) |
+
+### 7. Scene Metadata Block
+
+Scene properties go on the **line(s) immediately below the heading**, before any child bullets:
+
+```md
+## MyScene
+layout:parallel transition:fade transitionTime:1.2
+title:"My Scene Title" instruction:"Cinematic intro"
+- image src:bg.jpg duration:3
+- script "Narration here"
+```
+
+Multiple metadata lines are allowed. They're parsed as space-separated key:value pairs per line.
+
+### 8. Imports Block — Component Registry
+
+A `` ~~~js imports `` code fence (typically at the end of the document) registers external React components for use in `jsx:` expressions:
+
+```md
+~~~js imports
+export { PieChart } from "recharts"
+export { StatCounter as Counter } from "stat-counter"
+export function Hello({ name }) {
+  return <div style={{color: '#fff'}}>Hello {name}</div>;
+}
+~~~
+```
+
+Patterns: `export { Name } from "spec"`, `export { Name as Alias } from "spec"`, `export function Name(...) { ... }`, `import { Name } from "spec"` (also works).
+
+### 9. Variant Overrides Syntax
+
+Variant sections (`# zh`, `# portrait`, etc.) provide root-level overrides. Leaf nodes use **variant-prefixed keys** or **bare variant keys** to override content per variant:
+
+```md
+# video
+- script "English text"            ← base value
+  zh:"中文文本"                     ← bare variant key: replaces "script" (primary key for audio)
+- component jsx:"<Slide>{source}</Slide>"
+  ~~~md source                     ← base value for key "source"
+  ## English title
+  ~~~
+  ~~~md zh-source                  ← variant-prefixed: replaces "source" when variant=zh
+  ## 中文标题
+  ~~~
+```
+
+| Override type | Syntax | What it replaces |
+|---|---|---|
+| **Bare variant key** | `zh:"value"` | Node's primary content key (`script` for audio, `jsx` for component, `src` for image/video) |
+| **Variant-prefixed key** | `zh-src:path` | Specific key matching the suffix (`zh-src` → replaces `src`) |
+| **Variant-prefixed code fence** | `~~~md zh-source` | Same as above, for code-fence-backed properties |
+
+### 10. Root Config Line
+
+The line after `# video` holds canvas-level config as space-separated `key:value` pairs:
+
+```markdown
+# video
+width:1920 height:1080 fps:30 layout:series transition:fade transitionTime:1.2
+subtitle:{src:"captions.vtt",type:"Typewriter",fontSize:48}
+```
+
+Supported root keys: `width`, `height`, `fps`, `layout`, `tts`, `stt`, `tti`, `ttv`, `transition`, `transitionTime`, `instruction`, `metadata`, `stylesheet`, `subtitle`, `voices`.
+
+Values containing spaces (like JSON for `subtitle:` or `voices:`) must be quoted with double or single quotes, or wrapped in `{...}`/`[...]` brackets which the parser handles natively.
+
+### 11. Frontmatter (Metadata Only)
+
+Optional YAML block at the very top, delimited by `---`. **Does NOT affect video config** — only for metadata:
 
 ```yaml
 ---
 title: My Campaign
 description: Q4 product launch
+hook: ...
+conflict: ...
+emotion: ...
+ending: ...
 ---
 ```
 
-## Root Config Line
+All video configuration comes from the root config line (section 10), NOT from frontmatter.
 
-The line after `# video` contains all video configuration as space-separated
-`key:value` pairs:
-
-```markdown
-# video
-width:1920 height:1080 fps:30 layout:series 
-~~~css stylesheet
-.bg { background: #000; }
-~~~
-subtitle:{src:"captions.vtt",type:"Bounce"}
-```
-
-Supported keys: `width`, `height`, `fps`, `layout`, `tts`, `stt`, `tti`, `ttv`,
-`transition`, `transitionTime`, `instruction`, `metadata`, `stylesheet`, `subtitle`.
-
-Values containing spaces must be quoted with double or single quotes.
-
-### Subtitle on the config line
-
-Set subtitle via `subtitle:` on the root config line:
+### 12. Minimal Valid Document
 
 ```markdown
 # video
-width:640 height:480 subtitle:{src:"captions.vtt",type:"Bounce",fontSize:48}
+width:1080 height:1920 fps:30 layout:series
+
+## Scene1
+- image src:bg.jpg duration:3
+- script "Hello world"
 ```
 
-See the [Subtitle](#subtitle) section below for all supported fields.
+### 13. verify
+`npx @lalalic/markcut verify book.md` to verify the markdown document is valid and can be rendered. It will check for missing required fields, invalid values, and other common issues.
 
 ## Template Variables
 
@@ -97,53 +300,6 @@ Subtitles are configured at the root level as a VTT overlay. Set via `subtitle:`
 > The engine renders cue text via `dangerouslySetInnerHTML`, making `<span>`, `<b>`, `<i>`, `<br>`, and inline `style` attributes all work.
 
 If `src` is plain text (no `-->` markers), it renders as a single caption for the full video duration. The `type` field maps to a `remotion-subtitle` animation component — omit for a plain static caption.
-
-
-### Imports block (recommended)
-
-Use a `` ~~~js imports `` code fence at end of the document (or anywhere in the body). The block acts as a **component registry** — it re-exports components from external packages or defines them inline, making them available to JSX expressions throughout the video.
-
-```
-~~~js imports
-export { PieChart } from "recharts"
-export { BarChart, LineChart } from "recharts"
-export { StatCounter as Counter } from "stat-counter"
-
-export function Hello({ name }) {
-  return <div style={{color: '#fff'}}>Hello {name}</div>;
-}
-~~~
-```
-
-Think of this block as the **index file** for the video's component scope. `export { Name } from "spec"` re-exports an external component (conceptually correct — the block is the public API of available components). `export function Name()` defines an inline component directly.
-
-The imports block is the **primary** way to register components. The legacy YAML `imports:` array in frontmatter is still supported as a fallback, but the code block is preferred.
-
-> **How it works**: The server extracts the imports block from the raw source, parses it with `parseImportsBlock`, then runs `bundleFromEntries` which creates a temp npm project, installs packages, and bundles everything into a single ESM file with esbuild. The resulting bundle URL is set on `root.imports` (e.g. `/.component-cache/be710e5c.js`). At render time, `MarkCut.useComponentRegistry` dynamically imports this URL and feeds the named exports to react-jsx-parser.
-
-Supported patterns inside the block:
-
-| Pattern | Effect |
-|---|---|
-| `export { Name } from "spec"` | Re-exports `Name` from the resolved source (recommended) |
-| `export { Name as Alias } from "spec"` | Re-exports under `Alias` instead |
-| `export { N1, N2 } from "spec"` | Re-exports multiple from the same source |
-| `export default Name from "spec"` | Re-exports default export |
-| `export function Name(...) { ... }` | Inline component definition |
-| `export default function Name(...) { ... }` | Inline component definition (default) |
-
-For compatibility, `import { Name } from "spec"` also works and produces the same result — both syntaxes register the name identically.
-
-`from:` spec forms:
-
-| Prefix | Resolved by bundler as |
-|---|---|
-| `pkg` or `npm:pkg` | npm package — `npm install pkg`, then `esbuild` re-exports it |
-| `pkg@1.2.3` or `npm:pkg@1.2.3` | npm package with pinned version |
-| `@scope/pkg` or `npm:@scope/pkg` | npm scoped package |
-| `git:user/repo/path` | Raw specifier passed to esbuild; requires resolvable module |
-| `github:user/repo/path` | Same as `git:` |
-| `https://...`, `http://...`, path | Used as-is by esbuild |
 
 ## Key Reference (use these names)
 
@@ -195,42 +351,6 @@ For compatibility, `import { Name } from "spec"` also works and produces the sam
 
 ## Type Catalog
 
-Each type below shows: when to use, required keys, markdown syntax.
-
-### `scene` (heading) — organizer (preferred)
-
-When: always. `scene` is a container — scenes can nest inside other scenes via deeper headings (`##` → `###` → `####`).
-
-Syntax:
-
-```md
-## <title>
-layout:<x> [transition:<t> transitionTime:<n>] [instruction:..]
-- <children>
-```
-
-Scene metadata (layout, instruction, transition) goes on the line(s) immediately below the heading, before any child bullets. This keeps the heading clean. `name` comes from the heading text (must be a single token — no spaces). For multi-word titles, use key-value `title:"Long Title"` on the metadata line. `title` optionally follows ` - ` in the heading (e.g. `## Chapter1 - The Beginning` splits to name=`Chapter1`, title=`The Beginning`).
-
-For narration, use the `- script "..."` audio alias as a child of the scene (see [Narration / TTS](#narration--tts) below).
-
-### `image`
-
-When: photos, stills, title cards. Required: `src`, `duration`.
-
-`- image src:cover.jpg duration:2 fit:cover`
-
-### `video`
-
-When: moving footage. Required: `src` + (`duration` or `endAt`).
-
-`- video src:clip.mp4 startFrom:1 endAt:4 volume:0.8`
-
-### `audio`
-
-When: voiceover, BGM, SFX, TTS narration. Required: `src` + (`duration` or `endAt`).
-
-`- audio src:bgm.mp3 duration:6 volume:0.4 isBackground`
-
 ### Narration / TTS
 
 Narration text is set via the `script` field on audio nodes. There are three ways to provide it:
@@ -247,7 +367,7 @@ This is a shorthand that creates an audio node with the `script` field. Supports
 
 ```md
 - script "Welcome to the course"
-- script "Voiceover" volume:0.8 start:2 duration:5 foreground:true
+- script "Voiceover" volume:0.8 start:2 foreground:true
 ```
 
 **3. Code fence `~~~script` on an audio node**
@@ -269,9 +389,12 @@ All three patterns produce an `audio` node with a `script` field. The pipeline's
 When a `script` contains multiple lines matching `SpeakerName: text` format, the pipeline automatically expands it into a multi-turn dialogue where each line becomes a separate audio node with its own TTS generation. This allows different speakers to have different voices.
 
 ```md
-- script "Ray: Hello everyone and welcome
-Alice: Good day to you all
-Ray: Let's get started"
+- script 
+  ~~~script
+  Ray: Hello everyone and welcome
+  Alice: Good day to you all
+  Ray: Let's get started
+  ~~~
 ```
 
 The dialogue lines play sequentially. Each line is transcribed separately, and subtitles include the speaker prefix (e.g., `Ray: Hello everyone and welcome`).
@@ -295,112 +418,6 @@ voices:{"Ray":"--voice en-US-GuyNeural --rate +20%","Clone":"--voice clone-xxx -
 
 The final TTS command for a speaker: `<root tts cli> <speaker voice flags>`.
 
-### `subtitle` (root-level overlay)
-
-Subtitles are configured at the root level as a VTT overlay, not as tree nodes. Set via YAML frontmatter `subtitle:` or `root.subtitle` in JSON.
-
-The `type` field selects an animated caption component from `remotion-subtitle`:
-
-| Value | Component |
-|---|---|
-| *(omit)* | `Caption` — plain static text |
-| `Bounce` | `BounceCaption` — bouncing entrance |
-| `Fade` | `FadeCaption` — fade in |
-| `Typewriter` | `TypewriterCaption` — typewriter reveal |
-| `Colorful` | `ColorfulCaption` — rainbow text |
-| `Glowing` | `GlowingCaption` — glow effect |
-| `Neon` | `NeonCaption` — neon sign |
-| `Zoom` | `ZoomCaption` — zoom in |
-
-> **HTML in cue text**: Each cue's text is rendered via `dangerouslySetInnerHTML`, so you can use HTML tags with inline CSS to style individual words:
-> ```vtt
-> 00:00:01.000 --> 00:00:03.000
-> The <span style="color:#ff6b6b;font-weight:bold">quick</span> brown <span style="font-style:italic">fox</span> jumps over the lazy dog
-> ```
-> The `Typewriter` caption animation correctly respects HTML tag boundaries (character reveal skips over tags, only animates visible text).
-
-Each cue is rendered as a separate `<Sequence>` for optimal performance — inactive cues consume zero CPU.
-
-See [JSON Descriptive](json-descriptive.md#subtitle-root-level-overlay) for the full field reference.
-
-## Effects on Any Node
-
-Apply animations directly via the `effects` key on **any** node (leaf or container). No wrapper node needed.
-
-```md
-- image src:hero.jpg duration:3 effects:[fadeIn]
-- component duration:2 jsx:"<Title />" effects:[bounceIn]
-- video src:clip.mp4 duration:4 effects:[fadeIn, slideInLeft]
-```
-
-### Parameterized syntax
-
-Add positional parameters in parentheses — comma-separated.
-
-```md
-- image src:card.jpg duration:3 effects:[fadeIn(1.5)]
-- image src:card.jpg duration:3 effects:[fadeIn(1.5, ease-out)]
-- image src:card.jpg duration:3 effects:[fadeIn(1.5, ease-out, 2)]
-```
-
-Order: `(duration, timingFunction, iterationCount)`
-
-| Position | Parameter | Example |
-|---|---|---|
-| 1st | `duration` (seconds) | `fadeIn(1.5)` |
-| 2nd | `timingFunction` | `fadeIn(1.5, ease-out)` |
-| 3rd | `iterationCount` | `fadeIn(1.5, ease-out, 2)` |
-
-All parameters are optional — omit trailing ones.
-
-### Multiple effects
-
-Effects are applied outermost-first (first in the array is the outermost wrapper):
-
-```md
-- image src:hero.jpg duration:3 effects:[fadeIn, bounceIn]
-```
-
-### `component`
-
-When: JSX expression rendered at runtime with registered imports in scope. Required for non-background components: `duration` . The `jsx` value can come from an inline attribute or an indented code fence.
-
-Components must be registered via a `` ~~~js imports `` code block. Usage is via `jsx:"<TagName ... />"` on the component node.
-
-```md
-~~~js imports
-import { StatCounter } from "stat-counter"
-import { Logo } from "github:myorg/design#Logo"
-~~~
-
-# JSX usage (references registered components as tags)
-- component duration:1 jsx:"<StatCounter value={42} />"
-```
-
-### Code fence properties
-
-Properties that are too long for a single line can be provided via an indented code fence under the bullet item. The fence language (`~~~<lang> <propName>`) specifies which property to set:
-
-```md
-- component duration:4 isBackground:true
-  ~~~jsx jsx
-  <div style={{color:'#fff'}}>Hello</div>
-  ~~~
-
-- video start:5 volume:0
-  ~~~prompt prompt
-  animation of a robot learning to walk, cinematic lighting
-  ~~~
-```
-
-The fence syntax is `~~~<lang> <propName>`. If `propName` is omitted, it defaults to `lang`. Common patterns:
-
-| Fence | Sets property | Use case |
-|---|---|---|
-| `~~~jsx jsx` or `~~~jsx` | `jsx` | Component JSX expression |
-| `~~~prompt prompt` | `prompt` | TTI/TTV generation prompt |
-| `~~~script script` or `~~~script` | `script` | Narration text on audio nodes |
-
 ### `rhythm`
 
 When: beat-synced audio (music drops, music-reactive reveals). Required: `src`, `spots`, `children`.
@@ -413,15 +430,6 @@ Each child is assigned to a beat slot: child[i] starts at `spots[i]`, ends at `s
     - image src:flash2.jpg
     - image src:flash3.jpg
 ```
-
-### `effect`
-
-When: CSS keyframe animation wrapper. Required: `children`. `duration` falls back to children max.
-
-`- effect animation:fadeIn duration:2` then indented children.
-
-Built-in `animation` values:
-`fadeIn fadeOut fadeInDown fadeInUp fadeInLeft fadeInRight fadeOutDown fadeOutUp fadeOutLeft fadeOutRight slideInDown slideInUp slideInLeft slideInRight slideOutDown slideOutUp slideOutLeft slideOutRight zoomIn zoomOut zoomInDown zoomInUp zoomInLeft zoomInRight bounce bounceIn rotateIn rotateOut rotateInDownLeft rotateInDownRight rotateInUpLeft rotateInUpRight flipInX flipInY pulse flash heartBeat rubberBand shakeX shakeY swing tada wobble jello rollIn rollOut jackInTheBox lightSpeedIn lightSpeedOut`
 
 ### `map`
 
@@ -494,19 +502,6 @@ Any valid JavaScript expression — assign values, increment counters, toggle bo
 ```
 
 The expression is evaluated with all registered component IDs as scope variables. Each component variable is a Proxy whose property setter triggers a React re-render.
-
-### JSON form
-
-In the compiled stream tree, events are represented as an `on` field on any node:
-
-```json
-{
-  "type": "audio",
-  "src": "narration.mp3",
-  "duration": 3,
-  "on": { "when": "start", "state": "slide1.current=0" }
-}
-```
 
 ## Variants (Language / Platform / Any Override)
 
@@ -621,12 +616,10 @@ npx markcut render courseware.md --variant zh --output zh-video.mp4
 
 ### Combined variants
 
-Multiple `--variant` flags are applied in order. Each subsequent variant
-can override values set by a previous one. The directory is named with
-all variants joined by `-`:
+`--variant` value support multiple variants joined by `-` to merge multiple override sections. For example, `--variant zh-tiktok` merges the `# zh` and `# tiktok` sections into the base config.
 
 ```bash
-npx markcut preview courseware.md --variant zh --variant tiktok
+npx markcut preview courseware.md --variant zh-tiktok
 # Uses .markcut/courseware/zh-tiktok/ for variant artifacts
 ```
 
@@ -635,37 +628,6 @@ npx markcut preview courseware.md --variant zh --variant tiktok
 When a variant section provides a root-level key (e.g., `tts`), it merges
 into the base config. Scene-level `tts` overrides root-level `tts`,
 and the `ttsCli` option (if provided) overrides both.
-
-### How overrides are resolved
-
-1. The parser extracts `# video` as the base root and each `# <name>` as a
-   variant config map.
-2. When `--variant zh` is used, the `# zh` section's root keys are merged
-   into the base root (e.g., `tts` is replaced).
-3. `resolveVariantOverrides` walks the entire tree: for each node,
-   variant-prefixed keys (like `zh-src`) replace their unprefixed
-   counterparts. Bare variant keys (like `zh`) replace the node's
-   primary content key (see table above).
-4. All `<variant>-*` keys and bare variant keys are stripped from the
-   output — the compiled tree contains only the resolved values.
-5. The pipeline then runs TTS/STT/media generation as usual with the
-   overridden config and content.
-
-### Directory layout for variant artifacts
-
-```
-.markcut/
-├── generated/                  ← shared, content-addressed
-│   ├── tts/                    ← TTS audio (same script → same file)
-│   ├── media/                  ← TTI/TTV images/videos
-│   └── includes/               ← compiled sub-video JSON
-├── courseware/                 ← per-source-file
-│   ├── components/             ← component bundles (shared)
-│   ├── compiled.json           ← default (en) compiled output
-│   └── zh/
-│       ├── compiled.json       ← zh variant compiled output
-│       └── subtitles.vtt       ← zh variant subtitles
-```
 
 TTS audio files are content-addressed (hash of `script + CLI`), so
 identical scripts across variants produce the same file. The merged
@@ -679,16 +641,6 @@ differ.
 3. `start` only in `parallel`.
 4. `transitionTime` subtracted between `transitionSeries` items.
 5. Containers derive duration from children (parallel=max, series=sum, ts=sum−overlap).
-
-## Generation Workflow
-
-1. Root: `# video` + `width:<n> height:<n> fps:<n> layout:<mode>` on the next line.
-2. Frontmatter (optional): `---` block for root attrs + tts/stt pipeline config + `stylesheet`.
-3. Component registrations: `` ~~~js imports `` block for external components.
-4. Scenes via `##` with `layout:` metadata on the line below.
-5. Leaves as `- type key:value ...` bullets indented under scenes.
-6. Long values (JSX, prompts, scripts) use indented `~~~<lang> <propName>` code fences.
-7. Verify each leaf has resolvable `duration`.
 
 ## Tween Animation
 
@@ -725,30 +677,7 @@ tween(#000, #FFF)             — color interpolation
 - `tween()` uses Remotion's `interpolate()` with the component's action duration.
 - At frame 0, `tween(from, to)` returns `from`.
 
-## Self-Check
-
-- [ ] Root has `width`, `height`, `fps`, `layout`.
-- [ ] Every scene has ≥1 child or `script`.
-- [ ] All values use explicit `key:value` syntax (no bare tokens).
-- [ ] `start` only used inside `parallel` containers.
-- [ ] No `src` on component nodes (use `jsx:` instead).
-- [ ] Component registrations use `` ~~~js imports `` block — the ONLY supported method.
-- [ ] Every component `jsx:` references a name registered in `` ~~~js imports ``.
-- [ ] Every `jsx:` on a component node is a usage expression (JSX tag), not a definition.
-- [ ] Inline component definitions go inside `` ~~~js imports `` as `export function Name(...) { ... }`.
-- [ ] Scene names are single tokens (no spaces) — use `title:"..."` for multi-word titles.
-- [ ] Code fence properties are indented under their parent bullet.
-- [ ] Event targets (`id:name` on component) match the `id` used in `on:(when, id.prop=value)` expressions.
-
-## Validation with CLI
-
-Use `markcut verify` to parse and validate a descriptive markdown file without rendering:
-
-```bash
-markcut verify courseware.md
-```
-
-# common used components
+# Common used components
 - `react-markdown` — render markdown content, use plugins to extend functionality
   - `remark-gfm` — support GitHub Flavored Markdown (tables, strikethrough, task lists)
   - `remark-toc` — generate table of contents
@@ -760,7 +689,13 @@ markcut verify courseware.md
 - `@remotion/shapes` — render shapes like arrows, circles, rectangles, etc
 - `@remotion/starburst` — render starburst animations
 
-# best practices
+# Best practices
+- Markcut engine will automatically determine the duration of background streams, video, script audio. Don't set duration for them if no special requirements (e.g., speed up/down on purpose).
+- global streams (BGM, Logo, Lip-sync video,...) should be set on root level, and set `isBackground:true` to let it loop to fill the whole video duration.
+- Set `isBackground:true` for static vision content, such as image, when audio is playing
+- adjust audio start time with `start` property to avoid audio cut when transition effect is applied on vision scene
+
+
 ~~~ example - avoid audio cut
 - parallel
   - image|video isBackground:true
