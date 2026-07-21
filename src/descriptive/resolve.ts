@@ -9,7 +9,7 @@
  * has complete duration and renderable children.
  */
 import { execSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, statSync, renameSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { join, dirname, resolve as resolvePath, relative } from "node:path";
 import {
@@ -28,60 +28,13 @@ import { compileDescriptiveRoot, parseImportsBlock, extractDependencySpecs, reso
 import { parseMarkdownDescriptive, parseMarkdownVariants } from "./markdown";
 
 // ── Content-hash cache for expensive operations (TTS, STT) ────────────────
-// Skips regeneration when input hasn't changed. Cache key is a hash of all
-// inputs that affect the output (script + cli template).
-
-interface CacheEntry {
-  hash: string;
-  output: string;
-}
+// Output files are named by content hash — the filesystem IS the cache.
+// If a file named `<hash>.<ext>` exists, it's guaranteed to match its inputs.
+// No manifest file needed.
 
 function computeCacheKey(parts: Record<string, unknown>): string {
   const json = JSON.stringify(parts);
   return createHash("sha1").update(json).digest("hex").slice(0, 12);
-}
-
-function readCacheManifest(outputDir: string): Record<string, CacheEntry> {
-  const manifestPath = join(outputDir, ".cache.json");
-  try {
-    return JSON.parse(readFileSync(manifestPath, "utf-8"));
-  } catch {
-    return {};
-  }
-}
-
-function writeCacheManifest(outputDir: string, manifest: Record<string, CacheEntry>): void {
-  const manifestPath = join(outputDir, ".cache.json");
-  try {
-    writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), "utf-8");
-  } catch {
-    // best-effort
-  }
-}
-
-/**
- * Returns cached output path if inputs unchanged AND output file still exists.
- * Otherwise returns null (caller should regenerate).
- */
-function checkCache(
-  manifest: Record<string, CacheEntry>,
-  key: string,
-  cacheKey: string,
-): string | null {
-  const entry = manifest[key];
-  if (entry?.hash === cacheKey && entry.output && existsSync(entry.output)) {
-    return entry.output;
-  }
-  return null;
-}
-
-function updateCache(
-  manifest: Record<string, CacheEntry>,
-  key: string,
-  cacheKey: string,
-  output: string,
-): void {
-  manifest[key] = { hash: cacheKey, output };
 }
 
 // ── Media Duration ─────────────────────────────────────────────────────────
@@ -399,8 +352,6 @@ export async function resolveScripts(
 ): Promise<DescriptiveRoot> {
   const clone: DescriptiveRoot = JSON.parse(JSON.stringify(root));
   mkdirSync(options.outputDir, { recursive: true });
-  const cache = readCacheManifest(options.outputDir);
-  let cacheDirty = false;
 
   // Collect all audio nodes that have script text but no src yet
   const allScriptNodes: Array<{ node: any; id: string }> = [];
@@ -439,21 +390,18 @@ export async function resolveScripts(
     const cacheKey = computeCacheKey({ script: node.script, cli: ttsCli });
     const audioPath = join(options.outputDir, `${cacheKey}.mp3`);
 
-    // Check cache — skip TTS if script + config unchanged AND audio file exists
-    const cached = checkCache(cache, `tts:${cacheKey}`, cacheKey);
+    // Content-addressed cache: file is named by hash — if it exists, it's valid
     let generated: string;
     const speakerLabel = node.speaker ? `${node.speaker}: ` : "";
     const label = `${speakerLabel}${firstWords(node.script, 8)}`;
-    if (cached) {
-      generated = cached;
+    if (existsSync(audioPath)) {
+      generated = audioPath;
       cacheHits++;
       console.log(`  ✓ TTS: ${label} (cached)`);
     } else {
       console.log(`  🔊 TTS (${scriptsDone}/${totalScripts}): ${label}...`);
       generated = generateTTS(node.script, audioPath, ttsCli);
       if (generated) {
-        updateCache(cache, `tts:${cacheKey}`, cacheKey, generated);
-        cacheDirty = true;
         console.log(`  ✓ TTS (${scriptsDone}/${totalScripts}): ${label}`);
       } else {
         console.warn(`  ⚠ TTS produced no audio for "${label}". Audio will have no source. Check root.tts config.`);
@@ -466,9 +414,7 @@ export async function resolveScripts(
     delete node.script;
   }
 
-  if (cacheDirty) writeCacheManifest(options.outputDir, cache);
   if (totalScripts > 0) {
-    try { writeFileSync(join(options.outputDir, ".cache.json"), JSON.stringify(cache, null, 2), "utf-8"); } catch {}
     const ttsElapsed = Math.round((Date.now() - ttsStart) / 1000);
     const unique = new Set(allScriptNodes.filter(s => s.node.src).map(s => s.node.src)).size;
     console.log(`  ✅ TTS: ${unique} unique audio${unique > 1 ? "s" : ""} (${scriptsDone} nodes) in ${ttsElapsed}s (${cacheHits} cached)`);
@@ -502,8 +448,6 @@ export async function resolveSubtitles(
   if (!sttCli) return clone;
 
   mkdirSync(options.outputDir, { recursive: true });
-  const cache = readCacheManifest(options.outputDir);
-  let cacheDirty = false;
 
   // Collect { audioSrc, absoluteOffset } from the compiled tree
   const clips: Array<{ audioSrc: string; offset: number; speaker?: string }> = [];
@@ -596,30 +540,27 @@ export async function resolveSubtitles(
   let sttFailedCount = 0;
 
   for (const { audioSrc, offset, speaker } of clips) {
-    // Cache key: audio hash + STT CLI string
+    // Content-addressed STT cache: hash of (audio content + CLI) → hash-named VTT
     const audioHash = existsSync(audioSrc)
       ? createHash("sha1").update(readFileSync(audioSrc)).digest("hex").slice(0, 12)
       : audioSrc;
     const sttCacheKey = computeCacheKey({ audioHash, cli: sttCli });
-    const sttKey = `stt:${audioSrc.split("/").pop()}`;
     const clipName = audioSrc.split("/").pop()!;
+    const expectedVtt = join(options.outputDir, `${sttCacheKey}.vtt`);
 
     let vttPath: string | null = null;
-    // Cache per-clip STT by audio hash + CLI (individual VTT files are stable)
-    const cachedVtt = checkCache(cache, sttKey, sttCacheKey);
-    if (cachedVtt) {
-      vttPath = cachedVtt;
+    if (existsSync(expectedVtt)) {
+      vttPath = expectedVtt;
     } else {
       try {
         await generateSTT(audioSrc, options.outputDir, sttCli);
-        // Find generated VTT file
+        // Whisper names VTT after input audio file; rename to hash-based name
         const base = audioSrc.replace(/\.wav$/, "").replace(/\.mp3$/, "");
         const name = base.split("/").pop()!;
-        const candidate = join(options.outputDir, `${name}.vtt`);
-        if (existsSync(candidate)) {
-          vttPath = candidate;
-          updateCache(cache, sttKey, sttCacheKey, vttPath);
-          cacheDirty = true;
+        const whisperVtt = join(options.outputDir, `${name}.vtt`);
+        if (existsSync(whisperVtt)) {
+          renameSync(whisperVtt, expectedVtt);
+          vttPath = expectedVtt;
         }
       } catch {
         console.warn(`  ⚠ STT failed for ${clipName}. Install whisper (pip install openai-whisper) or set root.stt.`);
@@ -674,7 +615,6 @@ export async function resolveSubtitles(
     console.log(`  ✅ STT: subtitles ready (${cueIndex - 1} cues)`);
   }
 
-  if (cacheDirty) writeCacheManifest(options.outputDir, cache);
   return clone;
 }
 
@@ -708,8 +648,6 @@ export async function resolveGeneratedMedia(
 ): Promise<DescriptiveRoot> {
   const clone: DescriptiveRoot = JSON.parse(JSON.stringify(root));
   mkdirSync(options.outputDir, { recursive: true });
-  const cache = readCacheManifest(options.outputDir);
-  let cacheDirty = false;
 
   // Collect all image/video nodes that have prompt but no src
   const genNodes: Array<{
@@ -753,16 +691,17 @@ export async function resolveGeneratedMedia(
       ? (clone.tti ?? options.ttiCli ?? DEFAULT_TTI_CLI)
       : (clone.ttv ?? options.ttvCli ?? DEFAULT_TTV_CLI);
 
+    // Use the shared seed (from root, options, or content-derived default).
     const seed = options.seed;
     const cacheKey = computeCacheKey({ prompt, cli, type, seed });
     const outputPath = join(options.outputDir, `${cacheKey}.${ext}`);
 
-    const cached = checkCache(cache, `gen:${cacheKey}`, cacheKey);
     const label = type === "image" ? "TTI" : "TTV";
     const labelText = firstWords(prompt, 8);
 
-    if (cached) {
-      node.src = resolvePath(cached);
+    // Content-addressed cache: file is named by hash — if it exists, it's valid
+    if (existsSync(outputPath)) {
+      node.src = resolvePath(outputPath);
       cacheHits++;
       if (done % 5 === 0 || done === total) console.log(progressLine());
       continue;
@@ -776,8 +715,6 @@ export async function resolveGeneratedMedia(
         : generateTTV(prompt, outputPath, cli, ttiCmd, seed);
       if (result) {
         node.src = outputPath;
-        updateCache(cache, `gen:${cacheKey}`, cacheKey, outputPath);
-        cacheDirty = true;
         console.log(`  ✓ ${label} (${done}/${total}): ${labelText}`);
         if (done % 3 === 0 || done === total) console.log(progressLine());
       } else {
@@ -799,7 +736,6 @@ export async function resolveGeneratedMedia(
     const mediaType = genNodes[0]?.type === "video" ? "TTV" : "TTI";
     console.log(`  ✅ ${mediaType} complete: ${done} items in ${elapsed}s (${cacheHits} cached)`);
   }
-  if (cacheDirty) writeCacheManifest(options.outputDir, cache);
   return clone;
 }
 
@@ -830,6 +766,10 @@ export interface ResolveAllOptions extends ResolveMediaOptions {
    *  When set, include nodes parse their target .md files with variant awareness
    *  and apply variant overrides (zh-src → src, bare `zh` key → primary content). */
   variants?: string[];
+  /** Path to the source file (.md or .json). When set and root.seed is missing,
+   *  a deterministic seed is auto-generated and written back to the source file,
+   *  making it stable across restarts for cache consistency. */
+  sourcePath?: string;
 }
 
 /**
@@ -993,6 +933,37 @@ export async function resolveAll(
 ): Promise<DescriptiveRoot> {
   let result = root;
 
+  // ── Auto-seed: persist a deterministic seed into the source file ───────────
+  // When no seed is set by the user (root.seed) or caller (options.seed),
+  // generate one from the content hash and write it back to the source file.
+  // This makes the seed visible and stable across restarts — the cache key
+  // never changes unless the content or the user intentionally edits the seed.
+  if (result.seed == null && options.seed == null && options.sourcePath) {
+    const autoSeed = parseInt(computeCacheKey(result as any).slice(0, 8), 16);
+    result = { ...result, seed: autoSeed };
+    try {
+      const raw = readFileSync(options.sourcePath, "utf-8");
+      if (options.sourcePath.endsWith(".md")) {
+        // Insert seed: <N> after the first line (# video) or after existing header
+        const lines = raw.split("\n");
+        const headerEnd = lines.findIndex((l) => l.trim() === "" || l.startsWith("##"));
+        const insertAt = headerEnd > 1 ? headerEnd : Math.min(1, lines.length);
+        lines.splice(insertAt, 0, `seed:${autoSeed}`);
+        writeFileSync(options.sourcePath, lines.join("\n"), "utf-8");
+      } else if (options.sourcePath.endsWith(".json")) {
+        const parsed = JSON.parse(raw);
+        const target = parsed.root || parsed;
+        target.seed = autoSeed;
+        writeFileSync(options.sourcePath, JSON.stringify(parsed, null, 2), "utf-8");
+      }
+      console.log(`  🌱 Auto-seed: ${autoSeed} → ${options.sourcePath}`);
+    } catch (e: any) {
+      console.warn(`  ⚠ Could not write seed to source file: ${e.message}`);
+    }
+  }
+  const contentSeed = result.seed ?? options.seed ?? 0;
+  result = { ...result, seed: contentSeed };
+
   // Step 0: Resolve includes (pre-compile referenced .md files to JSON with accurate durations)
   result = await resolveIncludes(result, options);
 
@@ -1012,15 +983,12 @@ export async function resolveAll(
   result = await resolveMediaSrcs(result, { baseDir: options.baseDir });
 
   // Step 3: Generate images/videos from prompts before probing durations.
-  // Use root.seed if set; otherwise inherit from options (for includes).
-  // Auto-generate a random seed so {seed} in the CLI template always gets a value.
-  const generationSeed = result.seed ?? options.seed ?? Math.floor(Math.random() * 2_147_483_647);
   if (options.mediaOutputDir) {
     result = await resolveGeneratedMedia(result, {
       outputDir: options.mediaOutputDir,
       ttiCli: options.ttiCli,
       ttvCli: options.ttvCli,
-      seed: generationSeed,
+      seed: contentSeed,
     });
   }
 

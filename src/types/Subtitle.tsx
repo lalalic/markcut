@@ -288,13 +288,14 @@ export function SubtitleOverlay({ subtitle }: { subtitle: SubtitleOverlayConfig 
     };
   }, [subtitle.src]);
 
-  if (!cues) return null;@
-
-  const boxCss = subtitle.style ? (cssJS(subtitle.style) as React.CSSProperties) : {};@
-
   // Group consecutive cues with same plain text (word-level highlighting pattern)
   // so the caption component stays mounted across word transitions — no flash.
-  const cueGroups = React.useMemo(() => groupConsecutiveCues(cues), [cues]);
+  // Must be called unconditionally (before early return) to keep hooks order stable.
+  const cueGroups = React.useMemo(() => cues ? groupConsecutiveCues(cues) : [], [cues]);
+
+  if (!cues) return null;
+
+  const boxCss = subtitle.style ? (cssJS(subtitle.style) as React.CSSProperties) : {};
 
   return (
     <div className={`${subtitle.type || "default"} subtitle-overlay`} style={{ ...DEFAULT_BOX_STYLE, ...boxCss }}>

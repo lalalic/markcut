@@ -92,7 +92,7 @@ export const DEFAULT_AGENT_CLI = args.cliOverrides.agent || process.env.MARKCUT_
 /** Default edit agent CLI. Override via --edit-cli flag or MARKCUT_EDIT_CLI env var. */
 export const DEFAULT_EDIT_CLI = args.cliOverrides.editCli || process.env.MARKCUT_EDIT_CLI || 'npx pi --session-id {sessionid} --system-prompt {systemprompt} -p {prompt}';
 /** Text-to-image CLI. Override via --tti flag or MARKCUT_TTI_CLI env var. */
-export const DEFAULT_TTI_CLI = args.cliOverrides.tti || process.env.MARKCUT_TTI_CLI || 'uvx --from mflux mflux-generate-flux2 --model flux2-klein-4b --steps 5 --prompt "{input}" --output "{output}" --seed {seed}';
+export const DEFAULT_TTI_CLI = args.cliOverrides.tti || process.env.MARKCUT_TTI_CLI || 'uvx --from mflux mflux-generate-flux2 --model flux2-klein-4b --steps 2 --prompt "{input}" --output "{output}" --seed {seed}';
 /** Text-to-video CLI. Override via --ttv flag or MARKCUT_TTV_CLI env var. */
 export const DEFAULT_TTV_CLI = args.cliOverrides.ttv || process.env.MARKCUT_TTV_CLI || '';
 /** Image-to-text CLI. Override via --itt flag or MARKCUT_ITT_CLI env var. */

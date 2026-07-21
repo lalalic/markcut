@@ -964,7 +964,7 @@ init_compiler();
 
 // src/descriptive/resolve.ts
 import { execSync as execSync2 } from "node:child_process";
-import { existsSync as existsSync2, mkdirSync as mkdirSync2, readFileSync, writeFileSync } from "node:fs";
+import { existsSync as existsSync2, mkdirSync as mkdirSync2, readFileSync, writeFileSync, renameSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { join, dirname as dirname2, resolve as resolvePath, relative } from "node:path";
 
@@ -985,7 +985,7 @@ var args = (function parseArgs(argv) {
     "--tti": "tti",
     "--ttv": "ttv"
   };
-  const args2 = { command: "", file: "", output: "", forceNew: false, verbose: false, label: false, edit: false, noBrowser: false, chat: false, port: 3001, compile: false, cli: false, showClis: false, scriptOutputDir: "", mediaOutputDir: "", variant: [], cliOverrides: {} };
+  const args2 = { command: "", file: "", output: "", forceNew: false, verbose: false, dev: false, label: false, edit: false, noBrowser: false, chat: false, port: 3001, compile: false, cli: false, showClis: false, scriptOutputDir: "", mediaOutputDir: "", variant: [], cliOverrides: {} };
   let i = 2;
   if (argv[i]) args2.command = argv[i++];
   if (argv[i] && !argv[i].startsWith("--")) args2.file = argv[i++];
@@ -999,6 +999,7 @@ var args = (function parseArgs(argv) {
     else if (flag === "--compile") args2.compile = true;
     else if (flag === "--force-new") args2.forceNew = true;
     else if (flag === "--verbose") args2.verbose = true;
+    else if (flag === "--dev") args2.dev = true;
     else if (flag === "--label") args2.label = true;
     else if (flag === "--edit") args2.edit = true;
     else if (flag === "--no-browser") args2.noBrowser = true;
@@ -1022,7 +1023,7 @@ var DEFAULT_STT_CLI = args.cliOverrides.stt || process.env.MARKCUT_STT_CLI || 'u
 var DEFAULT_TTS_CLI = args.cliOverrides.tts || process.env.MARKCUT_TTS_CLI || 'uvx edge-tts --voice "en-US-GuyNeural" --text "{input}" --write-media "{output}"';
 var DEFAULT_AGENT_CLI = args.cliOverrides.agent || process.env.MARKCUT_AGENT_CLI || "npx pi -p {prompt}";
 var DEFAULT_EDIT_CLI = args.cliOverrides.editCli || process.env.MARKCUT_EDIT_CLI || "npx pi --session-id {sessionid} --system-prompt {systemprompt} -p {prompt}";
-var DEFAULT_TTI_CLI = args.cliOverrides.tti || process.env.MARKCUT_TTI_CLI || 'uvx --from mflux mflux-generate-flux2 --model flux2-klein-4b --steps 5 --prompt "{input}" --output "{output}" --seed {seed}';
+var DEFAULT_TTI_CLI = args.cliOverrides.tti || process.env.MARKCUT_TTI_CLI || 'uvx --from mflux mflux-generate-flux2 --model flux2-klein-4b --steps 2 --prompt "{input}" --output "{output}" --seed {seed}';
 var DEFAULT_TTV_CLI = args.cliOverrides.ttv || process.env.MARKCUT_TTV_CLI || "";
 var DEFAULT_ITT_CLI = args.cliOverrides.itt || process.env.MARKCUT_ITT_CLI || 'uvx --from mlx-vlm mlx_vlm.generate --model mlx-community/MiniCPM-V-4.6-bf16 --max-tokens 2048 --prompt "{prompt}" --image {input} --temperature 0.0 --thinking-mode disabled';
 var DEFAULT_VTT_CLI = args.cliOverrides.vtt || process.env.MARKCUT_VTT_CLI || `uvx --from mlx-vlm mlx_vlm.generate --model mlx-community/MiniCPM-V-4.6-bf16 --max-tokens 2048 --prompt "{prompt}" --video {input} --temperature 0.0 --processor-kwargs '{"max_num_frames": 32, "stack_frames": 1, "max_slice_nums": 1, "use_image_id": false}'`;
@@ -10133,6 +10134,7 @@ function preserveVariantAttrs(node2, attrs) {
     "duration",
     "startFrom",
     "endAt",
+    "loop",
     "width",
     "height",
     "fit",
@@ -10645,31 +10647,6 @@ function computeCacheKey(parts) {
   const json = JSON.stringify(parts);
   return createHash("sha1").update(json).digest("hex").slice(0, 12);
 }
-function readCacheManifest(outputDir) {
-  const manifestPath = join(outputDir, ".cache.json");
-  try {
-    return JSON.parse(readFileSync(manifestPath, "utf-8"));
-  } catch {
-    return {};
-  }
-}
-function writeCacheManifest(outputDir, manifest) {
-  const manifestPath = join(outputDir, ".cache.json");
-  try {
-    writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), "utf-8");
-  } catch {
-  }
-}
-function checkCache(manifest, key, cacheKey) {
-  const entry = manifest[key];
-  if (entry?.hash === cacheKey && entry.output && existsSync2(entry.output)) {
-    return entry.output;
-  }
-  return null;
-}
-function updateCache(manifest, key, cacheKey, output) {
-  manifest[key] = { hash: cacheKey, output };
-}
 function firstWords(text3, n) {
   if (!text3) return "";
   return text3.split(/\s+/).slice(0, n).join(" ").replace(/[^a-zA-Z0-9\u4e00-\u9fff\s-]/g, "").slice(0, 60) || text3.slice(0, 60);
@@ -10833,8 +10810,6 @@ function resolveDialogue(root) {
 async function resolveScripts(root, options) {
   const clone = JSON.parse(JSON.stringify(root));
   mkdirSync2(options.outputDir, { recursive: true });
-  const cache = readCacheManifest(options.outputDir);
-  let cacheDirty = false;
   const allScriptNodes = [];
   walkDown(clone, (node2) => {
     if (node2.type !== "audio") return;
@@ -10843,10 +10818,15 @@ async function resolveScripts(root, options) {
     const id = node2.id ?? `audio-${allScriptNodes.length}`;
     allScriptNodes.push({ node: node2, id });
   });
-  if (allScriptNodes.length > 0) {
-    console.log(`  \u{1F50A} TTS: generating ${allScriptNodes.length} script${allScriptNodes.length > 1 ? "s" : ""}...`);
+  const totalScripts = allScriptNodes.length;
+  let scriptsDone = 0;
+  let cacheHits = 0;
+  const ttsStart = Date.now();
+  if (totalScripts > 0) {
+    console.log(`  \u{1F50A} TTS: generating ${totalScripts} script${totalScripts > 1 ? "s" : ""}...`);
   }
   for (const { node: node2, id } of allScriptNodes) {
+    scriptsDone++;
     let ttsCli = clone.tts ?? options.ttsCli ?? DEFAULT_TTS_CLI;
     if (node2.speaker && clone.voices) {
       const speakerVoice = clone.voices[node2.speaker];
@@ -10856,19 +10836,18 @@ async function resolveScripts(root, options) {
     }
     const cacheKey = computeCacheKey({ script: node2.script, cli: ttsCli });
     const audioPath = join(options.outputDir, `${cacheKey}.mp3`);
-    const cached = checkCache(cache, `tts:${cacheKey}`, cacheKey);
     let generated;
     const speakerLabel = node2.speaker ? `${node2.speaker}: ` : "";
     const label = `${speakerLabel}${firstWords(node2.script, 8)}`;
-    if (cached) {
-      generated = cached;
+    if (existsSync2(audioPath)) {
+      generated = audioPath;
+      cacheHits++;
       console.log(`  \u2713 TTS: ${label} (cached)`);
     } else {
+      console.log(`  \u{1F50A} TTS (${scriptsDone}/${totalScripts}): ${label}...`);
       generated = generateTTS(node2.script, audioPath, ttsCli);
       if (generated) {
-        updateCache(cache, `tts:${cacheKey}`, cacheKey, generated);
-        cacheDirty = true;
-        console.log(`  \u2713 TTS: ${label}`);
+        console.log(`  \u2713 TTS (${scriptsDone}/${totalScripts}): ${label}`);
       } else {
         console.warn(`  \u26A0 TTS produced no audio for "${label}". Audio will have no source. Check root.tts config.`);
       }
@@ -10877,14 +10856,10 @@ async function resolveScripts(root, options) {
     node2.src = resolvePath(generated);
     delete node2.script;
   }
-  if (cacheDirty) writeCacheManifest(options.outputDir, cache);
-  if (allScriptNodes.length > 0) {
-    try {
-      writeFileSync(join(options.outputDir, ".cache.json"), JSON.stringify(cache, null, 2), "utf-8");
-    } catch {
-    }
+  if (totalScripts > 0) {
+    const ttsElapsed = Math.round((Date.now() - ttsStart) / 1e3);
     const unique = new Set(allScriptNodes.filter((s) => s.node.src).map((s) => s.node.src)).size;
-    console.log(`  \u2705 TTS: ${unique} unique audio file${unique > 1 ? "s" : ""} (${allScriptNodes.length} node${allScriptNodes.length > 1 ? "s" : ""})`);
+    console.log(`  \u2705 TTS: ${unique} unique audio${unique > 1 ? "s" : ""} (${scriptsDone} nodes) in ${ttsElapsed}s (${cacheHits} cached)`);
   }
   return clone;
 }
@@ -10893,8 +10868,6 @@ async function resolveSubtitles(root, options) {
   const sttCli = clone.stt ?? options.sttCli ?? DEFAULT_STT_CLI;
   if (!sttCli) return clone;
   mkdirSync2(options.outputDir, { recursive: true });
-  const cache = readCacheManifest(options.outputDir);
-  let cacheDirty = false;
   const clips = [];
   function walkSiblings(nodes, parentOffset, parentIsSeries, parentTransition, parentTransitionTime) {
     let seriesOffset = parentOffset;
@@ -10943,22 +10916,20 @@ async function resolveSubtitles(root, options) {
   for (const { audioSrc, offset, speaker } of clips) {
     const audioHash = existsSync2(audioSrc) ? createHash("sha1").update(readFileSync(audioSrc)).digest("hex").slice(0, 12) : audioSrc;
     const sttCacheKey = computeCacheKey({ audioHash, cli: sttCli });
-    const sttKey = `stt:${audioSrc.split("/").pop()}`;
     const clipName = audioSrc.split("/").pop();
+    const expectedVtt = join(options.outputDir, `${sttCacheKey}.vtt`);
     let vttPath = null;
-    const cachedVtt = checkCache(cache, sttKey, sttCacheKey);
-    if (cachedVtt) {
-      vttPath = cachedVtt;
+    if (existsSync2(expectedVtt)) {
+      vttPath = expectedVtt;
     } else {
       try {
         await generateSTT(audioSrc, options.outputDir, sttCli);
         const base = audioSrc.replace(/\.wav$/, "").replace(/\.mp3$/, "");
         const name = base.split("/").pop();
-        const candidate = join(options.outputDir, `${name}.vtt`);
-        if (existsSync2(candidate)) {
-          vttPath = candidate;
-          updateCache(cache, sttKey, sttCacheKey, vttPath);
-          cacheDirty = true;
+        const whisperVtt = join(options.outputDir, `${name}.vtt`);
+        if (existsSync2(whisperVtt)) {
+          renameSync(whisperVtt, expectedVtt);
+          vttPath = expectedVtt;
         }
       } catch {
         console.warn(`  \u26A0 STT failed for ${clipName}. Install whisper (pip install openai-whisper) or set root.stt.`);
@@ -11008,14 +10979,11 @@ async function resolveSubtitles(root, options) {
     clone.subtitle = { ...clone.subtitle ?? {}, src: mergedPath };
     console.log(`  \u2705 STT: subtitles ready (${cueIndex - 1} cues)`);
   }
-  if (cacheDirty) writeCacheManifest(options.outputDir, cache);
   return clone;
 }
 async function resolveGeneratedMedia(root, options) {
   const clone = JSON.parse(JSON.stringify(root));
   mkdirSync2(options.outputDir, { recursive: true });
-  const cache = readCacheManifest(options.outputDir);
-  let cacheDirty = false;
   const genNodes = [];
   walkDown(clone, (node2) => {
     if (node2.type !== "image" && node2.type !== "video") return;
@@ -11024,29 +10992,44 @@ async function resolveGeneratedMedia(root, options) {
     const id = node2.id ?? `${node2.type}-${genNodes.length}`;
     genNodes.push({ node: node2, id, type: node2.type, prompt: node2.prompt });
   });
+  const total = genNodes.length;
+  let done = 0;
+  let cacheHits = 0;
+  const startTime = Date.now();
+  function progressLine() {
+    const elapsed = (Date.now() - startTime) / 1e3;
+    const rate = done / Math.max(elapsed, 0.1);
+    const remaining = total - done;
+    const eta = rate > 0 ? Math.round(remaining / rate) : "?";
+    const etaStr = eta === "?" ? "" : `, ~${eta}s remaining`;
+    return `  ${done}/${total} generated (${cacheHits} cached)${etaStr}`;
+  }
+  if (total > 0) {
+    console.log(`  \u{1F3A8} Generating ${total} media item${total > 1 ? "s" : ""}...`);
+  }
   for (const { node: node2, id, type, prompt } of genNodes) {
+    done++;
     const ext = type === "image" ? "png" : "mp4";
     const cli = type === "image" ? clone.tti ?? options.ttiCli ?? DEFAULT_TTI_CLI : clone.ttv ?? options.ttvCli ?? DEFAULT_TTV_CLI;
     const seed = options.seed;
     const cacheKey = computeCacheKey({ prompt, cli, type, seed });
     const outputPath = join(options.outputDir, `${cacheKey}.${ext}`);
-    const cached = checkCache(cache, `gen:${cacheKey}`, cacheKey);
     const label = type === "image" ? "TTI" : "TTV";
     const labelText = firstWords(prompt, 8);
-    if (cached) {
-      node2.src = resolvePath(cached);
-      console.log(`  \u2713 ${label}: ${labelText} (cached)`);
+    if (existsSync2(outputPath)) {
+      node2.src = resolvePath(outputPath);
+      cacheHits++;
+      if (done % 5 === 0 || done === total) console.log(progressLine());
       continue;
     }
     try {
-      console.log(`  \u{1F50A} ${label}: ${labelText}...`);
+      console.log(`  \u{1F50A} ${label} (${done}/${total}): ${labelText}...`);
       const ttiCmd = clone.tti ?? options.ttiCli ?? DEFAULT_TTI_CLI;
       const result = type === "image" ? generateTTI(prompt, outputPath, cli, seed) : generateTTV(prompt, outputPath, cli, ttiCmd, seed);
       if (result) {
         node2.src = outputPath;
-        updateCache(cache, `gen:${cacheKey}`, cacheKey, outputPath);
-        cacheDirty = true;
-        console.log(`  \u2713 ${label}: ${labelText}`);
+        console.log(`  \u2713 ${label} (${done}/${total}): ${labelText}`);
+        if (done % 3 === 0 || done === total) console.log(progressLine());
       } else {
         const hint = cli.includes("echo") ? `No ${label} tool installed. The default CLI just echoes a message \u2014 set root.${type === "image" ? "tti" : "ttv"} to a real generation command.` : `The command ran but produced no output file. Check the CLI template or run the script manually to debug.`;
         console.error(`  \u26A0 ${label}: "${labelText}" produced no output. ${hint}`);
@@ -11056,7 +11039,11 @@ async function resolveGeneratedMedia(root, options) {
       console.error(`  \u2717 ${label}: "${labelText}" failed \u2014 ${err.message}. ${hint}`);
     }
   }
-  if (cacheDirty) writeCacheManifest(options.outputDir, cache);
+  if (total > 0) {
+    const elapsed = Math.round((Date.now() - startTime) / 1e3);
+    const mediaType = genNodes[0]?.type === "video" ? "TTV" : "TTI";
+    console.log(`  \u2705 ${mediaType} complete: ${done} items in ${elapsed}s (${cacheHits} cached)`);
+  }
   return clone;
 }
 async function resolveIncludes(root, options = {}) {
@@ -11142,6 +11129,30 @@ async function resolveIncludes(root, options = {}) {
 }
 async function resolveAll2(root, options = {}) {
   let result = root;
+  if (result.seed == null && options.seed == null && options.sourcePath) {
+    const autoSeed = parseInt(computeCacheKey(result).slice(0, 8), 16);
+    result = { ...result, seed: autoSeed };
+    try {
+      const raw = readFileSync(options.sourcePath, "utf-8");
+      if (options.sourcePath.endsWith(".md")) {
+        const lines = raw.split("\n");
+        const headerEnd = lines.findIndex((l) => l.trim() === "" || l.startsWith("##"));
+        const insertAt = headerEnd > 1 ? headerEnd : Math.min(1, lines.length);
+        lines.splice(insertAt, 0, `seed:${autoSeed}`);
+        writeFileSync(options.sourcePath, lines.join("\n"), "utf-8");
+      } else if (options.sourcePath.endsWith(".json")) {
+        const parsed = JSON.parse(raw);
+        const target = parsed.root || parsed;
+        target.seed = autoSeed;
+        writeFileSync(options.sourcePath, JSON.stringify(parsed, null, 2), "utf-8");
+      }
+      console.log(`  \u{1F331} Auto-seed: ${autoSeed} \u2192 ${options.sourcePath}`);
+    } catch (e) {
+      console.warn(`  \u26A0 Could not write seed to source file: ${e.message}`);
+    }
+  }
+  const contentSeed = result.seed ?? options.seed ?? 0;
+  result = { ...result, seed: contentSeed };
   result = await resolveIncludes(result, options);
   const { resolveAllTemplateVars: resolveAllTemplateVars2 } = await Promise.resolve().then(() => (init_compiler(), compiler_exports));
   result = resolveAllTemplateVars2(result, {
@@ -11151,13 +11162,12 @@ async function resolveAll2(root, options = {}) {
     variant: options.variants?.[0] ?? "video"
   });
   result = await resolveMediaSrcs(result, { baseDir: options.baseDir });
-  const generationSeed = result.seed ?? options.seed ?? Math.floor(Math.random() * 2147483647);
   if (options.mediaOutputDir) {
     result = await resolveGeneratedMedia(result, {
       outputDir: options.mediaOutputDir,
       ttiCli: options.ttiCli,
       ttvCli: options.ttvCli,
-      seed: generationSeed
+      seed: contentSeed
     });
   }
   result = await resolveMediaDurations(result, {
@@ -11201,6 +11211,7 @@ function isDescriptiveRoot(data) {
 }
 async function resolveAndCompile(data, options = {}) {
   const resolved = await resolveAll2(data, {
+    sourcePath: options.sourcePath,
     baseDir: options.baseDir,
     scriptOutputDir: options.scriptOutputDir,
     mediaOutputDir: options.mediaOutputDir,

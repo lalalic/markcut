@@ -45998,9 +45998,9 @@ function SubtitleOverlay({ subtitle }) {
       finish();
     };
   }, [subtitle.src]);
+  const cueGroups = React46.useMemo(() => cues ? groupConsecutiveCues(cues) : [], [cues]);
   if (!cues) return null;
   const boxCss = subtitle.style ? cssJS(subtitle.style) : {};
-  const cueGroups = React46.useMemo(() => groupConsecutiveCues(cues), [cues]);
   return /* @__PURE__ */ (0, import_jsx_runtime88.jsx)("div", { className: `${subtitle.type || "default"} subtitle-overlay`, style: { ...DEFAULT_BOX_STYLE, ...boxCss }, children: cueGroups.map((group, gi) => /* @__PURE__ */ (0, import_jsx_runtime88.jsx)(
     CueFrame,
     {

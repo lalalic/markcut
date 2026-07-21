@@ -42,6 +42,9 @@ export interface ResolveAndCompileOptions {
   /** Variant chain to apply to include nodes (e.g. ["zh", "tiktok"]).
    *  When set, included .md files are parsed with variant awareness. */
   variants?: string[];
+  /** Path to the source file (.md or .json). When set and root.seed is missing,
+   *  a deterministic seed is auto-generated and written back to the source file. */
+  sourcePath?: string;
 }
 
 /**
@@ -86,6 +89,7 @@ export async function resolveAndCompile(
 ): Promise<Root> {
   // 1. Async resolve: durations, TTS, STT, includes
   const resolved = await resolveAll(data, {
+    sourcePath: options.sourcePath,
     baseDir: options.baseDir,
     scriptOutputDir: options.scriptOutputDir,
     mediaOutputDir: options.mediaOutputDir,

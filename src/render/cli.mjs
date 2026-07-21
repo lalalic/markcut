@@ -317,6 +317,7 @@ edit=${DEFAULT_EDIT_CLI}`);
         const fileDir = dirname(filePath);
         const parsed = parseMarkdownVariants(raw);
         streamTree = await resolveWithVariants(parsed.base, {
+          sourcePath: filePath,
           baseDir: fileDir,
           scriptOutputDir: generatedDir(filePath, "tts"),
           mediaOutputDir: generatedDir(filePath, "media"),
@@ -330,6 +331,7 @@ edit=${DEFAULT_EDIT_CLI}`);
         if (isDescriptiveRoot(root)) {
           const fileDir = dirname(filePath);
           streamTree = await resolveAndCompile(root, {
+            sourcePath: filePath,
             baseDir: fileDir,
             scriptOutputDir: generatedDir(filePath, "tts"),
             mediaOutputDir: generatedDir(filePath, "media"),
@@ -518,6 +520,7 @@ function hasScript(root) {
 
     const baseDir = dirname(filePath);
     const baseOpts = {
+      sourcePath: filePath,
       baseDir,
       scriptOutputDir: args.scriptOutputDir || join(baseDir, "assets", "tts"),
       mediaOutputDir: args.mediaOutputDir || join(baseDir, "assets", "media"),

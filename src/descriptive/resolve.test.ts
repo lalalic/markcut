@@ -395,11 +395,10 @@ describe("resolveScripts — additional", () => {
 
   it("caches TTS output and skips second generateTTS call", async () => {
     let callCount = 0;
-    (generateTTS as any).mockImplementation(() => {
+    (generateTTS as any).mockImplementation((_script, audioPath) => {
       callCount++;
-      const p = join(tmpDir, `hook.wav`);
-      writeFileSync(p, "");
-      return p;
+      writeFileSync(audioPath, "");
+      return audioPath;
     });
 
     const root: DescriptiveRoot = {
@@ -412,7 +411,7 @@ describe("resolveScripts — additional", () => {
     await resolveScripts(root, { outputDir: tmpDir });
     expect(callCount).toBe(1);
 
-    // Second call — should hit cache
+    // Second call — filesystem cache: file named by hash already exists
     const result = await resolveScripts(root, { outputDir: tmpDir });
     expect(callCount).toBe(1);
     const scene = result.children[0] as any;
@@ -552,8 +551,9 @@ describe("resolveSubtitles — additional", () => {
   it("merges VTT from multiple audio clips with correct offsets", async () => {
     const a1 = join(tmpDir, "clip1.wav");
     const a2 = join(tmpDir, "clip2.wav");
-    writeFileSync(a1, "fake");
-    writeFileSync(a2, "fake");
+    // Different content ensures distinct audio hashes (avoid STT cache collision)
+    writeFileSync(a1, "clip1-content");
+    writeFileSync(a2, "clip2-content");
     (generateSTT as any)
       .mockImplementationOnce(async () => {
         writeFileSync(join(tmpDir, "clip1.vtt"), "WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nfirst\n");

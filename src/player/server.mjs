@@ -436,6 +436,7 @@ async function compileVariant(config, parsed, raw) {
     console.log(`  📝 Variant "${config.label}": resolving...`);
     const { resolveAll, compileDescriptiveRoot } = await import("./pipeline.mjs");
     const resolved = await resolveAll(descriptive, {
+      sourcePath: VIDEO_JSON,
       baseDir: dirname(VIDEO_JSON),
       scriptOutputDir: TTS_OUTPUT_DIR,
       mediaOutputDir: MEDIA_OUTPUT_DIR,
@@ -458,6 +459,7 @@ async function compileVariant(config, parsed, raw) {
 
       console.log(`  📝 Variant "${config.label}": resolving...`);
       compiled = await resolveAndCompile(descriptive, {
+        sourcePath: VIDEO_JSON,
         baseDir: dirname(VIDEO_JSON),
         scriptOutputDir: TTS_OUTPUT_DIR,
         mediaOutputDir: MEDIA_OUTPUT_DIR,
