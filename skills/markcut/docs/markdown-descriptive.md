@@ -291,21 +291,11 @@ Subtitles are configured at the root level as a VTT overlay. Set via `subtitle:`
 
 | Field | Required | Type | Notes |
 |---|---|---|---|
-| `src` | yes | string | VTT path/URL, inline VTT body, or plain text |
 | `type` | opt | string | caption animation: `Bounce`, `Fade`, `Typewriter`, `Colorful`, `Glowing`, `Neon`, `Zoom`. Default: plain static caption |
 | `fontSize` | opt | number \| string | default 56 (accepts CSS value like `"2em"` or number) |
 | `fontFamily` | opt | string | font family |
 | `fontStyle` | opt | string | `normal`, `italic`, `bold`, `bold italic` |
 | `style` | opt | string | inline CSS for the overlay container |
-
-> **HTML in cue text**: Cue text supports HTML tags with inline CSS, so you can style individual words:
-> ```vtt
-> 00:00:01.000 --> 00:00:03.000
-> Hello <span style="color:#ff6b6b">world</span>, welcome to <b>our show</b>!
-> ```
-> The engine renders cue text via `dangerouslySetInnerHTML`, making `<span>`, `<b>`, `<i>`, `<br>`, and inline `style` attributes all work.
-
-If `src` is plain text (no `-->` markers), it renders as a single caption for the full video duration. The `type` field maps to a `remotion-subtitle` animation component — omit for a plain static caption.
 
 ## Key Reference (use these names)
 

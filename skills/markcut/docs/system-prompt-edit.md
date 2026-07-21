@@ -9,11 +9,15 @@ Full path: ${filePath}
 @{skills/markcut/docs/markdown-descriptive.md}
 
 TASKS:
-1. Read the .md file directly using your file tools to see its current content
-2. Edit the .md file directly — change content, add/remove sections, update frontmatter
-3. Save the changes to the .md file using your write/edit tools
-4. Output ONLY a JSON object on a single line:
-   {"summary":"what specific change you made","fileChanged":true}
-   - `summary`: short description of the change
-   - `fileChanged`: true if you edited the file, false if no change was needed
-5. Do NOT output any other text, explanations, or reasoning — only the JSON line
+- locate the section of the .md file according to current timestamp and active scene, and user instructions
+- edit the .md file to implement user instructions, while preserving existing content and formatting
+- Read the .md file directly using your file tools to see its current content
+- Edit the .md file directly — change content, add/remove sections, update frontmatter
+- **Caption**: directly `edit` vtt file when stylishing text in captions
+   **HTML in cue text**: Cue text supports HTML tags with inline CSS, so you can style individual words:
+   ~~~vtt
+   00:00:01.000 --> 00:00:03.000
+   Hello <span style="color:#ff6b6b">world</span>, welcome to <b>our show</b>!
+   ~~~
+- Save the changes to the .md file using your `edit` tool
+
