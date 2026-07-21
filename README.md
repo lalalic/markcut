@@ -91,10 +91,7 @@ Inline components can be defined entirely in the imports block using `export fun
 
 | Document | What it covers |
 |---|---|
-| [docs/json-descriptive.md](docs/json-descriptive.md) | Full JSON descriptive schema reference |
 | [docs/markdown-strict-descriptive.md](docs/markdown-strict-descriptive.md) | Markdown descriptive syntax reference |
-| [docs/label-mode.md](docs/label-mode.md) | Label mode player and workflow |
-| [docs/edit-mode.md](docs/edit-mode.md) | Live edit mode with SSE reload |
 
 
 ## Variants

@@ -7,9 +7,8 @@
  *                                        (TTS/STT/durations)
  */
 import { execSync, spawn } from "node:child_process";
-import { readFileSync, writeFileSync, mkdirSync, existsSync, copyFileSync } from "node:fs";
-import { createHash } from "node:crypto";
-import { resolve, dirname, join, extname } from "node:path";
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
+import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   DEFAULT_TTS_CLI, DEFAULT_STT_CLI, DEFAULT_TTI_CLI, DEFAULT_TTV_CLI,
@@ -96,62 +95,10 @@ Commands:
  * Use --verbose to see every frame line (original behavior).
  */
 
-/**
- * Resolve a potentially relative source path against baseDir, skipping
- * absolute paths, URLs, and data URIs.
- */
-function resolveAssetPath(src, baseDir) {
-  if (!src || typeof src !== "string") return null;
-  // Already absolute on disk
-  if (src.startsWith("/")) return src;
-  // URL or data URI — can't stage locally
-  if (/^(https?:|data:|blob:)/.test(src)) return null;
-  // Relative path: resolve against the input file's directory
-  const abs = resolve(baseDir, src);
-  if (existsSync(abs)) return abs;
-  return null;
-}
-
-/**
- * Stage all local src files (absolute and relative) into
- * ROOT/public/.render-assets/ so `npx remotion render` (publicDir = ROOT/public)
- * can serve them. Relative paths are resolved against `baseDir` (the input
- * file's directory). The preview server handles these paths via multi-root
- * serving; the render CLI needs them staged into the one public dir Remotion
- * knows about.
- */
-function stageLocalAssets(tree, baseDir) {
-  const assetsDir = join(ROOT, "public", ".render-assets");
-  const seen = new Map();
-  const walk = (node) => {
-    if (!node || typeof node !== "object") return;
-    if (typeof node.src === "string") {
-      const absPath = resolveAssetPath(node.src, baseDir);
-      if (absPath) {
-        let staged = seen.get(absPath);
-        if (!staged) {
-          const name = createHash("md5").update(absPath).digest("hex").slice(0, 12) + extname(absPath);
-          mkdirSync(assetsDir, { recursive: true });
-          copyFileSync(absPath, join(assetsDir, name));
-          staged = `.render-assets/${name}`;
-          seen.set(absPath, staged);
-        }
-        node.src = staged;
-      }
-    }
-    for (const value of Object.values(node)) {
-      if (value && typeof value === "object") walk(value);
-    }
-  };
-  walk(tree);
-  return tree;
-}
-
-function renderOne(streamTree, outputPath, verbose, baseDir) {
-  const adapted = stageLocalAssets(JSON.parse(JSON.stringify(streamTree)), baseDir);
+function renderOne(streamTree, outputPath, verbose) {
   const tmpProps = join(ROOT, ".tmp", "render-stream.json");
   mkdirSync(dirname(tmpProps), { recursive: true });
-  writeFileSync(tmpProps, JSON.stringify({ root: adapted }));
+  writeFileSync(tmpProps, JSON.stringify({ root: streamTree }));
 
   mkdirSync(dirname(outputPath), { recursive: true });
 
@@ -409,19 +356,18 @@ edit=${DEFAULT_EDIT_CLI}`);
         const { bundleFromEntries } = await import("../player/bundler.mjs");
         const entries = parseImportsBlock(rawSource);
         const extraSpecs = extractDependencySpecs(rawSource);
-        const bundleDir = join(ROOT, "public", ".render-assets");
+        const bundleDir = join(ROOT, ".tmp", "component-bundle");
         mkdirSync(bundleDir, { recursive: true });
         const bundle = await bundleFromEntries(entries, extraSpecs, rawSource, bundleDir);
         if (bundle.url) {
-          streamTree.imports = ".render-assets/" + bundle.url.split("/").pop();
+          streamTree.imports = join(bundleDir, bundle.url.split("/").pop());
           console.log(`  \u2705 components \u2192 ${bundle.exports.join(", ")}`);
         }
       }
     }
 
     const output = args.output ? resolve(args.output) : join(ROOT, "out", "video.mp4");
-    const fileDir = dirname(resolve(args.file));
-    await renderOne(streamTree, output, args.verbose, fileDir);
+    await renderOne(streamTree, output, args.verbose);
 
     console.log("\n✅ Render complete.");
     process.exit(0);

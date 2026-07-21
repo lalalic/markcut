@@ -43,7 +43,7 @@ This section defines the markcut Markdown Descriptive grammar. An agent should r
 |---|---|---|---|
 | H1 | `# video` | **Root** — video canvas definition | Exactly one `# video` required. Everything else is nested inside this section. |
 | H1 | `# zh`, `# youtube`, `# portrait` etc. | **Variant** — override section for alternate versions | Any `# <name>` other than `video`. Only contains override configs + variant-prefixed overrides on base nodes. |
-| H2 | `## <name>` | **Scene** — top-level scene container | `name` = single token (no spaces). Optional `title` via ` - ` separator: `## Chapter1 - The Beginning` → name=`Chapter1`, title=`The Beginning`. |
+| H2 | `## <name>` | **Scene** — top-level scene container | `name` = single word (no spaces).|
 | H3 | `### <name>` | **Nested scene** — sub-scene inside parent | Same rules as H2. Creates nesting: parent scene's children array includes this as a sub-container. |
 | H4+ | `#### <name>` | **Deeply nested** — further nesting | Works identically; depth reflects nesting level. |
 
@@ -258,8 +258,14 @@ width:1080 height:1920 fps:30 layout:series
 - script "Hello world"
 ```
 
-### 13. verify
-`npx @lalalic/markcut verify book.md` to verify the markdown document is valid and can be rendered. It will check for missing required fields, invalid values, and other common issues.
+### 13. `src` Path Resolution — Context Root
+all src paths are resolved relative to the markdown file's location. For example, if your markdown file is at `./videos/course.md`, then `src:./assets/bg.jpg` resolves to `./videos/assets/bg.jpg`. Absolute paths (starting with `/`) are resolved relative to the project root.
+
+
+### 14. verify
+- all assets path are resolved relative to the markdown file's location. 
+- `npx @lalalic/markcut verify book.md` to verify the markdown document is valid and can be rendered. It will check for missing required fields, invalid values, and other common issues.
+
 
 ## Template Variables
 
