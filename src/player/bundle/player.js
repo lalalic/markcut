@@ -60558,6 +60558,7 @@ function PlayerApp() {
   const fps = data2?.fps ?? 30;
   const durationInSeconds = data2 ? getDurationInSeconds(data2, true) || 5 : 5;
   const durationInFrames = Math.max(1, Math.ceil(durationInSeconds * fps));
+  const inputProps = React55.useMemo(() => ({ root: data2, compose: {} }), [data2]);
   const loadData = React55.useCallback((initial = false) => {
     if (initial) setReady(false);
     const variant = window.VARIANT || "default";
@@ -60793,7 +60794,7 @@ function PlayerApp() {
           {
             ref: playerRef,
             component: MarkCut,
-            inputProps: { root: data2, compose: {} },
+            inputProps,
             durationInFrames,
             fps,
             compositionWidth: width,

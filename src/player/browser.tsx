@@ -165,6 +165,11 @@ function PlayerApp() {
   const durationInSeconds = data ? (getDurationInSeconds(data, true) || 5) : 5;
   const durationInFrames = Math.max(1, Math.ceil(durationInSeconds * fps));
 
+  // Memoize inputProps to avoid Remotion Player composition restart on every render.
+  // Without memoization, inputProps creates a new object reference on each render,
+  // causing ~10 composition restarts/sec (audio nodes remount → audio jumps back).
+  const inputProps = React.useMemo(() => ({ root: data, compose: {} }), [data]);
+
   // ── Load data (does NOT set ready=false to avoid player unmount) ─────
   const loadData = React.useCallback((initial = false) => {
     if (initial) setReady(false);
@@ -446,7 +451,7 @@ function PlayerApp() {
         <Player
           ref={playerRef}
           component={MarkCut}
-          inputProps={{ root: data, compose: {} }}
+          inputProps={inputProps}
           durationInFrames={durationInFrames}
           fps={fps}
           compositionWidth={width}
