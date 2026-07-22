@@ -45,7 +45,7 @@ npx @lalalic/markcut --show-clis # get command specific information
 npx @lalalic/markcut preview <file> # assemble and preview the video with a local server, and chat to edit the video and auto refresh
 npx @lalalic/markcut render <file> # render the video to mp4
 npx @lalalic/markcut vision <folder> # vision understanding medias in folder
-npx @lalalic/markcut vision <folder> --label # full pipeline vision understanding medias in folder, and provide ui to label the medias with text, time ranges
+npx @lalalic/markcut vision <folder> --label # an extra step to provide UI to label the medias with text, time ranges
 
 ```
 

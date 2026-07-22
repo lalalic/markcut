@@ -944,10 +944,10 @@ export async function resolveAll(
     try {
       const raw = readFileSync(options.sourcePath, "utf-8");
       if (options.sourcePath.endsWith(".md")) {
-        // Insert seed: <N> after the first line (# video) or after existing header
+        // Insert seed: <N> right after the `# video` line, before any config.
         const lines = raw.split("\n");
-        const headerEnd = lines.findIndex((l) => l.trim() === "" || l.startsWith("##"));
-        const insertAt = headerEnd > 1 ? headerEnd : Math.min(1, lines.length);
+        const videoIdx = lines.findIndex((l) => l.trim().startsWith("# video"));
+        const insertAt = videoIdx >= 0 ? videoIdx + 1 : 1;
         lines.splice(insertAt, 0, `seed:${autoSeed}`);
         writeFileSync(options.sourcePath, lines.join("\n"), "utf-8");
       } else if (options.sourcePath.endsWith(".json")) {

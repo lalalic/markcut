@@ -72,11 +72,11 @@ Commands:
     --output <path>                     Output path (default: out/video.mp4)
     --verbose                           Show full per-frame progress (default: compact)
 
-  vision <folder>                      Extract metadata into metadata.json
-    --label                            Full pipeline: preview → label → normalize → percept → segments
+  vision <folder>                      Full pipeline: extract → normalize → percept → segments
+    --label                            Add interactive labeling step before AI pipeline
+    --instruct "text"                   Background context about people/places (injected into prompts)
     --prompts-file <path>              Path to prompts markdown file (default: vision_prompts.md)
     --vtt-sample-interval <n>          Sample one video frame every N seconds (default: 5)
-    --context "text"                   Background context about people/places (injected into prompts)
     --skip-stt                         Skip speech-to-text for videos
     --dry-run                          Show what would be processed without running AI
     --show-prompts                     Print the prompts file and exit

@@ -648,9 +648,12 @@ function buildPreviewTree(folder, metadata) {
   }
   entries.sort((a, b) => a.created.localeCompare(b.created));
 
+  // Random seed for TTI/TTV generation.
+  const seed = Math.floor(Math.random() * 0xFFFFFFFF);
+
   return {
     id: "root", type: "root", width: 1080, height: 1920, fps: 30,
-    isSeries: true, transition: "fade", transitionTime: 0.5,
+    seed, isSeries: true, transition: "fade", transitionTime: 0.5,
     children: entries.map((e) => ({
       id: e.name, type: "folder", isSeries: false,
       children: [{
@@ -1093,14 +1096,14 @@ function printUsage() {
 markcut vision — Analyze images and videos in a folder for video generation
 
 Usage:
-  markcut vision <folder>                Extract metadata into metadata.json
-  markcut vision <folder> --label        Full pipeline: preview → label → normalize → percept → segments
+  markcut vision <folder>                Full pipeline: extract → normalize → percept → segments
+  markcut vision <folder> --label        Same as default, plus interactive labeling step before AI
 
 Options:
-  --label              Open label preview → then continue with full AI pipeline
+  --label              Open interactive labeling preview before running AI pipeline
+  --instruct "text"    Background context about people/places (injected into prompts)
   --prompts-file <path> Path to prompts markdown file (default: vision_prompts.md)
   --vtt-sample-interval <n> Sample one video frame every N seconds (default: 5)
-  --context "text"     Background context about people/places (injected into prompts)
   --pick <files>       Comma-separated filenames to process
   --skip-stt           Skip speech-to-text for videos
   --dry-run            Show what would be processed without running AI
@@ -1134,9 +1137,8 @@ export async function main(args) {
 
     else if (flag === "--prompts-file" && args[i]) { promptsFile = resolve(args[i++]); }
     else if (flag === "--vtt-sample-interval" && args[i]) { vttSampleInterval = parseInt(args[i++], 10) || DEFAULT_VTT_SAMPLE_INTERVAL; }
-    else if (flag === "--context" && args[i]) { context = args[i++]; }
+    else if (flag === "--instruct" && args[i]) { context = args[i++]; }
     else if (flag === "--show-prompts") { console.log(readFileSync(promptsFile, "utf-8")); return; }
-
     else if (flag === "--skip-stt") { skipSTT = true; }
     else if (flag === "--pick" && args[i]) { for (const f of args[i++].split(",")) pickSet.add(f.trim()); }
     else if (flag === "--dry-run") { dryRun = true; }
@@ -1151,11 +1153,44 @@ export async function main(args) {
   for (const [name, value] of promptOverrides) prompts.set(name, value);
 
   if (doLabel) {
+    // Full pipeline with interactive labeling
     await runFullPipeline(folder, prompts, context, pickSet, vttSampleInterval, skipSTT, dryRun);
   } else {
-    await runMetadataMode(folder, pickSet, dryRun);
+    // Default: full pipeline without labeling (extract → normalize → percept → segments)
+    const metadataPath = join(folder, "metadata.json");
+    if (!existsSync(metadataPath)) {
+      emitInfo(`\n📋 Extracting metadata...`);
+      await runMetadataMode(folder, pickSet, false);
+    }
+    if (!existsSync(metadataPath) || Object.keys(JSON.parse(readFileSync(metadataPath, "utf-8"))).length === 0) {
+      emitError("No media files found — nothing to process.");
+      return;
+    }
+    emitInfo(`\n🔧 Running full pipeline (normalize → perceive)...`);
+    await runNormalizeAndPercept(folder, metadataPath, prompts, context, pickSet, vttSampleInterval, skipSTT);
   }
 }
+
+// ═════════════════════════════════════════════════════════════════════════
+// Exported for testing
+// ═════════════════════════════════════════════════════════════════════════
+
+export {
+  scanMedia,
+  buildPreviewTree,
+  mergeLabelsIntoMetadata,
+  buildMergedCues,
+  parseVTT,
+  loadPrompts,
+  substituteTemplate,
+  shQuote,
+  normalizePerception,
+  extractRawText,
+  stripThinkBlocks,
+  looseJSONParse,
+  formatTime,
+  timeToSeconds,
+};
 
 // Direct execution
 if (process.argv[1] && process.argv[1].includes("src/vision/cli.mjs")) {

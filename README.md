@@ -215,6 +215,95 @@ src/
 ```bash
 npm run render      # render a JSON stream tree to MP4
 npm run preview     # open Remotion Studio
+npm run vision      # analyze images/videos in a folder (metadata + AI perception)
 npm run typecheck   # TypeScript type check
 npm test            # run unit + integration tests
 ```
+
+## Vision Pipeline
+
+```bash
+# Full pipeline: extract metadata → normalize → AI perception (images & videos)
+npx markcut vision <folder>
+
+# With interactive labeling step before AI
+npx markcut vision <folder> --label
+
+# Provide context about people/places
+npx markcut vision <folder> --instruct "the girl is Maggie, the man in red is me"
+```
+
+```mermaid
+flowchart LR
+    subgraph Input[Input]
+        A[Media Folder<br/>images + videos]
+    end
+
+    subgraph Metadata["1. Metadata Extraction"]
+        B[exiftool / ffprobe]
+        C[metadata.json<br/>width, height, created,<br/>GPS location, duration]
+    end
+
+    subgraph Normalize["2. Normalization"]
+        D[ffmpeg resize<br/>images → 384px<br/>videos → 360p]
+    end
+
+    subgraph Label["Optional: Labeling"]
+        E[Build preview tree<br/>with seed]
+        F[Label preview server<br/>user annotates scenes]
+        G[Merge labels → userHints<br/>into metadata.json]
+    end
+
+    subgraph Image["3. Image Perception"]
+        H[ITT: image-to-text<br/>mlx-vlm model]
+        I[Perception saved:<br/>description]
+    end
+
+    subgraph Video["4. Video Understanding"]
+        J[VTT: video-to-text<br/>mlx-vlm model]
+        K[STT: speech-to-text<br/>whisper]
+        L[VTT→ overall desc]
+        M[STT → VTT subtitles]
+        N[Build merged segment<br/>boundaries]
+        O[LLM merges boundaries<br/>into final segments]
+        P[Per-segment vision<br/>clip extraction + ITT]
+    end
+
+    subgraph Output[Output]
+        Q[metadata.json<br/>with perception desc,<br/>subtitles & segments]
+    end
+
+    A --> B --> C --> D
+    D --> Image
+    D --> Video
+    C -.->|--label| E --> F --> G --> D
+    Image --> H --> I --> Q
+    Video --> J --> L
+    Video --> K --> M
+    L --> N
+    M --> N
+    N --> O --> P --> Q
+
+    style Input fill:#1a1a2e,stroke:#16213e,color:#fff
+    style Metadata fill:#0f3460,stroke:#16213e,color:#fff
+    style Normalize fill:#533483,stroke:#16213e,color:#fff
+    style Label fill:#e94560,stroke:#16213e,color:#fff
+    style Image fill:#0f3460,stroke:#16213e,color:#fff
+    style Video fill:#0f3460,stroke:#16213e,color:#fff
+    style Output fill:#1a1a2e,stroke:#16213e,color:#fff
+```
+
+### Vision CLI Options
+
+| Option | Description |
+|---|---|
+| `--label` | Add interactive labeling step before AI pipeline (opens browser preview) |
+| `--instruct "text"` | Background context about people/places (injected into AI prompts) |
+| `--prompts-file <path>` | Custom prompts markdown file (default: `src/vision/vision_prompts.md`) |
+| `--vtt-sample-interval <n>` | Sample one video frame every N seconds for VTT (default: 5) |
+| `--pick <files>` | Comma-separated filenames to process (skip others) |
+| `--skip-stt` | Skip speech-to-text for videos |
+| `--dry-run` | Show what would be processed without running AI |
+| `--show-prompts` | Print the prompts template file and exit |
+
+## Architecture

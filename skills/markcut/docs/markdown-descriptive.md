@@ -16,7 +16,7 @@ This section defines the markcut Markdown Descriptive grammar. An agent should r
 │   ───...───
 ├─ # video                    ← Root node (REQUIRED, heading level 1)
 │   width:1080 height:1920 fps:30 layout:series
-│   subtitle:{src:"captions.vtt",type:"Typewriter"}
+│   subtitle:{type:"Typewriter"}
 │   ~~~css stylesheet           ← root.stylesheet
 │   .bg { background: #000; }
 │   ~~~
@@ -223,7 +223,7 @@ The line after `# video` holds canvas-level config as space-separated `key:value
 ```markdown
 # video
 width:1920 height:1080 fps:30 layout:series transition:fade transitionTime:1.2
-subtitle:{src:"captions.vtt",type:"Typewriter",fontSize:48}
+subtitle:{type:"Typewriter",fontSize:48}
 ```
 
 Supported root keys: `width`, `height`, `fps`, `layout`, `tts`, `stt`, `tti`, `ttv`, `transition`, `transitionTime`, `instruction`, `metadata`, `stylesheet`, `subtitle`, `voices`.
