@@ -21,6 +21,28 @@ const __dirname = dirname(__filename);
 const ROOT = resolve(__dirname, "../..");
 
 /**
+ * Convert absolute paths under `baseDir` (the source .md folder) into paths
+ * relative to it, so the render's staticFile() + --public-dir can serve them.
+ * Mirrors the preview server's makePathsRelative — keeping both surfaces on the
+ * same project-relative path scheme (e.g. `.markcut/generated/tts/x.mp3`).
+ */
+function relativizePaths(obj, baseDir) {
+  if (!obj || typeof obj !== "object") return obj;
+  if (Array.isArray(obj)) return obj.map((v) => relativizePaths(v, baseDir));
+  const out = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (typeof v === "string" && v.startsWith(baseDir + "/")) {
+      out[k] = v.slice(baseDir.length + 1);
+    } else if (v && typeof v === "object") {
+      out[k] = relativizePaths(v, baseDir);
+    } else {
+      out[k] = v;
+    }
+  }
+  return out;
+}
+
+/**
  * How many "Rendered X/Y" lines to skip before printing one.
  * E.g. 50 means print every 50th frame — for 1860 frames that's ~37 lines.
  */
@@ -95,7 +117,7 @@ Commands:
  * Use --verbose to see every frame line (original behavior).
  */
 
-function renderOne(streamTree, outputPath, verbose) {
+function renderOne(streamTree, outputPath, verbose, publicDir) {
   const tmpProps = join(ROOT, ".tmp", "render-stream.json");
   mkdirSync(dirname(tmpProps), { recursive: true });
   writeFileSync(tmpProps, JSON.stringify({ root: streamTree }));
@@ -111,7 +133,13 @@ console.log(`\n▶ Rendering → ${outputPath}`);
     if (args.dev) {
       spawnOpts.env = { ...process.env, NODE_ENV: "development" };
     }
-    const proc = spawn("npx", ["remotion", "render", "Root", outputPath, "--props", tmpProps, "--config", "remotion.config.ts"], spawnOpts);
+    // Point Remotion's public dir at the source .md folder so staticFile()
+    // resolves every project-relative src (.markcut/generated/..., assets/...)
+    // — including fetch()-based assets like subtitles and includes — exactly
+    // like the preview server serves them.
+    const remotionArgs = ["remotion", "render", "Root", outputPath, "--props", tmpProps, "--config", "remotion.config.ts"];
+    if (publicDir) remotionArgs.push(`--public-dir=${publicDir}`);
+    const proc = spawn("npx", remotionArgs, spawnOpts);
 
     let lastLoggedFrame = 0;
     let totalFrames = 0;
@@ -277,14 +305,15 @@ edit=${DEFAULT_EDIT_CLI}`);
         return join(dirname(filePath), ".markcut", "generated", sub);
       }
 
-      // Helper: per-variant output directory for subtitles and variant-specific artifacts
+      // Helper: per-variant output directory for subtitles and variant-specific
+      // artifacts. Mirrors the preview server layout exactly:
+      //   .markcut/<basename>/<label>/   (label is "default" when no --variant)
+      // so preview and render write subtitles to the same place.
       function variantDir(filePath) {
         const base = dirname(filePath);
         const basename = filePath.split("/").pop().replace(/\.[^.]+$/, "");
-        const variantLabel = args.variant && args.variant.length > 0 ? args.variant.join("-") : "";
-        return variantLabel
-          ? join(base, ".markcut", basename, variantLabel)
-          : join(base, ".markcut", basename);
+        const label = args.variant && args.variant.length > 0 ? args.variant.join("-") : "default";
+        return join(base, ".markcut", basename, label);
       }
 
       // Helper: resolve variants from the parsed descriptive root
@@ -358,18 +387,27 @@ edit=${DEFAULT_EDIT_CLI}`);
         const { bundleFromEntries } = await import("../player/bundler.mjs");
         const entries = parseImportsBlock(rawSource);
         const extraSpecs = extractDependencySpecs(rawSource);
-        const bundleDir = join(ROOT, ".tmp", "component-bundle");
+        // Shared, content-addressed component bundle cache — same location the
+        // preview server uses (.markcut/generated/components/) so preview and
+        // render reuse identical bundles instead of re-bundling.
+        const bundleDir = join(dirname(resolve(args.file)), ".markcut", "generated", "components");
         mkdirSync(bundleDir, { recursive: true });
         const bundle = await bundleFromEntries(entries, extraSpecs, rawSource, bundleDir);
         if (bundle.url) {
-          streamTree.imports = join(bundleDir, bundle.url.split("/").pop());
+          streamTree.imports = bundle.url;
           console.log(`  \u2705 components \u2192 ${bundle.exports.join(", ")}`);
         }
       }
     }
 
+    // Make every project-local src relative to the .md folder, then serve that
+    // folder as Remotion's public dir so staticFile() resolves them (mirrors the
+    // preview server). Absolute paths outside the project are left untouched.
+    const publicDir = dirname(resolve(args.file));
+    streamTree = relativizePaths(streamTree, publicDir);
+
     const output = args.output ? resolve(args.output) : join(ROOT, "out", "video.mp4");
-    await renderOne(streamTree, output, args.verbose);
+    await renderOne(streamTree, output, args.verbose, publicDir);
 
     console.log("\n✅ Render complete.");
     process.exit(0);
