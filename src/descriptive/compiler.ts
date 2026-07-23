@@ -1231,6 +1231,8 @@ export function compileDescriptiveRoot(input: DescriptiveRoot, options: CompileO
   registry.add("StoryboardSlot");
   registry.add("StoryboardCaption");
   registry.add("StoryboardInfo");
+  registry.add("Markdown");
+  registry.add("Mermaid");
   warnUnregisteredComponents(input, registry);
 
   ensureUniqueIds(input.children, "root");

@@ -138,6 +138,8 @@ All types share base fields from `BaseShape`: `id`, `name`, `title`, `descriptio
 | `video` | Video clip | `src`, `volume`, `playbackRate` |
 | `audio` | Soundtrack/SFX | `src`, `volume`, `foreground` (ducks parent) |
 | `subtitle` | Text overlay | `src` (text/VTT) or `cues[]`, `fontSize`, `style` |
+| `component` | Built-in `<Markdown>` | Renders markdown with GFM. Props: `source`/`children`, `plugins`, `components` |
+| `component` | Built-in `<Mermaid>` | Renders Mermaid diagrams as inline SVG. Props: `source`/`children`, `theme` |
 | `component` | React component | `componentName`, `props`, `src` (remote ESM) |
 | `effect` | CSS animation wrapper | `animation`, `customKeyframes`, `children[]` |
 | `rhythm` | Beat-synced loop | `src`, `spots[]`, `children[]` |

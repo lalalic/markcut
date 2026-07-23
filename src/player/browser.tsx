@@ -15,6 +15,7 @@ import * as Remotion from "remotion";
 import { Player } from "@remotion/player";
 import { MarkCut, getDurationInSeconds } from "../entry";
 import { HeaderBar, EditControls, LabelControls, SceneThumbnails, VariantBar } from "./components/index";
+import * as MarkcutComponents from "../components/index";
 
 /**
  * Register all player-bundled packages on a global registry so the import map
@@ -32,6 +33,7 @@ if (typeof window !== "undefined") {
     "react-dom": ReactDOM,
     "remotion": Remotion,
     "@remotion/player": { Player },
+    "@lalalic/markcut": MarkcutComponents,
   };
 
   // Stub for node:module — some component deps (e.g. @remotion/tailwind-v4)

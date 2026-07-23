@@ -60,7 +60,7 @@ npx @lalalic/markcut preview <file> --storyboard # fast structure preview: repla
 npx @lalalic/markcut render <file> # render the video to mp4
 npx @lalalic/markcut vision <folder> # vision understanding medias in folder
 npx @lalalic/markcut vision <folder> --label # an extra step to provide UI to label the medias with text, time ranges
-  
+
 ```
 
 ---
@@ -82,13 +82,48 @@ some common issues (photo or video can't be displayed, audio missing), take belo
 | Markdown descriptive format (primary authoring format) | [docs/markdown-descriptive.md](docs/markdown-descriptive.md) |
 
 
-## common used components
-- `react-markdown` — render markdown content, use plugins to extend functionality
-  - `remark-gfm` — support GitHub Flavored Markdown (tables, strikethrough, task lists)
-  - `remark-toc` — generate table of contents
-  - `remark-math` — support math formulas
-  - `rehype-katex` — render math formulas with KaTeX
+## Built-in Components (no imports needed)
 
+These components are available directly in `jsx:".."` fields or importable from the `~~~js imports` block via `@lalalic/markcut/components`:
+
+### `<Markdown />` — render markdown content
+```md
+- component jsx:"<Markdown source='# Hello\n\n**bold** text.' />"
+```
+- Uses `react-markdown` + `remark-gfm` (tables, strikethrough, task lists)
+- Supports `plugins` and `components` props: define custom renderers in imports block and pass them in
+- ` ```mermaid ` code fences inside markdown are automatically rendered as Mermaid diagrams
+- Importable: `import {Markdown} from "@lalalic/markcut/components"`
+
+### `<Mermaid />` — render Mermaid diagrams as SVG
+```md
+- component jsx:"<Mermaid source='graph TD; A-->B; A-->C; B-->D;' />"
+```
+- Theme prop: `theme="default" | "dark" | "forest" | "neutral"` (default: `dark`)
+- Uses `delayRender`/`continueRender` for async rendering — diagram is ready before Remotion captures the frame
+- Errors shown inline in the output
+- Importable: `import {Mermaid} from "@lalalic/markcut/components"`
+
+### Wrapping built-ins in custom components
+```js
+import {Markdown, Mermaid} from "@lalalic/markcut/components"
+
+export function SuperMarkdown({ source }) {
+  return (
+    <Markdown
+      source={source}
+      components={{
+        li: ({children}) => <li style={{color:'#ffd700'}}>{children}</li>,
+      }}
+    />
+  )
+}
+```
+
+## Common npm packages (used via imports block)
+- `react-markdown` + `remark-gfm` — already bundled as built-in `<Markdown />` above
+- `remark-toc` — generate table of contents
+- `remark-math` + `rehype-katex` — render math formulas with KaTeX
 - `@remotion/shapes` — render shapes like arrows, circles, rectangles, etc
 - `@remotion/starburst` — render starburst animations
 

@@ -44,6 +44,8 @@ storyboard.md  ──[parse]──▶  DescriptiveRoot  ──[compile]──▶
 | **TTS narration** | `script` field → edge-tts CLI → WAV audio. Configurable engine (mlx-audio, custom) |
 | **STT subtitles** | TTS audio → whisper → VTT → root subtitle overlay with animated caption types (typewriter, fade, bounce, etc.) |
 | **Tween animation** | `tween(from, to)` function calls in JSX for frame-accurate numeric animation |
+| **Built-in Markdown** | `<Markdown source="..." />` renders markdown with GFM, custom plugins, and component overrides. No imports needed |
+| **Built-in Mermaid** | `<Mermaid source="..." theme="dark" />` renders Mermaid diagrams as inline SVG. No imports needed |
 | **Styling** | Inline `style` strings on any node for CSS. JSX components use inline React styles |
 | **Live edit** | `--edit` watches the input file, re-runs pipeline, auto-reloads player |
 | **Storyboard** | `--storyboard` fast structure preview: replaces TTI/TTV prompts with placeholder components, skips slow generation. Implies `--edit` |

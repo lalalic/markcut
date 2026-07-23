@@ -108,6 +108,8 @@ function getSharedExternals() {
     "remotion",
     // Commonly used @remotion/* sub-packages
     "@remotion/player",
+    // Host package — built-in components importable from imports block
+    "@lalalic/markcut",
   ];
 }
 

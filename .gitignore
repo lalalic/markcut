@@ -13,3 +13,4 @@ tests/fixtures/templates/assets/
 .env
 *.tgz
 public/.render-assets/
+.github/user-steer.md

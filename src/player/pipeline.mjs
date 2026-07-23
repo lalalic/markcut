@@ -741,6 +741,8 @@ function compileDescriptiveRoot(input, options = {}) {
   registry.add("StoryboardSlot");
   registry.add("StoryboardCaption");
   registry.add("StoryboardInfo");
+  registry.add("Markdown");
+  registry.add("Mermaid");
   warnUnregisteredComponents(input, registry);
   ensureUniqueIds(input.children, "root");
   const children = compileChildren(input.children, ctx, rootKind);

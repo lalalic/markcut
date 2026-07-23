@@ -17,6 +17,7 @@
 import * as React from "react";
 import * as ReactDOM from "react-dom";
 import * as Remotion from "remotion";
+import * as MarkcutComponents from "../components/index";
 
 export function ensureSharedImportMap(): void {
   if (typeof document === "undefined") return;
@@ -27,6 +28,7 @@ export function ensureSharedImportMap(): void {
   g.__remotionShared["react"] ??= React;
   g.__remotionShared["react-dom"] ??= ReactDOM;
   g.__remotionShared["remotion"] ??= Remotion;
+  g.__remotionShared["@lalalic/markcut"] ??= MarkcutComponents;
 
   // Stub for node:* imports that some component deps reference at module
   // level for build-time helpers never called during rendering.

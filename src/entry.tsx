@@ -8,6 +8,7 @@ import { SubtitleOverlay } from "./types/Subtitle";
 import { StoryboardSlot } from "./components/StoryboardSlot";
 import { StoryboardCaption } from "./components/StoryboardCaption";
 import { StoryboardInfo } from "./components/StoryboardInfo";
+import { Markdown, Mermaid } from "./components/index";
 import { getDurationInSeconds } from "./utils/index";
 import { root as rootSchema, type Root } from "./schema/index";
 import {
@@ -48,6 +49,8 @@ const BUILTIN_COMPONENTS: Record<string, React.ComponentType<any>> = {
   StoryboardSlot,
   StoryboardCaption,
   StoryboardInfo,
+  Markdown,
+  Mermaid,
 };
 
 /**
