@@ -65,8 +65,10 @@ Commands:
 
   preview <file.json|.md>               Open player with live preview
     --label                           Open label input overlay
-    --storyboard                      Fast structure preview: show TTI/TTV prompts as
-                                      placeholder components (skips slow generation).
+    --storyboard                      Fast structure preview: replaces TTI/TTV prompt
+                                    nodes with <StoryboardSlot> placeholders and
+                                    script nodes with <StoryboardCaption> overlays.
+                                    Skips slow generation (TTI/TTV/STT).
                                       Implies --edit so you can reshape the story.
     --no-browser                      Skip opening browser automatically
     --port <num>                        Port for the player server (default: 3001)

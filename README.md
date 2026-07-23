@@ -9,6 +9,9 @@ npx markcut render storyboard.md
 # Preview with live edit (edit .md file, player auto-reloads)
 npx markcut preview storyboard.md --edit
 
+# Fast structure preview: show TTI/TTV prompts as placeholders, skip slow generation
+npx markcut preview storyboard.md --storyboard
+
 # Label clips in a stream tree
 npx markcut preview labels.json --label --port=3031
 ```
@@ -43,6 +46,7 @@ storyboard.md  ──[parse]──▶  DescriptiveRoot  ──[compile]──▶
 | **Tween animation** | `tween(from, to)` function calls in JSX for frame-accurate numeric animation |
 | **Styling** | Inline `style` strings on any node for CSS. JSX components use inline React styles |
 | **Live edit** | `--edit` watches the input file, re-runs pipeline, auto-reloads player |
+| **Storyboard** | `--storyboard` fast structure preview: replaces TTI/TTV prompts with placeholder components, skips slow generation. Implies `--edit` |
 | **Label mode** | `--label` interactive player with per-scene label input, saves to labels.json |
 | **CLI** | `render`, `preview` commands for MP4 export and Remotion Studio |
 | **Programmatic** | `MarkCut` / `DescriptiveComposition` React components for embedding |

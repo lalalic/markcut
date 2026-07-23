@@ -10,8 +10,9 @@ Everything video is a **stream tree** described with markdown. see [docs/markdow
 
 ## Video Design Utilities
 
-### User labels — label media with text, time ranges
-- `npx @lalalic/markcut preview --label` provides tool to label video and images with text.
+### Vision — understand video and images
+- `npx @lalalic/markcut vision <folder>` provides tool to understand video and images in a folder, and generate a `metadata.json` file with with text description, duration, and other metadata for each media file.
+- `npx @lalalic/markcut vision <folder> --label`, interactive mode, provides tool to label video and images with text, and above metadata.
 
 ### Storyboard — plan video structure with scene nodes
 
@@ -19,6 +20,18 @@ Everything video is a **stream tree** described with markdown. see [docs/markdow
 - Use `description`, `scene.instruction`, `script`, `image|video.prompt` to structure your video content.
 
 see [docs/markdown-descriptive.md](docs/markdown-descriptive.md) for full details.
+
+### `--storyboard` — fast structure preview
+```bash
+npx @lalalic/markcut preview video.md --storyboard
+```
+
+Skips slow TTI/TTV/STT generation and renders a fast preview where:
+- `image`/`video` nodes with `prompt` but no `src` → `<StoryboardSlot>` placeholder showing the prompt text
+- `audio`/`script` nodes → `<StoryboardCaption>` overlays showing narration text
+- A `<StoryboardInfo>` card with root metadata (title, dimensions, fps) appears at the first frame
+
+Implies `--edit` so you can chat to reshape the story and see live reloads.
 
 ### Video Variants
 - define variants for different video configurations, such as different languages, aspects, platforms
@@ -43,10 +56,11 @@ npx @lalalic/markcut <command> [options]
 npx @lalalic/markcut --help # get overall information
 npx @lalalic/markcut --show-clis # get command specific information
 npx @lalalic/markcut preview <file> # assemble and preview the video with a local server, and chat to edit the video and auto refresh
+npx @lalalic/markcut preview <file> --storyboard # fast structure preview: replaces TTI/TTV prompts with placeholder components, skips slow generation
 npx @lalalic/markcut render <file> # render the video to mp4
 npx @lalalic/markcut vision <folder> # vision understanding medias in folder
 npx @lalalic/markcut vision <folder> --label # an extra step to provide UI to label the medias with text, time ranges
-
+  
 ```
 
 ---

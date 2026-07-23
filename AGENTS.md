@@ -5,10 +5,11 @@
 ## Quick Start
 
 ```bash
-npm run render storyboard.md      # render markdown → MP4 (9x16 default)
-npm run preview storyboard.md --edit  # live preview with auto-reload
-npm test                           # unit + integration tests
-npm run typecheck                  # TypeScript type check
+npm run render storyboard.md                        # render markdown → MP4 (9x16 default)
+npm run preview storyboard.md --edit                # live preview with auto-reload
+npm run preview storyboard.md --storyboard          # fast structure preview (skips TTI/TTV, shows prompts as placeholders)
+npm test                                             # unit + integration tests
+npm run typecheck                                    # TypeScript type check
 ```
 
 ## Input formats
