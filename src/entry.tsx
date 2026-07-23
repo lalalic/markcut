@@ -5,6 +5,9 @@ import { ComposeContext, EventProvider, type ComposeContextValue } from "./conte
 
 import { FolderLeaf } from "./types/Folder";
 import { SubtitleOverlay } from "./types/Subtitle";
+import { StoryboardSlot } from "./components/StoryboardSlot";
+import { StoryboardCaption } from "./components/StoryboardCaption";
+import { StoryboardInfo } from "./components/StoryboardInfo";
 import { getDurationInSeconds } from "./utils/index";
 import { root as rootSchema, type Root } from "./schema/index";
 import {
@@ -32,6 +35,20 @@ const DefaultContainer: ComposeContextValue["Container"] = ({ children, style, c
     {children}
   </div>
 );
+
+/**
+ * Built-in components available to every video without registration.
+ * Currently includes the storyboard placeholder; add other universal
+ * components here as needed.
+ *
+ * User-provided components (via compose.components or root.imports) take
+ * precedence — they can override any builtin by using the same name.
+ */
+const BUILTIN_COMPONENTS: Record<string, React.ComponentType<any>> = {
+  StoryboardSlot,
+  StoryboardCaption,
+  StoryboardInfo,
+};
 
 /**
  * Load the component registry from root.imports.
@@ -115,11 +132,17 @@ export function MarkCut({ root, compose, background = "#000" }: MarkCutProps) {
   React.useMemo(() => getDurationInSeconds(parsed as any, true), [parsed]);
 
   const value = React.useMemo<ComposeContextValue>(
-    () => ({
-      Container: compose?.Container ?? DefaultContainer,
-      onError: compose?.onError,
-      components: registry ?? compose?.components,
-    }),
+    () => {
+      const userComponents = registry ?? compose?.components;
+      const components = userComponents
+        ? { ...BUILTIN_COMPONENTS, ...userComponents }
+        : BUILTIN_COMPONENTS;
+      return {
+        Container: compose?.Container ?? DefaultContainer,
+        onError: compose?.onError,
+        components,
+      };
+    },
     [compose, registry],
   );
 

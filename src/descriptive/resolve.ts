@@ -739,6 +739,148 @@ export async function resolveGeneratedMedia(
   return clone;
 }
 
+// ── Storyboard Mode ─────────────────────────────────────────────────────────
+
+/**
+ * Walk the descriptive tree and replace time-consuming nodes with built-in
+ * component placeholders so the user can preview the story structure fast:
+ *
+ * - `image`/`video` with `prompt` but no `src` → `<StoryboardSlot>` (TTI/TTV placeholder)
+ * - `audio` with `script` but no `src`     → `<StoryboardCaption>` (caption-style text)
+ *
+ * Also prepends a `<StoryboardInfo>` card showing root metadata (title,
+ * dimensions, fps, variants) at the very first frame.
+ *
+ * Called early in `resolveAll` (after template-variable resolution). Since the
+ * nodes are now component type, subsequent steps (resolveGeneratedMedia,
+ * resolveMediaDurations, etc.) simply skip them — no special-case logic needed.
+ *
+ * Only runs when `options.storyboard === true`.
+ */
+export function applyStoryboardOverrides(
+  root: DescriptiveRoot,
+  options?: { variants?: string[] },
+): DescriptiveRoot {
+  const clone: DescriptiveRoot = JSON.parse(JSON.stringify(root));
+  let count = 0;
+
+  const walk = (nodes: any[]) => {
+    for (let i = 0; i < nodes.length; i++) {
+      const n = nodes[i];
+      if (
+        (n.type === "image" || n.type === "video") &&
+        typeof n.prompt === "string" &&
+        (!n.src || n.src === "auto")
+      ) {
+        // ── Image/Video prompt → StoryboardSlot ───────────────────────
+        count++;
+        const kind = n.type === "video" ? "video" : "image";
+        nodes[i] = {
+          id: n.id,
+          type: "component",
+          jsx: `<StoryboardSlot kind="${kind}" prompt={prompt} />`,
+          prompt: n.prompt,
+          duration: n.duration,
+          start: n.start,
+          end: n.end,
+          style: n.style,
+          visible: n.visible,
+          isBackground: n.isBackground,
+          on: n.on,
+          instruction: n.instruction,
+        };
+      } else if (
+        n.type === "audio" &&
+        typeof n.script === "string" &&
+        (!n.src)
+      ) {
+        // ── Audio script → StoryboardCaption ──────────────────────────
+        count++;
+        // Default to 5s so the caption is readable; use node duration if set.
+        const dur = (typeof n.duration === "number" && n.duration > 0) ? n.duration : 5;
+        nodes[i] = {
+          id: n.id,
+          type: "component",
+          jsx: `<StoryboardCaption script={script}${n.speaker ? " speaker={speaker}" : ""} />`,
+          script: n.script,
+          speaker: n.speaker,
+          duration: dur,
+          start: n.start,
+          end: n.end,
+          style: n.style,
+          visible: n.visible,
+          isBackground: n.isBackground,
+          on: n.on,
+          instruction: n.instruction,
+        };
+      } else if (Array.isArray(n.children)) {
+        walk(n.children);
+      }
+    }
+  };
+
+  walk(clone.children);
+
+  // Prepend a StoryboardInfo card with root metadata at the first frame.
+  // This lets the user see project context immediately.
+  const rootNode = clone as any;
+  // All binding values must be strings (the compiler's component case only
+  // collects string fields). Non-string values are stringified.
+
+  // Build a formatted config summary of all root-level frontmatter fields.
+  const configLines: string[] = [];
+  if (rootNode.name ?? rootNode.title) configLines.push(`title: ${rootNode.name ?? rootNode.title}`);
+  if (clone.width) configLines.push(`width: ${clone.width}`);
+  if (clone.height) configLines.push(`height: ${clone.height}`);
+  if (clone.fps) configLines.push(`fps: ${clone.fps}`);
+  if (clone.layout) configLines.push(`layout: ${clone.layout}`);
+  if (clone.transition) {
+    const t = clone.transitionTime ? `${clone.transition}(${clone.transitionTime})` : clone.transition;
+    configLines.push(`transition: ${t}`);
+  }
+  if (clone.tts) configLines.push(`tts: ${clone.tts}`);
+  if (clone.stt) configLines.push(`stt: ${clone.stt}`);
+  if (clone.tti) configLines.push(`tti: ${clone.tti}`);
+  if (clone.ttv) configLines.push(`ttv: ${clone.ttv}`);
+  if (clone.seed != null) configLines.push(`seed: ${clone.seed}`);
+  if (clone.stylesheet) configLines.push(`stylesheet: yes`);
+  if (clone.importsBlock) configLines.push(`imports: yes`);
+  if (clone.voices) configLines.push(`voices: ${Object.keys(clone.voices).join(", ")}`);
+  if (clone.metadata) configLines.push(`metadata: ${clone.metadata}`);
+
+  const configStr = configLines.join("  ·  ");
+  const variantStr = (options?.variants ?? []).join(", ");
+  // Frontmatter is the raw YAML block from the markdown source (if any).
+  const frontmatter = (rootNode as any).rawFrontmatter ?? "";
+  const infoComponent: any = {
+    type: "component",
+    jsx: `<StoryboardInfo config={config} variants={variants} frontmatter={frontmatter} />`,
+    config: configStr,
+    variants: variantStr,
+    frontmatter,
+    duration: 4,
+    start: 0,
+    end: 4,
+    visible: true,
+  };
+  const infoScene: any = {
+    type: "scene",
+    id: "storyboard-info",
+    name: "Overview",
+    title: "Storyboard Info",
+    instruction: "Project metadata and variant overview",
+    duration: 4,
+    children: [infoComponent],
+  };
+  clone.children = [infoScene, ...clone.children];
+  count++;
+
+  if (count > 0) {
+    console.log(`  🎬 Storyboard: ${count} placeholder${count > 1 ? "s" : ""} (TTI/TTV/TTS preview)`);
+  }
+  return clone;
+}
+
 // ── Combined Pipeline ──────────────────────────────────────────────────────
 
 export interface ResolveAllOptions extends ResolveMediaOptions {
@@ -770,6 +912,9 @@ export interface ResolveAllOptions extends ResolveMediaOptions {
    *  a deterministic seed is auto-generated and written back to the source file,
    *  making it stable across restarts for cache consistency. */
   sourcePath?: string;
+  /** Storyboard mode: skip TTI/TTV generation. The compiler will convert
+   *  prompt image/video nodes to component placeholders instead. */
+  storyboard?: boolean;
 }
 
 /**
@@ -978,11 +1123,19 @@ export async function resolveAll(
     variant: options.variants?.[0] ?? "video",
   });
 
-  // Step 2: Best-match media src resolution — for pattern-based src values
+  // Step 2: Storyboard mode — replace time-consuming nodes with built-in
+  // component placeholders for fast structural preview. Converts image/video
+  // prompts and audio scripts into StoryboardSlot / StoryboardCaption cards.
+  // Also prepends a StoryboardInfo overlay with root metadata.
+  if (options.storyboard) {
+    result = applyStoryboardOverrides(result, { variants: options.variants });
+  }
+
+  // Step 3: Best-match media src resolution — for pattern-based src values
   // (e.g. photo_${width}x${height}.jpg), find the closest existing file.
   result = await resolveMediaSrcs(result, { baseDir: options.baseDir });
 
-  // Step 3: Generate images/videos from prompts before probing durations.
+  // Step 4: Generate images/videos from prompts before probing durations.
   if (options.mediaOutputDir) {
     result = await resolveGeneratedMedia(result, {
       outputDir: options.mediaOutputDir,

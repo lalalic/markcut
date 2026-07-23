@@ -40,14 +40,30 @@ export function extractScenes(root) {
     for (const s of root.children) {
       if (!(s.type === "folder" || s.type === "scene" || s.children?.length)) continue;
       if (s.isBackground) continue;
-      // Use durationInSeconds (set by compiler) as the definitive duration.
-      // Fall back to leaf end-start for backward compatibility.
-      const leaf = (s.children || []).find(c => c.src && (c.type === "image" || c.type === "video"));
+      // Compute scene duration. Priority:
+      // 1. s.durationInSeconds (set by engine's getDurationInSeconds)
+      // 2. Sum of children's durationInSeconds (for series) or max (for parallel)
+      // 3. Leaf node's end-start (backward compat with old compiled JSON)
+      // 4. Default 5s
       let dur = s.durationInSeconds;
       if (!dur || dur <= 0) {
+        const kids = s.children || [];
+        const childDurs = kids
+          .filter(c => !c.isBackground)
+          .map(c => c.durationInSeconds ?? (c.end != null ? c.end - (c.start ?? 0) : 0))
+          .filter(d => d > 0);
+        if (childDurs.length > 0) {
+          // Series → sum; Parallel → max. We don't know which here, so sum is
+          // the safe upper bound (parallel scenes are rare as direct root children).
+          dur = childDurs.reduce((a, b) => a + b, 0);
+        }
+      }
+      if (!dur || dur <= 0) {
+        const leaf = (s.children || []).find(c => c.src && (c.type === "image" || c.type === "video"));
         const src2 = leaf || s;
         dur = (src2.end ?? 5) - (src2.start ?? 0);
       }
+      const leaf = (s.children || []).find(c => c.src && (c.type === "image" || c.type === "video"));
       // Account for transition overlap: scene i starts at offset - i*overlap
       const transitionOffset = scenes.length * overlap;
       const start = Math.max(0, offset - transitionOffset);

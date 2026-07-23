@@ -1200,6 +1200,10 @@ export function compileDescriptiveRoot(input: DescriptiveRoot, options: CompileO
 
   // Resolve frontmatter imports / inline component defs onto each component node.
   const registry = resolveComponentSources(input);
+  // Add built-in components so warnUnregisteredComponents doesn't flag them.
+  registry.add("StoryboardSlot");
+  registry.add("StoryboardCaption");
+  registry.add("StoryboardInfo");
   warnUnregisteredComponents(input, registry);
 
   ensureUniqueIds(input.children, "root");

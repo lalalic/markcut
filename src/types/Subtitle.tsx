@@ -237,6 +237,9 @@ export function SubtitleOverlay({ subtitle }: { subtitle: SubtitleOverlayConfig 
   const { fps } = useVideoConfig();
   const [cues, setCues] = React.useState<Cue[] | null>(null);
 
+  // No subtitle source — nothing to render
+  if (!subtitle.src) return null;
+
   const CaptionComponent = React.useMemo(
     () => resolveCaption(subtitle.type),
     [subtitle.type],
@@ -244,6 +247,7 @@ export function SubtitleOverlay({ subtitle }: { subtitle: SubtitleOverlayConfig 
 
   React.useEffect(() => {
     const { src } = subtitle;
+    if (!src) return;
 
     // Inline VTT body
     if (src.includes("-->")) {

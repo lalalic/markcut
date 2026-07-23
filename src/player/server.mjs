@@ -30,6 +30,10 @@ const VIDEO_JSON = inputArg ? resolve(inputArg) : join(ROOT, "video.json");
 const IS_MARKDOWN = VIDEO_JSON.endsWith(".md");
 const MODE_LABEL = process.argv.includes("--label");
 const MODE_EDIT = process.argv.includes("--edit");
+// Storyboard mode: skip slow TTI/TTV generation. The compiler converts prompt
+// image/video nodes into component placeholders so the user can review the
+// story structure fast and chat to reshape it.
+const MODE_STORYBOARD = process.argv.includes("--storyboard");
 
 // ─── Variant configuration ─────────────────────────────────────────────────
 // Each --variant flag defines a separate compilation target.
@@ -256,9 +260,7 @@ function sendToAgent(prompt) {
 let editHistory = [];
 
 // ─── .markcut/ directory layout ────────────────────────────────────────────
-//   <project dir>/                ← server document root (folder containing the .md);
-//                                   compiled `src` paths are relative to here
-//   .markcut/                     ← generated + per-variant artifacts
+//   .markcut/                     ← server document root
 //     generated/                  ← shared, content-addressed (across all variants & files)
 //       tts/                      ← TTS audio (content-hash filenames)
 //       media/                    ← TTI/TTV media (content-hash filenames)
@@ -269,10 +271,7 @@ let editHistory = [];
 //         compiled.json
 //       zh-tiktok/                ← variant-specific artifacts
 //         compiled.json
-// The folder containing the source .md file — all compiled `src` paths are
-// stored relative to this directory (e.g. `.markcut/generated/tts/x.mp3`).
-const PROJECT_DIR = dirname(VIDEO_JSON);
-const MARKCUT_BASE = join(PROJECT_DIR, ".markcut");
+const MARKCUT_BASE = join(dirname(VIDEO_JSON), ".markcut");
 const MARKCUT_DIR = join(MARKCUT_BASE, "generated");
 const BASENAME = VIDEO_JSON.split("/").pop().replace(/\.[^.]+$/, "");
 const TTS_OUTPUT_DIR = join(MARKCUT_DIR, "tts");
@@ -290,10 +289,8 @@ function compiledCacheFile(label) {
 }
 
 /**
- * Recursively convert all absolute paths under the project directory (the folder
- * containing the source .md file) to paths relative to that directory. This makes
- * the cached compiled.json portable across machines and keeps every `src` relative
- * to the .md's location (e.g. `.markcut/generated/tts/x.mp3`, `assets/pic.png`).
+ * Recursively convert all absolute paths under MARKCUT_BASE to relative paths.
+ * This makes the cached compiled.json portable across machines.
  * The /api/video-data endpoint converts them back to server-relative URLs.
  */
 function makePathsRelative(obj) {
@@ -301,8 +298,8 @@ function makePathsRelative(obj) {
   if (Array.isArray(obj)) return obj.map(makePathsRelative);
   const result = {};
   for (const [key, value] of Object.entries(obj)) {
-    if (typeof value === "string" && value.startsWith(PROJECT_DIR + "/")) {
-      result[key] = value.slice(PROJECT_DIR.length + 1);
+    if (typeof value === "string" && value.startsWith(MARKCUT_BASE)) {
+      result[key] = value.replace(MARKCUT_BASE + "/", "");
     } else if (typeof value === "object" && value !== null) {
       result[key] = makePathsRelative(value);
     } else {
@@ -313,27 +310,14 @@ function makePathsRelative(obj) {
 }
 
 /**
- * Convert a compiled path into a server-relative URL for the browser.
- * Paths in compiled.json are relative to PROJECT_DIR (e.g. `.markcut/generated/...`)
- * so we prepend "/"; absolute paths under PROJECT_DIR are first made relative.
- * http(s)/data URIs and absolute paths outside PROJECT_DIR are left untouched.
- */
-function toServerUrl(p) {
-  if (p.startsWith("http://") || p.startsWith("https://") || p.startsWith("data:")) return p;
-  if (p.startsWith(PROJECT_DIR + "/")) p = p.slice(PROJECT_DIR.length + 1);
-  if (!p.startsWith("/")) p = "/" + p;
-  return p;
-}
-
-/**
- * Convert project-relative paths in the compiled root to server-relative URLs
- * for the browser. This is the inverse of makePathsRelative — it prepends "/" to
- * paths so the browser can fetch them from the server.
+ * Convert relative (to MARKCUT_BASE) paths in the compiled root to server-relative URLs
+ * for the browser. This is the inverse of makePathsRelative — it prepends "/" to paths
+ * so the browser can fetch them from the server.
  *
  * Handles:
  *   - compiled.imports (component bundle URL)
  *   - compiled.subtitle.src (VTT file)
- *   - Any node.src (media/tts/images) relative to the project directory
+ *   - Any node.src (media/tts/images) that is a relative path under MARKCUT_BASE
  */
 function resolveAssetPaths(root) {
   const out = JSON.parse(JSON.stringify(root));
@@ -343,18 +327,37 @@ function resolveAssetPaths(root) {
     if (Array.isArray(node)) { node.forEach(walkNode); return; }
 
     // Convert src fields that are relative paths
-    if (typeof node.src === "string") {
-      node.src = toServerUrl(node.src);
+    if (typeof node.src === "string" && !node.src.startsWith("http://") && !node.src.startsWith("https://") && !node.src.startsWith("data:")) {
+      // Already a relative path under MARKCUT_BASE (shouldn't be absolute)
+      if (!node.src.startsWith("/") && !node.src.startsWith(".")) {
+        // Plain relative path — prefix with / (server serves from project root)
+        node.src = "/" + node.src;
+      } else if (node.src.startsWith("./")) {
+        // Dot-prefixed relative path — strip ./ and prefix with /
+        node.src = "/" + node.src.slice(2);
+      }
+      // Convert absolute paths under MARKCUT_BASE
+      if (typeof node.src === "string" && node.src.startsWith(MARKCUT_BASE)) {
+        node.src = "/" + node.src.replace(MARKCUT_BASE + "/", "");
+      }
     }
 
     // Convert subtitle src
     if (node.subtitle && typeof node.subtitle.src === "string") {
-      node.subtitle.src = toServerUrl(node.subtitle.src);
+      if (node.subtitle.src.startsWith(MARKCUT_BASE)) {
+        node.subtitle.src = "/" + node.subtitle.src.replace(MARKCUT_BASE + "/", "");
+      } else if (!node.subtitle.src.startsWith("/") && !node.subtitle.src.startsWith("http")) {
+        node.subtitle.src = "/" + node.subtitle.src;
+      }
     }
 
     // Convert imports (component bundle URL)
     if (typeof node.imports === "string") {
-      node.imports = toServerUrl(node.imports);
+      if (node.imports.startsWith(MARKCUT_BASE)) {
+        node.imports = "/" + node.imports.replace(MARKCUT_BASE + "/", "");
+      } else if (!node.imports.startsWith("/") && !node.imports.startsWith("http")) {
+        node.imports = "/" + node.imports;
+      }
     }
 
     if (Array.isArray(node.children)) {
@@ -445,6 +448,7 @@ async function compileVariant(config, parsed, raw) {
       mediaOutputDir: MEDIA_OUTPUT_DIR,
       includeOutputDir: INCLUDE_CACHE_DIR,
       subtitleOutputDir: subtitleDir,
+      storyboard: MODE_STORYBOARD,
       variants: config.chain.length > 0 ? config.chain : undefined,
     });
     compiled = compileDescriptiveRoot(resolved);
@@ -468,6 +472,7 @@ async function compileVariant(config, parsed, raw) {
         mediaOutputDir: MEDIA_OUTPUT_DIR,
         includeOutputDir: INCLUDE_CACHE_DIR,
         subtitleOutputDir: subtitleDir,
+        storyboard: MODE_STORYBOARD,
         variants: config.chain.length > 0 ? config.chain : undefined,
       });
     } else {

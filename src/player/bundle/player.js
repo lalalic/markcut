@@ -41679,11 +41679,11 @@ var JsxParser = class extends import_react125.default.Component {
   constructor() {
     super(...arguments);
     __publicField(this, "ParsedChildren", null);
-    __privateAdd(this, _parseJSX, (jsx76) => {
+    __privateAdd(this, _parseJSX, (jsx79) => {
       const parser = Parser.extend(AcornJSX.default({
         autoCloseVoidElements: this.props.autoCloseVoidElements
       }));
-      const wrappedJsx = `<root>${jsx76}</root>`;
+      const wrappedJsx = `<root>${jsx79}</root>`;
       let parsed = [];
       try {
         parsed = parser.parse(wrappedJsx, { ecmaVersion: "latest" });
@@ -41981,8 +41981,8 @@ var JsxParser = class extends import_react125.default.Component {
     });
   }
   render() {
-    const jsx76 = (this.props.jsx || "").trim().replace(/<!DOCTYPE([^>]*)>/g, "");
-    this.ParsedChildren = __privateGet(this, _parseJSX).call(this, jsx76);
+    const jsx79 = (this.props.jsx || "").trim().replace(/<!DOCTYPE([^>]*)>/g, "");
+    this.ParsedChildren = __privateGet(this, _parseJSX).call(this, jsx79);
     const className2 = [.../* @__PURE__ */ new Set(["jsx-parser", ...String(this.props.className).split(" ")])].filter(Boolean).join(" ");
     return this.props.renderInWrapper ? /* @__PURE__ */ import_react125.default.createElement("div", {
       className: className2
@@ -42090,7 +42090,7 @@ function useTweenBindings(action) {
 // src/types/Component.tsx
 var import_jsx_runtime81 = __toESM(require_jsx_runtime(), 1);
 function TweenedJsxParser({
-  jsx: jsx76,
+  jsx: jsx79,
   components,
   data: data2,
   action
@@ -42101,7 +42101,7 @@ function TweenedJsxParser({
     {
       components,
       bindings: React30.useMemo(() => ({ ...data2, ...tweenBindings }), [data2, tweenBindings]),
-      jsx: jsx76,
+      jsx: jsx79,
       renderInWrapper: false,
       blacklistedAttrs: [],
       disableKeyGeneration: true,
@@ -42152,7 +42152,7 @@ function ComponentLeaf({ stream: stream2 }) {
   );
 }
 function EventAwareComponent({
-  jsx: jsx76,
+  jsx: jsx79,
   components,
   data: data2,
   action,
@@ -42163,7 +42163,7 @@ function EventAwareComponent({
   return /* @__PURE__ */ (0, import_jsx_runtime81.jsx)(
     TweenedJsxParser,
     {
-      jsx: jsx76,
+      jsx: jsx79,
       components,
       data: data2,
       action
@@ -45558,8 +45558,8 @@ function FolderLeaf({ stream: stream2 }) {
       style: containerStyle3,
       className: `${orientation} ${stream2.type}`.trim(),
       children: [
-        isSeries ? /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(TypedSeries, { children: sequences }) : sequences,
-        bgContent
+        bgContent,
+        isSeries ? /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(TypedSeries, { children: sequences }) : sequences
       ]
     }
   ) });
@@ -45959,12 +45959,14 @@ function GroupedCueInner({
 function SubtitleOverlay({ subtitle }) {
   const { fps } = useVideoConfig();
   const [cues, setCues] = React46.useState(null);
+  if (!subtitle.src) return null;
   const CaptionComponent = React46.useMemo(
     () => resolveCaption(subtitle.type),
     [subtitle.type]
   );
   React46.useEffect(() => {
     const { src } = subtitle;
+    if (!src) return;
     if (src.includes("-->")) {
       setCues(parseVTT(src));
       return;
@@ -46012,6 +46014,326 @@ function SubtitleOverlay({ subtitle }) {
     },
     `g${gi}-${group[0].startFrom}-${group[group.length - 1].endAt}`
   )) });
+}
+
+// src/components/StoryboardSlot.tsx
+var import_jsx_runtime89 = __toESM(require_jsx_runtime(), 1);
+function StoryboardSlot({ kind, prompt }) {
+  const isVideo = kind === "video";
+  const bgGrad = isVideo ? "linear-gradient(135deg,#7c2d12,#b91c1c)" : "linear-gradient(135deg,#1e3a8a,#6d28d9)";
+  const accentColor = isVideo ? "#fbbf24" : "#93c5fd";
+  const label3 = isVideo ? "Video" : "Image";
+  const emoji3 = isVideo ? "\u{1F3AC}" : "\u{1F5BC}\uFE0F";
+  return /* @__PURE__ */ (0, import_jsx_runtime89.jsxs)(
+    "div",
+    {
+      style: {
+        position: "absolute",
+        inset: 0,
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        background: bgGrad,
+        color: "#fff",
+        fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
+        padding: "6%",
+        boxSizing: "border-box"
+      },
+      children: [
+        /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(
+          "div",
+          {
+            style: {
+              position: "absolute",
+              inset: "4%",
+              border: "3px dashed rgba(255,255,255,0.35)",
+              borderRadius: 24,
+              pointerEvents: "none"
+            }
+          }
+        ),
+        /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(
+          "div",
+          {
+            style: {
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5em",
+              background: "rgba(0,0,0,0.35)",
+              border: `2px solid ${accentColor}`,
+              borderRadius: 999,
+              padding: "0.5em 1.1em",
+              fontSize: "2.2vh",
+              fontWeight: 800,
+              letterSpacing: "0.12em",
+              marginBottom: "3vh"
+            },
+            children: /* @__PURE__ */ (0, import_jsx_runtime89.jsx)("span", { style: { fontSize: "3.4vh", lineHeight: 1 }, children: emoji3 })
+          }
+        ),
+        /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(
+          "div",
+          {
+            style: {
+              position: "relative",
+              maxWidth: "88%",
+              textAlign: "center",
+              fontSize: "3.4vh",
+              lineHeight: 1.4,
+              fontWeight: 600,
+              textShadow: "0 2px 8px rgba(0,0,0,0.5)",
+              whiteSpace: "pre-wrap",
+              wordBreak: "break-word"
+            },
+            children: prompt ?? (isVideo ? "(no video prompt)" : "(no image prompt)")
+          }
+        )
+      ]
+    }
+  );
+}
+
+// src/components/StoryboardCaption.tsx
+var import_jsx_runtime90 = __toESM(require_jsx_runtime(), 1);
+function StoryboardCaption({ script, speaker }) {
+  return /* @__PURE__ */ (0, import_jsx_runtime90.jsx)(
+    "div",
+    {
+      style: {
+        position: "absolute",
+        bottom: "10%",
+        left: "5%",
+        right: "5%",
+        zIndex: 100,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        pointerEvents: "none"
+      },
+      children: /* @__PURE__ */ (0, import_jsx_runtime90.jsxs)(
+        "div",
+        {
+          style: {
+            maxWidth: "90%",
+            background: "rgba(0,0,0,0.7)",
+            backdropFilter: "blur(4px)",
+            borderRadius: 16,
+            padding: "2.5vh 4vh",
+            textAlign: "center",
+            color: "#fff",
+            fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif"
+          },
+          children: [
+            speaker && /* @__PURE__ */ (0, import_jsx_runtime90.jsx)(
+              "div",
+              {
+                style: {
+                  fontSize: "2vh",
+                  fontWeight: 700,
+                  color: "#93c5fd",
+                  marginBottom: "0.6vh",
+                  letterSpacing: "0.04em"
+                },
+                children: speaker
+              }
+            ),
+            /* @__PURE__ */ (0, import_jsx_runtime90.jsx)(
+              "div",
+              {
+                style: {
+                  fontSize: "2.6vh",
+                  lineHeight: 1.5,
+                  fontWeight: 500,
+                  textShadow: "0 1px 4px rgba(0,0,0,0.4)",
+                  whiteSpace: "pre-wrap",
+                  wordBreak: "break-word"
+                },
+                children: script
+              }
+            )
+          ]
+        }
+      )
+    }
+  );
+}
+
+// src/components/StoryboardInfo.tsx
+var import_jsx_runtime91 = __toESM(require_jsx_runtime(), 1);
+function StoryboardInfo({ config: config2, variants, frontmatter }) {
+  const parts = (config2 ?? "").split("  \xB7  ").filter(Boolean);
+  const variantList = (variants ?? "").split(/,\s*/).filter(Boolean);
+  return /* @__PURE__ */ (0, import_jsx_runtime91.jsxs)(
+    "div",
+    {
+      style: {
+        position: "absolute",
+        inset: 0,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "linear-gradient(135deg,#0f172a,#1e293b,#334155)",
+        color: "#fff",
+        fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
+        padding: "8%",
+        boxSizing: "border-box"
+      },
+      children: [
+        /* @__PURE__ */ (0, import_jsx_runtime91.jsx)(
+          "div",
+          {
+            style: {
+              position: "absolute",
+              inset: "5%",
+              border: "2px solid rgba(255,255,255,0.08)",
+              borderRadius: "50%"
+            }
+          }
+        ),
+        /* @__PURE__ */ (0, import_jsx_runtime91.jsx)(
+          "div",
+          {
+            style: {
+              position: "absolute",
+              inset: "12%",
+              border: "1px solid rgba(255,255,255,0.05)",
+              borderRadius: "50%"
+            }
+          }
+        ),
+        /* @__PURE__ */ (0, import_jsx_runtime91.jsx)("div", { style: { fontSize: "6vh", marginBottom: "2.5vh", opacity: 0.7 }, children: "\u{1F3AC}" }),
+        /* @__PURE__ */ (0, import_jsx_runtime91.jsx)(
+          "div",
+          {
+            style: {
+              fontSize: "4.2vh",
+              fontWeight: 800,
+              letterSpacing: "0.02em",
+              marginBottom: "3vh",
+              textAlign: "center",
+              textShadow: "0 2px 12px rgba(0,0,0,0.5)"
+            },
+            children: "Storyboard Preview"
+          }
+        ),
+        parts.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime91.jsx)(
+          "div",
+          {
+            style: {
+              display: "flex",
+              flexWrap: "wrap",
+              justifyContent: "center",
+              gap: "1.2vh",
+              maxWidth: "85%",
+              marginBottom: variantList.length > 0 ? "2.5vh" : 0
+            },
+            children: parts.map((entry) => {
+              const colonIdx = entry.indexOf(":");
+              const label3 = colonIdx > 0 ? entry.slice(0, colonIdx).trim() : "";
+              const value = colonIdx > 0 ? entry.slice(colonIdx + 1).trim() : entry;
+              return /* @__PURE__ */ (0, import_jsx_runtime91.jsxs)(
+                "div",
+                {
+                  style: {
+                    background: "rgba(255,255,255,0.07)",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    borderRadius: 12,
+                    padding: "1.2vh 2.2vh",
+                    textAlign: "center",
+                    minWidth: "16vh"
+                  },
+                  children: [
+                    label3 && /* @__PURE__ */ (0, import_jsx_runtime91.jsx)(
+                      "div",
+                      {
+                        style: {
+                          fontSize: "1.6vh",
+                          fontWeight: 600,
+                          color: "#93c5fd",
+                          letterSpacing: "0.08em",
+                          textTransform: "uppercase",
+                          marginBottom: "0.4vh"
+                        },
+                        children: label3
+                      }
+                    ),
+                    /* @__PURE__ */ (0, import_jsx_runtime91.jsx)(
+                      "div",
+                      {
+                        style: {
+                          fontSize: "2.2vh",
+                          fontWeight: 700,
+                          whiteSpace: "pre-wrap",
+                          wordBreak: "break-word",
+                          opacity: value.startsWith("http") ? 0.8 : 1
+                        },
+                        children: value
+                      }
+                    )
+                  ]
+                },
+                label3 || entry
+              );
+            })
+          }
+        ),
+        frontmatter && /* @__PURE__ */ (0, import_jsx_runtime91.jsx)(
+          "div",
+          {
+            style: {
+              maxWidth: "85%",
+              background: "rgba(255,255,255,0.05)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              borderRadius: 12,
+              padding: "1.5vh 2.5vh",
+              marginBottom: "2.5vh",
+              fontFamily: "monospace",
+              fontSize: "1.8vh",
+              lineHeight: 1.6,
+              color: "rgba(255,255,255,0.8)",
+              whiteSpace: "pre-wrap",
+              wordBreak: "break-word",
+              textAlign: "left",
+              maxHeight: "28vh",
+              overflow: "auto"
+            },
+            children: frontmatter
+          }
+        ),
+        variantList.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime91.jsx)(
+          "div",
+          {
+            style: {
+              display: "flex",
+              flexWrap: "wrap",
+              justifyContent: "center",
+              gap: "1vh"
+            },
+            children: variantList.map((v2) => /* @__PURE__ */ (0, import_jsx_runtime91.jsx)(
+              "div",
+              {
+                style: {
+                  background: "rgba(251,191,36,0.15)",
+                  border: "1px solid rgba(251,191,36,0.35)",
+                  borderRadius: 999,
+                  padding: "0.8vh 2vh",
+                  fontSize: "1.8vh",
+                  fontWeight: 600,
+                  color: "#fbbf24",
+                  letterSpacing: "0.04em"
+                },
+                children: v2
+              },
+              v2
+            ))
+          }
+        )
+      ]
+    }
+  );
 }
 
 // node_modules/zod/v4/classic/external.js
@@ -59812,7 +60134,7 @@ var folder = base.extend({
   children: external_exports.array(external_exports.lazy(() => stream)).default(() => [])
 });
 var subtitleOverlay = external_exports.object({
-  src: external_exports.string().describe("path or URL to VTT file covering the full video duration"),
+  src: external_exports.string().optional().describe("path or URL to VTT file covering the full video duration; omitted when no subtitles are available"),
   style: external_exports.string().optional().describe("inline css for the overlay container"),
   fontSize: external_exports.union([external_exports.number(), external_exports.string()]).optional(),
   type: external_exports.string().optional().describe("caption animation type: bounce, fade, typewriter, colorful, glowing, neon, etc."),
@@ -59933,8 +60255,13 @@ var stream = external_exports.discriminatedUnion("type", [
 ]);
 
 // src/entry.tsx
-var import_jsx_runtime89 = __toESM(require_jsx_runtime(), 1);
-var DefaultContainer2 = ({ children, style: style2, className: className2 }) => /* @__PURE__ */ (0, import_jsx_runtime89.jsx)("div", { className: className2, style: { position: "absolute", inset: 0, ...style2 }, children });
+var import_jsx_runtime92 = __toESM(require_jsx_runtime(), 1);
+var DefaultContainer2 = ({ children, style: style2, className: className2 }) => /* @__PURE__ */ (0, import_jsx_runtime92.jsx)("div", { className: className2, style: { position: "absolute", inset: 0, ...style2 }, children });
+var BUILTIN_COMPONENTS = {
+  StoryboardSlot,
+  StoryboardCaption,
+  StoryboardInfo
+};
 function useComponentRegistry(imports) {
   const [registry2, setRegistry] = React47.useState(null);
   const handleRef = React47.useRef(null);
@@ -59996,33 +60323,37 @@ function MarkCut({ root: root2, compose, background = "#000" }) {
   const registry2 = useComponentRegistry(parsed.imports);
   React47.useMemo(() => getDurationInSeconds(parsed, true), [parsed]);
   const value = React47.useMemo(
-    () => ({
-      Container: compose?.Container ?? DefaultContainer2,
-      onError: compose?.onError,
-      components: registry2 ?? compose?.components
-    }),
+    () => {
+      const userComponents = registry2 ?? compose?.components;
+      const components = userComponents ? { ...BUILTIN_COMPONENTS, ...userComponents } : BUILTIN_COMPONENTS;
+      return {
+        Container: compose?.Container ?? DefaultContainer2,
+        onError: compose?.onError,
+        components
+      };
+    },
     [compose, registry2]
   );
-  return /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(ComposeContext.Provider, { value, children: /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(EventProvider, { children: /* @__PURE__ */ (0, import_jsx_runtime89.jsxs)(AbsoluteFill, { style: { background }, children: [
-    parsed.stylesheet && /* @__PURE__ */ (0, import_jsx_runtime89.jsx)("style", { children: parsed.stylesheet }),
-    /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(FolderLeaf, { stream: parsed }),
-    parsed.subtitle && /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(SubtitleOverlay, { subtitle: parsed.subtitle })
+  return /* @__PURE__ */ (0, import_jsx_runtime92.jsx)(ComposeContext.Provider, { value, children: /* @__PURE__ */ (0, import_jsx_runtime92.jsx)(EventProvider, { children: /* @__PURE__ */ (0, import_jsx_runtime92.jsxs)(AbsoluteFill, { style: { background }, children: [
+    parsed.stylesheet && /* @__PURE__ */ (0, import_jsx_runtime92.jsx)("style", { children: parsed.stylesheet }),
+    /* @__PURE__ */ (0, import_jsx_runtime92.jsx)(FolderLeaf, { stream: parsed }),
+    parsed.subtitle && /* @__PURE__ */ (0, import_jsx_runtime92.jsx)(SubtitleOverlay, { subtitle: parsed.subtitle })
   ] }) }) });
 }
 
 // src/player/components/HeaderBar.tsx
 var React48 = __toESM(require_react(), 1);
-var import_jsx_runtime90 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime93 = __toESM(require_jsx_runtime(), 1);
 function HeaderBar({ mode, sceneInfo, editStatus, sseConnected }) {
   const handleClose = React48.useCallback(() => {
     navigator.sendBeacon("/api/shutdown", "{}");
     document.body.innerHTML = "<div style='display:flex;align-items:center;justify-content:center;height:100vh;background:#0a0a0a;color:#555;font-family:sans-serif;font-size:16px'>\u2B61 player closed \u2014 return to terminal</div>";
   }, []);
-  return /* @__PURE__ */ (0, import_jsx_runtime90.jsxs)("div", { id: "header", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime90.jsxs)("span", { style: { flex: 1, display: "flex", alignItems: "center", gap: 8 }, children: [
-      mode === "label" && sceneInfo && /* @__PURE__ */ (0, import_jsx_runtime90.jsx)("span", { id: "scene-info", children: sceneInfo }),
-      mode === "edit" && editStatus && /* @__PURE__ */ (0, import_jsx_runtime90.jsx)("span", { id: "edit-status", children: editStatus }),
-      /* @__PURE__ */ (0, import_jsx_runtime90.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime93.jsxs)("div", { id: "header", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime93.jsxs)("span", { style: { flex: 1, display: "flex", alignItems: "center", gap: 8 }, children: [
+      mode === "label" && sceneInfo && /* @__PURE__ */ (0, import_jsx_runtime93.jsx)("span", { id: "scene-info", children: sceneInfo }),
+      mode === "edit" && editStatus && /* @__PURE__ */ (0, import_jsx_runtime93.jsx)("span", { id: "edit-status", children: editStatus }),
+      /* @__PURE__ */ (0, import_jsx_runtime93.jsx)(
         "span",
         {
           id: "sse-indicator",
@@ -60038,13 +60369,13 @@ function HeaderBar({ mode, sceneInfo, editStatus, sseConnected }) {
         }
       )
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime90.jsx)("div", { id: "header-actions", children: /* @__PURE__ */ (0, import_jsx_runtime90.jsx)("button", { id: "close-btn", title: "Close player and return to terminal", onClick: handleClose, children: "\u2715" }) })
+    /* @__PURE__ */ (0, import_jsx_runtime93.jsx)("div", { id: "header-actions", children: /* @__PURE__ */ (0, import_jsx_runtime93.jsx)("button", { id: "close-btn", title: "Close player and return to terminal", onClick: handleClose, children: "\u2715" }) })
   ] });
 }
 
 // src/player/components/EditControls.tsx
 var React49 = __toESM(require_react(), 1);
-var import_jsx_runtime91 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime94 = __toESM(require_jsx_runtime(), 1);
 function EditControls({ onStatusChange, suppressReloadRef, currentTime, activeScene }) {
   const [busy, setBusy] = React49.useState(false);
   const inputRef = React49.useRef(null);
@@ -60090,8 +60421,8 @@ function EditControls({ onStatusChange, suppressReloadRef, currentTime, activeSc
     },
     [handleApplyEdit]
   );
-  return /* @__PURE__ */ (0, import_jsx_runtime91.jsxs)("div", { id: "bottom-bar", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime91.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime94.jsxs)("div", { id: "bottom-bar", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime94.jsx)(
       "input",
       {
         ref: inputRef,
@@ -60100,7 +60431,7 @@ function EditControls({ onStatusChange, suppressReloadRef, currentTime, activeSc
         onKeyDown: handleKeyDown
       }
     ),
-    /* @__PURE__ */ (0, import_jsx_runtime91.jsx)(
+    /* @__PURE__ */ (0, import_jsx_runtime94.jsx)(
       "button",
       {
         id: "edit-btn",
@@ -60115,7 +60446,7 @@ function EditControls({ onStatusChange, suppressReloadRef, currentTime, activeSc
 
 // src/player/components/LabelControls.tsx
 var React50 = __toESM(require_react(), 1);
-var import_jsx_runtime92 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime95 = __toESM(require_jsx_runtime(), 1);
 var VIDEO_EXT = {
   ".mov": 1,
   ".mp4": 1,
@@ -60282,7 +60613,7 @@ function LabelControls({ playerRef, currentTime, onSceneChange }) {
     [effectiveIdx]
   );
   const renderThumbnails = () => {
-    return /* @__PURE__ */ (0, import_jsx_runtime92.jsx)("div", { id: "thumbnails", children: scenes.map((scene2, i3) => {
+    return /* @__PURE__ */ (0, import_jsx_runtime95.jsx)("div", { id: "thumbnails", children: scenes.map((scene2, i3) => {
       const isActive = i3 === effectiveIdx;
       const entry = labelData[i3];
       const hasLabel = entry && (entry.overall || Object.keys(entry.timed).length > 0);
@@ -60290,9 +60621,9 @@ function LabelControls({ playerRef, currentTime, onSceneChange }) {
       const ext = scene2.src.substring(scene2.src.lastIndexOf(".")).toLowerCase();
       const isVideo = !!VIDEO_EXT[ext];
       if (scene2.src && !isVideo) {
-        thumbContent = /* @__PURE__ */ (0, import_jsx_runtime92.jsx)("img", { src: scene2.src, alt: "", loading: "lazy" });
+        thumbContent = /* @__PURE__ */ (0, import_jsx_runtime95.jsx)("img", { src: scene2.src, alt: "", loading: "lazy" });
       } else if (scene2.src && isVideo) {
-        thumbContent = /* @__PURE__ */ (0, import_jsx_runtime92.jsx)(
+        thumbContent = /* @__PURE__ */ (0, import_jsx_runtime95.jsx)(
           "video",
           {
             src: scene2.src,
@@ -60302,7 +60633,7 @@ function LabelControls({ playerRef, currentTime, onSceneChange }) {
           }
         );
       } else {
-        thumbContent = /* @__PURE__ */ (0, import_jsx_runtime92.jsx)(
+        thumbContent = /* @__PURE__ */ (0, import_jsx_runtime95.jsx)(
           "div",
           {
             style: {
@@ -60320,7 +60651,7 @@ function LabelControls({ playerRef, currentTime, onSceneChange }) {
           }
         );
       }
-      return /* @__PURE__ */ (0, import_jsx_runtime92.jsxs)(
+      return /* @__PURE__ */ (0, import_jsx_runtime95.jsxs)(
         "div",
         {
           className: "thumb-item" + (isActive ? " active" : ""),
@@ -60328,7 +60659,7 @@ function LabelControls({ playerRef, currentTime, onSceneChange }) {
           onClick: () => seekToScene(i3),
           children: [
             thumbContent,
-            /* @__PURE__ */ (0, import_jsx_runtime92.jsx)("div", { className: "thumb-badge" + (hasLabel ? " has-label" : "") })
+            /* @__PURE__ */ (0, import_jsx_runtime95.jsx)("div", { className: "thumb-badge" + (hasLabel ? " has-label" : "") })
           ]
         },
         i3
@@ -60339,12 +60670,12 @@ function LabelControls({ playerRef, currentTime, onSceneChange }) {
     const entry = labelData[effectiveIdx];
     const timed = entry && entry.timed || {};
     const keys = Object.keys(timed).sort();
-    return /* @__PURE__ */ (0, import_jsx_runtime92.jsx)("div", { id: "timed-labels", children: keys.map((k2) => {
+    return /* @__PURE__ */ (0, import_jsx_runtime95.jsx)("div", { id: "timed-labels", children: keys.map((k2) => {
       const sec = parseInt(k2.replace("at_", "")) / 1e3;
-      return /* @__PURE__ */ (0, import_jsx_runtime92.jsxs)("div", { className: "timed-label", "data-key": k2, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime92.jsx)("span", { className: "tl-time", children: formatTime2(sec) }),
-        /* @__PURE__ */ (0, import_jsx_runtime92.jsx)("span", { className: "tl-text", dangerouslySetInnerHTML: { __html: escHtml(timed[k2]) } }),
-        /* @__PURE__ */ (0, import_jsx_runtime92.jsx)("button", { className: "tl-del", title: "Remove", onClick: () => deleteTimed(k2), children: "\xD7" })
+      return /* @__PURE__ */ (0, import_jsx_runtime95.jsxs)("div", { className: "timed-label", "data-key": k2, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime95.jsx)("span", { className: "tl-time", children: formatTime2(sec) }),
+        /* @__PURE__ */ (0, import_jsx_runtime95.jsx)("span", { className: "tl-text", dangerouslySetInnerHTML: { __html: escHtml(timed[k2]) } }),
+        /* @__PURE__ */ (0, import_jsx_runtime95.jsx)("button", { className: "tl-del", title: "Remove", onClick: () => deleteTimed(k2), children: "\xD7" })
       ] }, k2);
     }) });
   };
@@ -60356,12 +60687,12 @@ function LabelControls({ playerRef, currentTime, onSceneChange }) {
       sceneInfoText = currentScene.name + " (" + currentTime.toFixed(1) + "s)";
     }
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime92.jsxs)(import_jsx_runtime92.Fragment, { children: [
+  return /* @__PURE__ */ (0, import_jsx_runtime95.jsxs)(import_jsx_runtime95.Fragment, { children: [
     renderThumbnails(),
     renderTimedLabels(),
-    /* @__PURE__ */ (0, import_jsx_runtime92.jsx)("div", { id: "saved-toast", children: "\u2713 Label saved" }),
-    /* @__PURE__ */ (0, import_jsx_runtime92.jsxs)("div", { id: "bottom-bar", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime92.jsx)(
+    /* @__PURE__ */ (0, import_jsx_runtime95.jsx)("div", { id: "saved-toast", children: "\u2713 Label saved" }),
+    /* @__PURE__ */ (0, import_jsx_runtime95.jsxs)("div", { id: "bottom-bar", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime95.jsx)(
         "input",
         {
           ref: inputRef,
@@ -60377,7 +60708,7 @@ function LabelControls({ playerRef, currentTime, onSceneChange }) {
           }
         }
       ),
-      /* @__PURE__ */ (0, import_jsx_runtime92.jsx)(
+      /* @__PURE__ */ (0, import_jsx_runtime95.jsx)(
         "button",
         {
           id: "label-btn",
@@ -60393,7 +60724,7 @@ function LabelControls({ playerRef, currentTime, onSceneChange }) {
 
 // src/player/components/SceneThumbnails.tsx
 var React51 = __toESM(require_react(), 1);
-var import_jsx_runtime93 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime96 = __toESM(require_jsx_runtime(), 1);
 function SceneThumbnails({ currentTime, onSeek }) {
   const [scenes, setScenes] = React51.useState([]);
   React51.useEffect(() => {
@@ -60412,9 +60743,9 @@ function SceneThumbnails({ currentTime, onSeek }) {
       break;
     }
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime93.jsx)("div", { id: "scene-thumbnails", children: scenes.map((scene2, i3) => {
+  return /* @__PURE__ */ (0, import_jsx_runtime96.jsx)("div", { id: "scene-thumbnails", children: scenes.map((scene2, i3) => {
     const isActive = i3 === activeIdx;
-    return /* @__PURE__ */ (0, import_jsx_runtime93.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime96.jsx)(
       "span",
       {
         className: "scene-pill" + (isActive ? " active" : ""),
@@ -60428,7 +60759,7 @@ function SceneThumbnails({ currentTime, onSeek }) {
 
 // src/player/components/VariantBar.tsx
 var React54 = __toESM(require_react(), 1);
-var import_jsx_runtime94 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime97 = __toESM(require_jsx_runtime(), 1);
 function VariantBar() {
   const [variants, setVariants] = React54.useState([]);
   const currentVariant = (typeof window !== "undefined" ? window.VARIANT : null) || "default";
@@ -60441,7 +60772,7 @@ function VariantBar() {
     });
   }, []);
   if (variants.length <= 1) return null;
-  return /* @__PURE__ */ (0, import_jsx_runtime94.jsx)("div", { id: "variant-bar", children: variants.map((v2) => /* @__PURE__ */ (0, import_jsx_runtime94.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime97.jsx)("div", { id: "variant-bar", children: variants.map((v2) => /* @__PURE__ */ (0, import_jsx_runtime97.jsx)(
     "a",
     {
       href: `/${v2 === "default" ? "" : v2}`,
@@ -60453,7 +60784,7 @@ function VariantBar() {
 }
 
 // src/player/browser.tsx
-var import_jsx_runtime95 = __toESM(require_jsx_runtime(), 1);
+var import_jsx_runtime98 = __toESM(require_jsx_runtime(), 1);
 if (typeof window !== "undefined") {
   globalThis.__remotionShared = {
     "react": React55,
@@ -60757,17 +61088,17 @@ function PlayerApp() {
     };
   }, []);
   if (error49) {
-    return /* @__PURE__ */ (0, import_jsx_runtime95.jsxs)("div", { style: { color: "red", padding: 40, fontFamily: "sans-serif" }, children: [
+    return /* @__PURE__ */ (0, import_jsx_runtime98.jsxs)("div", { style: { color: "red", padding: 40, fontFamily: "sans-serif" }, children: [
       "Error: ",
       error49
     ] });
   }
   if (!ready) {
-    return /* @__PURE__ */ (0, import_jsx_runtime95.jsx)("div", { style: { color: "#888", padding: 40, fontFamily: "sans-serif" }, children: "Loading..." });
+    return /* @__PURE__ */ (0, import_jsx_runtime98.jsx)("div", { style: { color: "#888", padding: 40, fontFamily: "sans-serif" }, children: "Loading..." });
   }
   const width = data2.width || 1080;
   const height = data2.height || 1920;
-  return /* @__PURE__ */ (0, import_jsx_runtime95.jsxs)(
+  return /* @__PURE__ */ (0, import_jsx_runtime98.jsxs)(
     "div",
     {
       style: {
@@ -60779,7 +61110,7 @@ function PlayerApp() {
         alignItems: "center"
       },
       children: [
-        /* @__PURE__ */ (0, import_jsx_runtime95.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime98.jsx)(
           HeaderBar,
           {
             mode,
@@ -60788,8 +61119,8 @@ function PlayerApp() {
             sceneInfo: mode === "label" ? labelSceneInfo : void 0
           }
         ),
-        /* @__PURE__ */ (0, import_jsx_runtime95.jsx)(VariantBar, {}),
-        /* @__PURE__ */ (0, import_jsx_runtime95.jsx)("div", { id: "player-frame", style: { flex: 1, width: "100%", maxWidth: 480, minHeight: 0 }, children: /* @__PURE__ */ (0, import_jsx_runtime95.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime98.jsx)(VariantBar, {}),
+        /* @__PURE__ */ (0, import_jsx_runtime98.jsx)("div", { id: "player-frame", style: { flex: 1, width: "100%", maxWidth: 480, minHeight: 0 }, children: /* @__PURE__ */ (0, import_jsx_runtime98.jsx)(
           Player,
           {
             ref: playerRef,
@@ -60808,7 +61139,7 @@ function PlayerApp() {
             autoPlay
           }
         ) }),
-        /* @__PURE__ */ (0, import_jsx_runtime95.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime98.jsx)(
           SceneThumbnails,
           {
             currentTime,
@@ -60821,7 +61152,7 @@ function PlayerApp() {
             }
           }
         ),
-        mode === "edit" && /* @__PURE__ */ (0, import_jsx_runtime95.jsx)(
+        mode === "edit" && /* @__PURE__ */ (0, import_jsx_runtime98.jsx)(
           EditControls,
           {
             onStatusChange: setEditStatus,
@@ -60830,7 +61161,7 @@ function PlayerApp() {
             activeScene
           }
         ),
-        mode === "label" && /* @__PURE__ */ (0, import_jsx_runtime95.jsx)(
+        mode === "label" && /* @__PURE__ */ (0, import_jsx_runtime98.jsx)(
           LabelControls,
           {
             playerRef,

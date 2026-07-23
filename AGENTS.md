@@ -214,20 +214,19 @@ node src/render/cli.mjs templates
 
 1. Basic Rendering — empty composition, dimension verification
 2. Image + Subtitle — image rendering, inline/VTT/karaoke subtitles
-3. Built-in Components — AnimatedHeadline, StatCounter, GradientBackground
-4. Effects — fadeIn, bounceIn, custom keyframes
-5. Map Rendering — canvas route visualization
-6. Audio Rendering — audio track, non-silent verification
-7. Include — nested composition via include
-8. Full Feature Combination — multiple features
-9. Scene Node — scene-based rendering
-10. Audio STT — speech-to-text verification via whisper
-11. Multiple Aspect Ratios — 16x9, 9x16, 1x1
-12. Cross-Stream Types — parallel rendering, effect-wrapped children
-13. Frame-Accurate — timeline consistency, frame count
-14. Description Field — schema validation, render preservation
-15. Scene as Folder Alias — scene/folder interchangeability
-16. **Video startFrom/endAt Trimming** — video trimming + photo in series
+3. Effects — fadeIn, bounceIn, custom keyframes
+4. Map Rendering — canvas route visualization
+5. Audio Rendering — audio track, non-silent verification
+6. Include — nested composition via include
+7. Full Feature Combination — multiple features
+8. Scene Node — scene-based rendering
+9. Audio STT — speech-to-text verification via whisper
+10. Multiple Aspect Ratios — 16x9, 9x16, 1x1
+11. Cross-Stream Types — parallel rendering, effect-wrapped children
+12. Frame-Accurate — timeline consistency, frame count
+13. Description Field — schema validation, render preservation
+14. Scene as Folder Alias — scene/folder interchangeability
+15. **Video startFrom/endAt Trimming** — video trimming + photo in series
 
 ### Running Tests
 

@@ -45,6 +45,9 @@ export interface ResolveAndCompileOptions {
   /** Path to the source file (.md or .json). When set and root.seed is missing,
    *  a deterministic seed is auto-generated and written back to the source file. */
   sourcePath?: string;
+  /** Storyboard mode: skip TTI/TTV generation, convert prompt image/video nodes
+   *  to component placeholders for fast structural preview. */
+  storyboard?: boolean;
 }
 
 /**
@@ -99,6 +102,7 @@ export async function resolveAndCompile(
     subtitleOutputDir: options.subtitleOutputDir,
     seed: options.seed,
     variants: options.variants,
+    storyboard: options.storyboard,
   });
 
   // 2. Sync compile: descriptive → stream tree

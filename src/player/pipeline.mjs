@@ -722,6 +722,9 @@ function compileDescriptiveRoot(input, options = {}) {
     googleMapsApiKey
   };
   const registry = resolveComponentSources(input);
+  registry.add("StoryboardSlot");
+  registry.add("StoryboardCaption");
+  registry.add("StoryboardInfo");
   warnUnregisteredComponents(input, registry);
   ensureUniqueIds(input.children, "root");
   const children = compileChildren(input.children, ctx, rootKind);
@@ -985,7 +988,7 @@ var args = (function parseArgs(argv) {
     "--tti": "tti",
     "--ttv": "ttv"
   };
-  const args2 = { command: "", file: "", output: "", forceNew: false, verbose: false, dev: false, label: false, edit: false, noBrowser: false, chat: false, port: 3001, compile: false, cli: false, showClis: false, scriptOutputDir: "", mediaOutputDir: "", variant: [], cliOverrides: {} };
+  const args2 = { command: "", file: "", output: "", forceNew: false, verbose: false, dev: false, label: false, edit: false, storyboard: false, noBrowser: false, chat: false, port: 3001, compile: false, cli: false, showClis: false, scriptOutputDir: "", mediaOutputDir: "", variant: [], cliOverrides: {} };
   let i = 2;
   if (argv[i]) args2.command = argv[i++];
   if (argv[i] && !argv[i].startsWith("--")) args2.file = argv[i++];
@@ -1002,6 +1005,7 @@ var args = (function parseArgs(argv) {
     else if (flag === "--dev") args2.dev = true;
     else if (flag === "--label") args2.label = true;
     else if (flag === "--edit") args2.edit = true;
+    else if (flag === "--storyboard") args2.storyboard = true;
     else if (flag === "--no-browser") args2.noBrowser = true;
     else if (flag === "--port" && argv[i]) args2.port = parseInt(argv[i], 10);
     else if (flag.startsWith("--port=")) args2.port = parseInt(flag.split("=")[1], 10);
@@ -10410,6 +10414,10 @@ function internalParse(markdown) {
   for (const node2 of mdast.children) {
     switch (node2.type) {
       case "yaml": {
+        const rawText = node2.value?.trim();
+        if (rawText) {
+          targetRoot().rawFrontmatter = rawText;
+        }
         break;
       }
       case "heading": {
@@ -11046,6 +11054,103 @@ async function resolveGeneratedMedia(root, options) {
   }
   return clone;
 }
+function applyStoryboardOverrides(root, options) {
+  const clone = JSON.parse(JSON.stringify(root));
+  let count = 0;
+  const walk = (nodes) => {
+    for (let i = 0; i < nodes.length; i++) {
+      const n = nodes[i];
+      if ((n.type === "image" || n.type === "video") && typeof n.prompt === "string" && (!n.src || n.src === "auto")) {
+        count++;
+        const kind = n.type === "video" ? "video" : "image";
+        nodes[i] = {
+          id: n.id,
+          type: "component",
+          jsx: `<StoryboardSlot kind="${kind}" prompt={prompt} />`,
+          prompt: n.prompt,
+          duration: n.duration,
+          start: n.start,
+          end: n.end,
+          style: n.style,
+          visible: n.visible,
+          isBackground: n.isBackground,
+          on: n.on,
+          instruction: n.instruction
+        };
+      } else if (n.type === "audio" && typeof n.script === "string" && !n.src) {
+        count++;
+        const dur = typeof n.duration === "number" && n.duration > 0 ? n.duration : 5;
+        nodes[i] = {
+          id: n.id,
+          type: "component",
+          jsx: `<StoryboardCaption script={script}${n.speaker ? " speaker={speaker}" : ""} />`,
+          script: n.script,
+          speaker: n.speaker,
+          duration: dur,
+          start: n.start,
+          end: n.end,
+          style: n.style,
+          visible: n.visible,
+          isBackground: n.isBackground,
+          on: n.on,
+          instruction: n.instruction
+        };
+      } else if (Array.isArray(n.children)) {
+        walk(n.children);
+      }
+    }
+  };
+  walk(clone.children);
+  const rootNode = clone;
+  const configLines = [];
+  if (rootNode.name ?? rootNode.title) configLines.push(`title: ${rootNode.name ?? rootNode.title}`);
+  if (clone.width) configLines.push(`width: ${clone.width}`);
+  if (clone.height) configLines.push(`height: ${clone.height}`);
+  if (clone.fps) configLines.push(`fps: ${clone.fps}`);
+  if (clone.layout) configLines.push(`layout: ${clone.layout}`);
+  if (clone.transition) {
+    const t = clone.transitionTime ? `${clone.transition}(${clone.transitionTime})` : clone.transition;
+    configLines.push(`transition: ${t}`);
+  }
+  if (clone.tts) configLines.push(`tts: ${clone.tts}`);
+  if (clone.stt) configLines.push(`stt: ${clone.stt}`);
+  if (clone.tti) configLines.push(`tti: ${clone.tti}`);
+  if (clone.ttv) configLines.push(`ttv: ${clone.ttv}`);
+  if (clone.seed != null) configLines.push(`seed: ${clone.seed}`);
+  if (clone.stylesheet) configLines.push(`stylesheet: yes`);
+  if (clone.importsBlock) configLines.push(`imports: yes`);
+  if (clone.voices) configLines.push(`voices: ${Object.keys(clone.voices).join(", ")}`);
+  if (clone.metadata) configLines.push(`metadata: ${clone.metadata}`);
+  const configStr = configLines.join("  \xB7  ");
+  const variantStr = (options?.variants ?? []).join(", ");
+  const frontmatter2 = rootNode.rawFrontmatter ?? "";
+  const infoComponent = {
+    type: "component",
+    jsx: `<StoryboardInfo config={config} variants={variants} frontmatter={frontmatter} />`,
+    config: configStr,
+    variants: variantStr,
+    frontmatter: frontmatter2,
+    duration: 4,
+    start: 0,
+    end: 4,
+    visible: true
+  };
+  const infoScene = {
+    type: "scene",
+    id: "storyboard-info",
+    name: "Overview",
+    title: "Storyboard Info",
+    instruction: "Project metadata and variant overview",
+    duration: 4,
+    children: [infoComponent]
+  };
+  clone.children = [infoScene, ...clone.children];
+  count++;
+  if (count > 0) {
+    console.log(`  \u{1F3AC} Storyboard: ${count} placeholder${count > 1 ? "s" : ""} (TTI/TTV/TTS preview)`);
+  }
+  return clone;
+}
 async function resolveIncludes(root, options = {}) {
   const clone = JSON.parse(JSON.stringify(root));
   const baseDir = options.baseDir ?? process.cwd();
@@ -11136,8 +11241,8 @@ async function resolveAll2(root, options = {}) {
       const raw = readFileSync(options.sourcePath, "utf-8");
       if (options.sourcePath.endsWith(".md")) {
         const lines = raw.split("\n");
-        const headerEnd = lines.findIndex((l) => l.trim() === "" || l.startsWith("##"));
-        const insertAt = headerEnd > 1 ? headerEnd : Math.min(1, lines.length);
+        const videoIdx = lines.findIndex((l) => l.trim().startsWith("# video"));
+        const insertAt = videoIdx >= 0 ? videoIdx + 1 : 1;
         lines.splice(insertAt, 0, `seed:${autoSeed}`);
         writeFileSync(options.sourcePath, lines.join("\n"), "utf-8");
       } else if (options.sourcePath.endsWith(".json")) {
@@ -11161,6 +11266,9 @@ async function resolveAll2(root, options = {}) {
     fps: result.fps ?? 30,
     variant: options.variants?.[0] ?? "video"
   });
+  if (options.storyboard) {
+    result = applyStoryboardOverrides(result, { variants: options.variants });
+  }
   result = await resolveMediaSrcs(result, { baseDir: options.baseDir });
   if (options.mediaOutputDir) {
     result = await resolveGeneratedMedia(result, {
@@ -11220,7 +11328,8 @@ async function resolveAndCompile(data, options = {}) {
     sttCli: options.sttCli,
     subtitleOutputDir: options.subtitleOutputDir,
     seed: options.seed,
-    variants: options.variants
+    variants: options.variants,
+    storyboard: options.storyboard
   });
   const compiled = compileDescriptiveRoot(resolved, {
     googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY

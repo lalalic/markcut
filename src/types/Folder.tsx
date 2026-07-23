@@ -172,8 +172,8 @@ export function FolderLeaf({ stream }: { stream: FolderStream }) {
         style={containerStyle}
         className={`${orientation} ${stream.type}`.trim()}
       >
-        {isSeries ? <TypedSeries>{sequences}</TypedSeries> : sequences}
         {bgContent}
+        {isSeries ? <TypedSeries>{sequences}</TypedSeries> : sequences}
       </Container>
     </AudioContext.Provider>
   );

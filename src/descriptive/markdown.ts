@@ -401,7 +401,11 @@ function internalParse(markdown: string): VariantParseResult {
   for (const node of (mdast as any).children) {
     switch (node.type) {
       case "yaml": {
-        // Frontmatter is metadata only — does not affect video config.
+        // Frontmatter is metadata only — store raw text for storyboard preview
+        const rawText = (node as any).value?.trim();
+        if (rawText) {
+          (targetRoot() as any).rawFrontmatter = rawText;
+        }
         break;
       }
       case "heading": {

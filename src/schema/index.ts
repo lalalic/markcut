@@ -57,7 +57,7 @@ export const folder = base.extend({
 export type Folder = z.infer<typeof folder>;
 
 export const subtitleOverlay = z.object({
-  src: z.string().describe("path or URL to VTT file covering the full video duration"),
+  src: z.string().optional().describe("path or URL to VTT file covering the full video duration; omitted when no subtitles are available"),
   style: z.string().optional().describe("inline css for the overlay container"),
   fontSize: z.union([z.number(), z.string()]).optional(),
   type: z.string().optional().describe("caption animation type: bounce, fade, typewriter, colorful, glowing, neon, etc."),

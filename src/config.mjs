@@ -20,7 +20,7 @@ export const args=(function parseArgs(argv) {
     "--tti": "tti",
     "--ttv": "ttv"
   };
-  const args = { command: "", file: "", output: "", forceNew: false, verbose: false, dev: false, label: false, edit: false, noBrowser: false, chat: false, port: 3001, compile: false, cli: false, showClis: false, scriptOutputDir: "", mediaOutputDir: "", variant: [], cliOverrides: {} };
+  const args = { command: "", file: "", output: "", forceNew: false, verbose: false, dev: false, label: false, edit: false, storyboard: false, noBrowser: false, chat: false, port: 3001, compile: false, cli: false, showClis: false, scriptOutputDir: "", mediaOutputDir: "", variant: [], cliOverrides: {} };
   let i = 2;
   if (argv[i]) args.command = argv[i++];
   if (argv[i] && !argv[i].startsWith("--")) args.file = argv[i++];
@@ -37,6 +37,7 @@ export const args=(function parseArgs(argv) {
     else if (flag === "--dev") args.dev = true;
     else if (flag === "--label") args.label = true;
     else if (flag === "--edit") args.edit = true;
+    else if (flag === "--storyboard") args.storyboard = true;
     else if (flag === "--no-browser") args.noBrowser = true;
     else if (flag === "--port" && argv[i]) args.port = parseInt(argv[i], 10);
     else if (flag.startsWith("--port=")) args.port = parseInt(flag.split("=")[1], 10);
