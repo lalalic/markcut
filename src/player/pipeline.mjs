@@ -224,18 +224,20 @@ function wrapWithEffects(node2, result, parentKind) {
 }
 function compileLeaf(node2, ctx, parentKind) {
   const id = node2.id ?? uid();
-  const start = parentKind === "parallel" ? Math.max(0, node2.start ?? 0) : 0;
-  const duration = deriveLeafDuration(node2, ctx);
-  const end = start + duration;
+  const hasOwnDuration = typeof node2.duration === "number" || typeof node2.endAt === "number";
+  const isBgNoOwnTiming = node2.isBackground && !hasOwnDuration;
+  const start = isBgNoOwnTiming ? typeof node2.start === "number" ? node2.start : void 0 : parentKind === "parallel" ? Math.max(0, node2.start ?? 0) : 0;
+  const duration = isBgNoOwnTiming ? void 0 : deriveLeafDuration(node2, ctx);
+  const end = duration != null ? start + duration : void 0;
   const base = {
     id,
     style: node2.style,
     visible: node2.visible ?? true,
     isBackground: node2.isBackground,
-    start,
+    start: isBgNoOwnTiming ? typeof node2.start === "number" ? node2.start : void 0 : start,
     end,
-    startFrom: node2.type === "video" || node2.type === "audio" ? node2.startFrom : void 0,
-    endAt: node2.type === "video" || node2.type === "audio" ? node2.endAt : void 0,
+    startFrom: isBgNoOwnTiming ? void 0 : node2.type === "video" || node2.type === "audio" ? node2.startFrom : void 0,
+    endAt: isBgNoOwnTiming ? void 0 : node2.type === "video" || node2.type === "audio" ? node2.endAt : void 0,
     durationInSeconds: end,
     ...pickOn(node2)
   };
@@ -250,7 +252,7 @@ function compileLeaf(node2, ctx, parentKind) {
         width: node2.width ?? 1080,
         height: node2.height ?? 1920
       };
-      return { stream, duration: end };
+      return { stream, duration: end ?? 0 };
     }
     case "audio": {
       const stream = {
@@ -261,7 +263,7 @@ function compileLeaf(node2, ctx, parentKind) {
         foreground: node2.foreground,
         speaker: node2.speaker
       };
-      return { stream, duration: end };
+      return { stream, duration: end ?? 0 };
     }
     case "image": {
       const stream = {
@@ -270,7 +272,7 @@ function compileLeaf(node2, ctx, parentKind) {
         src: node2.src,
         fit: node2.fit ?? "contain"
       };
-      return { stream, duration: end };
+      return { stream, duration: end ?? 0 };
     }
     case "component": {
       const KNOWN_COMPONENT_KEYS = /* @__PURE__ */ new Set([
@@ -298,7 +300,7 @@ function compileLeaf(node2, ctx, parentKind) {
         jsx: node2.jsx,
         data: Object.keys(bindings).length ? bindings : void 0
       };
-      return { stream, duration: end };
+      return { stream, duration: end ?? 0 };
     }
     case "rhythm": {
       const stream = {
@@ -309,7 +311,7 @@ function compileLeaf(node2, ctx, parentKind) {
         spots: node2.spots,
         children: []
       };
-      return { stream, duration: end };
+      return { stream, duration: end ?? 0 };
     }
     case "map": {
       const stream = {
@@ -325,7 +327,7 @@ function compileLeaf(node2, ctx, parentKind) {
         routeMarker: node2.routeMarker ?? "\u{1F697}",
         googleMapsApiKey: ctx.googleMapsApiKey
       };
-      return { stream, duration: end };
+      return { stream, duration: end ?? 0 };
     }
   }
 }
@@ -388,6 +390,13 @@ function compileScene(node2, ctx, parentKind) {
   ];
   const sceneContentDuration = sceneKind === "parallel" ? aggregateDuration(compiledChildren, "parallel") : aggregateDuration(compiledChildren, sceneKind, resolved.time);
   const localDuration = Math.max(node2.duration ?? 0, sceneContentDuration);
+  for (const c of compiledChildren) {
+    if (c.stream.isBackground && c.stream.end == null) {
+      c.stream.end = localDuration;
+      c.stream.durationInSeconds = localDuration;
+      if (c.stream.start == null) c.stream.start = 0;
+    }
+  }
   const start = parentKind === "parallel" ? Math.max(0, node2.start ?? 0) : 0;
   const end = start + localDuration;
   const stream = {
@@ -481,6 +490,13 @@ function compileContainer(node2, ctx, parentKind) {
   const resolved = node2.type === "transitionSeries" ? resolveTransition(node2.transition, node2.transitionTime) : { name: "fade", time: 0.5 };
   const children = compileChildren(node2.children, ctx, node2.type);
   const duration = aggregateDuration(children, node2.type, resolved.time);
+  for (const c of children) {
+    if (c.stream.isBackground && c.stream.end == null) {
+      c.stream.end = duration;
+      c.stream.durationInSeconds = duration;
+      if (c.stream.start == null) c.stream.start = 0;
+    }
+  }
   const stream = {
     id,
     type: "folder",
@@ -729,6 +745,13 @@ function compileDescriptiveRoot(input, options = {}) {
   ensureUniqueIds(input.children, "root");
   const children = compileChildren(input.children, ctx, rootKind);
   const duration = aggregateDuration(children, rootKind, resolved.time);
+  for (const c of children) {
+    if (c.stream.isBackground && c.stream.end == null) {
+      c.stream.end = duration;
+      c.stream.durationInSeconds = duration;
+      if (c.stream.start == null) c.stream.start = 0;
+    }
+  }
   const compiled = {
     id: "root",
     type: "root",
@@ -10746,6 +10769,7 @@ async function resolveMediaDurations(root, options = {}) {
   walkDown(clone, (node2) => {
     const n = node2;
     if (n.type !== "video" && n.type !== "audio") return;
+    if (n.isBackground && typeof n.duration !== "number" && typeof n.endAt !== "number") return;
     if (typeof n.duration === "number" && n.duration > 0) return;
     if (typeof n.endAt === "number") return;
     if (!n.src) return;
@@ -11130,9 +11154,9 @@ function applyStoryboardOverrides(root, options) {
     config: configStr,
     variants: variantStr,
     frontmatter: frontmatter2,
-    duration: 4,
+    duration: 3,
     start: 0,
-    end: 4,
+    end: 3,
     visible: true
   };
   const infoScene = {
@@ -11141,7 +11165,7 @@ function applyStoryboardOverrides(root, options) {
     name: "Overview",
     title: "Storyboard Info",
     instruction: "Project metadata and variant overview",
-    duration: 4,
+    duration: 3,
     children: [infoComponent]
   };
   clone.children = [infoScene, ...clone.children];

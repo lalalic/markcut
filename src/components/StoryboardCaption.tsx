@@ -25,7 +25,6 @@ export function StoryboardCaption({ script, speaker }: StoryboardCaptionProps) {
         bottom: "10%",
         left: "5%",
         right: "5%",
-        zIndex: 100,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",

@@ -198,6 +198,8 @@ export async function resolveMediaDurations(
   walkDown(clone as any, (node) => {
     const n = node as DescriptiveNode;
     if (n.type !== "video" && n.type !== "audio") return;
+    // Skip background nodes without explicit timing — parent container fills duration
+    if (n.isBackground && typeof n.duration !== "number" && typeof n.endAt !== "number") return;
     if (typeof n.duration === "number" && n.duration > 0) return;
     if (typeof n.endAt === "number") return; // trim already specified
     if (!n.src) return;
@@ -858,9 +860,9 @@ export function applyStoryboardOverrides(
     config: configStr,
     variants: variantStr,
     frontmatter,
-    duration: 4,
+    duration: 3,
     start: 0,
-    end: 4,
+    end: 3,
     visible: true,
   };
   const infoScene: any = {
@@ -869,7 +871,7 @@ export function applyStoryboardOverrides(
     name: "Overview",
     title: "Storyboard Info",
     instruction: "Project metadata and variant overview",
-    duration: 4,
+    duration: 3,
     children: [infoComponent],
   };
   clone.children = [infoScene, ...clone.children];

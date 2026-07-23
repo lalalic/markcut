@@ -490,19 +490,27 @@ function wrapWithEffects(
 
 function compileLeaf(node: Exclude<DescriptiveNode, DescriptiveContainer | DescriptiveScene | DescriptiveInclude>, ctx: CompileContext, parentKind: "series" | "parallel" | "transitionSeries"): CompileResult {
   const id = node.id ?? uid();
-  const start = parentKind === "parallel" ? Math.max(0, node.start ?? 0) : 0;
-  const duration = deriveLeafDuration(node, ctx);
-  const end = start + duration;
+
+  // Background nodes without explicit duration/endAt: let parent fill timing later
+  const hasOwnDuration = typeof node.duration === "number" || typeof node.endAt === "number";
+  const isBgNoOwnTiming = node.isBackground && !hasOwnDuration;
+
+  // For background without own timing, skip deriving duration — will be filled by parent
+  const start = isBgNoOwnTiming
+    ? (typeof node.start === "number" ? node.start : undefined)
+    : (parentKind === "parallel" ? Math.max(0, node.start ?? 0) : 0);
+  const duration = isBgNoOwnTiming ? undefined : deriveLeafDuration(node, ctx);
+  const end = duration != null ? start! + duration : undefined;
 
   const base = {
     id,
     style: node.style,
     visible: node.visible ?? true,
     isBackground: node.isBackground,
-    start,
+    start: isBgNoOwnTiming ? (typeof node.start === "number" ? node.start : undefined) : start,
     end,
-    startFrom: node.type === "video" || node.type === "audio" ? node.startFrom : undefined,
-    endAt: node.type === "video" || node.type === "audio" ? node.endAt : undefined,
+    startFrom: isBgNoOwnTiming ? undefined : (node.type === "video" || node.type === "audio" ? node.startFrom : undefined),
+    endAt: isBgNoOwnTiming ? undefined : (node.type === "video" || node.type === "audio" ? node.endAt : undefined),
     durationInSeconds: end,
     ...pickOn(node),
   };
@@ -518,7 +526,7 @@ function compileLeaf(node: Exclude<DescriptiveNode, DescriptiveContainer | Descr
         width: node.width ?? 1080,
         height: node.height ?? 1920,
       };
-      return { stream, duration: end };
+      return { stream, duration: end ?? 0 };
     }
     case "audio": {
       const stream: Audio = {
@@ -529,7 +537,7 @@ function compileLeaf(node: Exclude<DescriptiveNode, DescriptiveContainer | Descr
         foreground: node.foreground,
         speaker: node.speaker,
       };
-      return { stream, duration: end };
+      return { stream, duration: end ?? 0 };
     }
     case "image": {
       const stream: Image = {
@@ -538,7 +546,7 @@ function compileLeaf(node: Exclude<DescriptiveNode, DescriptiveContainer | Descr
         src: node.src,
         fit: node.fit ?? "contain",
       };
-      return { stream, duration: end };
+      return { stream, duration: end ?? 0 };
     }
     case "component": {
       // Collect extra properties from descriptive node (e.g. `source` from ~~~md source fences)
@@ -560,7 +568,7 @@ function compileLeaf(node: Exclude<DescriptiveNode, DescriptiveContainer | Descr
         jsx: node.jsx,
         data: Object.keys(bindings).length ? bindings : undefined,
       };
-      return { stream, duration: end };
+      return { stream, duration: end ?? 0 };
     }
     case "rhythm": {
       // rhythm without children compiles as a plain audio leaf
@@ -572,7 +580,7 @@ function compileLeaf(node: Exclude<DescriptiveNode, DescriptiveContainer | Descr
         spots: node.spots,
         children: [],
       };
-      return { stream, duration: end };
+      return { stream, duration: end ?? 0 };
     }
     case "map": {
       const stream: MapStream = {
@@ -588,7 +596,7 @@ function compileLeaf(node: Exclude<DescriptiveNode, DescriptiveContainer | Descr
         routeMarker: node.routeMarker ?? "🚗",
         googleMapsApiKey: ctx.googleMapsApiKey,
       };
-      return { stream, duration: end };
+      return { stream, duration: end ?? 0 };
     }
   }
 }
@@ -676,6 +684,16 @@ function compileScene(
     ? aggregateDuration(compiledChildren, "parallel")
     : aggregateDuration(compiledChildren, sceneKind, resolved.time);
   const localDuration = Math.max(node.duration ?? 0, sceneContentDuration);
+
+  // Back-propagate parent duration to background children without own timing
+  for (const c of compiledChildren) {
+    if (c.stream.isBackground && c.stream.end == null) {
+      c.stream.end = localDuration;
+      c.stream.durationInSeconds = localDuration;
+      if (c.stream.start == null) c.stream.start = 0;
+    }
+  }
+
   const start = parentKind === "parallel" ? Math.max(0, node.start ?? 0) : 0;
   const end = start + localDuration;
 
@@ -813,6 +831,15 @@ function compileContainer(node: DescriptiveContainer, ctx: CompileContext, paren
     : { name: "fade", time: 0.5 };
   const children = compileChildren(node.children, ctx, node.type);
   const duration = aggregateDuration(children, node.type, resolved.time);
+
+  // Back-propagate parent duration to background children without own timing
+  for (const c of children) {
+    if (c.stream.isBackground && c.stream.end == null) {
+      c.stream.end = duration;
+      c.stream.durationInSeconds = duration;
+      if (c.stream.start == null) c.stream.start = 0;
+    }
+  }
 
   const stream: Folder = {
     id,
@@ -1210,6 +1237,15 @@ export function compileDescriptiveRoot(input: DescriptiveRoot, options: CompileO
 
   const children = compileChildren(input.children, ctx, rootKind);
   const duration = aggregateDuration(children, rootKind, resolved.time);
+
+  // Back-propagate root duration to background children without own timing
+  for (const c of children) {
+    if (c.stream.isBackground && c.stream.end == null) {
+      c.stream.end = duration;
+      c.stream.durationInSeconds = duration;
+      if (c.stream.start == null) c.stream.start = 0;
+    }
+  }
 
   const compiled: Root = {
     id: "root",

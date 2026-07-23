@@ -64,20 +64,20 @@ export function extractScenes(root) {
         dur = (src2.end ?? 5) - (src2.start ?? 0);
       }
       const leaf = (s.children || []).find(c => c.src && (c.type === "image" || c.type === "video"));
-      // Account for transition overlap: scene i starts at offset - i*overlap
-      const transitionOffset = scenes.length * overlap;
-      const start = Math.max(0, offset - transitionOffset);
+      // Use the raw cumulative offset as the scene start time. Transition overlap
+      // is a rendering detail — scene thumbnails seek to the raw boundary so the
+      // user lands on the first frame of the intended scene, not inside a transition.
       scenes.push({
         name: s.name || s.id || "scene",
-        start,
-        end: start + dur,
+        start: offset,
+        end: offset + dur,
         duration: dur,
         src: leaf?.src || "",
         mediaType: leaf?.type || "unknown",
       });
       offset += dur;
     }
-    totalDuration = offset - Math.max(0, (scenes.length - 1)) * overlap;
+    totalDuration = offset;
   }
 
   // Format 2: scenes wrapped in a "scenes" folder
