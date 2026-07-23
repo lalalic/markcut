@@ -15,6 +15,7 @@ import type {
   Video,
 } from "../schema/index";
 import { uid, walkDown } from "../utils/index";
+import { BUILTIN_COMPONENT_NAMES } from "../components/builtin-registry";
 
 export interface CompileOptions {
   defaults?: Partial<Record<"image" | "video" | "audio" | "component" | "rhythm" | "include" | "map", number>>;
@@ -1227,12 +1228,13 @@ export function compileDescriptiveRoot(input: DescriptiveRoot, options: CompileO
 
   // Resolve frontmatter imports / inline component defs onto each component node.
   const registry = resolveComponentSources(input);
-  // Add built-in components so warnUnregisteredComponents doesn't flag them.
-  registry.add("StoryboardSlot");
-  registry.add("StoryboardCaption");
-  registry.add("StoryboardInfo");
-  registry.add("Markdown");
-  registry.add("Mermaid");
+  // Auto-register built-in components so warnUnregisteredComponents doesn't flag them.
+  // Names come from the barrel file's BUILTIN_COMPONENT_NAMES (lightweight, no React deps).
+  // To add a new built-in: export it from src/components/index.ts, add name to
+  // BUILTIN_COMPONENT_NAMES in the same file, then rebuild bundles.
+  for (const name of BUILTIN_COMPONENT_NAMES) {
+    registry.add(name);
+  }
   warnUnregisteredComponents(input, registry);
 
   ensureUniqueIds(input.children, "root");

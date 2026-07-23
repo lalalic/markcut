@@ -48,6 +48,21 @@ var init_utils = __esm({
   }
 });
 
+// src/components/builtin-registry.ts
+var BUILTIN_COMPONENT_NAMES;
+var init_builtin_registry = __esm({
+  "src/components/builtin-registry.ts"() {
+    "use strict";
+    BUILTIN_COMPONENT_NAMES = [
+      "StoryboardSlot",
+      "StoryboardCaption",
+      "StoryboardInfo",
+      "Markdown",
+      "Mermaid"
+    ];
+  }
+});
+
 // src/descriptive/compiler.ts
 var compiler_exports = {};
 __export(compiler_exports, {
@@ -738,11 +753,9 @@ function compileDescriptiveRoot(input, options = {}) {
     googleMapsApiKey
   };
   const registry = resolveComponentSources(input);
-  registry.add("StoryboardSlot");
-  registry.add("StoryboardCaption");
-  registry.add("StoryboardInfo");
-  registry.add("Markdown");
-  registry.add("Mermaid");
+  for (const name of BUILTIN_COMPONENT_NAMES) {
+    registry.add(name);
+  }
   warnUnregisteredComponents(input, registry);
   ensureUniqueIds(input.children, "root");
   const children = compileChildren(input.children, ctx, rootKind);
@@ -778,6 +791,7 @@ var init_compiler = __esm({
   "src/descriptive/compiler.ts"() {
     "use strict";
     init_utils();
+    init_builtin_registry();
     DEFAULTS = {
       image: 3,
       video: 3,

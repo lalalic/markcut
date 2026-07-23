@@ -5,10 +5,7 @@ import { ComposeContext, EventProvider, type ComposeContextValue } from "./conte
 
 import { FolderLeaf } from "./types/Folder";
 import { SubtitleOverlay } from "./types/Subtitle";
-import { StoryboardSlot } from "./components/StoryboardSlot";
-import { StoryboardCaption } from "./components/StoryboardCaption";
-import { StoryboardInfo } from "./components/StoryboardInfo";
-import { Markdown, Mermaid } from "./components/index";
+import * as AllComponents from "./components/index";
 import { getDurationInSeconds } from "./utils/index";
 import { root as rootSchema, type Root } from "./schema/index";
 import {
@@ -39,19 +36,14 @@ const DefaultContainer: ComposeContextValue["Container"] = ({ children, style, c
 
 /**
  * Built-in components available to every video without registration.
- * Currently includes the storyboard placeholder; add other universal
- * components here as needed.
+ * Auto-populated from the components barrel file (src/components/index.ts).
+ * To add a new built-in: create the component file, export it from the barrel,
+ * then rebuild bundles — no manual registration needed.
  *
  * User-provided components (via compose.components or root.imports) take
  * precedence — they can override any builtin by using the same name.
  */
-const BUILTIN_COMPONENTS: Record<string, React.ComponentType<any>> = {
-  StoryboardSlot,
-  StoryboardCaption,
-  StoryboardInfo,
-  Markdown,
-  Mermaid,
-};
+const BUILTIN_COMPONENTS: Record<string, React.ComponentType<any>> = AllComponents as unknown as Record<string, React.ComponentType<any>>;
 
 /**
  * Load the component registry from root.imports.
