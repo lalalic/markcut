@@ -14,7 +14,8 @@ import * as ReactDOM from "react-dom";
 import * as Remotion from "remotion";
 import { Player } from "@remotion/player";
 import { MarkCut, getDurationInSeconds } from "../entry";
-import { HeaderBar, EditControls, LabelControls, SceneThumbnails, VariantBar } from "./components/index";
+import { HeaderBar, EditControls, EditMessagePanel, LabelControls, SceneThumbnails, VariantBar } from "./components/index";
+import type { EditEntry } from "./components/EditMessagePanel";
 import * as MarkcutComponents from "../components/index";
 
 /**
@@ -389,9 +390,13 @@ function PlayerApp() {
     (typeof window !== "undefined" ? (window as any).MODE : null) || "preview";
 
   // Shared state for header info
-  const [editStatus, setEditStatus] = React.useState("");
   const [sseConnected, setSseConnected] = React.useState(false);
   const [labelSceneInfo, setLabelSceneInfo] = React.useState("");
+
+  // ── Edit message panel state ─────────────────────────────────────────
+  const [editEntries, setEditEntries] = React.useState<EditEntry[]>([]);
+  const [editPanelMinimized, setEditPanelMinimized] = React.useState(true);
+  let nextEditIdRef = React.useRef(1);
 
   // SSE connection — shared across all modes as a server-liveness monitor
   // Edit mode also listens for "reload" messages (auto-refresh on file change)
@@ -404,8 +409,54 @@ function PlayerApp() {
       evtSource.onmessage = (e: MessageEvent) => {
         try {
           const msg = JSON.parse(e.data);
+
+          // Reload event (file changed on disk or agent finished editing)
           if (msg.type === "reload" && !suppressReloadRef.current) {
             window.dispatchEvent(new Event("refresh-player"));
+            return;
+          }
+
+          // Edit progress events (live from agent RPC)
+          if (msg.type === "edit:start") {
+            const id = nextEditIdRef.current++;
+            setEditEntries((prev) => [
+              ...prev,
+              { id, request: msg.request || "", progress: "", status: "thinking" },
+            ]);
+            setEditPanelMinimized(false);
+            return;
+          }
+          if (msg.type === "edit:progress") {
+            setEditEntries((prev) => {
+              const last = prev[prev.length - 1];
+              if (!last || last.status !== "thinking") return prev;
+              return prev.map((e) =>
+                e.id === last.id ? { ...e, progress: msg.text || "" } : e
+              );
+            });
+            return;
+          }
+          if (msg.type === "edit:done") {
+            setEditEntries((prev) => {
+              const last = prev[prev.length - 1];
+              if (!last) return prev;
+              return prev.map((e) =>
+                e.id === last.id
+                  ? { ...e, status: "done", progress: e.progress || msg.summary || "" }
+                  : e
+              );
+            });
+            return;
+          }
+          if (msg.type === "edit:error") {
+            setEditEntries((prev) => {
+              const last = prev[prev.length - 1];
+              if (!last) return prev;
+              return prev.map((e) =>
+                e.id === last.id ? { ...e, status: "error", error: msg.error } : e
+              );
+            });
+            return;
           }
         } catch {}
       };
@@ -440,10 +491,18 @@ function PlayerApp() {
       {/* ── Header (close button + mode info) ── */}
       <HeaderBar
         mode={mode}
-        editStatus={editStatus}
         sseConnected={sseConnected}
         sceneInfo={mode === "label" ? labelSceneInfo : undefined}
       />
+
+      {/* ── Edit message panel ── */}
+      {mode === "edit" && (
+        <EditMessagePanel
+          entries={editEntries}
+          minimized={editPanelMinimized}
+          onToggleMinimize={() => setEditPanelMinimized((v) => !v)}
+        />
+      )}
 
       {/* ── Variant switcher ── */}
       <VariantBar />
@@ -483,7 +542,6 @@ function PlayerApp() {
       {/* ── Mode-specific controls ── */}
       {mode === "edit" && (
         <EditControls
-          onStatusChange={setEditStatus}
           suppressReloadRef={suppressReloadRef}
           currentTime={currentTime}
           activeScene={activeScene}

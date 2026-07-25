@@ -496,7 +496,7 @@ function hasScript(root) {
 
       // Compile to validate
       const compiled = compileDescriptiveRoot(descriptive);
-      emitSuccess(`Valid. Duration: ~${compiled.durationInSeconds ?? "?"}s, Scenes: ${compiled.children?.length ?? 0}`);
+      emitSuccess(`Valid`);
       process.exit(0);
 
     } catch (err) {

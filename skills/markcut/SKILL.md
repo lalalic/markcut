@@ -80,52 +80,13 @@ some common issues (photo or video can't be displayed, audio missing), take belo
 | Topic | File |
 |-------|------|
 | Markdown descriptive format (primary authoring format) | [docs/markdown-descriptive.md](docs/markdown-descriptive.md) |
+| Built-in components & common npm packages | [docs/components.md](docs/components.md) |
 
 
-## Built-in Components (no imports needed)
+## Built-in Components
 
-These components are available directly in `jsx:".."` fields or importable from the `~~~js imports` block via `@lalalic/markcut/components`:
+Built-in components available via `@lalalic/markcut/components`. See [docs/components.md](docs/components.md) for full reference.
 
-### `<Markdown />` — render markdown content
-```md
-- component jsx:"<Markdown source='# Hello\n\n**bold** text.' />"
-```
-- Uses `react-markdown` + `remark-gfm` (tables, strikethrough, task lists)
-- Supports `plugins` and `components` props: define custom renderers in imports block and pass them in
-- ` ```mermaid ` code fences inside markdown are automatically rendered as Mermaid diagrams
-- Importable: `import {Markdown} from "@lalalic/markcut/components"`
-
-### `<Mermaid />` — render Mermaid diagrams as SVG
-```md
-- component jsx:"<Mermaid source='graph TD; A-->B; A-->C; B-->D;' />"
-```
-- Theme prop: `theme="default" | "dark" | "forest" | "neutral"` (default: `dark`)
-- Uses `delayRender`/`continueRender` for async rendering — diagram is ready before Remotion captures the frame
-- Errors shown inline in the output
-- Importable: `import {Mermaid} from "@lalalic/markcut/components"`
-
-### Wrapping built-ins in custom components
-```js
-import {Markdown, Mermaid} from "@lalalic/markcut/components"
-
-export function SuperMarkdown({ source }) {
-  return (
-    <Markdown
-      source={source}
-      components={{
-        li: ({children}) => <li style={{color:'#ffd700'}}>{children}</li>,
-      }}
-    />
-  )
-}
-```
-
-## Common npm packages (used via imports block)
-- `react-markdown` + `remark-gfm` — already bundled as built-in `<Markdown />` above
-- `remark-toc` — generate table of contents
-- `remark-math` + `rehype-katex` — render math formulas with KaTeX
-- `@remotion/shapes` — render shapes like arrows, circles, rectangles, etc
-- `@remotion/starburst` — render starburst animations
 
 ## Golden rule
 - always check stream start and duration to avoid
@@ -133,8 +94,12 @@ export function SuperMarkdown({ source }) {
   - video cut off
   - subtitle mismatch
   - sync issues between audio, video, and subtitles
-- don't set duration for script or stream's duration depending on audio script
-  - markcut resolver will automatically calculate the duration based on the audio script length
-- **don't** rm `.markcut` directory, which served as cache for all generated content. cache will auto update according to the content change. rm `.markcut` will cause all content to be regenerated, which is time consuming and wasteful.
+according to the content change. rm `.markcut` will cause all content to be regenerated, which is time consuming and wasteful.
 - put all manual assets in `assets` folder, such as bgm, logo, watermark, etc. don't put them in `.markcut` folder, which is auto generated and will be deleted when `markcut clean` command is run.
-- `npx @lalalic/markcut preview` stuck until user close the preview window.
+
+### Don'ts
+- **don't** set duration for script or stream's duration depending on audio script
+  - markcut resolver will automatically calculate the duration based on the audio script length
+- **don't** rm `.markcut` directory, which served as cache for all generated content. cache will auto update 
+- **don't** set timeout for `preview`, `vision`, `render` markcut commands, which may take long time to generate medias.
+- **don't** use skill to understand vision media. use `npx @lalalic/markcut vision <folder>`.

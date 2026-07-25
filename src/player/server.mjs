@@ -79,6 +79,14 @@ const VARIANT_CONFIGS = parseVariantConfigs();
 const sseClients = new Set();
 let shutdownTimer = null;
 
+/** Push a JSON event to all connected SSE clients. */
+function ssePush(data) {
+  const text = `data: ${JSON.stringify(data)}\n\n`;
+  for (const client of sseClients) {
+    try { client.write(text); } catch { sseClients.delete(client); }
+  }
+}
+
 // ─── Label store for label mode ───────────────────────────────────────────
 let labels = [];
 
@@ -128,16 +136,24 @@ function handleAgentLine(obj) {
   const t = obj.type;
   if (t === "message_end") {
     const txt = extractAssistantText(obj.message);
-    if (txt) agentTurnText += (agentTurnText ? "\n" : "") + txt;
+    if (txt) {
+      agentTurnText += (agentTurnText ? "\n" : "") + txt;
+      // Push incremental assistant text to SSE clients
+      ssePush({ type: "edit:progress", text: agentTurnText });
+    }
     return;
   }
   if (t === "agent_settled" && pendingEditResolver) {
+    ssePush({ type: "edit:done", summary: agentTurnText.substring(0, 120) });
     finishAgentTurn({ ok: true });
     return;
   }
   if (t === "response" && obj.command === "prompt" && pendingEditResolver) {
     // Preflight result: success means "accepted, events incoming"; failure aborts.
-    if (obj.success === false) finishAgentTurn({ ok: false, error: obj.error || "prompt rejected" });
+    if (obj.success === false) {
+      ssePush({ type: "edit:error", error: obj.error || "prompt rejected" });
+      finishAgentTurn({ ok: false, error: obj.error || "prompt rejected" });
+    }
     return;
   }
   if (t === "extension_error" && obj.error) {
@@ -762,7 +778,7 @@ function getHtml(variantLabel) {
   html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a0a; }
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; flex-direction: column; align-items: center; }
   #header { display: flex; align-items: center; justify-content: flex-end; width: 100%; max-width: 500px; padding: 8px 12px; flex-shrink: 0; gap: 8px; }
-  #header-status, #edit-status { font-size: 11px; color: rgba(255,255,255,.4); flex: 1; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #header-status { font-size: 11px; color: rgba(255,255,255,.4); flex: 1; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #scene-info { font-size: 11px; color: rgba(255,255,255,.4); flex: 1; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #header-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
   #close-btn { width: 22px; height: 22px; border-radius: 50%; border: 1px solid rgba(255,255,255,.15); background: rgba(0,0,0,.3); color: rgba(255,255,255,.4); font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all .15s; }
@@ -805,6 +821,125 @@ function getHtml(variantLabel) {
   .scene-pill { flex-shrink: 0; padding: 4px 12px; border-radius: 12px; cursor: pointer; border: 1px solid transparent; transition: all .15s; background: rgba(255,255,255,.06); color: rgba(255,255,255,.45); font-size: 11px; white-space: nowrap; }
   .scene-pill:hover { border-color: rgba(74,158,255,.4); color: rgba(255,255,255,.7); }
   .scene-pill.active { background: rgba(74,158,255,.2); border-color: #4a9eff; color: #4a9eff; }
+
+  /* ── Edit message panel ───────────────────────────────────────────── */
+  #edit-message-panel {
+    width: 100%;
+    max-width: 500px;
+    flex-shrink: 0;
+    background: rgba(255,255,255,.04);
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 10px;
+    margin: 4px 12px;
+    overflow: hidden;
+    backdrop-filter: blur(8px);
+  }
+  #edit-message-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 10px;
+    font-size: 11px;
+    color: rgba(255,255,255,.5);
+    border-bottom: 1px solid rgba(255,255,255,.06);
+  }
+  #edit-message-minimize {
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    background: rgba(255,255,255,.06);
+    color: rgba(255,255,255,.4);
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all .15s;
+  }
+  #edit-message-minimize:hover {
+    background: rgba(74,158,255,.2);
+    border-color: rgba(74,158,255,.4);
+    color: #4a9eff;
+  }
+  #edit-message-list {
+    max-height: 180px;
+    overflow-y: auto;
+    padding: 6px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    scrollbar-width: thin;
+  }
+  #edit-message-list::-webkit-scrollbar { width: 4px; }
+  #edit-message-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,.15); border-radius: 2px; }
+  .edit-message-empty {
+    font-size: 11px;
+    color: rgba(255,255,255,.25);
+    padding: 8px 0;
+    text-align: center;
+  }
+  .edit-message-entry {
+    font-size: 11px;
+    line-height: 1.5;
+    padding: 4px 6px;
+    border-radius: 6px;
+    background: rgba(255,255,255,.03);
+  }
+  .edit-message-entry.error {
+    background: rgba(255,60,60,.08);
+  }
+  .edit-role {
+    font-weight: 600;
+    color: rgba(255,255,255,.5);
+    margin-right: 4px;
+  }
+  .edit-message-request {
+    color: rgba(255,255,255,.6);
+  }
+  .edit-message-thinking {
+    color: rgba(74,158,255,.7);
+  }
+  .edit-dots span {
+    animation: editDotPulse 1.4s infinite;
+    opacity: 0;
+  }
+  .edit-dots span:nth-child(1) { animation-delay: 0s; }
+  .edit-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .edit-dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes editDotPulse {
+    0%   { opacity: 0; }
+    50%  { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  .edit-message-response {
+    color: rgba(74,222,128,.8);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .edit-message-error {
+    color: rgba(255,100,100,.8);
+  }
+  #edit-message-bar {
+    display: block;
+    width: auto;
+    padding: 4px 12px;
+    margin: 4px 12px;
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,.1);
+    background: rgba(74,158,255,.12);
+    color: rgba(74,158,255,.8);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all .15s;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  #edit-message-bar:hover {
+    background: rgba(74,158,255,.2);
+    border-color: rgba(74,158,255,.4);
+  }
 </style>
 </head>
 <body>
@@ -963,6 +1098,9 @@ Edit request: ${text}`;
 
           console.log(`  🤖 edit: ${text}  (${currentTime !== undefined ? currentTime.toFixed(1) + "s" : ""} ${activeScene || ""})`);
 
+          // Push start event to SSE clients for real-time UI feedback
+          ssePush({ type: "edit:start", request: text });
+
           // Send to the persistent rpc agent (one cold start; conversation kept in memory)
           const result = await sendToAgent(userPrompt);
 
@@ -988,10 +1126,12 @@ Edit request: ${text}`;
           } else {
             const msg = result.error || "failed";
             console.error(`  ❌ edit ${msg}: ${(result.output || "").trim().substring(0, 100)}`);
+            ssePush({ type: "edit:error", error: msg });
             res.writeHead(500, { "Content-Type": "application/json" });
             res.end(JSON.stringify({ error: msg, output: (result.output || "").trim().substring(0, 200) }));
           }
         } catch (e) {
+          ssePush({ type: "edit:error", error: e.message });
           res.writeHead(500, { "Content-Type": "application/json" });
           res.end(JSON.stringify({ error: e.message }));
         }

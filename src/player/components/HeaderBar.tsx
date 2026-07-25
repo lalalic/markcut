@@ -12,13 +12,11 @@ interface HeaderBarProps {
   mode: string;
   /** Label mode scene info text (e.g. "slide1 (1.2s)") */
   sceneInfo?: string;
-  /** Edit mode status text (e.g. "✅ done", "⏳ editing...") */
-  editStatus?: string;
-  /** Edit mode: whether SSE is connected */
+  /** Whether SSE is connected */
   sseConnected?: boolean;
 }
 
-export function HeaderBar({ mode, sceneInfo, editStatus, sseConnected }: HeaderBarProps) {
+export function HeaderBar({ mode, sceneInfo, sseConnected }: HeaderBarProps) {
   const handleClose = React.useCallback(() => {
     navigator.sendBeacon("/api/shutdown", "{}");
     document.body.innerHTML =
@@ -31,9 +29,6 @@ export function HeaderBar({ mode, sceneInfo, editStatus, sseConnected }: HeaderB
       <span style={{ flex: 1, display: "flex", alignItems: "center", gap: 8 }}>
         {mode === "label" && sceneInfo && (
           <span id="scene-info">{sceneInfo}</span>
-        )}
-        {mode === "edit" && editStatus && (
-          <span id="edit-status">{editStatus}</span>
         )}
         {/* SSE indicator — shown in all modes */}
         <span
