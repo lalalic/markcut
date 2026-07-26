@@ -17,7 +17,7 @@ import { fileURLToPath } from "node:url";
 import { isDescriptiveRoot, resolveAndCompile, resolveAndCompileMarkdown, parseImportsBlock, extractDependencySpecs } from "./pipeline.mjs";
 import { bundleFromEntries } from "./bundler.mjs";
 import { extractScenes, MIME, serveFile, handleShutdown } from "./server-shared.mjs";
-import { DEFAULT_EDIT_CLI } from "../config.mjs";
+import { DEFAULT_EDIT_CLI, DEFAULT_STT_CLI, GOOGLE_MAPS_API_KEY } from "../config.mjs";
 
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -463,11 +463,14 @@ async function compileVariant(config, parsed, raw) {
       scriptOutputDir: TTS_OUTPUT_DIR,
       mediaOutputDir: MEDIA_OUTPUT_DIR,
       includeOutputDir: INCLUDE_CACHE_DIR,
+      sttCli: DEFAULT_STT_CLI,
       subtitleOutputDir: subtitleDir,
       storyboard: MODE_STORYBOARD,
       variants: config.chain.length > 0 ? config.chain : undefined,
     });
-    compiled = compileDescriptiveRoot(resolved);
+    compiled = compileDescriptiveRoot(resolved, {
+      googleMapsApiKey: GOOGLE_MAPS_API_KEY || "",
+    });
   } else {
     const parsedJson = JSON.parse(raw);
     const root = parsedJson.root || parsedJson;
@@ -487,6 +490,7 @@ async function compileVariant(config, parsed, raw) {
         scriptOutputDir: TTS_OUTPUT_DIR,
         mediaOutputDir: MEDIA_OUTPUT_DIR,
         includeOutputDir: INCLUDE_CACHE_DIR,
+        sttCli: DEFAULT_STT_CLI,
         subtitleOutputDir: subtitleDir,
         storyboard: MODE_STORYBOARD,
         variants: config.chain.length > 0 ? config.chain : undefined,
@@ -825,7 +829,6 @@ function getHtml(variantLabel) {
   /* ── Edit message panel ───────────────────────────────────────────── */
   #edit-message-panel {
     width: 100%;
-    max-width: 500px;
     flex-shrink: 0;
     background: rgba(255,255,255,.04);
     border: 1px solid rgba(255,255,255,.08);

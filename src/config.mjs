@@ -85,9 +85,9 @@ export const DEFAULT_VTT_SAMPLE_INTERVAL = Number(process.env.MARKCUT_VTT_SAMPLE
 
 
 /** Speech-to-text CLI. Override via --stt flag or MARKCUT_STT_CLI env var. */
-export const DEFAULT_STT_CLI = args.cliOverrides.stt || process.env.MARKCUT_STT_CLI || 'uvx --from openai-whisper whisper "{input}" --output_format vtt --output_dir "{output}"';
+export const DEFAULT_STT_CLI = args.cliOverrides.stt || process.env.MARKCUT_STT_CLI || 'uvx --from openai-whisper whisper "{input}" --output_format vtt --output_dir "{output}" --word_timestamps True --max_line_count 1 --max_line_width 14';
 /** Text-to-speech CLI. Override via --tts flag or MARKCUT_TTS_CLI env var. */
-export const DEFAULT_TTS_CLI = args.cliOverrides.tts || process.env.MARKCUT_TTS_CLI || 'uvx edge-tts --voice "en-US-GuyNeural" --text "{input}" --write-media "{output}"';
+export const DEFAULT_TTS_CLI = args.cliOverrides.tts || process.env.MARKCUT_TTS_CLI || 'uvx edge-tts --voice "zh-CN-YunxiNeural" --text "{input}" --write-media "{output}"';
 /** Default agent CLI. Override via --agent flag or MARKCUT_AGENT_CLI env var. */
 export const DEFAULT_AGENT_CLI = args.cliOverrides.agent || process.env.MARKCUT_AGENT_CLI || 'npx pi -p {prompt}';
 /** Default edit agent CLI. Override via --edit-cli flag or MARKCUT_EDIT_CLI env var. */
