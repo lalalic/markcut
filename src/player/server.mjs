@@ -4,7 +4,7 @@
  *
  * Modes:
  *   --label   – playback with label input overlay; labels map to media timestamps
- *   --edit    – auto-reload when the JSON file changes (agent edits file, player refreshes)
+ *   --edit    – edit input mode with AI-assisted changes
  *
  * Usage:
  *   node src/player/server.mjs <video.json> [--label] [--edit] [--port 3001]
@@ -687,40 +687,36 @@ function getScenes(label) {
 // Will be awaited before announcing "Player ready"
 const initScenesPromise = compileAndExtractScenes();
 
-// ─── Watch file for changes (--edit mode) ───────────────────────────────
-if (MODE_EDIT) {
-  let lastContent = readFileSync(VIDEO_JSON, "utf-8");
-  watchFile(VIDEO_JSON, { interval: 1000 }, async (curr, prev) => {
-    if (curr.mtimeMs === prev.mtimeMs) return;
-    if (pipelineRunning) return;
-    const newContent = readFileSync(VIDEO_JSON, "utf-8");
-    if (newContent === lastContent) return;
-    lastContent = newContent;
-    pipelineRunning = true;
-    console.log(`  📁 ${VIDEO_JSON} changed, re-running all variants...`);
+// ─── Watch source file for changes (all modes) ──────────────────────────
+let lastContent = readFileSync(VIDEO_JSON, "utf-8");
+watchFile(VIDEO_JSON, { interval: 1000 }, async (curr, prev) => {
+  if (curr.mtimeMs === prev.mtimeMs) return;
+  if (pipelineRunning) return;
+  const newContent = readFileSync(VIDEO_JSON, "utf-8");
+  if (newContent === lastContent) return;
+  lastContent = newContent;
+  pipelineRunning = true;
+  console.log(`  📁 ${VIDEO_JSON} changed, re-running all variants...`);
 
-    try {
-      compiledRootCache.clear();
-      scenesCache.clear();
-      await compileAllVariants();
+  try {
+    compiledRootCache.clear();
+    scenesCache.clear();
+    await compileAllVariants();
 
-      for (const config of VARIANT_CONFIGS) {
-        try {
-          const root = await loadCompiledRoot(config.label);
-          scenesCache.set(config.label, extractScenes(root));
-        } catch {}
-      }
-
-      for (const client of sseClients) {
-        client.write("data: " + JSON.stringify({ type: "reload" }) + "\n\n");
-      }
-    } catch (e) {
-      console.error("  ⚠️  Failed to re-process after change:", e.message);
-    } finally {
-      pipelineRunning = false;
+    for (const config of VARIANT_CONFIGS) {
+      try {
+        const root = await loadCompiledRoot(config.label);
+        scenesCache.set(config.label, extractScenes(root));
+      } catch {}
     }
-  });
-}
+
+    ssePush({ type: "reload" });
+  } catch (e) {
+    console.error("  ⚠️  Failed to re-process after change:", e.message);
+  } finally {
+    pipelineRunning = false;
+  }
+});
 // ─── MIME imported from ./server-shared.mjs ──────────────────────────────
 
 // ─── Variant detection from URL path ─────────────────────────────────────
@@ -791,7 +787,7 @@ function getHtml(variantLabel) {
   .variant-link { font-size: 11px; padding: 3px 10px; border-radius: 12px; background: rgba(255,255,255,.06); color: rgba(255,255,255,.4); text-decoration: none; white-space: nowrap; transition: all .15s; }
   .variant-link:hover { background: rgba(255,255,255,.12); color: rgba(255,255,255,.7); }
   .variant-link.active { background: rgba(74,158,255,.2); color: #4a9eff; }
-  #player-frame { flex: 1; width: 100%; max-width: 480px; min-height: 0; border-radius: 16px; overflow: hidden; border: 1px solid rgba(255,255,255,.08); background: #000; box-shadow: 0 4px 40px rgba(0,0,0,.6); margin: 0 12px; }
+  #player-frame { flex: 1; width: 100%; max-width: 480px; min-height: 0; border-radius: 16px; overflow: hidden; border: 1px solid rgba(255,255,255,.08); background: #000; box-shadow: 0 4px 40px rgba(0,0,0,.6); margin: 0 12px; position: relative; }
   #root { width: 100%; height: 100%; }
   #reload-toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(74,158,255,.9); color: #fff; padding: 12px 24px; border-radius: 10px; font-size: 14px; font-weight: 600; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 200; backdrop-filter: blur(8px); }
   #reload-toast.show { opacity: 1; }
@@ -827,15 +823,25 @@ function getHtml(variantLabel) {
   .scene-pill.active { background: rgba(74,158,255,.2); border-color: #4a9eff; color: #4a9eff; }
 
   /* ── Edit message panel ───────────────────────────────────────────── */
+  #edit-message-overlay {
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    z-index: 30;
+    pointer-events: none;
+  }
   #edit-message-panel {
     width: 100%;
+    max-width: 100%;
     flex-shrink: 0;
-    background: rgba(255,255,255,.04);
+    background: rgba(12,12,12,.78);
     border: 1px solid rgba(255,255,255,.08);
     border-radius: 10px;
-    margin: 4px 12px;
+    margin: 0;
     overflow: hidden;
     backdrop-filter: blur(8px);
+    pointer-events: auto;
   }
   #edit-message-header {
     display: flex;
@@ -867,7 +873,7 @@ function getHtml(variantLabel) {
     color: #4a9eff;
   }
   #edit-message-list {
-    max-height: 180px;
+    max-height: 150px;
     overflow-y: auto;
     padding: 6px 10px;
     display: flex;
@@ -1175,7 +1181,10 @@ Edit request: ${text}`;
       try {
         const root = await loadCompiledRoot(variantLabel);
         const rootOut = resolveAssetPaths(root);
-        res.writeHead(200, { "Content-Type": "application/json" });
+        res.writeHead(200, {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-store",
+        });
         res.end(JSON.stringify(rootOut));
       } catch (e) {
         res.writeHead(500, { "Content-Type": "application/json" });
@@ -1187,7 +1196,10 @@ Edit request: ${text}`;
     // API: Get scenes with media info for a specific variant
     if (path === "/api/scenes") {
       const { scenes, totalDuration } = getScenes(variantLabel);
-      res.writeHead(200, { "Content-Type": "application/json" });
+      res.writeHead(200, {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+      });
       res.end(JSON.stringify(scenes));
       return;
     }
@@ -1195,7 +1207,10 @@ Edit request: ${text}`;
     // API: Get current video info for a specific variant
     if (path === "/api/video-info") {
       const { scenes, totalDuration } = getScenes(variantLabel);
-      res.writeHead(200, { "Content-Type": "application/json" });
+      res.writeHead(200, {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+      });
       res.end(JSON.stringify({
         scenes,
         totalDuration,
@@ -1258,6 +1273,6 @@ server.listen(PORT, async () => {
       console.log(`   ${config.label}: ${url}`);
     }
   }
-  if (MODE_EDIT) console.log(`   Watching: ${VIDEO_JSON.split("/").pop()}`);
+  console.log(`   Watching: ${VIDEO_JSON.split("/").pop()}`);
   console.log("");
 });

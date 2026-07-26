@@ -258340,8 +258340,22 @@ function PlayerApp() {
   const [sseConnected, setSseConnected] = React58.useState(false);
   const [labelSceneInfo, setLabelSceneInfo] = React58.useState("");
   const [editEntries, setEditEntries] = React58.useState([]);
-  const [editPanelMinimized, setEditPanelMinimized] = React58.useState(true);
-  let nextEditIdRef = React58.useRef(1);
+  const [showEditOverlay, setShowEditOverlay] = React58.useState(false);
+  const nextEditIdRef = React58.useRef(1);
+  const hideEditOverlayTimerRef = React58.useRef(null);
+  const clearHideOverlayTimer = React58.useCallback(() => {
+    if (hideEditOverlayTimerRef.current !== null) {
+      window.clearTimeout(hideEditOverlayTimerRef.current);
+      hideEditOverlayTimerRef.current = null;
+    }
+  }, []);
+  const scheduleHideEditOverlay = React58.useCallback(() => {
+    clearHideOverlayTimer();
+    hideEditOverlayTimerRef.current = window.setTimeout(() => {
+      setShowEditOverlay(false);
+      hideEditOverlayTimerRef.current = null;
+    }, 5e3);
+  }, [clearHideOverlayTimer]);
   const suppressReloadRef = React58.useRef(false);
   React58.useEffect(() => {
     let evtSource = null;
@@ -258356,12 +258370,13 @@ function PlayerApp() {
             return;
           }
           if (msg.type === "edit:start") {
+            clearHideOverlayTimer();
+            setShowEditOverlay(true);
             const id39 = nextEditIdRef.current++;
             setEditEntries((prev2) => [
               ...prev2,
               { id: id39, request: msg.request || "", progress: "", status: "thinking" }
             ]);
-            setEditPanelMinimized(false);
             return;
           }
           if (msg.type === "edit:progress") {
@@ -258382,6 +258397,7 @@ function PlayerApp() {
                 (e4) => e4.id === last4.id ? { ...e4, status: "done", progress: e4.progress || msg.summary || "" } : e4
               );
             });
+            scheduleHideEditOverlay();
             return;
           }
           if (msg.type === "edit:error") {
@@ -258392,6 +258408,7 @@ function PlayerApp() {
                 (e4) => e4.id === last4.id ? { ...e4, status: "error", error: msg.error } : e4
               );
             });
+            scheduleHideEditOverlay();
             return;
           }
         } catch {
@@ -258402,10 +258419,11 @@ function PlayerApp() {
       setSseConnected(false);
     }
     return () => {
+      clearHideOverlayTimer();
       evtSource?.close();
       setSseConnected(false);
     };
-  }, []);
+  }, [clearHideOverlayTimer, scheduleHideEditOverlay]);
   if (error51) {
     return /* @__PURE__ */ (0, import_jsx_runtime102.jsxs)("div", { style: { color: "red", padding: 40, fontFamily: "sans-serif" }, children: [
       "Error: ",
@@ -258437,34 +258455,36 @@ function PlayerApp() {
             sceneInfo: mode === "label" ? labelSceneInfo : void 0
           }
         ),
-        mode === "edit" && /* @__PURE__ */ (0, import_jsx_runtime102.jsx)(
-          EditMessagePanel,
-          {
-            entries: editEntries,
-            minimized: editPanelMinimized,
-            onToggleMinimize: () => setEditPanelMinimized((v5) => !v5)
-          }
-        ),
         /* @__PURE__ */ (0, import_jsx_runtime102.jsx)(VariantBar, {}),
-        /* @__PURE__ */ (0, import_jsx_runtime102.jsx)("div", { id: "player-frame", style: { flex: 1, width: "100%", maxWidth: 480, minHeight: 0 }, children: /* @__PURE__ */ (0, import_jsx_runtime102.jsx)(
-          Player,
-          {
-            ref: playerRef,
-            component: MarkCut,
-            inputProps,
-            durationInFrames,
-            fps,
-            compositionWidth: width3,
-            compositionHeight: height2,
-            style: { width: "100%", height: "100%" },
-            controls: true,
-            showPlaybackRateControl: true,
-            allowFullscreen: true,
-            clickToPlay: false,
-            doubleClickToFullscreen: true,
-            autoPlay
-          }
-        ) }),
+        /* @__PURE__ */ (0, import_jsx_runtime102.jsxs)("div", { id: "player-frame", style: { flex: 1, width: "100%", maxWidth: 480, minHeight: 0 }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime102.jsx)(
+            Player,
+            {
+              ref: playerRef,
+              component: MarkCut,
+              inputProps,
+              durationInFrames,
+              fps,
+              compositionWidth: width3,
+              compositionHeight: height2,
+              style: { width: "100%", height: "100%" },
+              controls: true,
+              showPlaybackRateControl: true,
+              allowFullscreen: true,
+              clickToPlay: false,
+              doubleClickToFullscreen: true,
+              autoPlay
+            }
+          ),
+          mode === "edit" && showEditOverlay && /* @__PURE__ */ (0, import_jsx_runtime102.jsx)("div", { id: "edit-message-overlay", children: /* @__PURE__ */ (0, import_jsx_runtime102.jsx)(
+            EditMessagePanel,
+            {
+              entries: editEntries,
+              minimized: false,
+              onToggleMinimize: () => setShowEditOverlay(false)
+            }
+          ) })
+        ] }),
         /* @__PURE__ */ (0, import_jsx_runtime102.jsx)(
           SceneThumbnails,
           {

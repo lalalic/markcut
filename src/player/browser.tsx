@@ -395,8 +395,24 @@ function PlayerApp() {
 
   // ── Edit message panel state ─────────────────────────────────────────
   const [editEntries, setEditEntries] = React.useState<EditEntry[]>([]);
-  const [editPanelMinimized, setEditPanelMinimized] = React.useState(true);
-  let nextEditIdRef = React.useRef(1);
+  const [showEditOverlay, setShowEditOverlay] = React.useState(false);
+  const nextEditIdRef = React.useRef(1);
+  const hideEditOverlayTimerRef = React.useRef<number | null>(null);
+
+  const clearHideOverlayTimer = React.useCallback(() => {
+    if (hideEditOverlayTimerRef.current !== null) {
+      window.clearTimeout(hideEditOverlayTimerRef.current);
+      hideEditOverlayTimerRef.current = null;
+    }
+  }, []);
+
+  const scheduleHideEditOverlay = React.useCallback(() => {
+    clearHideOverlayTimer();
+    hideEditOverlayTimerRef.current = window.setTimeout(() => {
+      setShowEditOverlay(false);
+      hideEditOverlayTimerRef.current = null;
+    }, 5000);
+  }, [clearHideOverlayTimer]);
 
   // SSE connection — shared across all modes as a server-liveness monitor
   // Edit mode also listens for "reload" messages (auto-refresh on file change)
@@ -418,12 +434,13 @@ function PlayerApp() {
 
           // Edit progress events (live from agent RPC)
           if (msg.type === "edit:start") {
+            clearHideOverlayTimer();
+            setShowEditOverlay(true);
             const id = nextEditIdRef.current++;
             setEditEntries((prev) => [
               ...prev,
               { id, request: msg.request || "", progress: "", status: "thinking" },
             ]);
-            setEditPanelMinimized(false);
             return;
           }
           if (msg.type === "edit:progress") {
@@ -446,6 +463,7 @@ function PlayerApp() {
                   : e
               );
             });
+            scheduleHideEditOverlay();
             return;
           }
           if (msg.type === "edit:error") {
@@ -456,6 +474,7 @@ function PlayerApp() {
                 e.id === last.id ? { ...e, status: "error", error: msg.error } : e
               );
             });
+            scheduleHideEditOverlay();
             return;
           }
         } catch {}
@@ -465,10 +484,11 @@ function PlayerApp() {
       setSseConnected(false);
     }
     return () => {
+      clearHideOverlayTimer();
       evtSource?.close();
       setSseConnected(false);
     };
-  }, []);
+  }, [clearHideOverlayTimer, scheduleHideEditOverlay]);
 
   if (error) {
     return <div style={{ color: "red", padding: 40, fontFamily: "sans-serif" }}>Error: {error}</div>;
@@ -495,15 +515,6 @@ function PlayerApp() {
         sceneInfo={mode === "label" ? labelSceneInfo : undefined}
       />
 
-      {/* ── Edit message panel ── */}
-      {mode === "edit" && (
-        <EditMessagePanel
-          entries={editEntries}
-          minimized={editPanelMinimized}
-          onToggleMinimize={() => setEditPanelMinimized((v) => !v)}
-        />
-      )}
-
       {/* ── Variant switcher ── */}
       <VariantBar />
 
@@ -525,6 +536,17 @@ function PlayerApp() {
           doubleClickToFullscreen={true}
           autoPlay={autoPlay}
         />
+
+        {/* ── Edit message overlay (shown while waiting, then auto-hides) ── */}
+        {mode === "edit" && showEditOverlay && (
+          <div id="edit-message-overlay">
+            <EditMessagePanel
+              entries={editEntries}
+              minimized={false}
+              onToggleMinimize={() => setShowEditOverlay(false)}
+            />
+          </div>
+        )}
       </div>
 
       {/* ── Scene thumbnails (shared across all modes) ── */}

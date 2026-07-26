@@ -128,7 +128,10 @@ export function serveFile(req, res, filePath) {
   const ext = extname(filePath).toLowerCase();
   const mime = MIME[ext] || "application/octet-stream";
   const fileSize = statSync(filePath).size;
-  const cacheControl = (ext === ".js" || ext === ".html") ? "no-cache" : "public, max-age=3600";
+  // Dynamic authoring assets (vtt/json/html/js) must not be cached,
+  // otherwise subtitle edits can appear stale after refresh.
+  const noStoreExt = new Set([".js", ".html", ".json", ".vtt"]);
+  const cacheControl = noStoreExt.has(ext) ? "no-store" : "public, max-age=3600";
   const range = req.headers.range;
 
   if (range) {
