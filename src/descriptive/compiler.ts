@@ -448,15 +448,21 @@ function wrapWithEffects(
   const absEnd = innerStream.end ?? result.duration;
   const duration = absEnd - absStart;
 
-  // Reset inner stream's timing to be relative (start=0) so the effect
-  // wrapper owns the absolute timing. The EffectWrapper renders children
-  // with their relative timing inside its own Sequence.
-  const resetStream = {
-    ...innerStream,
-    start: 0,
-    end: duration,
-    durationInSeconds: duration,
-  } as any;
+  // For background nodes without explicit end, keep original timing
+  // (start/end undefined) so parent back-propagation fills the correct
+  // scene duration. The effect wrapper handles animation timing via
+  // durationInSeconds and the parent fills end for proper visibility span.
+  // Other nodes: reset to relative timing so the effect wrapper owns
+  // the absolute positioning in the parent timeline.
+  const isBgNoEnd = innerStream.isBackground && innerStream.end == null;
+  const resetStream = isBgNoEnd
+    ? { ...innerStream }
+    : {
+        ...innerStream,
+        start: 0,
+        end: duration,
+        durationInSeconds: duration,
+      } as any;
 
   // Build nested effect wrappers from innermost → outermost.
   // The outermost effect uses the original absolute timing;
@@ -476,14 +482,18 @@ function wrapWithEffects(
       id: uid(),
       type: "effect",
       animation: spec.animation,
+      animationDurationSeconds: spec.duration,
       durationInSeconds: spec.duration,
       animationTimingFunction: spec.animationTimingFunction,
       animationIterationCount: spec.animationIterationCount ?? 1,
       customKeyframes: spec.customKeyframes,
       children: [currentStream],
-      start: effStart,
-      end: effEnd,
-      visible: true,
+      // For background inner nodes: propagate start/end as-is so parent
+      // back-propagation fills the correct scene duration. The effect's
+      // durationInSeconds (animation spec) controls animation timing.
+      start: isOutermost && isBgNoEnd ? innerStream.start : effStart,
+      end: isOutermost && isBgNoEnd ? undefined : effEnd,
+      visible: innerStream.visible ?? true,
       ...pickOn(node),
     } as Effect;
   }
@@ -690,13 +700,26 @@ function compileScene(
     : aggregateDuration(compiledChildren, sceneKind, resolved.time);
   const localDuration = Math.max(node.duration ?? 0, sceneContentDuration);
 
-  // Back-propagate parent duration to background children without own timing
-  for (const c of compiledChildren) {
-    if (c.stream.isBackground && c.stream.end == null) {
-      c.stream.end = localDuration;
-      c.stream.durationInSeconds = localDuration;
-      if (c.stream.start == null) c.stream.start = 0;
+  // Back-propagate parent duration to nodes without own timing.
+  // Also recurses into effect wrappers so nested background children
+  // (wrapped by effects) get the correct scene duration.
+  function backpropagate(stream: Record<string, any>, dur: number): void {
+    if (stream.end == null) {
+      stream.end = dur;
+      if (stream.durationInSeconds == null) {
+        stream.durationInSeconds = dur;
+      }
+      if (stream.start == null) stream.start = 0;
     }
+    // Recursively walk into effect wrapper children
+    if (stream.type === "effect" && Array.isArray(stream.children)) {
+      for (const child of stream.children) {
+        backpropagate(child, dur);
+      }
+    }
+  }
+  for (const c of compiledChildren) {
+    backpropagate(c.stream, localDuration);
   }
 
   const start = parentKind === "parallel" ? Math.max(0, node.start ?? 0) : 0;
@@ -837,13 +860,23 @@ function compileContainer(node: DescriptiveContainer, ctx: CompileContext, paren
   const children = compileChildren(node.children, ctx, node.type);
   const duration = aggregateDuration(children, node.type, resolved.time);
 
-  // Back-propagate parent duration to background children without own timing
-  for (const c of children) {
-    if (c.stream.isBackground && c.stream.end == null) {
-      c.stream.end = duration;
-      c.stream.durationInSeconds = duration;
-      if (c.stream.start == null) c.stream.start = 0;
+  // Back-propagate parent duration to nodes without own timing.
+  function backpropagate(stream: Record<string, any>, dur: number): void {
+    if (stream.end == null) {
+      stream.end = dur;
+      if (stream.durationInSeconds == null) {
+        stream.durationInSeconds = dur;
+      }
+      if (stream.start == null) stream.start = 0;
     }
+    if (stream.type === "effect" && Array.isArray(stream.children)) {
+      for (const child of stream.children) {
+        backpropagate(child, dur);
+      }
+    }
+  }
+  for (const c of children) {
+    backpropagate(c.stream, duration);
   }
 
   const stream: Folder = {

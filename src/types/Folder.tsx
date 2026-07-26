@@ -62,7 +62,7 @@ export function FolderLeaf({ stream }: { stream: FolderStream }) {
   // Background children are rendered outside the series (parallel overlays),
   // so TransitionSeries doesn't reject the <Loop> wrapper.
   const bgChildren = visibleChildren.filter((c) => c.isBackground);
-  const seriesChildren = isSeries ? visibleChildren.filter((c) => !c.isBackground) : visibleChildren;
+  const seriesChildren = visibleChildren.filter((c) => !c.isBackground);
 
   // When all non-background series children are audio, skip transitions to
   // avoid audio overlap (both audio tracks play simultaneously during a fade).

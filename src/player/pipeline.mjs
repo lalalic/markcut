@@ -207,7 +207,8 @@ function wrapWithEffects(node2, result, parentKind) {
   const absStart = innerStream.start ?? 0;
   const absEnd = innerStream.end ?? result.duration;
   const duration = absEnd - absStart;
-  const resetStream = {
+  const isBgNoEnd = innerStream.isBackground && innerStream.end == null;
+  const resetStream = isBgNoEnd ? { ...innerStream } : {
     ...innerStream,
     start: 0,
     end: duration,
@@ -224,14 +225,18 @@ function wrapWithEffects(node2, result, parentKind) {
       id: uid(),
       type: "effect",
       animation: spec.animation,
+      animationDurationSeconds: spec.duration,
       durationInSeconds: spec.duration,
       animationTimingFunction: spec.animationTimingFunction,
       animationIterationCount: spec.animationIterationCount ?? 1,
       customKeyframes: spec.customKeyframes,
       children: [currentStream],
-      start: effStart,
-      end: effEnd,
-      visible: true,
+      // For background inner nodes: propagate start/end as-is so parent
+      // back-propagation fills the correct scene duration. The effect's
+      // durationInSeconds (animation spec) controls animation timing.
+      start: isOutermost && isBgNoEnd ? innerStream.start : effStart,
+      end: isOutermost && isBgNoEnd ? void 0 : effEnd,
+      visible: innerStream.visible ?? true,
       ...pickOn(node2)
     };
   }
@@ -407,12 +412,22 @@ function compileScene(node2, ctx, parentKind) {
   ];
   const sceneContentDuration = sceneKind === "parallel" ? aggregateDuration(compiledChildren, "parallel") : aggregateDuration(compiledChildren, sceneKind, resolved.time);
   const localDuration = Math.max(node2.duration ?? 0, sceneContentDuration);
-  for (const c of compiledChildren) {
-    if (c.stream.isBackground && c.stream.end == null) {
-      c.stream.end = localDuration;
-      c.stream.durationInSeconds = localDuration;
-      if (c.stream.start == null) c.stream.start = 0;
+  function backpropagate(stream2, dur) {
+    if (stream2.end == null) {
+      stream2.end = dur;
+      if (stream2.durationInSeconds == null) {
+        stream2.durationInSeconds = dur;
+      }
+      if (stream2.start == null) stream2.start = 0;
     }
+    if (stream2.type === "effect" && Array.isArray(stream2.children)) {
+      for (const child of stream2.children) {
+        backpropagate(child, dur);
+      }
+    }
+  }
+  for (const c of compiledChildren) {
+    backpropagate(c.stream, localDuration);
   }
   const start = parentKind === "parallel" ? Math.max(0, node2.start ?? 0) : 0;
   const end = start + localDuration;
@@ -507,12 +522,22 @@ function compileContainer(node2, ctx, parentKind) {
   const resolved = node2.type === "transitionSeries" ? resolveTransition(node2.transition, node2.transitionTime) : { name: "fade", time: 0.5 };
   const children = compileChildren(node2.children, ctx, node2.type);
   const duration = aggregateDuration(children, node2.type, resolved.time);
-  for (const c of children) {
-    if (c.stream.isBackground && c.stream.end == null) {
-      c.stream.end = duration;
-      c.stream.durationInSeconds = duration;
-      if (c.stream.start == null) c.stream.start = 0;
+  function backpropagate(stream2, dur) {
+    if (stream2.end == null) {
+      stream2.end = dur;
+      if (stream2.durationInSeconds == null) {
+        stream2.durationInSeconds = dur;
+      }
+      if (stream2.start == null) stream2.start = 0;
     }
+    if (stream2.type === "effect" && Array.isArray(stream2.children)) {
+      for (const child of stream2.children) {
+        backpropagate(child, dur);
+      }
+    }
+  }
+  for (const c of children) {
+    backpropagate(c.stream, duration);
   }
   const stream = {
     id,

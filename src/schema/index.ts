@@ -143,6 +143,7 @@ export type Component = z.infer<typeof component>;
 export const effect = base.extend({
   type: z.literal("effect").default("effect"),
   animation: z.string().optional().describe("builtin keyframe name or 'custom'"),
+  animationDurationSeconds: z.number().optional().describe("animation duration (separate from wrapper durationInSeconds which getDurationInSeconds may overwrite)"),
   animationTimingFunction: z
     .enum(["linear", "ease", "ease-in", "ease-out", "ease-in-out"])
     .optional(),

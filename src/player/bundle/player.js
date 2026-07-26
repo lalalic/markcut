@@ -227966,7 +227966,7 @@ function getDurationInSeconds(stream3, update2 = true) {
   for (const child of stream3.children) {
     getDurationInSeconds(child, update2);
   }
-  const visible = stream3.children.filter((c5) => !c5.isBackground);
+  const visible = stream3.type === "effect" ? stream3.children : stream3.children.filter((c5) => !c5.isBackground);
   if (stream3.isSeries) {
     const overlap = stream3.transition ? stream3.transitionTime ?? 0.5 : 0;
     for (let i5 = 0; i5 < visible.length; i5++) {
@@ -242999,15 +242999,17 @@ function EffectWrapper({
     const end2 = Math.ceil(endSec * fps);
     const durationInFrames = end2 - start4;
     if (durationInFrames <= 0) return [];
+    const animDurationSec = stream3.animationDurationSeconds ?? stream3.durationInSeconds ?? durationInFrames / fps;
+    const animDurationFrames = Math.ceil(animDurationSec * fps);
     const animation2 = stream3.animation;
     const timingFn = stream3.animationTimingFunction;
     const iterCount = stream3.animationIterationCount ?? 1;
     const style4 = cssJS(stream3.style) ?? {};
     let currentFrame = frame2;
-    if (iterCount > 0 && durationInFrames > 0) {
-      const iteration = Math.floor((frame2 - start4) / durationInFrames);
+    if (iterCount > 0 && animDurationFrames > 0) {
+      const iteration = Math.floor((frame2 - start4) / animDurationFrames);
       if (iteration < iterCount) {
-        currentFrame = start4 + (frame2 - start4) % durationInFrames;
+        currentFrame = start4 + (frame2 - start4) % animDurationFrames;
       }
     }
     if (currentFrame >= start4 && currentFrame < end2) {
@@ -243017,7 +243019,7 @@ function EffectWrapper({
         if (config4) {
           const animStyle = interpolateKeyframes(config4, actionFrame, {
             fps,
-            durationInSeconds: durationInFrames / fps,
+            durationInSeconds: animDurationSec,
             timingFunction: timingFn
           });
           if (animStyle) Object.assign(style4, animStyle);
@@ -243025,7 +243027,7 @@ function EffectWrapper({
       }
     }
     return Object.keys(style4).length > 0 ? [style4] : [];
-  }, [frame2, fps, startSec, endSec, stream3.animation, stream3.animationTimingFunction, stream3.animationIterationCount, stream3.customKeyframes, stream3.style]);
+  }, [frame2, fps, startSec, endSec, stream3.animation, stream3.animationTimingFunction, stream3.animationIterationCount, stream3.customKeyframes, stream3.style, stream3.animationDurationSeconds, stream3.durationInSeconds]);
   if (styles7.length === 0) return /* @__PURE__ */ (0, import_jsx_runtime92.jsx)(import_jsx_runtime92.Fragment, { children: children2 });
   return /* @__PURE__ */ (0, import_jsx_runtime92.jsx)(
     "div",
@@ -243070,7 +243072,7 @@ function FolderLeaf({ stream: stream3 }) {
   const isRoot = stream3.id === "root";
   const visibleChildren = stream3.children.filter((c5) => c5.visible !== false);
   const bgChildren = visibleChildren.filter((c5) => c5.isBackground);
-  const seriesChildren = isSeries ? visibleChildren.filter((c5) => !c5.isBackground) : visibleChildren;
+  const seriesChildren = visibleChildren.filter((c5) => !c5.isBackground);
   const allAudio = seriesChildren.length > 0 && seriesChildren.every((c5) => c5.type === "audio");
   const effectiveTransition = allAudio ? void 0 : transition2;
   const TypedSeries = React47.useMemo(() => {
@@ -257462,6 +257464,7 @@ var component2 = base.extend({
 var effect = base.extend({
   type: external_exports.literal("effect").default("effect"),
   animation: external_exports.string().optional().describe("builtin keyframe name or 'custom'"),
+  animationDurationSeconds: external_exports.number().optional().describe("animation duration (separate from wrapper durationInSeconds which getDurationInSeconds may overwrite)"),
   animationTimingFunction: external_exports.enum(["linear", "ease", "ease-in", "ease-out", "ease-in-out"]).optional(),
   animationIterationCount: external_exports.number().default(1),
   customKeyframes: external_exports.record(external_exports.string(), external_exports.record(external_exports.string(), external_exports.string())).optional().describe('inline keyframes: { "0": { opacity: "0" }, "100": { opacity: "1" } }'),

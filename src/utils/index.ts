@@ -135,7 +135,11 @@ export function getDurationInSeconds(stream: DurationStream, update = true): num
     getDurationInSeconds(child, update);
   }
 
-  const visible = stream.children.filter((c) => !c.isBackground);
+  // Effect wrappers encompass all children visually; background children
+  // still contribute to the effect's visible duration.
+  const visible = stream.type === "effect"
+    ? stream.children
+    : stream.children.filter((c) => !c.isBackground);
   if (stream.isSeries) {
     const overlap = stream.transition ? (stream.transitionTime ?? 0.5) : 0;
     for (let i = 0; i < visible.length; i++) {

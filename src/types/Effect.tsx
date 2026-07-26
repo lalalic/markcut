@@ -34,17 +34,24 @@ export function EffectWrapper({
     const durationInFrames = end - start;
     if (durationInFrames <= 0) return [] as Record<string, string>[];
 
+    // Use animationDurationSeconds for animation timing when available
+    // (set by wrapWithEffects for background nodes where end is set to parent
+    //  duration but the animation spec duration is preserved separately).
+    const animDurationSec = stream.animationDurationSeconds ?? stream.durationInSeconds ?? (durationInFrames / fps);
+    const animDurationFrames = Math.ceil(animDurationSec * fps);
+
     const animation = stream.animation;
     const timingFn = stream.animationTimingFunction;
     const iterCount = stream.animationIterationCount ?? 1;
     const style = (cssJS(stream.style) ?? {}) as Record<string, string>;
 
-    // Handle iteration count: loop the animation within the span
+    // Handle iteration count: loop the animation within the span.
+    // The animation period is animDurationFrames (not the full span duration).
     let currentFrame = frame;
-    if (iterCount > 0 && durationInFrames > 0) {
-      const iteration = Math.floor((frame - start) / durationInFrames);
+    if (iterCount > 0 && animDurationFrames > 0) {
+      const iteration = Math.floor((frame - start) / animDurationFrames);
       if (iteration < iterCount) {
-        currentFrame = start + ((frame - start) % durationInFrames);
+        currentFrame = start + ((frame - start) % animDurationFrames);
       }
     }
 
@@ -56,7 +63,7 @@ export function EffectWrapper({
         if (config) {
           const animStyle = interpolateKeyframes(config, actionFrame, {
             fps,
-            durationInSeconds: durationInFrames / fps,
+            durationInSeconds: animDurationSec,
             timingFunction: timingFn,
           });
           if (animStyle) Object.assign(style, animStyle);
@@ -65,7 +72,7 @@ export function EffectWrapper({
     }
 
     return Object.keys(style).length > 0 ? [style] : [];
-  }, [frame, fps, startSec, endSec, stream.animation, stream.animationTimingFunction, stream.animationIterationCount, stream.customKeyframes, stream.style]);
+  }, [frame, fps, startSec, endSec, stream.animation, stream.animationTimingFunction, stream.animationIterationCount, stream.customKeyframes, stream.style, stream.animationDurationSeconds, stream.durationInSeconds]);
 
   if (styles.length === 0) return <>{children}</>;
 
