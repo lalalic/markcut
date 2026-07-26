@@ -43,4 +43,5 @@ export function SuperMarkdown({ source }) {
 - `@remotion/shapes` — render shapes like arrows, circles, rectangles, etc
 - `@remotion/starburst` — render starburst animations
 - `react-webcam-pro` — render webcam video
-- `react-chartjs-2` — render charts with Chart.js at https://react-chartjs-2.js.org/components
+- `react-chartjs-2` — render charts with Chart.js at `https://react-chartjs-2.js.org/components`
+- `@xyflow/react` - render diagrams with `https://reactflow.dev/api-reference`
