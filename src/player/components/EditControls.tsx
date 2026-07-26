@@ -17,11 +17,14 @@ interface EditControlsProps {
   currentTime?: number;
   /** Active scene name (sent with edit request for context) */
   activeScene?: string;
+  /** UI locale */
+  locale?: "en" | "zh";
 }
 
-export function EditControls({ onStatusChange, suppressReloadRef, currentTime, activeScene }: EditControlsProps) {
+export function EditControls({ onStatusChange, suppressReloadRef, currentTime, activeScene, locale = "en" }: EditControlsProps) {
   const [busy, setBusy] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
+  const isZh = locale === "zh";
 
   // ── Edit submit ──────────────────────────────────────────────────────
   const handleApplyEdit = React.useCallback(
@@ -75,12 +78,12 @@ export function EditControls({ onStatusChange, suppressReloadRef, currentTime, a
       <input
         ref={inputRef}
         id="edit-input"
-        placeholder="What should change? e.g. make text bigger"
+        placeholder={isZh ? "想改什么？例如：把文字放大一些" : "What should change? e.g. make text bigger"}
         onKeyDown={handleKeyDown}
       />
       <button
         id="edit-btn"
-        title="Apply edit"
+        title={isZh ? "应用修改" : "Apply edit"}
         disabled={busy}
         onClick={() => handleApplyEdit(inputRef.current?.value || "")}
       >

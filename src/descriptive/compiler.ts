@@ -147,6 +147,8 @@ export interface DescriptiveMap extends DescriptiveBaseNode {
   zoom?: number;
   center?: { lat: number; lng: number };
   mapType?: "roadmap" | "satellite" | "hybrid" | "terrain";
+  language?: string;
+  region?: string;
   travelMode?: "DRIVING" | "WALKING" | "BICYCLING" | "TRANSIT";
   routeMarker?: string;
 }
@@ -593,6 +595,8 @@ function compileLeaf(node: Exclude<DescriptiveNode, DescriptiveContainer | Descr
         zoom: node.zoom ?? 10,
         center: node.center,
         mapType: node.mapType ?? "roadmap",
+        language: node.language,
+        region: node.region,
         travelMode: node.travelMode ?? "DRIVING",
         routeMarker: node.routeMarker ?? "🚗",
         googleMapsApiKey: ctx.googleMapsApiKey,

@@ -327,6 +327,8 @@ function parseNodeLine(content: string, lineNum?: number): DescriptiveNode {
         zoom: attrs.zoom as any,
         center: attrs.center as any,
         mapType: attrs.mapType as any,
+        language: (attrs.language as any) ?? (attrs.lang as any),
+        region: attrs.region as any,
         instruction: attrs.instruction as any,
         visible: attrs.visible as any,
         isBackground: attrs.isBackground as any,

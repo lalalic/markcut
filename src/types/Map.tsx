@@ -39,6 +39,15 @@ function resolveApiKey(stream: MapStream): string {
   return "";
 }
 
+function resolveMapLocale(language?: string, region?: string): { language?: string; region?: string } {
+  if (!language) return { language: undefined, region };
+  const lang = language.trim().toLowerCase();
+  if (lang === "zh") return { language: "zh-CN", region: region ?? "CN" };
+  if (lang === "en") return { language: "en", region: region ?? "US" };
+  if (lang.startsWith("zh-")) return { language, region: region ?? "CN" };
+  return { language, region };
+}
+
 // ============================================================
 // MapLeaf — entry point, renders each action as a Sequence
 // ============================================================
@@ -58,13 +67,53 @@ export function MapLeaf({ stream }: { stream: MapStream }) {
   const mapType = stream.mapType ?? "roadmap";
   const travelMode = stream.travelMode ?? "DRIVING";
   const markerEmoji = stream.routeMarker ?? "🚗";
+  const mapLocale = React.useMemo(
+    () => resolveMapLocale(stream.language, stream.region),
+    [stream.language, stream.region],
+  );
+  const mapLoadHandleRef = React.useRef<number | null>(null);
+  const mapLoadContinuedRef = React.useRef(false);
+
+  React.useEffect(() => {
+    mapLoadHandleRef.current = delayRender("Waiting for map tiles to load...");
+    mapLoadContinuedRef.current = false;
+
+    // Avoid hanging indefinitely when map tiles fail to load.
+    const fallbackTimer = window.setTimeout(() => {
+      if (!mapLoadContinuedRef.current && mapLoadHandleRef.current !== null) {
+        continueRender(mapLoadHandleRef.current);
+        mapLoadContinuedRef.current = true;
+      }
+    }, 8000);
+
+    return () => {
+      window.clearTimeout(fallbackTimer);
+      if (!mapLoadContinuedRef.current && mapLoadHandleRef.current !== null) {
+        continueRender(mapLoadHandleRef.current);
+        mapLoadContinuedRef.current = true;
+      }
+      mapLoadHandleRef.current = null;
+    };
+  }, [stream.id, start, end]);
+
+  const handleTilesLoaded = React.useCallback(() => {
+    if (!mapLoadContinuedRef.current && mapLoadHandleRef.current !== null) {
+      continueRender(mapLoadHandleRef.current);
+      mapLoadContinuedRef.current = true;
+    }
+  }, []);
+
   return (
     <Sequence
       durationInFrames={durFrames}
       from={Math.floor(fps * start)}
       layout="none"
     >
-      <APIProvider apiKey={apiKey}>
+      <APIProvider
+        apiKey={apiKey}
+        language={mapLocale.language}
+        region={mapLocale.region}
+      >
         <GoogleMap
           mapId={String(stream.id ?? "map")}
           defaultCenter={center}
@@ -74,6 +123,7 @@ export function MapLeaf({ stream }: { stream: MapStream }) {
             disableDefaultUI: true,
             zoomControl: false,
           }}
+          onTilesLoaded={handleTilesLoaded}
           style={{ width: "100%", height: "100%", position: "absolute" }}
         >
           <RouteWithMarker

@@ -14,14 +14,17 @@ interface HeaderBarProps {
   sceneInfo?: string;
   /** Whether SSE is connected */
   sseConnected?: boolean;
+  /** UI locale */
+  locale?: "en" | "zh";
 }
 
-export function HeaderBar({ mode, sceneInfo, sseConnected }: HeaderBarProps) {
+export function HeaderBar({ mode, sceneInfo, sseConnected, locale = "en" }: HeaderBarProps) {
+  const isZh = locale === "zh";
   const handleClose = React.useCallback(() => {
     navigator.sendBeacon("/api/shutdown", "{}");
     document.body.innerHTML =
-      "<div style='display:flex;align-items:center;justify-content:center;height:100vh;background:#0a0a0a;color:#555;font-family:sans-serif;font-size:16px'>\u2B61 player closed \u2014 return to terminal</div>";
-  }, []);
+      `<div style='display:flex;align-items:center;justify-content:center;height:100vh;background:#0a0a0a;color:#555;font-family:sans-serif;font-size:16px'>\u2B61 ${isZh ? "播放器已关闭，返回终端" : "player closed — return to terminal"}</div>`;
+  }, [isZh]);
 
   return (
     <div id="header">
@@ -33,7 +36,7 @@ export function HeaderBar({ mode, sceneInfo, sseConnected }: HeaderBarProps) {
         {/* SSE indicator — shown in all modes */}
         <span
           id="sse-indicator"
-          title={sseConnected ? "Connected — auto-reload ready" : "Disconnected"}
+          title={sseConnected ? (isZh ? "已连接，可自动刷新" : "Connected — auto-reload ready") : (isZh ? "连接断开" : "Disconnected")}
           style={{
             display: "inline-block",
             width: 8,
@@ -46,7 +49,7 @@ export function HeaderBar({ mode, sceneInfo, sseConnected }: HeaderBarProps) {
       </span>
       {/* Right: close button */}
       <div id="header-actions">
-        <button id="close-btn" title="Close player and return to terminal" onClick={handleClose}>
+        <button id="close-btn" title={isZh ? "关闭播放器并返回终端" : "Close player and return to terminal"} onClick={handleClose}>
           ✕
         </button>
       </div>

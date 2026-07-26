@@ -162,6 +162,13 @@ function PlayerApp() {
   const urlParams = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
   const autoPlay = urlParams.get("autoplay") === "true";
   const startAt = parseFloat(urlParams.get("start") || urlParams.get("t") || "0") || 0;
+  const locale: "en" | "zh" = (() => {
+    const raw = (urlParams.get("lang") || "").toLowerCase();
+    if (raw === "zh" || raw.startsWith("zh-")) return "zh";
+    if (raw === "en" || raw.startsWith("en-")) return "en";
+    if (typeof navigator !== "undefined" && navigator.language.toLowerCase().startsWith("zh")) return "zh";
+    return "en";
+  })();
 
   // Derive player config from data early so effects can reference them safely.
   const fps = data?.fps ?? 30;
@@ -513,6 +520,7 @@ function PlayerApp() {
         mode={mode}
         sseConnected={sseConnected}
         sceneInfo={mode === "label" ? labelSceneInfo : undefined}
+        locale={locale}
       />
 
       {/* ── Variant switcher ── */}
@@ -543,6 +551,7 @@ function PlayerApp() {
             <EditMessagePanel
               entries={editEntries}
               minimized={false}
+              locale={locale}
               onToggleMinimize={() => setShowEditOverlay(false)}
             />
           </div>
@@ -567,6 +576,7 @@ function PlayerApp() {
           suppressReloadRef={suppressReloadRef}
           currentTime={currentTime}
           activeScene={activeScene}
+          locale={locale}
         />
       )}
       {mode === "label" && (

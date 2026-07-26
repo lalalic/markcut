@@ -81,6 +81,8 @@ some common issues (photo or video can't be displayed, audio missing), take belo
 |-------|------|
 | Markdown descriptive format (primary authoring format) | [docs/markdown-descriptive.md](docs/markdown-descriptive.md) |
 | Built-in components & common npm packages | [docs/components.md](docs/components.md) |
+| Sound effects | [docs/sound-effects.md](docs/sound-effects.md) |
+
 
 
 ## Built-in Components

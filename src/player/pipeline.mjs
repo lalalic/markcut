@@ -338,6 +338,8 @@ function compileLeaf(node2, ctx, parentKind) {
         zoom: node2.zoom ?? 10,
         center: node2.center,
         mapType: node2.mapType ?? "roadmap",
+        language: node2.language,
+        region: node2.region,
         travelMode: node2.travelMode ?? "DRIVING",
         routeMarker: node2.routeMarker ?? "\u{1F697}",
         googleMapsApiKey: ctx.googleMapsApiKey
@@ -10413,6 +10415,8 @@ function parseNodeLine(content3, lineNum) {
         zoom: attrs.zoom,
         center: attrs.center,
         mapType: attrs.mapType,
+        language: attrs.language ?? attrs.lang,
+        region: attrs.region,
         instruction: attrs.instruction,
         visible: attrs.visible,
         isBackground: attrs.isBackground,

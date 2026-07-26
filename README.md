@@ -48,6 +48,7 @@ storyboard.md  ──[parse]──▶  DescriptiveRoot  ──[compile]──▶
 | **Built-in Mermaid** | `<Mermaid source="..." theme="dark" />` renders Mermaid diagrams as inline SVG. No imports needed |
 | **Styling** | Inline `style` strings on any node for CSS. JSX components use inline React styles |
 | **Live edit** | `--edit` watches the input file, re-runs pipeline, auto-reloads player |
+| **Player language** | Player UI supports English/Chinese. Use `?lang=en` or `?lang=zh` |
 | **Storyboard** | `--storyboard` fast structure preview: replaces TTI/TTV prompts with placeholder components, skips slow generation. Implies `--edit` |
 | **Label mode** | `--label` interactive player with per-scene label input, saves to labels.json |
 | **CLI** | `render`, `preview` commands for MP4 export and Remotion Studio |
@@ -158,6 +159,34 @@ Compound variant labels (like `zh-tiktok`) are split on `-` to form a **variant 
 ### Variant-Aware Browser
 
 The browser player reads `window.VARIANT` from the URL path and fetches the correct compiled data via `/api/video-data?variant=<name>`. A **variant switcher bar** at the top of the player lets you jump between variants instantly.
+
+### Player UI Language (EN / ZH)
+
+The player UI (edit panel, placeholders, tooltips) supports English and Chinese.
+
+- `?lang=en` for English
+- `?lang=zh` for Chinese
+
+Examples:
+
+- `http://localhost:3001?lang=en`
+- `http://localhost:3001?lang=zh`
+
+If `lang` is not provided, the player falls back to browser language (Chinese browsers default to `zh`, otherwise `en`).
+
+### Map Language (EN / ZH)
+
+`map` nodes support `language`/`lang` and `region` keys.
+
+```md
+- map duration:3 lang:zh region:CN waypoints:[31.23,121.47,"上海";39.90,116.40,"北京"]
+- map duration:3 lang:en region:US waypoints:[37.77,-122.41,"SF";34.05,-118.24,"LA"]
+```
+
+Locale shorthand normalization:
+
+- `lang:zh` / `language:zh` → `zh-CN` (default region `CN`)
+- `lang:en` / `language:en` → `en` (default region `US`)
 
 ## `.markcut/` Directory Layout
 

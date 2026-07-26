@@ -228,6 +228,8 @@ export const mapStream = base.extend({
   zoom: z.number().default(10),
   center: z.object({ lat: z.number(), lng: z.number() }).optional().describe("map view center (defaults to first waypoint)"),
   mapType: z.enum(["roadmap", "satellite", "hybrid", "terrain"]).default("roadmap").describe("Google Maps style"),
+  language: z.string().optional().describe("Google Maps UI/label language, e.g. zh-CN"),
+  region: z.string().optional().describe("Google Maps region code, e.g. CN"),
   travelMode: z.enum(["DRIVING", "WALKING", "BICYCLING", "TRANSIT"]).default("DRIVING").describe("Directions API travel mode"),
   routeMarker: z.string().default("🚗").describe("emoji/character for the animated traveling marker"),
   googleMapsApiKey: z.string().optional().describe("injected by compiler from GOOGLE_MAPS_API_KEY env var"),

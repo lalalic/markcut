@@ -242080,6 +242080,14 @@ function resolveApiKey(stream3) {
   }
   return "";
 }
+function resolveMapLocale(language, region) {
+  if (!language) return { language: void 0, region };
+  const lang = language.trim().toLowerCase();
+  if (lang === "zh") return { language: "zh-CN", region: region ?? "CN" };
+  if (lang === "en") return { language: "en", region: region ?? "US" };
+  if (lang.startsWith("zh-")) return { language, region: region ?? "CN" };
+  return { language, region };
+}
 function MapLeaf({ stream: stream3 }) {
   const { fps } = useVideoConfig();
   const waypoints = stream3.waypoints ?? [];
@@ -242095,35 +242103,74 @@ function MapLeaf({ stream: stream3 }) {
   const mapType = stream3.mapType ?? "roadmap";
   const travelMode = stream3.travelMode ?? "DRIVING";
   const markerEmoji = stream3.routeMarker ?? "\u{1F697}";
+  const mapLocale = import_react128.default.useMemo(
+    () => resolveMapLocale(stream3.language, stream3.region),
+    [stream3.language, stream3.region]
+  );
+  const mapLoadHandleRef = import_react128.default.useRef(null);
+  const mapLoadContinuedRef = import_react128.default.useRef(false);
+  import_react128.default.useEffect(() => {
+    mapLoadHandleRef.current = delayRender("Waiting for map tiles to load...");
+    mapLoadContinuedRef.current = false;
+    const fallbackTimer = window.setTimeout(() => {
+      if (!mapLoadContinuedRef.current && mapLoadHandleRef.current !== null) {
+        continueRender(mapLoadHandleRef.current);
+        mapLoadContinuedRef.current = true;
+      }
+    }, 8e3);
+    return () => {
+      window.clearTimeout(fallbackTimer);
+      if (!mapLoadContinuedRef.current && mapLoadHandleRef.current !== null) {
+        continueRender(mapLoadHandleRef.current);
+        mapLoadContinuedRef.current = true;
+      }
+      mapLoadHandleRef.current = null;
+    };
+  }, [stream3.id, start4, end2]);
+  const handleTilesLoaded = import_react128.default.useCallback(() => {
+    if (!mapLoadContinuedRef.current && mapLoadHandleRef.current !== null) {
+      continueRender(mapLoadHandleRef.current);
+      mapLoadContinuedRef.current = true;
+    }
+  }, []);
   return /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(
     Sequence,
     {
       durationInFrames: durFrames,
       from: Math.floor(fps * start4),
       layout: "none",
-      children: /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(APIProvider, { apiKey, children: /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(
-        Map4,
+      children: /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(
+        APIProvider,
         {
-          mapId: String(stream3.id ?? "map"),
-          defaultCenter: center4,
-          defaultZoom: zoom2,
-          defaultOptions: {
-            mapTypeId: mapType,
-            disableDefaultUI: true,
-            zoomControl: false
-          },
-          style: { width: "100%", height: "100%", position: "absolute" },
+          apiKey,
+          language: mapLocale.language,
+          region: mapLocale.region,
           children: /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(
-            RouteWithMarker,
+            Map4,
             {
-              waypoints,
-              travelMode,
-              markerEmoji,
-              actionDuration: end2 - start4
+              mapId: String(stream3.id ?? "map"),
+              defaultCenter: center4,
+              defaultZoom: zoom2,
+              defaultOptions: {
+                mapTypeId: mapType,
+                disableDefaultUI: true,
+                zoomControl: false
+              },
+              onTilesLoaded: handleTilesLoaded,
+              style: { width: "100%", height: "100%", position: "absolute" },
+              children: /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(
+                RouteWithMarker,
+                {
+                  waypoints,
+                  travelMode,
+                  markerEmoji,
+                  actionDuration: end2 - start4
+                }
+              )
             }
           )
         }
-      ) })
+      )
     }
   );
 }
@@ -257456,6 +257503,8 @@ var mapStream = base.extend({
   zoom: external_exports.number().default(10),
   center: external_exports.object({ lat: external_exports.number(), lng: external_exports.number() }).optional().describe("map view center (defaults to first waypoint)"),
   mapType: external_exports.enum(["roadmap", "satellite", "hybrid", "terrain"]).default("roadmap").describe("Google Maps style"),
+  language: external_exports.string().optional().describe("Google Maps UI/label language, e.g. zh-CN"),
+  region: external_exports.string().optional().describe("Google Maps region code, e.g. CN"),
   travelMode: external_exports.enum(["DRIVING", "WALKING", "BICYCLING", "TRANSIT"]).default("DRIVING").describe("Directions API travel mode"),
   routeMarker: external_exports.string().default("\u{1F697}").describe("emoji/character for the animated traveling marker"),
   googleMapsApiKey: external_exports.string().optional().describe("injected by compiler from GOOGLE_MAPS_API_KEY env var")
@@ -257560,11 +257609,12 @@ function MarkCut({ root: root8, compose, background = "#000" }) {
 // src/player/components/HeaderBar.tsx
 var React50 = __toESM(require_react(), 1);
 var import_jsx_runtime96 = __toESM(require_jsx_runtime(), 1);
-function HeaderBar({ mode, sceneInfo, sseConnected }) {
+function HeaderBar({ mode, sceneInfo, sseConnected, locale: locale3 = "en" }) {
+  const isZh = locale3 === "zh";
   const handleClose = React50.useCallback(() => {
     navigator.sendBeacon("/api/shutdown", "{}");
-    document.body.innerHTML = "<div style='display:flex;align-items:center;justify-content:center;height:100vh;background:#0a0a0a;color:#555;font-family:sans-serif;font-size:16px'>\u2B61 player closed \u2014 return to terminal</div>";
-  }, []);
+    document.body.innerHTML = `<div style='display:flex;align-items:center;justify-content:center;height:100vh;background:#0a0a0a;color:#555;font-family:sans-serif;font-size:16px'>\u2B61 ${isZh ? "\u64AD\u653E\u5668\u5DF2\u5173\u95ED\uFF0C\u8FD4\u56DE\u7EC8\u7AEF" : "player closed \u2014 return to terminal"}</div>`;
+  }, [isZh]);
   return /* @__PURE__ */ (0, import_jsx_runtime96.jsxs)("div", { id: "header", children: [
     /* @__PURE__ */ (0, import_jsx_runtime96.jsxs)("span", { style: { flex: 1, display: "flex", alignItems: "center", gap: 8 }, children: [
       mode === "label" && sceneInfo && /* @__PURE__ */ (0, import_jsx_runtime96.jsx)("span", { id: "scene-info", children: sceneInfo }),
@@ -257572,7 +257622,7 @@ function HeaderBar({ mode, sceneInfo, sseConnected }) {
         "span",
         {
           id: "sse-indicator",
-          title: sseConnected ? "Connected \u2014 auto-reload ready" : "Disconnected",
+          title: sseConnected ? isZh ? "\u5DF2\u8FDE\u63A5\uFF0C\u53EF\u81EA\u52A8\u5237\u65B0" : "Connected \u2014 auto-reload ready" : isZh ? "\u8FDE\u63A5\u65AD\u5F00" : "Disconnected",
           style: {
             display: "inline-block",
             width: 8,
@@ -257584,16 +257634,17 @@ function HeaderBar({ mode, sceneInfo, sseConnected }) {
         }
       )
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime96.jsx)("div", { id: "header-actions", children: /* @__PURE__ */ (0, import_jsx_runtime96.jsx)("button", { id: "close-btn", title: "Close player and return to terminal", onClick: handleClose, children: "\u2715" }) })
+    /* @__PURE__ */ (0, import_jsx_runtime96.jsx)("div", { id: "header-actions", children: /* @__PURE__ */ (0, import_jsx_runtime96.jsx)("button", { id: "close-btn", title: isZh ? "\u5173\u95ED\u64AD\u653E\u5668\u5E76\u8FD4\u56DE\u7EC8\u7AEF" : "Close player and return to terminal", onClick: handleClose, children: "\u2715" }) })
   ] });
 }
 
 // src/player/components/EditControls.tsx
 var React51 = __toESM(require_react(), 1);
 var import_jsx_runtime97 = __toESM(require_jsx_runtime(), 1);
-function EditControls({ onStatusChange, suppressReloadRef, currentTime, activeScene }) {
+function EditControls({ onStatusChange, suppressReloadRef, currentTime, activeScene, locale: locale3 = "en" }) {
   const [busy, setBusy] = React51.useState(false);
   const inputRef = React51.useRef(null);
+  const isZh = locale3 === "zh";
   const handleApplyEdit = React51.useCallback(
     async (text10) => {
       if (!text10 || busy) return;
@@ -257642,7 +257693,7 @@ function EditControls({ onStatusChange, suppressReloadRef, currentTime, activeSc
       {
         ref: inputRef,
         id: "edit-input",
-        placeholder: "What should change? e.g. make text bigger",
+        placeholder: isZh ? "\u60F3\u6539\u4EC0\u4E48\uFF1F\u4F8B\u5982\uFF1A\u628A\u6587\u5B57\u653E\u5927\u4E00\u4E9B" : "What should change? e.g. make text bigger",
         onKeyDown: handleKeyDown
       }
     ),
@@ -257650,7 +257701,7 @@ function EditControls({ onStatusChange, suppressReloadRef, currentTime, activeSc
       "button",
       {
         id: "edit-btn",
-        title: "Apply edit",
+        title: isZh ? "\u5E94\u7528\u4FEE\u6539" : "Apply edit",
         disabled: busy,
         onClick: () => handleApplyEdit(inputRef.current?.value || ""),
         children: "\u2728"
@@ -257662,8 +257713,9 @@ function EditControls({ onStatusChange, suppressReloadRef, currentTime, activeSc
 // src/player/components/EditMessagePanel.tsx
 var React54 = __toESM(require_react(), 1);
 var import_jsx_runtime98 = __toESM(require_jsx_runtime(), 1);
-function EditMessagePanel({ entries: entries2, minimized, onToggleMinimize }) {
+function EditMessagePanel({ entries: entries2, minimized, locale: locale3 = "en", onToggleMinimize }) {
   const listRef = React54.useRef(null);
+  const isZh = locale3 === "zh";
   React54.useEffect(() => {
     if (listRef.current) {
       listRef.current.scrollTop = listRef.current.scrollHeight;
@@ -257671,34 +257723,35 @@ function EditMessagePanel({ entries: entries2, minimized, onToggleMinimize }) {
   }, [entries2]);
   if (minimized) {
     const latest = entries2[entries2.length - 1];
-    const label3 = entries2.length === 0 ? "\u2728 Edit" : `\u2728 ${entries2.length} edit${entries2.length > 1 ? "s" : ""}${latest?.status === "thinking" ? " \u23F3" : ""}`;
-    return /* @__PURE__ */ (0, import_jsx_runtime98.jsx)("button", { id: "edit-message-bar", onClick: onToggleMinimize, title: "Show edit history", children: label3 });
+    const label3 = entries2.length === 0 ? isZh ? "\u2728 \u7F16\u8F91" : "\u2728 Edit" : isZh ? `\u2728 ${entries2.length} \u6761\u7F16\u8F91${latest?.status === "thinking" ? " \u23F3" : ""}` : `\u2728 ${entries2.length} edit${entries2.length > 1 ? "s" : ""}${latest?.status === "thinking" ? " \u23F3" : ""}`;
+    return /* @__PURE__ */ (0, import_jsx_runtime98.jsx)("button", { id: "edit-message-bar", onClick: onToggleMinimize, title: isZh ? "\u663E\u793A\u7F16\u8F91\u5386\u53F2" : "Show edit history", children: label3 });
   }
   return /* @__PURE__ */ (0, import_jsx_runtime98.jsxs)("div", { id: "edit-message-panel", children: [
     /* @__PURE__ */ (0, import_jsx_runtime98.jsxs)("div", { id: "edit-message-header", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime98.jsx)("span", { children: "\u2728 Edit History" }),
+      /* @__PURE__ */ (0, import_jsx_runtime98.jsx)("span", { children: isZh ? "\u2728 \u7F16\u8F91\u5386\u53F2" : "\u2728 Edit History" }),
       /* @__PURE__ */ (0, import_jsx_runtime98.jsx)(
         "button",
         {
           id: "edit-message-minimize",
           onClick: onToggleMinimize,
-          title: "Minimize",
-          "aria-label": "Minimize edit panel",
+          title: isZh ? "\u6700\u5C0F\u5316" : "Minimize",
+          "aria-label": isZh ? "\u6700\u5C0F\u5316\u7F16\u8F91\u9762\u677F" : "Minimize edit panel",
           children: "\u2500"
         }
       )
     ] }),
     /* @__PURE__ */ (0, import_jsx_runtime98.jsxs)("div", { id: "edit-message-list", ref: listRef, children: [
-      entries2.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime98.jsx)("div", { className: "edit-message-empty", children: "No edits yet. Type a request below." }),
+      entries2.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime98.jsx)("div", { className: "edit-message-empty", children: isZh ? "\u6682\u65E0\u7F16\u8F91\u8BB0\u5F55\u3002\u8BF7\u5728\u4E0B\u65B9\u8F93\u5165\u4FEE\u6539\u8BF7\u6C42\u3002" : "No edits yet. Type a request below." }),
       entries2.map((entry) => /* @__PURE__ */ (0, import_jsx_runtime98.jsxs)("div", { className: `edit-message-entry ${entry.status}`, children: [
         /* @__PURE__ */ (0, import_jsx_runtime98.jsxs)("div", { className: "edit-message-request", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime98.jsx)("span", { className: "edit-role", children: "You:" }),
+          /* @__PURE__ */ (0, import_jsx_runtime98.jsx)("span", { className: "edit-role", children: isZh ? "\u4F60:" : "You:" }),
           " ",
           entry.request
         ] }),
         entry.status === "thinking" && /* @__PURE__ */ (0, import_jsx_runtime98.jsxs)("div", { className: "edit-message-thinking", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime98.jsx)("span", { className: "edit-role", children: "Assistant:" }),
-          " Thinking",
+          /* @__PURE__ */ (0, import_jsx_runtime98.jsx)("span", { className: "edit-role", children: isZh ? "\u52A9\u624B:" : "Assistant:" }),
+          " ",
+          isZh ? "\u601D\u8003\u4E2D" : "Thinking",
           /* @__PURE__ */ (0, import_jsx_runtime98.jsxs)("span", { className: "edit-dots", children: [
             /* @__PURE__ */ (0, import_jsx_runtime98.jsx)("span", { children: "." }),
             /* @__PURE__ */ (0, import_jsx_runtime98.jsx)("span", { children: "." }),
@@ -257706,14 +257759,14 @@ function EditMessagePanel({ entries: entries2, minimized, onToggleMinimize }) {
           ] })
         ] }),
         entry.status === "done" && entry.progress && /* @__PURE__ */ (0, import_jsx_runtime98.jsxs)("div", { className: "edit-message-response", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime98.jsx)("span", { className: "edit-role", children: "Assistant:" }),
+          /* @__PURE__ */ (0, import_jsx_runtime98.jsx)("span", { className: "edit-role", children: isZh ? "\u52A9\u624B:" : "Assistant:" }),
           " ",
           entry.progress
         ] }),
         entry.status === "error" && /* @__PURE__ */ (0, import_jsx_runtime98.jsxs)("div", { className: "edit-message-error", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime98.jsx)("span", { className: "edit-role", children: "Error:" }),
+          /* @__PURE__ */ (0, import_jsx_runtime98.jsx)("span", { className: "edit-role", children: isZh ? "\u9519\u8BEF:" : "Error:" }),
           " ",
-          entry.error || entry.progress || "Edit failed"
+          entry.error || entry.progress || (isZh ? "\u7F16\u8F91\u5931\u8D25" : "Edit failed")
         ] })
       ] }, entry.id))
     ] })
@@ -258163,6 +258216,13 @@ function PlayerApp() {
   const urlParams = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
   const autoPlay = urlParams.get("autoplay") === "true";
   const startAt = parseFloat(urlParams.get("start") || urlParams.get("t") || "0") || 0;
+  const locale3 = (() => {
+    const raw = (urlParams.get("lang") || "").toLowerCase();
+    if (raw === "zh" || raw.startsWith("zh-")) return "zh";
+    if (raw === "en" || raw.startsWith("en-")) return "en";
+    if (typeof navigator !== "undefined" && navigator.language.toLowerCase().startsWith("zh")) return "zh";
+    return "en";
+  })();
   const fps = data7?.fps ?? 30;
   const durationInSeconds = data7 ? getDurationInSeconds(data7, true) || 5 : 5;
   const durationInFrames = Math.max(1, Math.ceil(durationInSeconds * fps));
@@ -258452,7 +258512,8 @@ function PlayerApp() {
           {
             mode,
             sseConnected,
-            sceneInfo: mode === "label" ? labelSceneInfo : void 0
+            sceneInfo: mode === "label" ? labelSceneInfo : void 0,
+            locale: locale3
           }
         ),
         /* @__PURE__ */ (0, import_jsx_runtime102.jsx)(VariantBar, {}),
@@ -258481,6 +258542,7 @@ function PlayerApp() {
             {
               entries: editEntries,
               minimized: false,
+              locale: locale3,
               onToggleMinimize: () => setShowEditOverlay(false)
             }
           ) })
@@ -258503,7 +258565,8 @@ function PlayerApp() {
           {
             suppressReloadRef,
             currentTime,
-            activeScene
+            activeScene,
+            locale: locale3
           }
         ),
         mode === "label" && /* @__PURE__ */ (0, import_jsx_runtime102.jsx)(

@@ -331,6 +331,9 @@ Subtitles are configured at the root level as a VTT overlay. Set via `subtitle:`
 | `zoom` | int (default 10) | map |
 | `center` | `{lat:n,lng:n}` JSON | map |
 | `mapType` | `roadmap\|satellite\|hybrid\|terrain` | map |
+| `language` | map label/UI language. Supports `en`, `zh`, `zh-CN`, etc. | map |
+| `lang` | alias of `language` (e.g. `lang:zh`) | map |
+| `region` | region code hint (e.g. `CN`, `US`) | map |
 | `routeMarker` | emoji string e.g. `"🚗"` | map |
 | `title` | display title | scene |
 | `instruction` | visual intent / style / any prompt; NOT rendered | any |
@@ -432,6 +435,15 @@ Each child is assigned to a beat slot: child[i] starts at `spots[i]`, ends at `s
 When: animated route. Required: `duration`, `waypoints`.
 
 `- map duration:3 travelMode:DRIVING waypoints:[37.77,-122.41,"SF";34.05,-118.24,"LA"]`
+
+Language and region are optional:
+
+`- map duration:3 language:zh region:CN waypoints:[31.23,121.47,"上海";39.90,116.40,"北京"]`
+
+Shorthand aliases:
+
+- `language:zh` or `lang:zh` → normalized to `zh-CN` with `region:CN` default
+- `language:en` or `lang:en` → keeps English labels with `region:US` default
 
 ### `include`
 

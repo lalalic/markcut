@@ -822,12 +822,14 @@ function getHtml(variantLabel) {
   .scene-pill:hover { border-color: rgba(74,158,255,.4); color: rgba(255,255,255,.7); }
   .scene-pill.active { background: rgba(74,158,255,.2); border-color: #4a9eff; color: #4a9eff; }
 
+  .subtitle-overlay>*{width:100%}
+
   /* ── Edit message panel ───────────────────────────────────────────── */
   #edit-message-overlay {
     position: absolute;
     left: 8px;
     right: 8px;
-    bottom: 8px;
+    top: 8px;
     z-index: 30;
     pointer-events: none;
   }
