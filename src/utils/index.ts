@@ -4,7 +4,15 @@
  */
 
 export function uid(): string {
-  return Math.random().toString(36).slice(2, 10);
+  // Ensure the first character is a letter (valid JS identifier start)
+  const raw = Math.random().toString(36).slice(2, 10);
+  const first = raw[0]!;
+  // If first char is a digit, prepend a random letter
+  if (/^[0-9]/.test(first)) {
+    const letter = String.fromCharCode(97 + Math.floor(Math.random() * 26));
+    return letter + raw;
+  }
+  return raw;
 }
 
 const KEBAB = /[^a-zA-Z0-9_-]+/g;

@@ -33,7 +33,13 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 
 // src/utils/index.ts
 function uid() {
-  return Math.random().toString(36).slice(2, 10);
+  const raw = Math.random().toString(36).slice(2, 10);
+  const first = raw[0];
+  if (/^[0-9]/.test(first)) {
+    const letter = String.fromCharCode(97 + Math.floor(Math.random() * 26));
+    return letter + raw;
+  }
+  return raw;
 }
 function walkDown(node2, visit, parent = null, depth = 0) {
   const keep = visit(node2, parent, depth);
@@ -243,14 +249,15 @@ function wrapWithEffects(node2, result, parentKind) {
   return { stream: currentStream, duration: result.duration };
 }
 function compileLeaf(node2, ctx, parentKind) {
-  const id = node2.id ?? uid();
+  const id = node2.id;
+  const hasExplicitId = node2.id != null;
   const hasOwnDuration = typeof node2.duration === "number" || typeof node2.endAt === "number";
   const isBgNoOwnTiming = node2.isBackground && !hasOwnDuration;
   const start = isBgNoOwnTiming ? typeof node2.start === "number" ? node2.start : void 0 : parentKind === "parallel" ? Math.max(0, node2.start ?? 0) : 0;
   const duration = isBgNoOwnTiming ? void 0 : deriveLeafDuration(node2, ctx);
   const end = duration != null ? start + duration : void 0;
   const base = {
-    id,
+    ...id ? { id } : {},
     style: node2.style,
     visible: node2.visible ?? true,
     isBackground: node2.isBackground,

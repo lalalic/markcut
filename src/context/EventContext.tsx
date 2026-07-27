@@ -74,6 +74,9 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
     const keys = Object.keys(scope);
     const vals = Object.values(scope);
     try {
+      // Debug: log the exact code string
+      const codeChars = Array.from(code).map((c: string) => c.charCodeAt(0));
+      console.log(`EventContext.debug: keys=${JSON.stringify(keys)}, codeLen=${code.length}, codeChars=${JSON.stringify(codeChars)}, codeStr=${JSON.stringify(code)}`);
       const fn = new Function(...keys, code);
       fn(...vals);
       console.info(`Event evaluation succeeded: "${code}"`);

@@ -225416,10 +225416,52 @@ var mermaid_default = mermaid;
 // src/components/Mermaid.tsx
 var import_jsx_runtime60 = __toESM(require_jsx_runtime(), 1);
 var initialized = false;
-function Mermaid({ children: children2, source = children2, theme = "dark", className: className2 }) {
+function extractText(x7) {
+  if (typeof x7 === "string") return x7;
+  if (Array.isArray(x7)) return x7.map(extractText).join("");
+  if (x7 && typeof x7 === "object" && "props" in x7) {
+    return extractText(x7.props?.children);
+  }
+  return "";
+}
+function findNodeGroup(svg4, name2) {
+  const byId = svg4.querySelector(`[id*="-${CSS.escape(name2)}-"]`);
+  if (byId) {
+    let el = byId;
+    while (el && el.tagName !== "g") el = el.parentElement;
+    return el || byId;
+  }
+  for (const t4 of svg4.querySelectorAll("text")) {
+    const text10 = t4.textContent?.trim() ?? "";
+    if (text10.startsWith(name2)) {
+      let el = t4;
+      while (el && el.tagName !== "g") el = el.parentElement;
+      return el || t4;
+    }
+  }
+  for (const t4 of svg4.querySelectorAll("title")) {
+    if ((t4.textContent?.trim() ?? "").startsWith(name2) && t4.parentElement) {
+      return t4.parentElement;
+    }
+  }
+  return null;
+}
+function Mermaid({
+  children: children2,
+  source: sourceProp,
+  theme = "dark",
+  className: className2,
+  style: style4,
+  highlight
+}) {
   const ref2 = React8.useRef(null);
-  const [handle2] = React8.useState(() => delayRender("Mermaid rendering"));
+  const renderedRef = React8.useRef(false);
+  const source = React8.useMemo(
+    () => extractText(sourceProp ?? children2),
+    [sourceProp, children2]
+  );
   React8.useEffect(() => {
+    let cancelled = false;
     if (!source || !ref2.current) return;
     if (!initialized) {
       mermaid_default.initialize({
@@ -225431,25 +225473,59 @@ function Mermaid({ children: children2, source = children2, theme = "dark", clas
     }
     const id39 = "mmd-" + Math.random().toString(36).slice(2, 10);
     mermaid_default.render(id39, source).then((result) => {
-      if (ref2.current) ref2.current.innerHTML = result.svg;
-      continueRender(handle2);
+      if (cancelled || !ref2.current) return;
+      ref2.current.innerHTML = result.svg;
+      const svg4 = ref2.current.querySelector("svg");
+      if (svg4) {
+        svg4.removeAttribute("width");
+        svg4.removeAttribute("height");
+        svg4.style.width = "100%";
+        svg4.style.height = "100%";
+        if (highlight) {
+          const names = Array.isArray(highlight) ? highlight : [highlight];
+          for (const name2 of names) {
+            const node3 = findNodeGroup(svg4, name2);
+            if (node3) node3.classList.add("highlight");
+          }
+        }
+      }
+      renderedRef.current = true;
     }).catch((err) => {
+      if (cancelled) return;
       console.error("Mermaid error:", err);
       if (ref2.current) {
         ref2.current.innerHTML = `<div style="color:#f87171;padding:1em;border:2px dashed #f87171;border-radius:8px;font-family:monospace;font-size:14px;">
             <strong>\u26A0 Mermaid Error</strong><br/>${String(err).replace(/</g, "&lt;").replace(/>/g, "&gt;")}
           </div>`;
       }
-      continueRender(handle2);
     });
-  }, [source, theme, handle2]);
-  return /* @__PURE__ */ (0, import_jsx_runtime60.jsx)(
-    "div",
-    {
-      ref: ref2,
-      className: className2
+    return () => {
+      cancelled = true;
+    };
+  }, [source, theme]);
+  React8.useEffect(() => {
+    const svg4 = ref2.current?.querySelector("svg");
+    if (!svg4) return;
+    svg4.querySelectorAll(".highlight").forEach((el) => {
+      el.classList.remove("highlight");
+    });
+    const names = Array.isArray(highlight) ? highlight : highlight ? [highlight] : [];
+    for (const name2 of names) {
+      const node3 = findNodeGroup(svg4, name2);
+      if (node3) {
+        node3.classList.add("highlight");
+      }
     }
-  );
+  }, [highlight]);
+  const containerStyle3 = {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    width: "100%",
+    height: "100%",
+    ...style4
+  };
+  return /* @__PURE__ */ (0, import_jsx_runtime60.jsx)("div", { ref: ref2, className: className2, style: containerStyle3 });
 }
 
 // src/components/Markdown.tsx
@@ -225588,6 +225664,8 @@ function EventProvider({ children: children2 }) {
     const keys4 = Object.keys(scope);
     const vals = Object.values(scope);
     try {
+      const codeChars = Array.from(code4).map((c5) => c5.charCodeAt(0));
+      console.log(`EventContext.debug: keys=${JSON.stringify(keys4)}, codeLen=${code4.length}, codeChars=${JSON.stringify(codeChars)}, codeStr=${JSON.stringify(code4)}`);
       const fn3 = new Function(...keys4, code4);
       fn3(...vals);
       console.info(`Event evaluation succeeded: "${code4}"`);
@@ -227900,7 +227978,13 @@ var clockWipe = (props) => {
 
 // src/utils/index.ts
 function uid() {
-  return Math.random().toString(36).slice(2, 10);
+  const raw = Math.random().toString(36).slice(2, 10);
+  const first3 = raw[0];
+  if (/^[0-9]/.test(first3)) {
+    const letter = String.fromCharCode(97 + Math.floor(Math.random() * 26));
+    return letter + raw;
+  }
+  return raw;
 }
 var KEBAB = /[^a-zA-Z0-9_-]+/g;
 function toClassName(s3) {

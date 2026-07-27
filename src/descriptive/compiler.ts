@@ -502,7 +502,10 @@ function wrapWithEffects(
 }
 
 function compileLeaf(node: Exclude<DescriptiveNode, DescriptiveContainer | DescriptiveScene | DescriptiveInclude>, ctx: CompileContext, parentKind: "series" | "parallel" | "transitionSeries"): CompileResult {
-  const id = node.id ?? uid();
+  // Only set id when explicitly provided — auto-generated uids would register
+  // in EventContext and may create invalid JS identifiers (starting with digit).
+  const id = node.id;
+  const hasExplicitId = node.id != null;
 
   // Background nodes without explicit duration/endAt: let parent fill timing later
   const hasOwnDuration = typeof node.duration === "number" || typeof node.endAt === "number";
@@ -516,7 +519,7 @@ function compileLeaf(node: Exclude<DescriptiveNode, DescriptiveContainer | Descr
   const end = duration != null ? start! + duration : undefined;
 
   const base = {
-    id,
+    ...(id ? { id } : {}),
     style: node.style,
     visible: node.visible ?? true,
     isBackground: node.isBackground,
