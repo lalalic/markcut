@@ -122,7 +122,7 @@ var require_react_production = __commonJS({
     function cloneAndReplaceKey(oldElement, newKey) {
       return ReactElement(oldElement.type, newKey, oldElement.props);
     }
-    function isValidElement(object4) {
+    function isValidElement2(object4) {
       return "object" === typeof object4 && null !== object4 && object4.$$typeof === REACT_ELEMENT_TYPE;
     }
     function escape3(key) {
@@ -189,7 +189,7 @@ var require_react_production = __commonJS({
       if (invokeCallback)
         return callback = callback(children2), invokeCallback = "" === nameSoFar ? "." + getElementKey(children2, 0) : nameSoFar, isArrayImpl(callback) ? (escapedPrefix = "", null != invokeCallback && (escapedPrefix = invokeCallback.replace(userProvidedKeyEscapeRegex, "$&/") + "/"), mapIntoArray(callback, array5, escapedPrefix, "", function(c5) {
           return c5;
-        })) : null != callback && (isValidElement(callback) && (callback = cloneAndReplaceKey(
+        })) : null != callback && (isValidElement2(callback) && (callback = cloneAndReplaceKey(
           callback,
           escapedPrefix + (null == callback.key || children2 && children2.key === callback.key ? "" : ("" + callback.key).replace(
             userProvidedKeyEscapeRegex,
@@ -298,7 +298,7 @@ var require_react_production = __commonJS({
         }) || [];
       },
       only: function(children2) {
-        if (!isValidElement(children2))
+        if (!isValidElement2(children2))
           throw Error(
             "React.Children.only expected to receive a single React element child."
           );
@@ -385,7 +385,7 @@ var require_react_production = __commonJS({
     exports2.forwardRef = function(render8) {
       return { $$typeof: REACT_FORWARD_REF_TYPE, render: render8 };
     };
-    exports2.isValidElement = isValidElement;
+    exports2.isValidElement = isValidElement2;
     exports2.lazy = function(ctor) {
       return {
         $$typeof: REACT_LAZY_TYPE,
@@ -225587,29 +225587,120 @@ function Mermaid({
 
 // src/components/Markdown.tsx
 var import_jsx_runtime61 = __toESM(require_jsx_runtime(), 1);
-function Markdown2({ children: children2, source = children2, className: className2, plugins, components: components3 }) {
-  return /* @__PURE__ */ (0, import_jsx_runtime61.jsx)("div", { className: className2, children: /* @__PURE__ */ (0, import_jsx_runtime61.jsx)(
+var ListCtx = React9.createContext([]);
+function OrderedList({
+  children: children2,
+  ...props
+}) {
+  const hl = React9.useContext(ListCtx);
+  const items = React9.Children.toArray(children2).filter(
+    (c5) => React9.isValidElement(c5) && c5.type === "li"
+  );
+  return /* @__PURE__ */ (0, import_jsx_runtime61.jsx)("ol", { ...props, children: items.map((child, i5) => {
+    if (hl.includes(i5)) {
+      return React9.cloneElement(child, { className: "highlight-list-item", key: child.key });
+    }
+    return child;
+  }) });
+}
+function UnorderedList({
+  children: children2,
+  ...props
+}) {
+  const hl = React9.useContext(ListCtx);
+  const items = React9.Children.toArray(children2).filter(
+    (c5) => React9.isValidElement(c5) && c5.type === "li"
+  );
+  return /* @__PURE__ */ (0, import_jsx_runtime61.jsx)("ul", { ...props, children: items.map((child, i5) => {
+    if (hl.includes(i5)) {
+      return React9.cloneElement(child, { className: "highlight-list-item", key: child.key });
+    }
+    return child;
+  }) });
+}
+function Markdown2({
+  children: children2,
+  source = children2,
+  className: className2,
+  plugins,
+  components: propComponents,
+  highlight
+}) {
+  const hl = React9.useMemo(() => highlight ?? [], [highlight]);
+  React9.useEffect(() => {
+    const id39 = "markcut-markdown-defaults";
+    if (document.getElementById(id39)) return;
+    const el = document.createElement("style");
+    el.id = id39;
+    el.textContent = `
+      .highlight-list-item {
+        background: rgba(255, 215, 0, 0.15);
+        border-left: 3px solid #ffd700;
+        padding-left: 8px;
+        border-radius: 0 4px 4px 0;
+      }
+      .slide {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        text-align: center;
+      }
+      .slide h1 { font-size: 2em; margin: 0.4em 0; font-weight: 700; }
+      .slide h2 { font-size: 1.6em; margin: 0.35em 0; font-weight: 600; }
+      .slide h3 { font-size: 1.3em; margin: 0.3em 0; font-weight: 600; }
+      .slide p { margin: 0.6em 0; line-height: 1.6; }
+      .slide ul, .slide ol { margin: 0.5em 0; padding-left: 1.5em; text-align: left; }
+      .slide li { margin: 0.3em 0; }
+      .slide blockquote {
+        margin: 0.6em 0;
+        padding: 0.4em 1em;
+        border-left: 3px solid rgba(255,255,255,.3);
+        font-style: italic;
+        opacity: .85;
+      }
+      .slide code {
+        background: rgba(255,255,255,.08);
+        padding: 0.15em 0.4em;
+        border-radius: 4px;
+        font-size: 0.9em;
+      }
+      .slide pre { margin: 0.6em 0; text-align: left; width: 100%; }
+      .slide a { color: #4a9eff; text-decoration: none; }
+      .slide a:hover { text-decoration: underline; }
+    `;
+    document.head.appendChild(el);
+    return () => {
+      document.getElementById(id39)?.remove();
+    };
+  }, []);
+  const mergedComponents = React9.useMemo(
+    () => ({
+      ...propComponents,
+      ol: OrderedList,
+      ul: UnorderedList,
+      pre: ({ children: preChildren }) => {
+        const code4 = React9.Children.toArray(preChildren)[0];
+        if (code4?.props?.className === "language-mermaid") {
+          return /* @__PURE__ */ (0, import_jsx_runtime61.jsx)(Mermaid, { source: String(code4.props.children) });
+        }
+        if (propComponents?.pre) {
+          return propComponents.pre({ children: preChildren });
+        }
+        return /* @__PURE__ */ (0, import_jsx_runtime61.jsx)("pre", { children: preChildren });
+      }
+    }),
+    [propComponents]
+  );
+  return /* @__PURE__ */ (0, import_jsx_runtime61.jsx)(ListCtx.Provider, { value: hl, children: /* @__PURE__ */ (0, import_jsx_runtime61.jsx)("div", { className: className2, children: /* @__PURE__ */ (0, import_jsx_runtime61.jsx)(
     Markdown,
     {
       remarkPlugins: React9.useMemo(() => [remarkGfm, ...plugins || []], [plugins]),
-      components: React9.useMemo(
-        () => ({
-          ...components3,
-          pre: ({ children: children3 }) => {
-            const code4 = React9.Children.toArray(children3)[0];
-            if (code4?.props?.className === "language-mermaid") {
-              return /* @__PURE__ */ (0, import_jsx_runtime61.jsx)(Mermaid, { source: String(code4.props.children) });
-            } else if (components3.pre) {
-              return components3.pre({ children: children3 });
-            }
-            return /* @__PURE__ */ (0, import_jsx_runtime61.jsx)("pre", { children: children3 });
-          }
-        }),
-        [components3]
-      ),
+      components: mergedComponents,
       children: source
     }
-  ) });
+  ) }) });
 }
 
 // src/utils/component-import-map.ts
@@ -239808,7 +239899,30 @@ function ComponentLeaf({ stream: stream3 }) {
     () => ({ ...components3, ...stream3.data, ...eventState }),
     [stream3.data, components3, eventState]
   );
-  if (!stream3.jsx) return null;
+  if (!stream3.jsx) {
+    const start5 = stream3.start ?? 0;
+    const end3 = stream3.end ?? start5 + (stream3.duration ?? 1);
+    const durFrames2 = Math.max(1, Math.floor(fps * (end3 - start5)));
+    return /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(
+      Sequence,
+      {
+        durationInFrames: durFrames2,
+        from: Math.floor(fps * start5),
+        layout: "none",
+        children: /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(
+          EventAwareComponent,
+          {
+            jsx: "",
+            components: components3,
+            data: bindings,
+            action: { start: start5, end: end3 },
+            durFrames: durFrames2,
+            on: stream3.on
+          }
+        )
+      }
+    );
+  }
   const start4 = stream3.start ?? 0;
   const end2 = stream3.end ?? start4 + (stream3.duration ?? 1);
   const durFrames = Math.max(1, Math.floor(fps * (end2 - start4)));
@@ -239841,6 +239955,7 @@ function EventAwareComponent({
   on: on3
 }) {
   useFrameEvents(on3, durFrames);
+  if (!jsx84) return null;
   return /* @__PURE__ */ (0, import_jsx_runtime87.jsx)(
     TweenedJsxParser,
     {

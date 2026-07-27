@@ -10153,6 +10153,7 @@ var TYPE_TOKENS = {
   video: "video",
   audio: "audio",
   component: "component",
+  event: "event",
   rhythm: "rhythm",
   include: "include",
   map: "map",
@@ -10365,6 +10366,21 @@ function parseNodeLine(content3, lineNum) {
         instruction: attrs.instruction,
         visible: attrs.visible,
         isBackground: attrs.isBackground,
+        style: attrs.style,
+        effects: attrs.effects,
+        on: attrs.on
+      };
+      preserveVariantAttrs(node2, attrs);
+      return node2;
+    }
+    case "event": {
+      const node2 = {
+        type: "component",
+        id: attrs.id,
+        jsx: "",
+        duration: attrs.duration,
+        start: attrs.start,
+        instruction: attrs.instruction,
         style: attrs.style,
         effects: attrs.effects,
         on: attrs.on

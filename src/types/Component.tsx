@@ -72,7 +72,30 @@ export function ComponentLeaf({ stream }: { stream: Component }) {
     [stream.data, components, eventState],
   );
 
-  if (!stream.jsx) return null;
+  if (!stream.jsx) {
+    // Event-only stub: no JSX to render, but may fire events on `on`.
+    // Still needs EventAwareComponent for useFrameEvents to register
+    // and fire at the right frame.
+    const start = stream.start ?? 0;
+    const end = stream.end ?? start + (stream.duration ?? 1);
+    const durFrames = Math.max(1, Math.floor(fps * (end - start)));
+    return (
+      <Sequence
+        durationInFrames={durFrames}
+        from={Math.floor(fps * start)}
+        layout="none"
+      >
+        <EventAwareComponent
+          jsx=""
+          components={components}
+          data={bindings}
+          action={{ start, end }}
+          durFrames={durFrames}
+          on={stream.on}
+        />
+      </Sequence>
+    );
+  }
 
   const start = stream.start ?? 0;
   const end = stream.end ?? start + (stream.duration ?? 1);
@@ -117,6 +140,9 @@ function EventAwareComponent({
 }) {
   // Fire events at the right frame for this node's timeline
   useFrameEvents(on, durFrames);
+
+  // If no JSX, this is an event-only stub — nothing to render
+  if (!jsx) return null;
 
   return (
     <TweenedJsxParser

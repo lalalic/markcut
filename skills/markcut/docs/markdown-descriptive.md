@@ -69,6 +69,7 @@ Where:
 | `audio` | `audio` | Voiceover, BGM, SFX | `src` + (`duration` or `endAt`) |
 | `script "..."` | `audio` | Narration/TTS (shorthand for audio with script) | `script` text (the `"..."` is the primary content) |
 | `component` | `component` | JSX React component | `jsx` (inline or code fence) + `duration` (unless `isBackground`) |
+| `event` | `component` (stub) | **Event-only** — renders nothing, fires JS on registered components at a specific frame | `on:(when, state)` + `start` + `duration` |
 | `rhythm` | `rhythm` | Beat-synced audio with timed children | `src`, `spots`, `children` |
 | `map` | `map` | Animated route visualization | `duration`, `waypoints` |
 | `include` | `include` | Embed external `.md` sub-video | `src` (path to another `.md` file) |
@@ -112,9 +113,12 @@ Fire JS expression at a specific frame to mutate component state.
 ```
 - script "Narration" on:(start, slide.current=0)
 - script "Beat" on:(50%, slide.current++)
+- event duration:3 start:6 on:(start, slide.current=1)
 ```
 
 `when`: `start`/`end`/`50%` (percent) / `2.5s` (seconds value). `state`: any JS expression.
+
+Use the `event` type token to create an **event-only stub** — a node that renders nothing and exists solely to fire an event at a specific time. This avoids boilerplate like `- component duration:3 jsx:"<></>" start:6 on:(...)`.
 
 #### Lists — `spots:[n,n,n]`, `start:n`
 
@@ -160,8 +164,7 @@ When a property value is too long for a single line (JSX, prompts, scripts, mark
 | `~~~jsx jsx` or `~~~jsx` | `jsx` | Component JSX expression |
 | `~~~prompt prompt` | `prompt` | TTI/TTV generation prompt |
 | `~~~script script` or `~~~script` | `script` | Narration text on audio nodes |
-| `~~~css stylesheet` | `stylesheet` | Global CSS (only valid at root level) |
-| `~~~md <key>` | arbitrary | Markdown content for a specific key (e.g., `source` for `react-markdown`) |
+| `~~~css stylesheet` | `stylesheet` | Global CSS (only valid at root level) || `~~~mermaid` | `mermaid` | Mermaid diagram source (referenced as `{mermaid}` in JSX) || `~~~md <key>` | arbitrary | Markdown content for a specific key (e.g., `source` for `react-markdown`) |
 
 ### 7. Scene Metadata Block
 

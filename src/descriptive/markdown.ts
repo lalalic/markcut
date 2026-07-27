@@ -38,6 +38,7 @@ const TYPE_TOKENS: Record<string, string> = {
   video: "video",
   audio: "audio",
   component: "component",
+  event: "event",
   rhythm: "rhythm",
   include: "include",
   map: "map",
@@ -244,6 +245,23 @@ function parseNodeLine(content: string, lineNum?: number): DescriptiveNode {
         instruction: attrs.instruction as any,
         visible: attrs.visible as any,
         isBackground: attrs.isBackground as any,
+        style: attrs.style as any,
+        effects: attrs.effects as any,
+        on: attrs.on as any,
+      };
+      preserveVariantAttrs(node, attrs);
+      return node;
+    }
+    case "event": {
+      // Event-only stub: compiles to a component with empty JSX (renders nothing),
+      // just fires events on other registered components via `on`.
+      const node: DescriptiveComponent = {
+        type: "component",
+        id: attrs.id as any,
+        jsx: "",
+        duration: attrs.duration as any,
+        start: attrs.start as any,
+        instruction: attrs.instruction as any,
         style: attrs.style as any,
         effects: attrs.effects as any,
         on: attrs.on as any,
