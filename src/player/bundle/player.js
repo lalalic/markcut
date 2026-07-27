@@ -225446,16 +225446,64 @@ function findNodeGroup(svg4, name2) {
   }
   return null;
 }
+function applyEdgeAnimation(svg4, spec) {
+  if (!spec) return;
+  const allEdges = Array.from(svg4.querySelectorAll(
+    'path[id*="-L_"]'
+  ));
+  if (spec === true) {
+    for (const path5 of allEdges) {
+      path5.classList.add("edge-animated");
+    }
+    return;
+  }
+  for (const pattern of spec) {
+    const match3 = pattern.match(/^(\w+)\s*->\s*(\w+)$/);
+    if (!match3) continue;
+    const source = match3[1];
+    const target = match3[2];
+    const suffix = `L_${source}_${target}_`;
+    for (const path5 of allEdges) {
+      if (path5.id.includes(suffix)) {
+        path5.classList.add("edge-animated");
+      }
+    }
+  }
+}
 function Mermaid({
   children: children2,
   source: sourceProp,
   theme = "dark",
   className: className2,
   style: style4,
-  highlight
+  highlight,
+  animateEdges
 }) {
   const ref2 = React8.useRef(null);
   const renderedRef = React8.useRef(false);
+  const styleRef = React8.useRef(null);
+  React8.useEffect(() => {
+    if (!styleRef.current) {
+      const el = document.createElement("style");
+      el.textContent = `
+        @keyframes mermaid-edge-flow {
+          to { stroke-dashoffset: -24; }
+        }
+        .edge-animated {
+          stroke-dasharray: 8 6 !important;
+          animation: mermaid-edge-flow 0.5s linear infinite !important;
+        }
+      `;
+      document.head.appendChild(el);
+      styleRef.current = el;
+    }
+    return () => {
+      if (styleRef.current) {
+        styleRef.current.remove();
+        styleRef.current = null;
+      }
+    };
+  }, []);
   const source = React8.useMemo(
     () => extractText(sourceProp ?? children2),
     [sourceProp, children2]
@@ -225488,6 +225536,7 @@ function Mermaid({
             if (node3) node3.classList.add("highlight");
           }
         }
+        applyEdgeAnimation(svg4, animateEdges);
       }
       renderedRef.current = true;
     }).catch((err) => {
@@ -225517,6 +225566,14 @@ function Mermaid({
       }
     }
   }, [highlight]);
+  React8.useEffect(() => {
+    const svg4 = ref2.current?.querySelector("svg");
+    if (!svg4) return;
+    svg4.querySelectorAll(".edge-animated").forEach((el) => {
+      el.classList.remove("edge-animated");
+    });
+    applyEdgeAnimation(svg4, animateEdges);
+  }, [animateEdges]);
   const containerStyle3 = {
     display: "flex",
     justifyContent: "center",
@@ -257543,7 +257600,7 @@ var image3 = base.extend({
 var component2 = base.extend({
   type: external_exports.literal("component").default("component"),
   jsx: external_exports.string().describe("usage JSX expression compiled at runtime; tag names resolved from imports"),
-  data: external_exports.record(external_exports.string(), external_exports.union([external_exports.string(), external_exports.number(), external_exports.boolean()])).optional().describe("extra variables (e.g. from ~~~md source code fences) available in JSX scope")
+  data: external_exports.record(external_exports.string(), external_exports.unknown()).optional().describe("extra variables (e.g. from ~~~md source code fences) available in JSX scope")
 });
 var effect = base.extend({
   type: external_exports.literal("effect").default("effect"),

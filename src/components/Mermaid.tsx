@@ -9,18 +9,23 @@ import mermaid from "mermaid";
  *   <Mermaid source={diagram} theme="dark" />
  *
  * Props:
- *   source    — Mermaid diagram definition string
- *   theme     — Mermaid theme: "default" | "dark" | "forest" | "neutral" (default: "dark")
- *   className — Optional container className
- *   style     — Container inline style
- *   highlight — Node name(s) to highlight. String or array of strings.
- *               Toggles CSS class `highlight` on matching SVG elements.
- *               The diagram source should define the class, e.g.:
- *                 classDef highlight fill:#ffd700,stroke:#ff6600,stroke-width:3px
+ *   source       — Mermaid diagram definition string
+ *   theme        — Mermaid theme: "default" | "dark" | "forest" | "neutral" (default: "dark")
+ *   className    — Optional container className
+ *   style        — Container inline style
+ *   highlight    — Node name(s) to highlight. String or array of strings.
+ *                  Toggles CSS class `highlight` on matching SVG elements.
+ *                  The diagram source should define the class, e.g.:
+ *                    classDef highlight fill:#ffd700,stroke:#ff6600,stroke-width:3px
+ *   animateEdges — Edge(s) to animate with a flowing dash effect.
+ *                  true = animate all edges.
+ *                  string[] = animate specific edges by source->target alias,
+ *                  e.g. ["A->B", "D->C"]. Edge paths are found via Mermaid's
+ *                  SVG id pattern: {prefix}-L_{source}_{target}_{index}.
+ *                  Adds CSS class `edge-animated` with a stroke-dashoffset
+ *                  keyframe animation.
  *
  * The diagram is rendered asynchronously via the mermaid library.
- * Uses delayRender/continueRender to ensure the SVG is ready before
- * the frame is captured by Remotion.
  *
  * Built-in — no imports or frontmatter registration needed.
  */
@@ -31,6 +36,7 @@ export interface MermaidProps {
   className?: string;
   style?: React.CSSProperties;
   highlight?: string | string[];
+  animateEdges?: boolean | string[];
 }
 
 let initialized = false;
@@ -80,6 +86,45 @@ function findNodeGroup(svg: SVGSVGElement, name: string): Element | null {
   return null;
 }
 
+/**
+ * Apply edge animation to matching paths in the rendered Mermaid SVG.
+ * Mermaid edge paths have IDs like `{prefix}-L_{source}_{target}_{index}`.
+ *
+ * @param svg - The rendered SVG element
+ * @param spec - true = animate all edges, string[] = specific edges by "A->B" pattern
+ */
+function applyEdgeAnimation(svg: SVGSVGElement, spec: boolean | string[] | undefined): void {
+  if (!spec) return;
+
+  const allEdges = Array.from(svg.querySelectorAll<SVGPathElement>(
+    'path[id*="-L_"]',
+  ));
+
+  if (spec === true) {
+    // Animate all edges
+    for (const path of allEdges) {
+      path.classList.add("edge-animated");
+    }
+    return;
+  }
+
+  // spec is string[] — parse patterns like "A->B"
+  for (const pattern of spec) {
+    const match = pattern.match(/^(\w+)\s*->\s*(\w+)$/);
+    if (!match) continue;
+    const source = match[1]!;
+    const target = match[2]!;
+
+    // Find matching path by ID pattern: *L_{source}_{target}_*
+    const suffix = `L_${source}_${target}_`;
+    for (const path of allEdges) {
+      if (path.id.includes(suffix)) {
+        path.classList.add("edge-animated");
+      }
+    }
+  }
+}
+
 export function Mermaid({
   children,
   source: sourceProp,
@@ -87,9 +132,35 @@ export function Mermaid({
   className,
   style,
   highlight,
+  animateEdges,
 }: MermaidProps) {
   const ref = React.useRef<HTMLDivElement>(null);
   const renderedRef = React.useRef(false);
+  const styleRef = React.useRef<HTMLStyleElement | null>(null);
+
+  // Inject edge animation CSS once
+  React.useEffect(() => {
+    if (!styleRef.current) {
+      const el = document.createElement("style");
+      el.textContent = `
+        @keyframes mermaid-edge-flow {
+          to { stroke-dashoffset: -24; }
+        }
+        .edge-animated {
+          stroke-dasharray: 8 6 !important;
+          animation: mermaid-edge-flow 0.5s linear infinite !important;
+        }
+      `;
+      document.head.appendChild(el);
+      styleRef.current = el;
+    }
+    return () => {
+      if (styleRef.current) {
+        styleRef.current.remove();
+        styleRef.current = null;
+      }
+    };
+  }, []);
 
   // Resolve source string: children from JsxParser may be nested React
   // elements wrapping template literals.
@@ -136,6 +207,9 @@ export function Mermaid({
               if (node) node.classList.add("highlight");
             }
           }
+
+          // Apply edge animation now that SVG exists.
+          applyEdgeAnimation(svg, animateEdges);
         }
         renderedRef.current = true;
       })
@@ -173,6 +247,21 @@ export function Mermaid({
       }
     }
   }, [highlight]);
+
+  // AnimateEdges effect — re-applies edge animation on prop changes.
+  // Runs in addition to the initial application in the render callback.
+  React.useEffect(() => {
+    const svg = ref.current?.querySelector<SVGSVGElement>("svg");
+    if (!svg) return;
+
+    // Remove animated class from all edges first
+    svg.querySelectorAll(".edge-animated").forEach((el) => {
+      el.classList.remove("edge-animated");
+    });
+
+    // Re-apply to current spec
+    applyEdgeAnimation(svg, animateEdges);
+  }, [animateEdges]);
 
   // Default: center the SVG in the container. User style overrides individual properties.
   const containerStyle: React.CSSProperties = {

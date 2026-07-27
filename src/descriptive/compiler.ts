@@ -570,11 +570,10 @@ function compileLeaf(node: Exclude<DescriptiveNode, DescriptiveContainer | Descr
         "type", "jsx", "id", "instruction", "style", "visible",
         "isBackground", "duration", "start", "on",
       ]);
-      const bindings: Record<string, string> = {};
+      const bindings: Record<string, unknown> = {};
       for (const key of Object.keys(node)) {
         if (!KNOWN_COMPONENT_KEYS.has(key)) {
-          const val = (node as any)[key];
-          if (typeof val === "string") bindings[key] = val;
+          bindings[key] = (node as any)[key];
         }
       }
 

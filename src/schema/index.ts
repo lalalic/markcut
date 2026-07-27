@@ -133,7 +133,7 @@ export type Image = z.infer<typeof image>;
 export const component = base.extend({
   type: z.literal("component").default("component"),
   jsx: z.string().describe("usage JSX expression compiled at runtime; tag names resolved from imports"),
-  data: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).optional().describe("extra variables (e.g. from ~~~md source code fences) available in JSX scope"),
+  data: z.record(z.string(), z.unknown()).optional().describe("extra variables (e.g. from ~~~md source code fences) available in JSX scope"),
 });
 export type Component = z.infer<typeof component>;
 

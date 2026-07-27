@@ -317,8 +317,7 @@ function compileLeaf(node2, ctx, parentKind) {
       const bindings = {};
       for (const key of Object.keys(node2)) {
         if (!KNOWN_COMPONENT_KEYS.has(key)) {
-          const val = node2[key];
-          if (typeof val === "string") bindings[key] = val;
+          bindings[key] = node2[key];
         }
       }
       const stream = {
