@@ -36,6 +36,11 @@ Implies `--edit` so you can chat to reshape the story and see live reloads.
 ### Video Variants
 - define variants for different video configurations, such as different languages, aspects, platforms
 
+### Route / Vlog videos (map clips)
+- For **route / travel-vlog clips** (drone flyover, route map with photo stops, Street View walks) use the `map` stream type with `view: overview | route | cinematic | streetview` and `tween(from,to,easing)` camera moves.
+- Discover interesting stops along a route with `markcut spots --waypoints "lat,lng;lat,lng" --photos --markdown`, then compose a `map` storyboard from the returned `waypoints:[...]` line.
+- See [docs/map-dynamic-camera.md](docs/map-dynamic-camera.md) — the agent guide with effects, spots workflow, and copy-paste markdown examples.
+
 ### Viral Story requires
 - **Hooks** : why should the viewer watch this?
 - **Conflict** : what challenges or obstacles do the characters face?
@@ -60,6 +65,7 @@ npx @lalalic/markcut preview <file> --storyboard # fast structure preview: repla
 npx @lalalic/markcut render <file> # render the video to mp4
 npx @lalalic/markcut vision <folder> # vision understanding medias in folder
 npx @lalalic/markcut vision <folder> --label # an extra step to provide UI to label the medias with text, time ranges
+npx @lalalic/markcut spots --waypoints "lat,lng;lat,lng" # discover POIs along a route (for route/vlog map clips)
 
 ```
 
@@ -80,6 +86,7 @@ some common issues (photo or video can't be displayed, audio missing), take belo
 | Topic | File |
 |-------|------|
 | Markdown descriptive format (primary authoring format) | [docs/markdown-descriptive.md](docs/markdown-descriptive.md) |
+| Route / vlog map clips (effects, spots, examples) | [docs/map-dynamic-camera.md](docs/map-dynamic-camera.md) |
 | Built-in components & common npm packages | [docs/components.md](docs/components.md) |
 | Sound effects | [docs/sound-effects.md](docs/sound-effects.md) |
 

@@ -239858,6 +239858,23 @@ function useTweenBindings(action) {
   );
   return { tween, interpolate };
 }
+function resolveTween(frame2, fps, spec, start4, end2, fallback) {
+  if (typeof spec === "number") return spec;
+  const tween = spec?.__tween;
+  if (!tween || tween.length < 2) return fallback;
+  const from2 = Number(tween[0]);
+  const to = Number(tween[1]);
+  if (!Number.isFinite(from2) || !Number.isFinite(to)) return fallback;
+  const easingName = typeof tween[2] === "string" ? tween[2] : void 0;
+  const easingFn = easingName ? EASING_MAP[easingName] : void 0;
+  const startF = Math.max(0, Math.floor(start4 * fps));
+  const endF = Math.max(startF + 1, Math.floor(end2 * fps));
+  return interpolate(frame2, [startF, endF], [from2, to], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+    easing: easingFn
+  });
+}
 
 // src/types/Component.tsx
 var import_jsx_runtime87 = __toESM(require_jsx_runtime(), 1);
@@ -242326,6 +242343,20 @@ var Rectangle = (0, import_react127.forwardRef)((props, ref2) => {
   return import_react127.default.createElement(import_react127.default.Fragment, null);
 });
 Rectangle.displayName = "Rectangle";
+function useMap3D(id39 = null) {
+  const apiContext = (0, import_react127.useContext)(APIProviderContext);
+  const map3dContext = (0, import_react127.useContext)(GoogleMaps3DContext);
+  if (apiContext === null) {
+    logErrorOnce("useMap3D(): failed to retrieve APIProviderContext. Make sure that the <APIProvider> component exists and that the component you are calling `useMap3D()` from is a child of the <APIProvider>.");
+    return null;
+  }
+  const { map3dInstances } = apiContext;
+  if (id39 !== null)
+    return map3dInstances[id39] || null;
+  if (map3dContext === null || map3dContext === void 0 ? void 0 : map3dContext.map3d)
+    return map3dContext.map3d;
+  return map3dInstances["default"] || null;
+}
 
 // src/types/Map.tsx
 var import_jsx_runtime89 = __toESM(require_jsx_runtime(), 1);
@@ -242351,14 +242382,10 @@ function MapLeaf({ stream: stream3 }) {
   const end2 = stream3.end ?? start4 + (stream3.duration ?? 1);
   const totalDur = stream3.durationInSeconds ?? end2;
   const apiKey = resolveApiKey(stream3);
+  const view = stream3.view ?? "route";
   useFrameEvents(stream3.on, Math.max(1, Math.floor(totalDur * fps)));
-  if (waypoints.length === 0) return null;
+  if ((view === "route" || view === "cinematic") && waypoints.length === 0) return null;
   const durFrames = Math.max(1, Math.floor(fps * (end2 - start4)));
-  const center4 = stream3.center ?? { lat: waypoints[0].lat, lng: waypoints[0].lng };
-  const zoom2 = stream3.zoom ?? 10;
-  const mapType = stream3.mapType ?? "roadmap";
-  const travelMode = stream3.travelMode ?? "DRIVING";
-  const markerEmoji = stream3.routeMarker ?? "\u{1F697}";
   const mapLocale = import_react128.default.useMemo(
     () => resolveMapLocale(stream3.language, stream3.region),
     [stream3.language, stream3.region]
@@ -242366,7 +242393,7 @@ function MapLeaf({ stream: stream3 }) {
   const mapLoadHandleRef = import_react128.default.useRef(null);
   const mapLoadContinuedRef = import_react128.default.useRef(false);
   import_react128.default.useEffect(() => {
-    mapLoadHandleRef.current = delayRender("Waiting for map tiles to load...");
+    mapLoadHandleRef.current = delayRender("Waiting for map to load...");
     mapLoadContinuedRef.current = false;
     const fallbackTimer = window.setTimeout(() => {
       if (!mapLoadContinuedRef.current && mapLoadHandleRef.current !== null) {
@@ -242383,50 +242410,310 @@ function MapLeaf({ stream: stream3 }) {
       mapLoadHandleRef.current = null;
     };
   }, [stream3.id, start4, end2]);
-  const handleTilesLoaded = import_react128.default.useCallback(() => {
+  const handleMapReady = import_react128.default.useCallback(() => {
     if (!mapLoadContinuedRef.current && mapLoadHandleRef.current !== null) {
       continueRender(mapLoadHandleRef.current);
       mapLoadContinuedRef.current = true;
     }
   }, []);
+  const use3d = view === "cinematic" && stream3.cinematic?.fallback === "none" && (stream3.cinematic.mode === "flyTo" || stream3.cinematic.mode === "orbit");
   return /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(
     Sequence,
     {
       durationInFrames: durFrames,
       from: Math.floor(fps * start4),
       layout: "none",
-      children: /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(
+      children: /* @__PURE__ */ (0, import_jsx_runtime89.jsxs)(
         APIProvider,
         {
           apiKey,
           language: mapLocale.language,
           region: mapLocale.region,
-          children: /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(
-            Map4,
-            {
-              mapId: String(stream3.id ?? "map"),
-              defaultCenter: center4,
-              defaultZoom: zoom2,
-              defaultOptions: {
-                mapTypeId: mapType,
-                disableDefaultUI: true,
-                zoomControl: false
-              },
-              onTilesLoaded: handleTilesLoaded,
-              style: { width: "100%", height: "100%", position: "absolute" },
-              children: /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(
-                RouteWithMarker,
-                {
-                  waypoints,
-                  travelMode,
-                  markerEmoji,
-                  actionDuration: end2 - start4
-                }
-              )
-            }
-          )
+          children: [
+            view === "overview" && /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(OverviewMap, { stream: stream3, onTilesLoaded: handleMapReady }),
+            view === "cinematic" && (use3d ? /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(CinematicMap3D, { stream: stream3, onReady: handleMapReady }) : /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(CinematicMap, { stream: stream3, onTilesLoaded: handleMapReady })),
+            view === "streetview" && /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(StreetViewLeaf, { stream: stream3, onPanoReady: handleMapReady }),
+            view === "route" && /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(RouteMap, { stream: stream3, onTilesLoaded: handleMapReady })
+          ]
         }
       )
+    }
+  );
+}
+function OverviewMap({
+  stream: stream3,
+  onTilesLoaded
+}) {
+  const { fps } = useVideoConfig();
+  const frame2 = useCurrentFrame();
+  const start4 = stream3.start ?? 0;
+  const end2 = stream3.end ?? start4 + (stream3.duration ?? 1);
+  const fallbackCenter = stream3.center ?? { lat: 37.7749, lng: -122.4194 };
+  const center4 = {
+    lat: resolveTween(frame2, fps, stream3.camera?.center?.lat, start4, end2, fallbackCenter.lat),
+    lng: resolveTween(frame2, fps, stream3.camera?.center?.lng, start4, end2, fallbackCenter.lng)
+  };
+  const zoom2 = resolveTween(frame2, fps, stream3.camera?.zoom, start4, end2, stream3.zoom ?? 10);
+  const heading3 = resolveTween(frame2, fps, stream3.camera?.heading, start4, end2, 0);
+  const tilt = resolveTween(frame2, fps, stream3.camera?.tilt, start4, end2, 0);
+  return /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(
+    Map4,
+    {
+      mapId: String(stream3.id ?? "map-overview"),
+      center: center4,
+      zoom: zoom2,
+      heading: heading3,
+      tilt,
+      mapTypeId: stream3.mapType ?? "roadmap",
+      disableDefaultUI: true,
+      zoomControl: false,
+      onTilesLoaded,
+      style: { width: "100%", height: "100%", position: "absolute" }
+    }
+  );
+}
+function RouteMap({
+  stream: stream3,
+  onTilesLoaded
+}) {
+  const { fps } = useVideoConfig();
+  const frame2 = useCurrentFrame();
+  const waypoints = stream3.waypoints ?? [];
+  const start4 = stream3.start ?? 0;
+  const end2 = stream3.end ?? start4 + (stream3.duration ?? 1);
+  const fallbackCenter = stream3.center ?? { lat: waypoints[0].lat, lng: waypoints[0].lng };
+  const center4 = {
+    lat: resolveTween(frame2, fps, stream3.camera?.center?.lat, start4, end2, fallbackCenter.lat),
+    lng: resolveTween(frame2, fps, stream3.camera?.center?.lng, start4, end2, fallbackCenter.lng)
+  };
+  const zoom2 = resolveTween(frame2, fps, stream3.camera?.zoom, start4, end2, stream3.zoom ?? 10);
+  return /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(
+    Map4,
+    {
+      mapId: String(stream3.id ?? "map-route"),
+      center: center4,
+      zoom: zoom2,
+      mapTypeId: stream3.mapType ?? "roadmap",
+      disableDefaultUI: true,
+      zoomControl: false,
+      onTilesLoaded,
+      style: { width: "100%", height: "100%", position: "absolute" },
+      children: /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(
+        RouteWithMarker,
+        {
+          waypoints,
+          travelMode: stream3.travelMode ?? "DRIVING",
+          markerEmoji: stream3.routeMarker ?? "\u{1F697}",
+          actionDuration: end2 - start4
+        }
+      )
+    }
+  );
+}
+function CinematicMap({
+  stream: stream3,
+  onTilesLoaded
+}) {
+  const { fps } = useVideoConfig();
+  const frame2 = useCurrentFrame();
+  const waypoints = stream3.waypoints ?? [];
+  const start4 = stream3.start ?? 0;
+  const end2 = stream3.end ?? start4 + (stream3.duration ?? 1);
+  const actionDuration = Math.max(0.1, end2 - start4);
+  const mode = stream3.cinematic?.mode ?? "flyAlong";
+  const headingFollow = stream3.cinematic?.headingFollow ?? true;
+  const leg = useRouteLeg(waypoints, stream3.travelMode ?? "DRIVING");
+  const seconds2 = frame2 / fps;
+  const pos = routePositionAt(leg, waypoints, actionDuration, seconds2);
+  const lookahead2 = routePositionAt(leg, waypoints, actionDuration, seconds2 + 0.4);
+  const first3 = waypoints[0];
+  const fallbackCenter = stream3.center ?? first3;
+  let center4;
+  if (mode === "flyAlong" && pos) {
+    center4 = pos;
+  } else if (mode === "flyTo") {
+    center4 = {
+      lat: resolveTween(frame2, fps, stream3.camera?.center?.lat, start4, end2, first3.lat),
+      lng: resolveTween(frame2, fps, stream3.camera?.center?.lng, start4, end2, first3.lng)
+    };
+  } else {
+    center4 = fallbackCenter;
+  }
+  let heading3 = resolveTween(frame2, fps, stream3.camera?.heading, start4, end2, 0);
+  if (headingFollow && pos && lookahead2) {
+    heading3 = bearing(pos, lookahead2);
+  }
+  const tilt = resolveTween(frame2, fps, stream3.cinematic?.tilt, start4, end2, 45);
+  const zoom2 = resolveTween(frame2, fps, stream3.camera?.zoom, start4, end2, stream3.zoom ?? 13);
+  return /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(
+    Map4,
+    {
+      mapId: String(stream3.id ?? "map-cinematic"),
+      center: center4,
+      zoom: zoom2,
+      heading: heading3,
+      tilt,
+      mapTypeId: stream3.mapType ?? "roadmap",
+      disableDefaultUI: true,
+      zoomControl: false,
+      onTilesLoaded,
+      style: { width: "100%", height: "100%", position: "absolute" },
+      children: /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(
+        RouteWithMarker,
+        {
+          waypoints,
+          travelMode: stream3.travelMode ?? "DRIVING",
+          markerEmoji: stream3.routeMarker ?? "\u{1F697}",
+          actionDuration
+        }
+      )
+    }
+  );
+}
+function CinematicMap3D({
+  stream: stream3,
+  onReady
+}) {
+  const { fps } = useVideoConfig();
+  const frame2 = useCurrentFrame();
+  const waypoints = stream3.waypoints ?? [];
+  const start4 = stream3.start ?? 0;
+  const end2 = stream3.end ?? start4 + (stream3.duration ?? 1);
+  const actionDuration = Math.max(0.1, end2 - start4);
+  const first3 = waypoints[0] ?? { lat: 37.7749, lng: -122.4194 };
+  const map3dRef = import_react128.default.useRef(null);
+  const map3d = useMap3D();
+  const leg = useRouteLeg(waypoints, stream3.travelMode ?? "DRIVING");
+  const range3 = resolveTween(frame2, fps, stream3.cinematic?.range, start4, end2, 2e3);
+  const tilt = resolveTween(frame2, fps, stream3.cinematic?.tilt, start4, end2, 60);
+  const roll = resolveTween(frame2, fps, stream3.cinematic?.roll, start4, end2, 0);
+  const heading3 = resolveTween(frame2, fps, stream3.camera?.heading, start4, end2, 0);
+  const center4 = {
+    lat: resolveTween(frame2, fps, stream3.camera?.center?.lat, start4, end2, first3.lat),
+    lng: resolveTween(frame2, fps, stream3.camera?.center?.lng, start4, end2, first3.lng),
+    altitude: stream3.cinematic?.altitude ?? 100
+  };
+  const seconds2 = frame2 / fps;
+  const pos = routePositionAt(leg, waypoints, actionDuration, seconds2);
+  const legPath = import_react128.default.useMemo(() => {
+    if (!leg) return null;
+    const pts2 = [];
+    for (const step3 of leg.steps ?? []) {
+      for (const p4 of step3.path ?? []) pts2.push({ lat: p4.lat(), lng: p4.lng(), altitude: 0 });
+    }
+    return pts2.length ? pts2 : null;
+  }, [leg]);
+  import_react128.default.useEffect(() => {
+    if (!map3d || !legPath) return;
+    const el = document.createElement("gmp-polyline-3d");
+    el.coordinates = legPath;
+    el.strokeColor = stream3.routeColor ?? "#4285F4";
+    el.strokeWidth = stream3.routeWeight ?? 4;
+    map3d.appendChild(el);
+    return () => {
+      el.remove();
+    };
+  }, [map3d, legPath, stream3.routeColor, stream3.routeWeight]);
+  return /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(
+    Map3D,
+    {
+      ref: map3dRef,
+      mode: stream3.mapType === "hybrid" ? "HYBRID" : "SATELLITE",
+      center: center4,
+      range: range3,
+      heading: heading3,
+      tilt,
+      roll,
+      onSteadyChange: onReady,
+      onAnimationEnd: onReady,
+      style: { width: "100%", height: "100%", position: "absolute" },
+      children: pos ? /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(Marker3D, { position: { lat: pos.lat, lng: pos.lng, altitude: 0 } }) : null
+    }
+  );
+}
+function StreetViewLeaf({
+  stream: stream3,
+  onPanoReady
+}) {
+  const containerRef = import_react128.default.useRef(null);
+  const svLibrary = useMapsLibrary("streetView");
+  const [pano, setPano] = import_react128.default.useState(null);
+  const { fps } = useVideoConfig();
+  const frame2 = useCurrentFrame();
+  const start4 = stream3.start ?? 0;
+  const end2 = stream3.end ?? start4 + (stream3.duration ?? 1);
+  const sv = stream3.streetView;
+  import_react128.default.useEffect(() => {
+    if (!svLibrary || !containerRef.current) return;
+    const pan2 = new svLibrary.StreetViewPanorama(containerRef.current, {
+      disableDefaultUI: true
+    });
+    if (sv?.pano) {
+      pan2.setPano(sv.pano);
+    } else if (sv?.location) {
+      pan2.setPosition(sv.location);
+    } else if (sv?.route?.length) {
+      pan2.setPosition(sv.route[0]);
+    }
+    if (sv?.pov) {
+      pan2.setPov({
+        heading: typeof sv.pov.heading === "number" ? sv.pov.heading : 0,
+        pitch: typeof sv.pov.pitch === "number" ? sv.pov.pitch : 0
+      });
+    }
+    if (typeof sv?.zoom === "number") {
+      pan2.setZoom(sv.zoom);
+    }
+    setPano(pan2);
+    return () => {
+      pan2.setVisible(false);
+    };
+  }, [svLibrary, stream3.id, sv?.pano, sv?.location, sv?.route, sv?.pov, sv?.zoom]);
+  import_react128.default.useEffect(() => {
+    if (!pano) return;
+    const pov = pano.getPov();
+    const heading3 = resolveTween(frame2, fps, sv?.pov?.heading, start4, end2, pov.heading);
+    const pitch = resolveTween(frame2, fps, sv?.pov?.pitch, start4, end2, pov.pitch);
+    pano.setPov({ heading: heading3, pitch });
+    const zoom2 = resolveTween(frame2, fps, sv?.zoom, start4, end2, pano.getZoom() ?? 0);
+    pano.setZoom(zoom2);
+    let movedPosition = false;
+    if (sv?.route && sv.route.length > 1) {
+      const t4 = Math.min(Math.max(frame2 / fps / Math.max(0.1, end2 - start4), 0), 1);
+      const total = sv.route.length - 1;
+      const segI = Math.min(Math.floor(t4 * total), total - 1);
+      const segT = t4 * total - segI;
+      const a3 = sv.route[segI];
+      const b5 = sv.route[segI + 1];
+      pano.setPosition({
+        lat: a3.lat + (b5.lat - a3.lat) * segT,
+        lng: a3.lng + (b5.lng - a3.lng) * segT
+      });
+      movedPosition = true;
+    }
+    const handle2 = delayRender(`Street View frame ${frame2}`);
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      continueRender(handle2);
+      onPanoReady();
+    };
+    const graceMs = movedPosition ? 1200 : 400;
+    const onPano = () => setTimeout(finish, graceMs);
+    const lPano = pano.addListener("pano_changed", onPano);
+    const fallback = setTimeout(finish, movedPosition ? 3e3 : 600);
+    return () => {
+      google.maps.event.removeListener(lPano);
+      clearTimeout(fallback);
+      finish();
+    };
+  }, [pano, frame2, fps, start4, end2, sv?.route, sv?.pov, sv?.zoom, onPanoReady]);
+  return /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(
+    "div",
+    {
+      ref: containerRef,
+      style: { width: "100%", height: "100%", position: "absolute" }
     }
   );
 }
@@ -242436,41 +242723,33 @@ function RouteWithMarker({
   markerEmoji,
   actionDuration
 }) {
-  const map9 = useMap();
-  const routesLibrary = useMapsLibrary("routes");
-  const [leg, setLeg] = import_react128.default.useState(null);
-  const [routeIndex, setRouteIndex] = import_react128.default.useState(0);
-  const handle2 = import_react128.default.useRef(null);
-  import_react128.default.useEffect(() => {
-    if (!routesLibrary || !map9 || waypoints.length < 2) return;
-    const renderHandle = delayRender("Loading map directions...");
-    handle2.current = renderHandle;
-    const renderer15 = new routesLibrary.DirectionsRenderer({ map: map9, suppressMarkers: true });
-    const service = new routesLibrary.DirectionsService();
-    service.route({
-      origin: waypoints[0],
-      destination: waypoints[waypoints.length - 1],
-      waypoints: waypoints.slice(1, -1).map((wp) => ({ location: wp, stopover: true })),
-      travelMode: google.maps.TravelMode[travelMode],
-      provideRouteAlternatives: false
-    }).then((response) => {
-      renderer15.setDirections(response);
-      setRouteIndex(0);
-      setLeg(response.routes[0]?.legs[0] ?? null);
-      if (handle2.current !== null) continueRender(handle2.current);
-    }).catch(() => {
-      if (handle2.current !== null) continueRender(handle2.current);
-    });
-    return () => {
-      renderer15.setMap(null);
-    };
-  }, [routesLibrary, map9, waypoints, travelMode]);
-  import_react128.default.useEffect(() => {
-    setRouteIndex((prev2) => prev2);
-  }, [routeIndex]);
+  const leg = useRouteLeg(waypoints, travelMode);
   const position7 = useAnimatedPosition({ leg, actionDuration, waypoints });
   return /* @__PURE__ */ (0, import_jsx_runtime89.jsxs)(import_jsx_runtime89.Fragment, { children: [
-    waypoints.map((wp, i5) => /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(AdvancedMarker, { position: wp, children: wp.label ? /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(
+    waypoints.map((wp, i5) => /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(AdvancedMarker, { position: wp, children: wp.media ? /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(
+      "div",
+      {
+        style: {
+          width: 44,
+          height: 44,
+          borderRadius: 6,
+          overflow: "hidden",
+          border: "2px solid #fff",
+          boxShadow: "0 1px 4px rgba(0,0,0,0.45)",
+          background: "#fff",
+          position: "relative",
+          top: "-24px"
+        },
+        children: /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(
+          "img",
+          {
+            src: wp.media,
+            alt: "",
+            style: { width: "100%", height: "100%", objectFit: "cover", display: "block" }
+          }
+        )
+      }
+    ) : wp.label ? /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(
       "div",
       {
         style: {
@@ -242490,6 +242769,36 @@ function RouteWithMarker({
     position7 ? /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(AdvancedMarker, { position: position7, children: /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(Pin, { glyphText: markerEmoji, scale: 4 }) }) : null
   ] });
 }
+function useRouteLeg(waypoints, travelMode) {
+  const map9 = useMap();
+  const routesLibrary = useMapsLibrary("routes");
+  const [leg, setLeg] = import_react128.default.useState(null);
+  const handle2 = import_react128.default.useRef(null);
+  import_react128.default.useEffect(() => {
+    if (!routesLibrary || !map9 || waypoints.length < 2) return;
+    const renderHandle = delayRender("Loading map directions...");
+    handle2.current = renderHandle;
+    const renderer15 = new routesLibrary.DirectionsRenderer({ map: map9, suppressMarkers: true });
+    const service = new routesLibrary.DirectionsService();
+    service.route({
+      origin: waypoints[0],
+      destination: waypoints[waypoints.length - 1],
+      waypoints: waypoints.slice(1, -1).map((wp) => ({ location: wp, stopover: true })),
+      travelMode: google.maps.TravelMode[travelMode],
+      provideRouteAlternatives: false
+    }).then((response) => {
+      renderer15.setDirections(response);
+      setLeg(response.routes[0]?.legs[0] ?? null);
+      if (handle2.current !== null) continueRender(handle2.current);
+    }).catch(() => {
+      if (handle2.current !== null) continueRender(handle2.current);
+    });
+    return () => {
+      renderer15.setMap(null);
+    };
+  }, [routesLibrary, map9, waypoints, travelMode]);
+  return leg;
+}
 function useAnimatedPosition({
   leg,
   actionDuration,
@@ -242497,46 +242806,50 @@ function useAnimatedPosition({
 }) {
   const frame2 = useCurrentFrame();
   const { fps } = useVideoConfig();
-  return import_react128.default.useMemo(() => {
-    if (!leg || !leg.duration?.value) {
-      if (waypoints.length < 2) return null;
-      const t4 = Math.min(frame2 / (actionDuration * fps), 1);
-      const total = waypoints.length - 1;
-      const segI = Math.min(Math.floor(t4 * total), total - 1);
-      const segT = t4 * total - segI;
-      const a3 = waypoints[segI];
-      const b5 = waypoints[segI + 1];
-      if (!a3 || !b5) return null;
-      return {
-        lat: a3.lat + (b5.lat - a3.lat) * segT,
-        lng: a3.lng + (b5.lng - a3.lng) * segT
-      };
-    }
-    const currentInSecond = frame2 / fps * (leg.duration.value / actionDuration);
-    const { step: step3, elapsedInSeconds } = getCurrentStep(leg, currentInSecond);
-    if (!step3 || !step3.path) {
-      const t4 = Math.min(frame2 / (actionDuration * fps), 1);
-      const total = waypoints.length - 1;
-      const segI = Math.min(Math.floor(t4 * total), total - 1);
-      const segT = t4 * total - segI;
-      const a3 = waypoints[segI];
-      const b5 = waypoints[segI + 1];
-      if (!a3 || !b5) return null;
-      return {
-        lat: a3.lat + (b5.lat - a3.lat) * segT,
-        lng: a3.lng + (b5.lng - a3.lng) * segT
-      };
-    }
-    const stepElapsed = currentInSecond - elapsedInSeconds;
-    const stepProgress = stepElapsed / (step3.duration?.value ?? 1);
-    const pathIdx = Math.min(
-      Math.max(0, Math.floor(stepProgress * step3.path.length)),
-      step3.path.length - 1
-    );
-    const pt = step3.path[pathIdx];
-    if (!pt) return null;
-    return { lat: pt.lat(), lng: pt.lng() };
-  }, [leg, frame2, fps, actionDuration, waypoints]);
+  return import_react128.default.useMemo(
+    () => routePositionAt(leg, waypoints, actionDuration, frame2 / fps),
+    [leg, frame2, fps, actionDuration, waypoints]
+  );
+}
+function routePositionAt(leg, waypoints, actionDuration, seconds2) {
+  const linearFallback = () => {
+    if (waypoints.length < 2) return null;
+    const t4 = Math.min(seconds2 / actionDuration, 1);
+    const total = waypoints.length - 1;
+    const segI = Math.min(Math.floor(t4 * total), total - 1);
+    const segT = t4 * total - segI;
+    const a3 = waypoints[segI];
+    const b5 = waypoints[segI + 1];
+    if (!a3 || !b5) return null;
+    return { lat: a3.lat + (b5.lat - a3.lat) * segT, lng: a3.lng + (b5.lng - a3.lng) * segT };
+  };
+  if (!leg || !leg.duration?.value) {
+    return linearFallback();
+  }
+  const currentInSecond = seconds2 * (leg.duration.value / actionDuration);
+  const { step: step3, elapsedInSeconds } = getCurrentStep(leg, currentInSecond);
+  if (!step3 || !step3.path) {
+    return linearFallback();
+  }
+  const stepElapsed = currentInSecond - elapsedInSeconds;
+  const stepProgress = stepElapsed / (step3.duration?.value ?? 1);
+  const pathIdx = Math.min(
+    Math.max(0, Math.floor(stepProgress * step3.path.length)),
+    step3.path.length - 1
+  );
+  const pt = step3.path[pathIdx];
+  if (!pt) return null;
+  return { lat: pt.lat(), lng: pt.lng() };
+}
+function bearing(a3, b5) {
+  const toRad = (d4) => d4 * Math.PI / 180;
+  const toDeg = (d4) => d4 * 180 / Math.PI;
+  const lat1 = toRad(a3.lat);
+  const lat2 = toRad(b5.lat);
+  const dLng = toRad(b5.lng - a3.lng);
+  const y7 = Math.sin(dLng) * Math.cos(lat2);
+  const x7 = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+  return (toDeg(Math.atan2(y7, x7)) + 360) % 360;
 }
 function getCurrentStep(leg, currentInSecond) {
   let elapsedInSeconds = 0;
@@ -257754,8 +258067,41 @@ var mapWaypoint = external_exports.object({
   label: external_exports.string().optional(),
   media: external_exports.string().optional().describe("image/video src for waypoint marker")
 });
+var tweenSpec = external_exports.object({
+  __tween: external_exports.array(external_exports.union([external_exports.number(), external_exports.string()]))
+});
+var tweenableNumber = external_exports.union([external_exports.number(), tweenSpec]);
+var mapCamera = external_exports.object({
+  zoom: tweenableNumber.optional(),
+  center: external_exports.object({ lat: tweenableNumber, lng: tweenableNumber }).optional(),
+  heading: tweenableNumber.optional(),
+  tilt: tweenableNumber.optional()
+});
+var mapCinematic = external_exports.object({
+  mode: external_exports.enum(["flyAlong", "flyTo", "orbit"]).optional().describe("camera move; default flyAlong"),
+  followRoute: external_exports.boolean().optional().describe("center follows the animated marker; default true"),
+  headingFollow: external_exports.boolean().optional().describe("heading = route bearing (forward is up); default true"),
+  tilt: tweenableNumber.optional().describe("0 = top-down reveal, 45 = chase; tween(0,45) = tilt reveal; default 45"),
+  range: tweenableNumber.optional().describe("3D camera distance (m); tween(8000,300) = fly-to"),
+  altitude: external_exports.number().optional().describe("3D center altitude (m)"),
+  roll: tweenableNumber.optional().describe("3D bank (deg); default 0"),
+  fallback: external_exports.enum(["2d", "none"]).optional().describe("'2d' renders safe 2D chase; 'none' opts into experimental Map3D; default '2d'")
+});
+var mapStreetView = external_exports.object({
+  pano: external_exports.string().optional().describe("explicit panorama id (deterministic)"),
+  location: external_exports.object({ lat: external_exports.number(), lng: external_exports.number() }).optional().describe("else nearest-pano search"),
+  route: external_exports.array(external_exports.object({ lat: external_exports.number(), lng: external_exports.number() })).optional().describe("walk/drive path (nearest pano per stop)"),
+  radius: external_exports.number().optional().describe("nearest-pano search radius (m); default 50"),
+  source: external_exports.enum(["default", "outdoor", "indoor"]).optional().describe("default 'default'"),
+  pov: external_exports.object({
+    heading: tweenableNumber.optional().describe("tween(200,320) = pan"),
+    pitch: tweenableNumber.optional().describe("tween(0,-10) = tilt sweep")
+  }).optional(),
+  zoom: tweenableNumber.optional().describe("street view field-of-view zoom; tween(0,1) = dolly-zoom feel")
+});
 var mapStream = base.extend({
   type: external_exports.literal("map").default("map"),
+  view: external_exports.enum(["overview", "route", "cinematic", "streetview"]).default("route").describe("camera experience: static/dolly overview, animated route, cinematic flyover, immersive street view"),
   waypoints: external_exports.array(mapWaypoint).default(() => []),
   routeColor: external_exports.string().default("#4285F4"),
   routeWeight: external_exports.number().default(4),
@@ -257766,6 +258112,9 @@ var mapStream = base.extend({
   region: external_exports.string().optional().describe("Google Maps region code, e.g. CN"),
   travelMode: external_exports.enum(["DRIVING", "WALKING", "BICYCLING", "TRANSIT"]).default("DRIVING").describe("Directions API travel mode"),
   routeMarker: external_exports.string().default("\u{1F697}").describe("emoji/character for the animated traveling marker"),
+  camera: mapCamera.optional().describe("generic camera tween (dolly/pan/tilt)"),
+  cinematic: mapCinematic.optional().describe("cinematic camera behavior"),
+  streetView: mapStreetView.optional().describe("immersive street view config"),
   googleMapsApiKey: external_exports.string().optional().describe("injected by compiler from GOOGLE_MAPS_API_KEY env var")
 });
 var stream2 = external_exports.discriminatedUnion("type", [

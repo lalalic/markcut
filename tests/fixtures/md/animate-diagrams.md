@@ -13,8 +13,8 @@ layout:parallel
   ~~~
 
 ## FlowChart
-layout:parallel
-- component id:flowChart duration:12
+layout:series
+- component id:flowChart isBackground:true 
   ~~~jsx
   <div style={{position:'absolute',top:0,left:0,width:640,height:480,background:'#1a1a2e',padding:10,fontFamily:'monospace',boxSizing:'border-box',display:'flex',flexDirection:'column'}}>
     <p style={{color:'#00d4ff',fontSize:12,textAlign:'center',margin:'0 0 4px 0',flexShrink:0}}>Flow — {highlight}</p>
@@ -33,8 +33,10 @@ layout:parallel
     F --> G["Send Response"]
     classDef highlight fill:#ffd700,stroke:#ff6600,stroke-width:3px,color:#000
   ~~~
-  highlight:"A"
-  animateEdges:true
-- event duration:3 start:3 on:(start, flowChart.highlight="B";flowChart.animateEdges=["B->C"])
-- event duration:3 start:6 on:(start, flowChart.highlight="C")
-- event duration:3 start:9 on:(start, flowChart.highlight=["D","G"])
+- script on:(start, flowChart.highlight="A")
+  ~~~script
+  
+  ~~~
+- script on:(start, flowChart.highlight="B")
+- script on:(start, flowChart.highlight="C")
+- script on:(start, flowChart.highlight=["D","G"])

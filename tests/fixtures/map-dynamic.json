@@ -1,0 +1,52 @@
+{
+  "id": "root",
+  "type": "root",
+  "width": 640,
+  "height": 480,
+  "fps": 30,
+  "isSeries": true,
+  "transition": "fade",
+  "transitionTime": 0.3,
+  "children": [
+    {
+      "id": "overview",
+      "type": "map",
+      "view": "overview",
+      "name": "satellite-dolly",
+      "mapType": "satellite",
+      "center": { "lat": 37.7749, "lng": -122.4194 },
+      "zoom": 6,
+      "camera": { "zoom": { "__tween": [6, 12, "easeInOut"] } },
+      "start": 0,
+      "end": 3
+    },
+    {
+      "id": "cinematic",
+      "type": "map",
+      "view": "cinematic",
+      "name": "cinematic-flyover",
+      "waypoints": [
+        { "lat": 37.7749, "lng": -122.4194, "label": "SF" },
+        { "lat": 34.0522, "lng": -118.2437, "label": "LA" }
+      ],
+      "cinematic": { "mode": "flyAlong", "headingFollow": true, "tilt": { "__tween": [20, 45] } },
+      "camera": { "zoom": { "__tween": [12, 14, "easeInOut"] } },
+      "start": 0,
+      "end": 8
+    },
+    {
+      "id": "streetview",
+      "type": "map",
+      "view": "streetview",
+      "name": "streetview-pan",
+      "streetView": {
+        "location": { "lat": 37.7749, "lng": -122.4194 },
+        "radius": 50,
+        "pov": { "heading": { "__tween": [200, 320, "easeInOut"] }, "pitch": 0 },
+        "zoom": { "__tween": [0, 0.5, "easeInOut"] }
+      },
+      "start": 0,
+      "end": 6
+    }
+  ]
+}

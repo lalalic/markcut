@@ -268,6 +268,8 @@ all src paths are resolved relative to the markdown file's location. For example
 ### 14. verify
 - all assets path are resolved relative to the markdown file's location. 
 - `npx @lalalic/markcut verify book.md` to verify the markdown document is valid and can be rendered. It will check for missing required fields, invalid values, and other common issues.
+- **Asset-relative check**: `verify` also walks the tree and requires every local asset (image/video/audio/subtitle `.vtt`, map `waypoints[].media`, root `subtitle.src`) to be a path **relative to the markdown file's folder** — no absolute paths (`/...`), no `..` escapes. Remote URLs (`https:`, `data:`, etc.) and inline subtitle text are fine. Violations are printed as actionable errors (exit 1) so an agent can fix the source and re-run.
+- `markcut render` runs the same check on the compiled tree right before rendering and aborts with errors instead of failing mid-render with 404s.
 
 
 ## Template Variables

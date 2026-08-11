@@ -80,6 +80,12 @@ Commands:
   vision <folder>                      Full pipeline: extract → normalize → percept → segments
     --label                            Add interactive labeling step before AI pipeline
     --instruct "text"                   Background context about people/places (injected into prompts)
+
+  spots --waypoints "lat,lng;..."      Discover POIs along a route (Directions + Places API)
+    --travelMode DRIVING               DRIVING | WALKING | BICYCLING (default DRIVING)
+    --limit 8                          Max spots after ranking
+    --photos                           Attach a static-map thumbnail per spot
+    --markdown                         Print waypoints:[...] markdown to stderr
     --prompts-file <path>              Path to prompts markdown file (default: vision_prompts.md)
     --vtt-sample-interval <n>          Sample one video frame every N seconds (default: 5)
     --skip-stt                         Skip speech-to-text for videos
@@ -91,6 +97,7 @@ Commands:
 
 
 /**
+/**
  * Render a stream tree to an MP4 video with compact progress output.
  *
  * In compact mode (default), "Rendered X/Y" lines are shown only every
@@ -100,7 +107,7 @@ Commands:
  * Use --verbose to see every frame line (original behavior).
  */
 
-function renderOne(streamTree, outputPath, verbose) {
+function renderOne(streamTree, outputPath, verbose, publicDir) {
   const tmpProps = join(ROOT, ".tmp", "render-stream.json");
   mkdirSync(dirname(tmpProps), { recursive: true });
   writeFileSync(tmpProps, JSON.stringify({ root: streamTree }));
@@ -116,7 +123,10 @@ console.log(`\n▶ Rendering → ${outputPath}`);
     if (args.dev) {
       spawnOpts.env = { ...process.env, NODE_ENV: "development" };
     }
-    const proc = spawn("npx", ["remotion", "render", "Root", outputPath, "--props", tmpProps, "--config", "remotion.config.ts"], spawnOpts);
+    // Serve local media (TTS, subtitles, images) from the .markcut base dir.
+    const renderArgs = ["remotion", "render", "Root", outputPath, "--props", tmpProps, "--config", "remotion.config.ts"];
+    if (publicDir) renderArgs.push("--public-dir", publicDir);
+    const proc = spawn("npx", renderArgs, spawnOpts);
 
     let lastLoggedFrame = 0;
     let totalFrames = 0;
@@ -213,6 +223,11 @@ edit=${DEFAULT_EDIT_CLI}`);
     process.exit(0);
   }
 
+  if (args.command === "spots") {
+    await import("../spots/cli.mjs");  // self-executing top-level script
+    process.exit(0);
+  }
+
   if (args.command === "preview") {
     // --storyboard implies --edit: show story structure fast (prompts as
     // placeholder components) and let user chat to reshape before generation.
@@ -276,6 +291,7 @@ edit=${DEFAULT_EDIT_CLI}`);
   if (args.command === "render") {
     let streamTree;
     let rawInput = "";
+    let renderPublicDir;  // .markcut base dir → Remotion publicDir for local media
 
     if (args.file) {
       const filePath = resolve(args.file);
@@ -334,6 +350,10 @@ edit=${DEFAULT_EDIT_CLI}`);
           includeOutputDir: generatedDir(filePath, "includes"),
           subtitleOutputDir: variantDir(filePath),
         });
+        // Serve the source .md folder as Remotion's public dir (the "default
+        // root"): every asset in the JSON is md-folder-relative, so paths like
+        // .markcut/generated/... and assets/... resolve via staticFile.
+        renderPublicDir = fileDir;
       } else {
         const parsed = JSON.parse(raw);
         const root = parsed.root ?? parsed;
@@ -348,6 +368,7 @@ edit=${DEFAULT_EDIT_CLI}`);
             includeOutputDir: generatedDir(filePath, "includes"),
             subtitleOutputDir: variantDir(filePath),
           });
+          renderPublicDir = fileDir;
         } else {
           streamTree = root;
         }
@@ -378,8 +399,24 @@ edit=${DEFAULT_EDIT_CLI}`);
       }
     }
 
+    // Guard: every local asset must be relative to the source folder (the
+    // render publicDir). Absolute paths or ".." escapes would 404 in Remotion
+    // (staticFile serves --public-dir), so fail fast with actionable errors.
+    if (renderPublicDir) {
+      const { validateAssetsRelative } = await import("./validate-assets.mjs");
+      const assetErrors = validateAssetsRelative(streamTree, renderPublicDir);
+      if (assetErrors.length > 0) {
+        for (const e of assetErrors) emitError(e);
+        emitError(
+          `Aborting render: ${assetErrors.length} asset(s) not relative to baseDir ` +
+          `(${renderPublicDir}). Fix the source or re-run resolve, then retry.`
+        );
+        process.exit(1);
+      }
+    }
+
     const output = args.output ? resolve(args.output) : join(ROOT, "out", "video.mp4");
-    await renderOne(streamTree, output, args.verbose);
+    await renderOne(streamTree, output, args.verbose, renderPublicDir);
 
     console.log("\n✅ Render complete.");
     process.exit(0);
@@ -486,6 +523,20 @@ function hasScript(root) {
         }
       }
       walkMedia(descriptive.children);
+
+      // ── Check: all assets relative to baseDir ───────────────────────────
+      // Every local asset must be a path relative to the source file's folder
+      // (the render publicDir). Absolute paths, "/..." and ".." escapes would
+      // 404 in render / break media in preview.
+      {
+        const { validateAssetsRelative } = await import("./validate-assets.mjs");
+        const baseDir = dirname(filePath);
+        // Descriptive trees: include.src may point outside baseDir legitimately
+        // (it is compiled against its own baseDir, then relativized).
+        for (const e of validateAssetsRelative(descriptive, baseDir, { skipIncludeSrc: true })) {
+          errors.push(e);
+        }
+      }
 
       // ── Results ─────────────────────────────────────────────────────────
       for (const w of warnings) emitWarn(w);

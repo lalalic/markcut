@@ -46,8 +46,9 @@ function firstWords(text: string, n: number): string {
 }
 
 export interface ResolveMediaOptions {
-  /** Base directory for resolving relative src paths (default: cwd) */
-  baseDir?: string;
+  /** Source file's folder — every asset path is resolved/emitted relative to it.
+   *  Always set by the CLI/server (dirname of the source file); no fallback. */
+  baseDir: string;
   /** Skip nodes whose src matches this regex */
   skip?: RegExp;
 }
@@ -56,7 +57,7 @@ export interface ResolveMediaOptions {
  * Probe actual media duration via ffprobe.
  * Returns duration in seconds, or null if probe fails.
  */
-function probeDuration(src: string, baseDir?: string): number | null {
+function probeDuration(src: string, baseDir: string): number | null {
   const absPath = resolveSrc(src, baseDir);
   try {
     const out = execSync(
@@ -70,9 +71,37 @@ function probeDuration(src: string, baseDir?: string): number | null {
   }
 }
 
-function resolveSrc(src: string, baseDir?: string): string {
+function resolveSrc(src: string, baseDir: string): string {
   if (/^(https?:|file:|\/)/.test(src)) return src;
-  return resolvePath(baseDir ?? process.cwd(), src);
+  return resolvePath(baseDir, src);
+}
+
+/**
+ * Convert every generated asset path that lives under `baseDir` (the source
+ * .md folder) into a path relative to it, so the compiled JSON references
+ * every asset from the md folder's perspective. Render serves that folder via
+ * --public-dir and the preview server serves it as the document root — no
+ * render-time normalization needed. Paths outside baseDir (or remote) stay
+ * unchanged.
+ *
+ * Applied once at the end of resolveAll — all resolvers keep emitting
+ * absolute paths internally (needed for ffprobe/whisper), and this single
+ * walk relativizes them for the final JSON.
+ */
+function relativizeAssetsUnder(node: any, baseDir: string): any {
+  if (!node || typeof node !== "object") return node;
+  if (Array.isArray(node)) return node.map((v) => relativizeAssetsUnder(v, baseDir));
+  const out: Record<string, any> = {};
+  for (const [k, v] of Object.entries(node)) {
+    if (typeof v === "string" && v.startsWith(baseDir + "/")) {
+      out[k] = v.slice(baseDir.length + 1);
+    } else if (v && typeof v === "object") {
+      out[k] = relativizeAssetsUnder(v, baseDir);
+    } else {
+      out[k] = v;
+    }
+  }
+  return out;
 }
 
 /**
@@ -111,7 +140,7 @@ export function resolveMediaSrc(
   src: string,
   targetWidth: number,
   targetHeight: number,
-  baseDir?: string,
+  baseDir: string,
 ): string {
   // If no pattern, direct resolve
   if (!src.includes("${")) {
@@ -157,7 +186,7 @@ export function resolveMediaSrc(
  */
 export async function resolveMediaSrcs(
   root: DescriptiveRoot,
-  options: ResolveMediaOptions = {},
+  options: ResolveMediaOptions,
 ): Promise<DescriptiveRoot> {
   const clone: DescriptiveRoot = JSON.parse(JSON.stringify(root));
   const baseDir = options.baseDir;
@@ -190,7 +219,7 @@ export async function resolveMediaSrcs(
  */
 export async function resolveMediaDurations(
   root: DescriptiveRoot,
-  options: ResolveMediaOptions = {},
+  options: ResolveMediaOptions,
 ): Promise<DescriptiveRoot> {
   const clone: DescriptiveRoot = JSON.parse(JSON.stringify(root));
   const baseDir = options.baseDir;
@@ -411,7 +440,8 @@ export async function resolveScripts(
     }
     if (!generated) continue;
 
-    // Set resolved src (normalize to absolute for reliable probing later)
+    // Set resolved src (absolute for reliable probing; the final
+    // relativizeAssetsUnder pass in resolveAll makes it md-folder-relative)
     node.src = resolvePath(generated);
     delete node.script;
   }
@@ -485,6 +515,8 @@ export async function resolveSubtitles(
       const effectiveOffset = nodeStart + actionStart;
 
       if (node.type === "audio" && node.src) {
+        // node.src is still absolute here (relativization happens at the end of
+        // resolveAll), so whisper/existsSync can read the file directly.
         clips.push({ audioSrc: node.src, offset: effectiveOffset, speaker: node.speaker });
       }
 
@@ -937,10 +969,10 @@ export interface ResolveAllOptions extends ResolveMediaOptions {
  */
 export async function resolveIncludes(
   root: DescriptiveRoot,
-  options: ResolveAllOptions = {},
+  options: ResolveAllOptions,
 ): Promise<DescriptiveRoot> {
   const clone: DescriptiveRoot = JSON.parse(JSON.stringify(root));
-  const baseDir = options.baseDir ?? process.cwd();
+  const baseDir = options.baseDir;
   const outputDir = options.includeOutputDir ?? join(baseDir, ".markcut", "generated", "includes");
   mkdirSync(outputDir, { recursive: true });
 
@@ -1076,7 +1108,7 @@ export async function resolveIncludes(
  */
 export async function resolveAll(
   root: DescriptiveRoot,
-  options: ResolveAllOptions = {},
+  options: ResolveAllOptions,
 ): Promise<DescriptiveRoot> {
   let result = root;
 
@@ -1179,6 +1211,13 @@ export async function resolveAll(
       mergedOutputDir: options.subtitleOutputDir,
     });
   }
+
+  // Final step: emit every generated asset path relative to the source .md
+  // folder so the compiled JSON carries md-folder-relative paths. Render
+  // serves that folder via --public-dir and the preview server serves it as
+  // the document root — no render-time normalization needed. baseDir is
+  // always the source file's folder (set by the CLI/server) — no fallback.
+  result = relativizeAssetsUnder(result, options.baseDir);
 
   return result;
 }

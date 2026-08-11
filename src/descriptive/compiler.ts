@@ -139,9 +139,18 @@ export interface DescriptiveMapWaypoint {
   media?: string;
 }
 
+/** A tween expression `tween(from, to, easing?)` parsed into a tagged spec. */
+export interface DescriptiveTween {
+  __tween: Array<number | string>;
+}
+
+/** A static number OR an animated tween expression. */
+export type DescriptiveTweenable = number | DescriptiveTween;
+
 export interface DescriptiveMap extends DescriptiveBaseNode {
   type: "map";
   waypoints: DescriptiveMapWaypoint[];
+  view?: "overview" | "route" | "cinematic" | "streetview";
   routeColor?: string;
   routeWeight?: number;
   zoom?: number;
@@ -151,6 +160,34 @@ export interface DescriptiveMap extends DescriptiveBaseNode {
   region?: string;
   travelMode?: "DRIVING" | "WALKING" | "BICYCLING" | "TRANSIT";
   routeMarker?: string;
+  camera?: {
+    zoom?: DescriptiveTweenable;
+    center?: { lat: DescriptiveTweenable; lng: DescriptiveTweenable };
+    heading?: DescriptiveTweenable;
+    tilt?: DescriptiveTweenable;
+  };
+  cinematic?: {
+    mode?: "flyAlong" | "flyTo" | "orbit";
+    followRoute?: boolean;
+    headingFollow?: boolean;
+    tilt?: DescriptiveTweenable;
+    range?: DescriptiveTweenable;
+    altitude?: number;
+    roll?: DescriptiveTweenable;
+    fallback?: "2d" | "none";
+  };
+  streetView?: {
+    pano?: string;
+    location?: { lat: number; lng: number };
+    route?: Array<{ lat: number; lng: number }>;
+    radius?: number;
+    source?: "default" | "outdoor" | "indoor";
+    zoom?: DescriptiveTweenable;
+    pov?: {
+      heading?: DescriptiveTweenable;
+      pitch?: DescriptiveTweenable;
+    };
+  };
 }
 
 export interface DescriptiveContainer extends DescriptiveBaseNode {
@@ -601,6 +638,7 @@ function compileLeaf(node: Exclude<DescriptiveNode, DescriptiveContainer | Descr
       const stream: MapStream = {
         ...base,
         type: "map",
+        view: node.view ?? "route",
         waypoints: node.waypoints,
         routeColor: node.routeColor ?? "#4285F4",
         routeWeight: node.routeWeight ?? 4,
@@ -611,6 +649,9 @@ function compileLeaf(node: Exclude<DescriptiveNode, DescriptiveContainer | Descr
         region: node.region,
         travelMode: node.travelMode ?? "DRIVING",
         routeMarker: node.routeMarker ?? "🚗",
+        camera: node.camera,
+        cinematic: node.cinematic,
+        streetView: node.streetView,
         googleMapsApiKey: ctx.googleMapsApiKey,
       };
       return { stream, duration: end ?? 0 };

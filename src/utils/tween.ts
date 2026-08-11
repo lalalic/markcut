@@ -14,7 +14,7 @@ import * as React from "react";
 import { interpolate, useCurrentFrame, Easing } from "remotion";
 
 /** Built-in easing name → Remotion easing function. */
-const EASING_MAP: Record<string, ((t: number) => number) | undefined> = {
+export const EASING_MAP: Record<string, ((t: number) => number) | undefined> = {
   linear: undefined,
   ease: Easing.ease,
   easeIn: Easing.in(Easing.ease),
@@ -115,4 +115,52 @@ export function useTweenBindings(action: { start?: number; end?: number }): Reco
   );
 
   return { tween, interpolate };
+}
+
+// ---------------------------------------------------------------------------
+// Tween spec resolution (used by stream leaf renderers, e.g. Map.tsx)
+// ---------------------------------------------------------------------------
+
+/**
+ * A tween expression as parsed by the descriptive DSL: `tween(from, to, easing?)`
+ * becomes `{ __tween: [from, to, easing?] }` (see parseProps in dsl.ts).
+ */
+export interface TweenSpec {
+  __tween: Array<number | string>;
+}
+
+/** A static number OR a tween spec. */
+export type Tweenable = number | TweenSpec;
+
+/**
+ * Resolve a `Tweenable` to a per-frame value — deterministic per frame.
+ *
+ * - A plain number is returned as-is (static).
+ * - A `{__tween:[from,to,easing?]}` spec is interpolated over the node's
+ *   `[start, end]` (seconds) using the current frame.
+ * - Anything malformed falls back to `fallback`.
+ */
+export function resolveTween(
+  frame: number,
+  fps: number,
+  spec: Tweenable | undefined,
+  start: number,
+  end: number,
+  fallback: number,
+): number {
+  if (typeof spec === "number") return spec;
+  const tween = spec?.__tween;
+  if (!tween || tween.length < 2) return fallback;
+  const from = Number(tween[0]);
+  const to = Number(tween[1]);
+  if (!Number.isFinite(from) || !Number.isFinite(to)) return fallback;
+  const easingName = typeof tween[2] === "string" ? tween[2] : undefined;
+  const easingFn = easingName ? EASING_MAP[easingName] : undefined;
+  const startF = Math.max(0, Math.floor(start * fps));
+  const endF = Math.max(startF + 1, Math.floor(end * fps));
+  return interpolate(frame, [startF, endF], [from, to], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+    easing: easingFn,
+  });
 }

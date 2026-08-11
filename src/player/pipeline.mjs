@@ -343,6 +343,7 @@ function compileLeaf(node2, ctx, parentKind) {
       const stream = {
         ...base,
         type: "map",
+        view: node2.view ?? "route",
         waypoints: node2.waypoints,
         routeColor: node2.routeColor ?? "#4285F4",
         routeWeight: node2.routeWeight ?? 4,
@@ -353,6 +354,9 @@ function compileLeaf(node2, ctx, parentKind) {
         region: node2.region,
         travelMode: node2.travelMode ?? "DRIVING",
         routeMarker: node2.routeMarker ?? "\u{1F697}",
+        camera: node2.camera,
+        cinematic: node2.cinematic,
+        streetView: node2.streetView,
         googleMapsApiKey: ctx.googleMapsApiKey
       };
       return { stream, duration: end ?? 0 };
@@ -9953,18 +9957,41 @@ function parseWaypoints(raw) {
     const lat = Number(bits[0] ?? 0);
     const lng = Number(bits[1] ?? 0);
     const labelRaw = bits[2];
-    const label = labelRaw ? unquote(labelRaw) : void 0;
-    return { lat, lng, label };
+    const labelRawUq = labelRaw ? unquote(labelRaw) : void 0;
+    const label = labelRawUq ? labelRawUq : void 0;
+    const mediaRaw = bits[3];
+    const media = mediaRaw ? unquote(mediaRaw) : void 0;
+    return { lat, lng, label, media };
   });
+}
+function rewriteTweenExprs(s) {
+  return s.replace(
+    /tween\(\s*([^,()]+?)\s*,\s*([^,()]+?)\s*(?:,\s*([^()]+?))?\s*\)/g,
+    (_match, fromRaw, toRaw, easingRaw) => {
+      const scalar = (v) => {
+        const t = v.trim();
+        if (/^[+-]?(\d+(\.\d+)?|\.\d+)$/.test(t)) return t;
+        if (/^"(?:[^"\\]|\\.)*"$/.test(t)) return t;
+        if (t === "true" || t === "false" || t === "null") return t;
+        return JSON.stringify(t);
+      };
+      const items = [scalar(fromRaw), scalar(toRaw)];
+      if (easingRaw !== void 0 && easingRaw.trim()) {
+        items.push(scalar(easingRaw));
+      }
+      return `{"__tween":[${items.join(",")}]}`;
+    }
+  );
 }
 function parseProps(raw) {
   const s = raw.trim();
   if (!s.startsWith("{") && !s.startsWith("[")) return {};
   if (!s.endsWith("}") && !s.endsWith("]")) return {};
+  const withTweens = rewriteTweenExprs(s);
   try {
-    return JSON.parse(s);
+    return JSON.parse(withTweens);
   } catch {
-    let normalized = s.replace(
+    let normalized = withTweens.replace(
       /([{,]\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:(?=\s*["{[]?)/g,
       '$1"$2":'
     );
@@ -9980,7 +10007,7 @@ function parseProps(raw) {
       return JSON.parse(normalized);
     } catch {
       try {
-        const result = (0, eval)("(" + s + ")");
+        const result = (0, eval)("(" + withTweens + ")");
         return typeof result === "object" && result !== null ? result : {};
       } catch {
         return {};
@@ -10233,6 +10260,10 @@ function preserveVariantAttrs(node2, attrs) {
     "mapType",
     "data",
     "prompt",
+    "view",
+    "camera",
+    "cinematic",
+    "streetView",
     "name",
     "title",
     "transition",
@@ -10455,6 +10486,7 @@ function parseNodeLine(content3, lineNum) {
         waypoints: attrs.waypoints ?? [],
         duration: attrs.duration,
         start: attrs.start,
+        view: attrs.view,
         routeMarker: attrs.routeMarker,
         travelMode: attrs.travelMode,
         routeColor: attrs.routeColor,
@@ -10462,6 +10494,9 @@ function parseNodeLine(content3, lineNum) {
         zoom: attrs.zoom,
         center: attrs.center,
         mapType: attrs.mapType,
+        camera: attrs.camera,
+        cinematic: attrs.cinematic,
+        streetView: attrs.streetView,
         language: attrs.language ?? attrs.lang,
         region: attrs.region,
         instruction: attrs.instruction,
@@ -10764,7 +10799,22 @@ function probeDuration(src, baseDir) {
 }
 function resolveSrc(src, baseDir) {
   if (/^(https?:|file:|\/)/.test(src)) return src;
-  return resolvePath(baseDir ?? process.cwd(), src);
+  return resolvePath(baseDir, src);
+}
+function relativizeAssetsUnder(node2, baseDir) {
+  if (!node2 || typeof node2 !== "object") return node2;
+  if (Array.isArray(node2)) return node2.map((v) => relativizeAssetsUnder(v, baseDir));
+  const out = {};
+  for (const [k, v] of Object.entries(node2)) {
+    if (typeof v === "string" && v.startsWith(baseDir + "/")) {
+      out[k] = v.slice(baseDir.length + 1);
+    } else if (v && typeof v === "object") {
+      out[k] = relativizeAssetsUnder(v, baseDir);
+    } else {
+      out[k] = v;
+    }
+  }
+  return out;
 }
 var COMMON_RESOLUTIONS = [
   { width: 1920, height: 1080 },
@@ -10809,7 +10859,7 @@ function resolveMediaSrc(src, targetWidth, targetHeight, baseDir) {
   console.warn(`  \u26A0 No matching media file for "${src}" at ${targetWidth}x${targetHeight}`);
   return exactAbs;
 }
-async function resolveMediaSrcs(root, options = {}) {
+async function resolveMediaSrcs(root, options) {
   const clone = JSON.parse(JSON.stringify(root));
   const baseDir = options.baseDir;
   const targetWidth = clone.width ?? 1080;
@@ -10830,7 +10880,7 @@ async function resolveMediaSrcs(root, options = {}) {
   });
   return clone;
 }
-async function resolveMediaDurations(root, options = {}) {
+async function resolveMediaDurations(root, options) {
   const clone = JSON.parse(JSON.stringify(root));
   const baseDir = options.baseDir;
   walkDown(clone, (node2) => {
@@ -11242,9 +11292,9 @@ function applyStoryboardOverrides(root, options) {
   }
   return clone;
 }
-async function resolveIncludes(root, options = {}) {
+async function resolveIncludes(root, options) {
   const clone = JSON.parse(JSON.stringify(root));
-  const baseDir = options.baseDir ?? process.cwd();
+  const baseDir = options.baseDir;
   const outputDir = options.includeOutputDir ?? join(baseDir, ".markcut", "generated", "includes");
   mkdirSync2(outputDir, { recursive: true });
   function extractImportEntriesFromRaw(raw) {
@@ -11323,7 +11373,7 @@ async function resolveIncludes(root, options = {}) {
   }
   return clone;
 }
-async function resolveAll2(root, options = {}) {
+async function resolveAll2(root, options) {
   let result = root;
   if (result.seed == null && options.seed == null && options.sourcePath) {
     const autoSeed = parseInt(computeCacheKey(result).slice(0, 8), 16);
@@ -11391,6 +11441,7 @@ async function resolveAll2(root, options = {}) {
       mergedOutputDir: options.subtitleOutputDir
     });
   }
+  result = relativizeAssetsUnder(result, options.baseDir);
   return result;
 }
 
@@ -11408,7 +11459,7 @@ function isDescriptiveRoot(data) {
   )) return true;
   return false;
 }
-async function resolveAndCompile(data, options = {}) {
+async function resolveAndCompile(data, options) {
   const resolved = await resolveAll2(data, {
     sourcePath: options.sourcePath,
     baseDir: options.baseDir,
@@ -11427,7 +11478,7 @@ async function resolveAndCompile(data, options = {}) {
   });
   return compiled;
 }
-async function resolveAndCompileMarkdown(markdown, options = {}) {
+async function resolveAndCompileMarkdown(markdown, options) {
   const descriptive = parseMarkdownDescriptive(markdown);
   return resolveAndCompile(descriptive, options);
 }

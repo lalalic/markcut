@@ -100,6 +100,19 @@ describe("dsl — parseWaypoints", () => {
     expect(parseWaypoints("[40.7,-74.0]")).toEqual([{ lat: 40.7, lng: -74.0, label: undefined }]);
   });
 
+  it("parses waypoint media as a 4th field", () => {
+    expect(parseWaypoints('[40.7,-74.0,"NYC","photo1.jpg"; 34.05,-118.25,"LA","clip.mp4"]')).toEqual([
+      { lat: 40.7, lng: -74.0, label: "NYC", media: "photo1.jpg" },
+      { lat: 34.05, lng: -118.25, label: "LA", media: "clip.mp4" },
+    ]);
+  });
+
+  it("parses waypoint media without a label", () => {
+    expect(parseWaypoints('[40.7,-74.0,"","img.jpg"]')).toEqual([
+      { lat: 40.7, lng: -74.0, label: undefined, media: "img.jpg" },
+    ]);
+  });
+
   it("returns empty array for non-bracket input", () => {
     expect(parseWaypoints("not a list")).toEqual([]);
   });
@@ -132,6 +145,36 @@ describe("dsl — parseProps", () => {
 
   it("returns {} for unclosed object", () => {
     expect(parseProps("{a:1")).toEqual({});
+  });
+
+  it("parses tween() expressions into tagged specs", () => {
+    expect(parseProps("{zoom:tween(6, 12)}")).toEqual({ zoom: { __tween: [6, 12] } });
+  });
+
+  it("parses tween() with easing", () => {
+    expect(parseProps("{zoom:tween(6, 12, easeInOut)}")).toEqual({
+      zoom: { __tween: [6, 12, "easeInOut"] },
+    });
+  });
+
+  it("parses tween() nested inside objects and arrays", () => {
+    expect(parseProps("{center:{lat:tween(37.0, 37.9), lng:120}, pov:{heading:tween(200, 320)}}")).toEqual({
+      center: { lat: { __tween: [37.0, 37.9] }, lng: 120 },
+      pov: { heading: { __tween: [200, 320] } },
+    });
+  });
+
+  it("parses tween() with quoted string values (colors)", () => {
+    expect(parseProps('{color:tween("#000000", "#FFFFFF", easeOut)}')).toEqual({
+      color: { __tween: ["#000000", "#FFFFFF", "easeOut"] },
+    });
+  });
+
+  it("keeps static numbers alongside tweens", () => {
+    expect(parseProps("{zoom:tween(6, 12), tilt:45}")).toEqual({
+      zoom: { __tween: [6, 12] },
+      tilt: 45,
+    });
   });
 });
 

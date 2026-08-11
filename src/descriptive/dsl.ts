@@ -174,9 +174,41 @@ export function parseWaypoints(raw: string): DescriptiveMapWaypoint[] {
     const lat = Number(bits[0] ?? 0);
     const lng = Number(bits[1] ?? 0);
     const labelRaw = bits[2];
-    const label = labelRaw ? unquote(labelRaw) : undefined;
-    return { lat, lng, label };
+    const labelRawUq = labelRaw ? unquote(labelRaw) : undefined;
+    const label = labelRawUq ? labelRawUq : undefined;
+    const mediaRaw = bits[3];
+    const media = mediaRaw ? unquote(mediaRaw) : undefined;
+    return { lat, lng, label, media };
   });
+}
+
+/**
+ * Rewrite `tween(from, to, easing?)` expressions inside a JSON-ish string into
+ * a tagged literal `{"__tween":[from,to,"easing"]}` so the regular JSON parser
+ * can handle them. `from`/`to` may be numbers or quoted strings (e.g. colors);
+ * `easing` is a bare word or quoted string. No eval — deterministic, no scope.
+ *
+ *   tween(6, 12, easeInOut)  →  {"__tween":[6,12,"easeInOut"]}
+ */
+function rewriteTweenExprs(s: string): string {
+  return s.replace(
+    /tween\(\s*([^,()]+?)\s*,\s*([^,()]+?)\s*(?:,\s*([^()]+?))?\s*\)/g,
+    (_match, fromRaw: string, toRaw: string, easingRaw?: string) => {
+      // Scalar → JSON literal: numbers stay, quoted strings stay, bare words get quoted.
+      const scalar = (v: string): string => {
+        const t = v.trim();
+        if (/^[+-]?(\d+(\.\d+)?|\.\d+)$/.test(t)) return t;
+        if (/^"(?:[^"\\]|\\.)*"$/.test(t)) return t;
+        if (t === "true" || t === "false" || t === "null") return t;
+        return JSON.stringify(t);
+      };
+      const items = [scalar(fromRaw), scalar(toRaw)];
+      if (easingRaw !== undefined && easingRaw.trim()) {
+        items.push(scalar(easingRaw));
+      }
+      return `{"__tween":[${items.join(",")}]}`;
+    },
+  );
 }
 
 /**
@@ -185,17 +217,22 @@ export function parseWaypoints(raw: string): DescriptiveMapWaypoint[] {
  * Accepts standard JSON, then falls back to a lenient two-pass normalization
  * that quotes bare keys (`{foo:` → `{"foo":`) and bare string values, and
  * finally to `eval` for JSX-like expressions. Returns `{}` on total failure.
+ *
+ * Also understands `tween(from, to, easing?)` expressions (see
+ * {@link rewriteTweenExprs}), which are rewritten to a tagged JSON literal
+ * before parsing so camera/map configs can animate values.
  */
 export function parseProps(raw: string): unknown {
   const s = raw.trim();
   if (!s.startsWith("{") && !s.startsWith("[")) return {};
   if (!s.endsWith("}") && !s.endsWith("]")) return {};
+  const withTweens = rewriteTweenExprs(s);
   try {
-    return JSON.parse(s);
+    return JSON.parse(withTweens);
   } catch {
     // Lenient parse: add quotes around unquoted keys and string values.
     // First pass: quote bare keys: {foo: → {"foo":
-    let normalized = s.replace(
+    let normalized = withTweens.replace(
       /([{,]\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:(?=\s*["{[]?)/g,
       '$1"$2":',
     );
@@ -214,7 +251,7 @@ export function parseProps(raw: string): unknown {
     } catch {
       // Last resort: eval (safe since this is a CLI tool)
       try {
-        const result = (0, eval)("(" + s + ")");
+        const result = (0, eval)("(" + withTweens + ")");
         return typeof result === "object" && result !== null ? result : {};
       } catch {
         return {};

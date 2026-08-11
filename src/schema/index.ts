@@ -212,7 +212,7 @@ export const scene = base.extend({
 export type Scene = z.infer<typeof scene>;
 
 // ---------------------------------------------------------------------------
-// Map — animated route visualization
+// Map — animated route visualization with dynamic camera views
 // ---------------------------------------------------------------------------
 export const mapWaypoint = z.object({
   lat: z.number(),
@@ -221,8 +221,60 @@ export const mapWaypoint = z.object({
   media: z.string().optional().describe("image/video src for waypoint marker"),
 });
 
+/**
+ * A tween expression: `tween(from, to, easing?)` → `{__tween:[from,to,easing?]}`,
+ * parsed by the descriptive DSL (see parseProps in dsl.ts).
+ */
+export const tweenSpec = z.object({
+  __tween: z.array(z.union([z.number(), z.string()])),
+});
+export type TweenSpec = z.infer<typeof tweenSpec>;
+
+/** A static number OR an animated tween spec. */
+export const tweenableNumber = z.union([z.number(), tweenSpec]);
+export type TweenableNumber = z.infer<typeof tweenableNumber>;
+
+/** Generic camera tween shared by overview/route/cinematic-lite. */
+export const mapCamera = z.object({
+  zoom: tweenableNumber.optional(),
+  center: z.object({ lat: tweenableNumber, lng: tweenableNumber }).optional(),
+  heading: tweenableNumber.optional(),
+  tilt: tweenableNumber.optional(),
+});
+export type MapCamera = z.infer<typeof mapCamera>;
+
+/** Cinematic camera behavior (chase/tilt/flyTo/orbit, 3D flyover). All fields
+ * optional — the renderer applies defaults (mode flyAlong, tilt 45, etc.). */
+export const mapCinematic = z.object({
+  mode: z.enum(["flyAlong", "flyTo", "orbit"]).optional().describe("camera move; default flyAlong"),
+  followRoute: z.boolean().optional().describe("center follows the animated marker; default true"),
+  headingFollow: z.boolean().optional().describe("heading = route bearing (forward is up); default true"),
+  tilt: tweenableNumber.optional().describe("0 = top-down reveal, 45 = chase; tween(0,45) = tilt reveal; default 45"),
+  range: tweenableNumber.optional().describe("3D camera distance (m); tween(8000,300) = fly-to"),
+  altitude: z.number().optional().describe("3D center altitude (m)"),
+  roll: tweenableNumber.optional().describe("3D bank (deg); default 0"),
+  fallback: z.enum(["2d", "none"]).optional().describe("'2d' renders safe 2D chase; 'none' opts into experimental Map3D; default '2d'"),
+});
+export type MapCinematic = z.infer<typeof mapCinematic>;
+
+/** Immersive Street View config with POV/position animation. */
+export const mapStreetView = z.object({
+  pano: z.string().optional().describe("explicit panorama id (deterministic)"),
+  location: z.object({ lat: z.number(), lng: z.number() }).optional().describe("else nearest-pano search"),
+  route: z.array(z.object({ lat: z.number(), lng: z.number() })).optional().describe("walk/drive path (nearest pano per stop)"),
+  radius: z.number().optional().describe("nearest-pano search radius (m); default 50"),
+  source: z.enum(["default", "outdoor", "indoor"]).optional().describe("default 'default'"),
+  pov: z.object({
+    heading: tweenableNumber.optional().describe("tween(200,320) = pan"),
+    pitch: tweenableNumber.optional().describe("tween(0,-10) = tilt sweep"),
+  }).optional(),
+  zoom: tweenableNumber.optional().describe("street view field-of-view zoom; tween(0,1) = dolly-zoom feel"),
+});
+export type MapStreetView = z.infer<typeof mapStreetView>;
+
 export const mapStream = base.extend({
   type: z.literal("map").default("map"),
+  view: z.enum(["overview", "route", "cinematic", "streetview"]).default("route").describe("camera experience: static/dolly overview, animated route, cinematic flyover, immersive street view"),
   waypoints: z.array(mapWaypoint).default(() => []),
   routeColor: z.string().default("#4285F4"),
   routeWeight: z.number().default(4),
@@ -233,6 +285,9 @@ export const mapStream = base.extend({
   region: z.string().optional().describe("Google Maps region code, e.g. CN"),
   travelMode: z.enum(["DRIVING", "WALKING", "BICYCLING", "TRANSIT"]).default("DRIVING").describe("Directions API travel mode"),
   routeMarker: z.string().default("🚗").describe("emoji/character for the animated traveling marker"),
+  camera: mapCamera.optional().describe("generic camera tween (dolly/pan/tilt)"),
+  cinematic: mapCinematic.optional().describe("cinematic camera behavior"),
+  streetView: mapStreetView.optional().describe("immersive street view config"),
   googleMapsApiKey: z.string().optional().describe("injected by compiler from GOOGLE_MAPS_API_KEY env var"),
 });
 export type MapStream = z.infer<typeof mapStream>;

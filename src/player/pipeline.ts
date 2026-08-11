@@ -21,8 +21,9 @@ import type { DescriptiveRoot } from "../descriptive/compiler";
 import type { Root } from "../schema/index";
 
 export interface ResolveAndCompileOptions {
-  /** Base directory for resolving relative media src paths */
-  baseDir?: string;
+  /** Base directory (the source file's folder) for resolving/emitting asset paths.
+   *  Always set by the CLI/server; no fallback. */
+  baseDir: string;
   /** Output directory for generated TTS audio / STT VTT files */
   scriptOutputDir?: string;
   /** Output directory for generated TTI/TTV media files */
@@ -88,7 +89,7 @@ export function isDescriptiveRoot(data: any): boolean {
  */
 export async function resolveAndCompile(
   data: DescriptiveRoot,
-  options: ResolveAndCompileOptions = {},
+  options: ResolveAndCompileOptions,
 ): Promise<Root> {
   // 1. Async resolve: durations, TTS, STT, includes
   const resolved = await resolveAll(data, {
@@ -121,7 +122,7 @@ export async function resolveAndCompile(
  */
 export async function resolveAndCompileMarkdown(
   markdown: string,
-  options: ResolveAndCompileOptions = {},
+  options: ResolveAndCompileOptions,
 ): Promise<Root> {
   const descriptive = parseMarkdownDescriptive(markdown);
   return resolveAndCompile(descriptive, options);

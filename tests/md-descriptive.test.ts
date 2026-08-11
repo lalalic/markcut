@@ -897,6 +897,64 @@ describe("resolveDialogue", () => {
   });
 });
 
+// ── Map Dynamic Views ─────────────────────────────────────────────────────
+
+describe("map dynamic views (tween camera)", () => {
+  const md = `
+# video
+width:640 height:480 fps:30 layout:series
+
+## Overview
+layout:parallel
+- script "This is the city."
+- map view:overview mapType:satellite duration:4 camera:{zoom:tween(6, 12, easeInOut)}
+
+## Cinematic
+layout:parallel
+- script "Flying over."
+- map view:cinematic duration:8 cinematic:{mode:flyAlong, tilt:tween(0,45)} waypoints:[37.77,-122.41,"SF","photo1.jpg"; 34.05,-118.25,"LA","photo2.jpg"]
+
+## Streetview
+layout:parallel
+- script "On the ground."
+- map view:streetview duration:6 streetView:{location:{lat:37.77,lng:-122.41}, pov:{heading:tween(200,320)}, zoom:tween(0,1)}
+`;
+
+  it("parses view/camera/cinematic/streetView into descriptive nodes", () => {
+    const parsed = parseMarkdownDescriptive(md);
+    const scenes = parsed.children as any[];
+    const overview = scenes[0].children.find((c: any) => c.type === "map");
+    expect(overview.view).toBe("overview");
+    expect(overview.camera?.zoom).toEqual({ __tween: [6, 12, "easeInOut"] });
+
+    const cinematic = scenes[1].children.find((c: any) => c.type === "map");
+    expect(cinematic.view).toBe("cinematic");
+    expect(cinematic.cinematic?.mode).toBe("flyAlong");
+    expect(cinematic.cinematic?.tilt).toEqual({ __tween: [0, 45] });
+    expect(cinematic.waypoints[0].media).toBe("photo1.jpg");
+    expect(cinematic.waypoints[1].media).toBe("photo2.jpg");
+
+    const street = scenes[2].children.find((c: any) => c.type === "map");
+    expect(street.view).toBe("streetview");
+    expect(street.streetView?.pov?.heading).toEqual({ __tween: [200, 320] });
+    expect(street.streetView?.zoom).toEqual({ __tween: [0, 1] });
+  });
+
+  it("compiles view fields into the stream tree", () => {
+    const compiled = compileDescriptiveRoot(parseMarkdownDescriptive(md));
+    const maps = (compiled.children as any[]).flatMap((c: any) =>
+      (c.children ?? []).filter((ch: any) => ch.type === "map"),
+    );
+    expect(maps).toHaveLength(3);
+    expect(maps[0].view).toBe("overview");
+    expect(maps[0].camera?.zoom).toEqual({ __tween: [6, 12, "easeInOut"] });
+    expect(maps[1].view).toBe("cinematic");
+    expect(maps[1].cinematic?.tilt).toEqual({ __tween: [0, 45] });
+    expect(maps[2].view).toBe("streetview");
+    expect(maps[2].streetView?.pov?.heading).toEqual({ __tween: [200, 320] });
+  });
+});
+
 // ── Helper ────────────────────────────────────────────────────────────────
 
 function findComponents(node: any): any[] {

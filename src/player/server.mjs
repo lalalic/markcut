@@ -326,59 +326,39 @@ function makePathsRelative(obj) {
 }
 
 /**
- * Convert relative (to MARKCUT_BASE) paths in the compiled root to server-relative URLs
- * for the browser. This is the inverse of makePathsRelative — it prepends "/" to paths
- * so the browser can fetch them from the server.
+ * Convert asset paths in the compiled root to server-relative URLs for the
+ * browser. The compiled JSON now carries md-folder-relative paths (e.g.
+ * ".markcut/generated/tts/x.mp3" or "assets/photo.jpg") because the resolve
+ * step emits them relative to the source .md folder — the server document
+ * root. This prepends "/" so the browser can fetch them (resolveAsset() then
+ * maps the URL back onto the md folder).
  *
- * Handles:
- *   - compiled.imports (component bundle URL)
- *   - compiled.subtitle.src (VTT file)
- *   - Any node.src (media/tts/images) that is a relative path under MARKCUT_BASE
+ * Also handles legacy absolute paths under MARKCUT_BASE (older cached trees).
  */
 function resolveAssetPaths(root) {
   const out = JSON.parse(JSON.stringify(root));
+
+  function toServerUrl(p) {
+    if (typeof p !== "string") return p;
+    if (/^(https?:|data:|blob:)/.test(p)) return p;
+    if (p.startsWith("/")) return p;                       // already a server URL
+    // Legacy: absolute path under the .markcut base (older cached trees)
+    if (p.startsWith(MARKCUT_BASE)) return p.slice(MARKCUT_BASE.length);
+    // md-folder-relative path (new scheme): ".markcut/...", "assets/..."
+    const rel = p.startsWith("./") ? p.slice(2) : p;
+    return "/" + rel;
+  }
 
   function walkNode(node) {
     if (!node || typeof node !== "object") return;
     if (Array.isArray(node)) { node.forEach(walkNode); return; }
 
-    // Convert src fields that are relative paths
-    if (typeof node.src === "string" && !node.src.startsWith("http://") && !node.src.startsWith("https://") && !node.src.startsWith("data:")) {
-      // Already a relative path under MARKCUT_BASE (shouldn't be absolute)
-      if (!node.src.startsWith("/") && !node.src.startsWith(".")) {
-        // Plain relative path — prefix with / (server serves from project root)
-        node.src = "/" + node.src;
-      } else if (node.src.startsWith("./")) {
-        // Dot-prefixed relative path — strip ./ and prefix with /
-        node.src = "/" + node.src.slice(2);
-      }
-      // Convert absolute paths under MARKCUT_BASE
-      if (typeof node.src === "string" && node.src.startsWith(MARKCUT_BASE)) {
-        node.src = "/" + node.src.replace(MARKCUT_BASE + "/", "");
-      }
-    }
-
-    // Convert subtitle src
+    if (typeof node.src === "string") node.src = toServerUrl(node.src);
     if (node.subtitle && typeof node.subtitle.src === "string") {
-      if (node.subtitle.src.startsWith(MARKCUT_BASE)) {
-        node.subtitle.src = "/" + node.subtitle.src.replace(MARKCUT_BASE + "/", "");
-      } else if (!node.subtitle.src.startsWith("/") && !node.subtitle.src.startsWith("http")) {
-        node.subtitle.src = "/" + node.subtitle.src;
-      }
+      node.subtitle.src = toServerUrl(node.subtitle.src);
     }
-
-    // Convert imports (component bundle URL)
-    if (typeof node.imports === "string") {
-      if (node.imports.startsWith(MARKCUT_BASE)) {
-        node.imports = "/" + node.imports.replace(MARKCUT_BASE + "/", "");
-      } else if (!node.imports.startsWith("/") && !node.imports.startsWith("http")) {
-        node.imports = "/" + node.imports;
-      }
-    }
-
-    if (Array.isArray(node.children)) {
-      node.children.forEach(walkNode);
-    }
+    if (typeof node.imports === "string") node.imports = toServerUrl(node.imports);
+    if (Array.isArray(node.children)) node.children.forEach(walkNode);
   }
 
   walkNode(out);

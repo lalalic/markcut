@@ -755,7 +755,7 @@ describe("resolveMediaDurations", () => {
         { type: "video", src: "nonexistent.mp4", duration: 5 },
       ],
     };
-    const result = await resolveMediaDurations(root);
+    const result = await resolveMediaDurations(root, { baseDir: tmpDir });
     expect(result).not.toBe(root);
     expect(result.children[0]!.duration).toBe(5);
   });
@@ -767,7 +767,7 @@ describe("resolveMediaDurations", () => {
         { type: "video", src: "anything.mp4", duration: 7 },
       ],
     };
-    const result = await resolveMediaDurations(root);
+    const result = await resolveMediaDurations(root, { baseDir: tmpDir });
     expect(result.children[0]!.duration).toBe(7);
   });
 
@@ -778,7 +778,7 @@ describe("resolveMediaDurations", () => {
         { type: "video", src: "anything.mp4", startFrom: 2, endAt: 5 },
       ],
     };
-    const result = await resolveMediaDurations(root);
+    const result = await resolveMediaDurations(root, { baseDir: tmpDir });
     expect((result.children[0] as any).endAt).toBe(5);
     expect((result.children[0] as any).duration).toBeUndefined();
   });
@@ -791,7 +791,7 @@ describe("resolveMediaDurations", () => {
         { type: "image", src: "photo.jpg" },
       ],
     };
-    const result = await resolveMediaDurations(root, { skip: /\.jpg$/ });
+    const result = await resolveMediaDurations(root, { baseDir: tmpDir, skip: /\.jpg$/ });
     // .jpg skipped, .mp4 tried but file doesn't exist so duration stays undefined
     expect(result.children[0]!.duration).toBeUndefined();
     expect(result.children[1]!.duration).toBeUndefined();
@@ -805,7 +805,7 @@ describe("resolveMediaDurations", () => {
       ],
     };
     const originalChildren = root.children[0];
-    const result = await resolveMediaDurations(root);
+    const result = await resolveMediaDurations(root, { baseDir: tmpDir });
     expect(result).not.toBe(root);
     expect(root.children[0]).toBe(originalChildren);
   });

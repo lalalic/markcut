@@ -385,6 +385,7 @@ describe("Full Feature Combination", () => {
       "effects.json",
       "subtitle.json",
       "map.json",
+      "map-dynamic.json",
       "audio.json",
       "subvideo.json",
       "full.json",
