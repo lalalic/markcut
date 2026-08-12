@@ -219,6 +219,8 @@ export const mapWaypoint = z.object({
   lng: z.number(),
   label: z.string().optional(),
   media: z.string().optional().describe("image/video src for waypoint marker"),
+  mode: z.enum(["DRIVING", "WALKING", "BICYCLING", "TRANSIT", "FLIGHT", "BOAT"]).optional()
+    .describe("travel mode for the leg FROM this waypoint to the next; defaults to map travelMode"),
 });
 
 /**

@@ -162,7 +162,17 @@ export function parseNumberMaybe(v: string): number | string | boolean {
  * Parse a map `waypoints:[...]` value into an array of waypoints.
  *
  * Format: `[lat,lng,"Label"; lat,lng,"Label"]` — semicolon-separated entries,
- * comma-separated fields. Returns `[]` on any structural mismatch.
+ * comma-separated fields. After lat/lng, the optional fields are parsed
+ * smartly:
+ *   - a BARE (unquoted) token that names a travel mode (DRIVING, WALKING,
+ *     BICYCLING, TRANSIT, FLIGHT, BOAT) is the outgoing-leg mode, wherever it
+ *     appears — so `[lat,lng,"Label",FLIGHT]` or `[lat,lng,FLIGHT]` work with
+ *     no empty media slot;
+ *   - quoted-empty `""` slots are skipped (backward compat for
+ *     `[lat,lng,"Label","",MODE]`);
+ *   - remaining values map positionally: 1st = label, 2nd = media.
+ * Quoted tokens are always literal (a quoted "FLIGHT" is a label/media, not a
+ * mode). Returns `[]` on any structural mismatch.
  */
 export function parseWaypoints(raw: string): DescriptiveMapWaypoint[] {
   const s = raw.trim();
@@ -173,14 +183,24 @@ export function parseWaypoints(raw: string): DescriptiveMapWaypoint[] {
     const bits = splitTokens(part.replace(/,/g, " "));
     const lat = Number(bits[0] ?? 0);
     const lng = Number(bits[1] ?? 0);
-    const labelRaw = bits[2];
-    const labelRawUq = labelRaw ? unquote(labelRaw) : undefined;
-    const label = labelRawUq ? labelRawUq : undefined;
-    const mediaRaw = bits[3];
-    const media = mediaRaw ? unquote(mediaRaw) : undefined;
-    return { lat, lng, label, media };
+    let mode: string | undefined;
+    const values: string[] = [];
+    for (const tok of bits.slice(2)) {
+      const value = unquote(tok);
+      if (!isQuoted(tok) && value && KNOWN_TRAVEL_MODES.has(value.toUpperCase())) {
+        mode = value.toUpperCase();
+        continue;
+      }
+      values.push(value); // keep position — a quoted-empty "" means "no value here"
+    }
+    const label = values[0] || undefined;
+    const media = values[1] || undefined;
+    return { lat, lng, label, media, mode };
   });
 }
+
+/** Bare (unquoted) waypoint tokens recognized as a travel mode. */
+const KNOWN_TRAVEL_MODES = new Set(["DRIVING", "WALKING", "BICYCLING", "TRANSIT", "FLIGHT", "BOAT"]);
 
 /**
  * Rewrite `tween(from, to, easing?)` expressions inside a JSON-ish string into

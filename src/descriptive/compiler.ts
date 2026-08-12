@@ -137,6 +137,8 @@ export interface DescriptiveMapWaypoint {
   lng: number;
   label?: string;
   media?: string;
+  /** Travel mode for the leg leaving this waypoint (DRIVING|WALKING|BICYCLING|TRANSIT|FLIGHT|BOAT). */
+  mode?: string;
 }
 
 /** A tween expression `tween(from, to, easing?)` parsed into a tagged spec. */

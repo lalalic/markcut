@@ -125,4 +125,22 @@ describe("map stream — dynamic camera views", () => {
   it("rejects an invalid view", () => {
     expect(() => mapStream.parse({ ...base, view: "drone" })).toThrow();
   });
+
+  it("carries per-waypoint travel modes (FLIGHT/BOAT/DRIVING...)", () => {
+    const m = mapStream.parse({
+      ...base,
+      waypoints: [
+        { lat: 37.77, lng: -122.41, mode: "FLIGHT" },
+        { lat: 34.05, lng: -118.25, mode: "BOAT" },
+        { lat: 34.01, lng: -118.5, mode: "WALKING" },
+      ],
+    });
+    expect(m.waypoints.map((w) => w.mode)).toEqual(["FLIGHT", "BOAT", "WALKING"]);
+  });
+
+  it("rejects an invalid waypoint travel mode", () => {
+    expect(() =>
+      mapStream.parse({ ...base, waypoints: [{ lat: 37.77, lng: -122.41, mode: "TELEPORT" }] }),
+    ).toThrow();
+  });
 });

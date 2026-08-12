@@ -113,6 +113,41 @@ describe("dsl — parseWaypoints", () => {
     ]);
   });
 
+  it("parses a bare travel mode without an empty media slot (smart)", () => {
+    expect(parseWaypoints('[40.7,-74.0,"NYC",FLIGHT; 34.05,-118.25,"LA","photo.jpg",BOAT]')).toEqual([
+      { lat: 40.7, lng: -74.0, label: "NYC", media: undefined, mode: "FLIGHT" },
+      { lat: 34.05, lng: -118.25, label: "LA", media: "photo.jpg", mode: "BOAT" },
+    ]);
+  });
+
+  it("parses a bare travel mode as the only trailing field", () => {
+    expect(parseWaypoints('[40.7,-74.0,FLIGHT]')).toEqual([
+      { lat: 40.7, lng: -74.0, label: undefined, media: undefined, mode: "FLIGHT" },
+    ]);
+  });
+
+  it("parses a bare mode even before the label", () => {
+    expect(parseWaypoints('[40.7,-74.0,BOAT,"Pier"]')).toEqual([
+      { lat: 40.7, lng: -74.0, label: "Pier", media: undefined, mode: "BOAT" },
+    ]);
+  });
+
+  it("uppercases a lowercase bare mode", () => {
+    expect(parseWaypoints('[40.7,-74.0,"NYC",flight]')[0]!.mode).toBe("FLIGHT");
+  });
+
+  it("still accepts empty quoted media slots (backward compat)", () => {
+    expect(parseWaypoints('[40.7,-74.0,"NYC","",BOAT]')).toEqual([
+      { lat: 40.7, lng: -74.0, label: "NYC", media: undefined, mode: "BOAT" },
+    ]);
+  });
+
+  it("treats a quoted mode word as a literal label/media (escape hatch)", () => {
+    expect(parseWaypoints('[40.7,-74.0,"NYC","FLIGHT"]')).toEqual([
+      { lat: 40.7, lng: -74.0, label: "NYC", media: "FLIGHT", mode: undefined },
+    ]);
+  });
+
   it("returns empty array for non-bracket input", () => {
     expect(parseWaypoints("not a list")).toEqual([]);
   });

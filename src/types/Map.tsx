@@ -37,6 +37,13 @@ import {
 } from "@vis.gl/react-google-maps";
 import type { Map3DRef } from "@vis.gl/react-google-maps";
 import { resolveTween } from "../utils/tween";
+import {
+  makeSyntheticLeg,
+  isSyntheticMode,
+  routePositionAtLegs,
+  modeEmoji,
+  type RouteLeg,
+} from "../utils/route-legs";
 import type { MapStream } from "../schema/index";
 
 // API key is injected by the compiler onto the stream node (see compileLeaf in compiler.ts).
@@ -203,11 +210,13 @@ function RouteMap({
       onTilesLoaded={onTilesLoaded}
       style={{ width: "100%", height: "100%", position: "absolute" }}
     >
-      <RouteWithMarker
+      <RouteWithMarkerLegs
         waypoints={waypoints}
         travelMode={stream.travelMode ?? "DRIVING"}
         markerEmoji={stream.routeMarker ?? "🚗"}
         actionDuration={end - start}
+        routeColor={stream.routeColor ?? "#4285F4"}
+        routeWeight={stream.routeWeight ?? 4}
       />
     </GoogleMap>
   );
@@ -467,23 +476,13 @@ function StreetViewLeaf({
 }
 
 // ============================================================
-// RouteWithMarker — fetches the Directions route, renders the
-// route line + waypoint markers (label or media thumbnail) +
-// the animated traveling marker
+// WaypointMarkers — one marker per waypoint (media thumbnail or label)
 // ============================================================
-function RouteWithMarker({
-  waypoints, travelMode, markerEmoji, actionDuration,
+function WaypointMarkers({
+  waypoints,
 }: {
   waypoints: { lat: number; lng: number; label?: string; media?: string }[];
-  travelMode: string;
-  markerEmoji: string;
-  actionDuration: number;
 }) {
-  const leg = useRouteLeg(waypoints, travelMode);
-
-  // Compute animated marker position
-  const position = useAnimatedPosition({ leg, actionDuration, waypoints });
-
   return (
     <>
       {waypoints.map((wp, i) => (
@@ -527,12 +526,212 @@ function RouteWithMarker({
           ) : null}
         </AdvancedMarker>
       ))}
-      {position ? (
-        <AdvancedMarker position={position}>
-          <Pin glyphText={markerEmoji} scale={4} />
-        </AdvancedMarker>
-      ) : null}
     </>
+  );
+}
+
+// ============================================================
+// TravelingMarker — the animated marker along the route
+// ============================================================
+function TravelingMarker({
+  position,
+  glyph,
+}: {
+  position: { lat: number; lng: number } | null;
+  glyph: string;
+}) {
+  if (!position) return null;
+  return (
+    <AdvancedMarker position={position}>
+      <Pin glyphText={glyph} scale={4} />
+    </AdvancedMarker>
+  );
+}
+
+// ============================================================
+// RoutePolylines — draws each leg's route line. Road legs are a
+// solid line in the route color; synthetic legs (FLIGHT ✈️ / BOAT 🚢)
+// are a dashed arc in a distinct color.
+// ============================================================
+function RoutePolylines({
+  legs, routeColor, routeWeight,
+}: {
+  legs: RouteLeg[];
+  routeColor: string;
+  routeWeight: number;
+}) {
+  const map = useMap();
+
+  React.useEffect(() => {
+    if (!map) return;
+    const created = legs.map((leg) => {
+      const path = leg.steps.flatMap((s) => s.path);
+      const synthetic = isSyntheticMode(leg.mode);
+      const color = synthetic
+        ? leg.mode.toUpperCase() === "BOAT" ? "#00ACC1" : "#FBBC04"
+        : routeColor;
+      const opts: google.maps.PolylineOptions = {
+        map,
+        path,
+        strokeColor: color,
+        strokeWeight: synthetic ? Math.max(3, routeWeight - 1) : routeWeight,
+        strokeOpacity: 0.95,
+        zIndex: 1,
+      };
+      if (synthetic) {
+        opts.icons = [{
+          icon: { path: "M 0 -1 0 1", strokeColor: color, strokeWeight: 2, scale: 2 },
+          offset: "0",
+          repeat: "12px",
+        }];
+      }
+      return new google.maps.Polyline(opts);
+    });
+    return () => created.forEach((p) => p.setMap(null));
+  }, [map, legs, routeColor, routeWeight]);
+
+  return null;
+}
+
+// ============================================================
+// RouteWithMarker — single-leg route (used by cinematic views).
+// Fetches the Directions route, renders the route line + waypoint
+// markers (label or media thumbnail) + the animated traveling marker
+// ============================================================
+function RouteWithMarker({
+  waypoints, travelMode, markerEmoji, actionDuration,
+}: {
+  waypoints: { lat: number; lng: number; label?: string; media?: string }[];
+  travelMode: string;
+  markerEmoji: string;
+  actionDuration: number;
+}) {
+  const leg = useRouteLeg(waypoints, travelMode);
+
+  // Compute animated marker position
+  const position = useAnimatedPosition({ leg, actionDuration, waypoints });
+
+  return (
+    <>
+      <WaypointMarkers waypoints={waypoints} />
+      <TravelingMarker position={position} glyph={markerEmoji} />
+    </>
+  );
+}
+
+// ============================================================
+// RouteWithMarkerLegs — multi-leg route (view:"route"). Each
+// waypoint may tag its outgoing leg with a travel mode
+// (waypoint.mode ?? map travelMode); FLIGHT/BOAT legs are synthetic
+// dashed arcs. The traveling marker switches glyph per leg
+// (✈️ 🚢 🚶 🚲 🚌 🚗).
+// ============================================================
+function RouteWithMarkerLegs({
+  waypoints, travelMode, markerEmoji, actionDuration, routeColor, routeWeight,
+}: {
+  waypoints: { lat: number; lng: number; label?: string; media?: string; mode?: string }[];
+  travelMode: string;
+  markerEmoji: string;
+  actionDuration: number;
+  routeColor: string;
+  routeWeight: number;
+}) {
+  const legs = useRouteLegs(waypoints, travelMode);
+  const position = useAnimatedPositionLegs({ legs, actionDuration });
+  const glyph = position ? modeEmoji(position.mode) : markerEmoji;
+
+  return (
+    <>
+      <RoutePolylines legs={legs} routeColor={routeColor} routeWeight={routeWeight} />
+      <WaypointMarkers waypoints={waypoints} />
+      <TravelingMarker position={position} glyph={glyph} />
+    </>
+  );
+}
+
+// ============================================================
+// useRouteLegs — loads one Directions leg per consecutive waypoint
+// pair (view:"route"). Each waypoint's `mode` tags its OUTGOING leg;
+// FLIGHT/BOAT legs are synthetic arcs (no Directions route). Time is
+// split across legs proportionally to each leg's duration.
+// ============================================================
+function useRouteLegs(
+  waypoints: { lat: number; lng: number; mode?: string }[],
+  travelMode: string,
+): RouteLeg[] {
+  const map = useMap();
+  const routesLibrary = useMapsLibrary("routes");
+  const [legs, setLegs] = React.useState<RouteLeg[]>([]);
+  const handle = React.useRef<number | null>(null);
+
+  React.useEffect(() => {
+    if (!routesLibrary || !map || waypoints.length < 2) return;
+    let active = true;
+    const renderHandle = delayRender("Loading map directions...");
+    handle.current = renderHandle;
+
+    const service = new routesLibrary.DirectionsService();
+
+    Promise.all(
+      waypoints.slice(0, -1).map((wp, i) => {
+        const to = waypoints[i + 1]!;
+        const mode = (wp.mode ?? travelMode).toUpperCase();
+        if (isSyntheticMode(mode)) {
+          return Promise.resolve<RouteLeg | null>(makeSyntheticLeg(wp, to, mode));
+        }
+        return service
+          .route({
+            origin: wp,
+            destination: to,
+            travelMode: google.maps.TravelMode[mode as keyof typeof google.maps.TravelMode] ?? google.maps.TravelMode.DRIVING,
+            provideRouteAlternatives: false,
+          })
+          .then((response) => {
+            const leg = response.routes[0]?.legs[0];
+            if (!leg) return null;
+            const steps = (leg.steps ?? []).map((s) => ({
+              path: (s.path ?? []).map((p) => ({ lat: p.lat(), lng: p.lng() })),
+              durationSec: s.duration?.value ?? 1,
+            }));
+            return {
+              mode,
+              from: wp,
+              to,
+              durationSec: leg.duration?.value ?? (steps.reduce((sum, st) => sum + st.durationSec, 0) || 1),
+              steps,
+            } satisfies RouteLeg;
+          })
+          .catch(() => null);
+      }),
+    ).then((resolved) => {
+      if (!active) return;
+      setLegs(resolved.filter((l): l is RouteLeg => l !== null));
+      if (handle.current !== null) continueRender(handle.current);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [routesLibrary, map, waypoints, travelMode]);
+
+  return legs;
+}
+
+// ============================================================
+// useAnimatedPositionLegs — leg-aware animated marker position
+// (view:"route"): returns { lat, lng, mode } for the current frame
+// ============================================================
+function useAnimatedPositionLegs({
+  legs, actionDuration,
+}: {
+  legs: RouteLeg[];
+  actionDuration: number;
+}) {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  return React.useMemo(
+    () => routePositionAtLegs(legs, actionDuration, frame / fps),
+    [legs, frame, fps, actionDuration],
   );
 }
 

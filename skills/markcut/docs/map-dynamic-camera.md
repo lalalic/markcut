@@ -16,7 +16,7 @@ Use `map` clips when the video is about **a place and getting around**:
 - city tour: establishing shot → flyover → street level
 - route explainers: commute, road trip, walking tour, "how to get there"
 
-Every map clip can carry a `script` narration next to it (see §6 for the
+Every map clip can carry a `script` narration next to it (see §7 for the
 scene pattern that plays map + narration together).
 
 ---
@@ -101,7 +101,53 @@ Full example:
 
 ---
 
-## 5. Discovering spots along a route — `markcut spots`
+## 5. Per-leg travel modes (flight ✈️ / boat 🚢 / walk 🚶 / drive 🚗)
+
+A route is a sequence of **legs** — one per consecutive waypoint pair. Each
+waypoint can tag the leg that **leaves it** with its own travel mode. The
+parser is smart: a **bare (unquoted) mode word anywhere after lat/lng** is the
+outgoing-leg mode — no empty slots needed. Untagged waypoints fall back to
+the map's `travelMode` (default DRIVING).
+
+```
+[lat,lng,"Label","media",MODE]   # full
+[lat,lng,"Label",MODE]            # mode without media (no empty "") — smart
+[lat,lng,MODE]                     # just a mode
+```
+
+| mode | how it renders |
+|---|---|
+| `DRIVING` (default) | Google Directions road route — solid line, 🚗 marker |
+| `WALKING` | Google Directions pedestrian route — 🚶 marker |
+| `BICYCLING` | Google Directions bike route — 🚲 marker |
+| `TRANSIT` | Google Directions transit route — 🚌 marker |
+| `FLIGHT` | **synthetic great-circle arc** (no road) — dashed yellow line, ✈️ marker |
+| `BOAT` | **synthetic arc across water** — dashed teal line, 🚢 marker |
+
+FLIGHT/BOAT have no Directions route, so they're drawn as curved "as the crow
+flies" arcs and timed by distance at a cruise speed (✈️ ~850 km/h, 🚢 ~40 km/h).
+The traveling marker switches glyph to the current leg's mode as it moves, and
+time is split across legs **proportionally to each leg's duration**.
+
+Rules:
+- A mode word must be **unquoted** — quote it (`"FLIGHT"`) and it's a literal
+  label/media instead. That's the escape hatch if a media file is literally
+  named `FLIGHT`.
+- Quoted-empty `""` slots are still accepted (backward compat).
+- Remaining values map positionally: 1st = label, 2nd = media.
+
+Example — fly in, take a boat, walk, then drive:
+
+```md
+- map view:route duration:12 travelMode:DRIVING
+  waypoints:[37.8199,-122.4783,"SFO",FLIGHT; 33.94,-118.41,"LAX",BOAT; 33.75,-118.28,"Long Beach",WALKING; 33.77,-118.19,"Promenade",DRIVING; 33.94,-118.41,"LAX"]
+```
+
+Legs above: SFO→LAX by ✈️, LAX→Long Beach by 🚢, Long Beach→Promenade by 🚶,
+Promenade→LAX by 🚗 (the last waypoint has no outgoing leg, so its mode is
+ignored).
+
+## 6. Discovering spots along a route — `markcut spots`
 
 Don't hand-pick coordinates for a route video — **discover** interesting stops
 with the spots CLI. It samples points along a route (Directions API) and ranks
@@ -132,7 +178,7 @@ npx @lalalic/markcut spots --waypoints "37.8199,-122.4783;37.6213,-122.3790" \
 
 ---
 
-## 6. Markdown examples (copy-paste)
+## 7. Markdown examples (copy-paste)
 
 ### 6.1 Simple route clip with narration
 
@@ -224,7 +270,7 @@ layout:parallel
 
 ---
 
-## 7. Recipe — build a route/vlog clip
+## 8. Recipe — build a route/vlog clip
 
 1. **Get the route** — endpoints from the user's media/GPS, or two landmarks.
 2. **Discover spots** — `markcut spots --waypoints "lat,lng;lat,lng" --photos --markdown`; pick 2–5 that tell the story.
@@ -234,7 +280,7 @@ layout:parallel
 
 ---
 
-## 8. Tips & pitfalls
+## 9. Tips & pitfalls
 
 - **Map + narration**: put `- map ...` and `- script "..."` as sibling bullets in a `layout:parallel` scene so they play together. If the scene is `series`, narration plays alone first and the map shows nothing while speaking.
 - **Street View coverage is not universal** — a spot may have no panorama. If a `streetview` scene looks dark/empty, pick a nearby well-covered location or use `view:cinematic` instead.

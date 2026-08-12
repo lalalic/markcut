@@ -242358,6 +242358,110 @@ function useMap3D(id39 = null) {
   return map3dInstances["default"] || null;
 }
 
+// src/utils/route-legs.ts
+var FLIGHT_SPEED_KMH = 850;
+var BOAT_SPEED_KMH = 40;
+function isSyntheticMode(mode) {
+  const m4 = (mode ?? "").toUpperCase();
+  return m4 === "FLIGHT" || m4 === "BOAT";
+}
+var EARTH_RADIUS_KM = 6371;
+var toRad = (d4) => d4 * Math.PI / 180;
+var toDeg = (d4) => d4 * 180 / Math.PI;
+function haversineKm(a3, b5) {
+  const dLat = toRad(b5.lat - a3.lat);
+  const dLng = toRad(b5.lng - a3.lng);
+  const h3 = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a3.lat)) * Math.cos(toRad(b5.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * EARTH_RADIUS_KM * Math.asin(Math.sqrt(h3));
+}
+function greatCirclePath(a3, b5, points = 64) {
+  const \u03C61 = toRad(a3.lat);
+  const \u03BB1 = toRad(a3.lng);
+  const \u03C62 = toRad(b5.lat);
+  const \u03BB2 = toRad(b5.lng);
+  const d4 = haversineKm(a3, b5) / EARTH_RADIUS_KM;
+  const out = [];
+  for (let i5 = 0; i5 <= points; i5++) {
+    if (d4 === 0) {
+      out.push({ lat: a3.lat, lng: a3.lng });
+      continue;
+    }
+    const f3 = i5 / points;
+    const A3 = Math.sin((1 - f3) * d4) / Math.sin(d4);
+    const B3 = Math.sin(f3 * d4) / Math.sin(d4);
+    const x7 = A3 * Math.cos(\u03C61) * Math.cos(\u03BB1) + B3 * Math.cos(\u03C62) * Math.cos(\u03BB2);
+    const y7 = A3 * Math.cos(\u03C61) * Math.sin(\u03BB1) + B3 * Math.cos(\u03C62) * Math.sin(\u03BB2);
+    const z4 = A3 * Math.sin(\u03C61) + B3 * Math.sin(\u03C62);
+    out.push({ lat: toDeg(Math.atan2(z4, Math.sqrt(x7 * x7 + y7 * y7))), lng: toDeg(Math.atan2(y7, x7)) });
+  }
+  return out;
+}
+function makeSyntheticLeg(from2, to, mode) {
+  const speedKmh = (mode || "").toUpperCase() === "BOAT" ? BOAT_SPEED_KMH : FLIGHT_SPEED_KMH;
+  const durationSec = haversineKm(from2, to) / speedKmh * 3600;
+  return {
+    mode: mode.toUpperCase(),
+    from: from2,
+    to,
+    durationSec,
+    steps: [{ path: greatCirclePath(from2, to), durationSec }]
+  };
+}
+function modeEmoji(mode) {
+  switch ((mode ?? "").toUpperCase()) {
+    case "FLIGHT":
+      return "\u2708\uFE0F";
+    case "BOAT":
+      return "\u{1F6A2}";
+    case "WALKING":
+      return "\u{1F6B6}";
+    case "BICYCLING":
+      return "\u{1F6B2}";
+    case "TRANSIT":
+      return "\u{1F68C}";
+    case "DRIVING":
+      return "\u{1F697}";
+    default:
+      return "\u{1F4CD}";
+  }
+}
+function positionAlongLeg(leg, t4) {
+  if (leg.steps.length === 0) return null;
+  const currentInSecond = t4 * leg.durationSec;
+  let acc = 0;
+  for (const step3 of leg.steps) {
+    if (currentInSecond <= acc + step3.durationSec) {
+      const stepElapsed = currentInSecond - acc;
+      const stepProgress = step3.durationSec > 0 ? stepElapsed / step3.durationSec : 0;
+      const idx = Math.min(
+        Math.max(0, Math.floor(stepProgress * step3.path.length)),
+        step3.path.length - 1
+      );
+      return step3.path[idx] ?? null;
+    }
+    acc += step3.durationSec;
+  }
+  const last4 = leg.steps[leg.steps.length - 1];
+  return last4.path[last4.path.length - 1] ?? null;
+}
+function routePositionAtLegs(legs, actionDuration, seconds2) {
+  if (legs.length === 0) return null;
+  const total = legs.reduce((s3, l5) => s3 + l5.durationSec, 0);
+  const currentInSecond = seconds2 * (total / Math.max(actionDuration, 0.1));
+  let acc = 0;
+  for (const leg of legs) {
+    if (currentInSecond <= acc + leg.durationSec) {
+      const t4 = leg.durationSec > 0 ? Math.min(Math.max((currentInSecond - acc) / leg.durationSec, 0), 1) : 0;
+      const pos2 = positionAlongLeg(leg, t4);
+      return pos2 ? { ...pos2, mode: leg.mode } : null;
+    }
+    acc += leg.durationSec;
+  }
+  const last4 = legs[legs.length - 1];
+  const pos = positionAlongLeg(last4, 1);
+  return pos ? { ...pos, mode: last4.mode } : null;
+}
+
 // src/types/Map.tsx
 var import_jsx_runtime89 = __toESM(require_jsx_runtime(), 1);
 function resolveApiKey(stream3) {
@@ -242499,12 +242603,14 @@ function RouteMap({
       onTilesLoaded,
       style: { width: "100%", height: "100%", position: "absolute" },
       children: /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(
-        RouteWithMarker,
+        RouteWithMarkerLegs,
         {
           waypoints,
           travelMode: stream3.travelMode ?? "DRIVING",
           markerEmoji: stream3.routeMarker ?? "\u{1F697}",
-          actionDuration: end2 - start4
+          actionDuration: end2 - start4,
+          routeColor: stream3.routeColor ?? "#4285F4",
+          routeWeight: stream3.routeWeight ?? 4
         }
       )
     }
@@ -242717,6 +242823,90 @@ function StreetViewLeaf({
     }
   );
 }
+function WaypointMarkers({
+  waypoints
+}) {
+  return /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(import_jsx_runtime89.Fragment, { children: waypoints.map((wp, i5) => /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(AdvancedMarker, { position: wp, children: wp.media ? /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(
+    "div",
+    {
+      style: {
+        width: 44,
+        height: 44,
+        borderRadius: 6,
+        overflow: "hidden",
+        border: "2px solid #fff",
+        boxShadow: "0 1px 4px rgba(0,0,0,0.45)",
+        background: "#fff",
+        position: "relative",
+        top: "-24px"
+      },
+      children: /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(
+        "img",
+        {
+          src: wp.media,
+          alt: "",
+          style: { width: "100%", height: "100%", objectFit: "cover", display: "block" }
+        }
+      )
+    }
+  ) : wp.label ? /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(
+    "div",
+    {
+      style: {
+        background: "rgba(255,255,255,0.9)",
+        borderRadius: "4px",
+        padding: "2px 6px",
+        fontSize: "12px",
+        fontWeight: 700,
+        color: "#333",
+        whiteSpace: "nowrap",
+        position: "relative",
+        top: "-24px"
+      },
+      children: wp.label
+    }
+  ) : null }, i5)) });
+}
+function TravelingMarker({
+  position: position7,
+  glyph
+}) {
+  if (!position7) return null;
+  return /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(AdvancedMarker, { position: position7, children: /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(Pin, { glyphText: glyph, scale: 4 }) });
+}
+function RoutePolylines({
+  legs,
+  routeColor,
+  routeWeight
+}) {
+  const map9 = useMap();
+  import_react128.default.useEffect(() => {
+    if (!map9) return;
+    const created = legs.map((leg) => {
+      const path5 = leg.steps.flatMap((s3) => s3.path);
+      const synthetic = isSyntheticMode(leg.mode);
+      const color3 = synthetic ? leg.mode.toUpperCase() === "BOAT" ? "#00ACC1" : "#FBBC04" : routeColor;
+      const opts = {
+        map: map9,
+        path: path5,
+        strokeColor: color3,
+        strokeWeight: synthetic ? Math.max(3, routeWeight - 1) : routeWeight,
+        strokeOpacity: 0.95,
+        zIndex: 1
+      };
+      if (synthetic) {
+        opts.icons = [{
+          icon: { path: "M 0 -1 0 1", strokeColor: color3, strokeWeight: 2, scale: 2 },
+          offset: "0",
+          repeat: "12px"
+        }];
+      }
+      return new google.maps.Polyline(opts);
+    });
+    return () => created.forEach((p4) => p4.setMap(null));
+  }, [map9, legs, routeColor, routeWeight]);
+  return null;
+}
 function RouteWithMarker({
   waypoints,
   travelMode,
@@ -242726,48 +242916,87 @@ function RouteWithMarker({
   const leg = useRouteLeg(waypoints, travelMode);
   const position7 = useAnimatedPosition({ leg, actionDuration, waypoints });
   return /* @__PURE__ */ (0, import_jsx_runtime89.jsxs)(import_jsx_runtime89.Fragment, { children: [
-    waypoints.map((wp, i5) => /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(AdvancedMarker, { position: wp, children: wp.media ? /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(
-      "div",
-      {
-        style: {
-          width: 44,
-          height: 44,
-          borderRadius: 6,
-          overflow: "hidden",
-          border: "2px solid #fff",
-          boxShadow: "0 1px 4px rgba(0,0,0,0.45)",
-          background: "#fff",
-          position: "relative",
-          top: "-24px"
-        },
-        children: /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(
-          "img",
-          {
-            src: wp.media,
-            alt: "",
-            style: { width: "100%", height: "100%", objectFit: "cover", display: "block" }
-          }
-        )
-      }
-    ) : wp.label ? /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(
-      "div",
-      {
-        style: {
-          background: "rgba(255,255,255,0.9)",
-          borderRadius: "4px",
-          padding: "2px 6px",
-          fontSize: "12px",
-          fontWeight: 700,
-          color: "#333",
-          whiteSpace: "nowrap",
-          position: "relative",
-          top: "-24px"
-        },
-        children: wp.label
-      }
-    ) : null }, i5)),
-    position7 ? /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(AdvancedMarker, { position: position7, children: /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(Pin, { glyphText: markerEmoji, scale: 4 }) }) : null
+    /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(WaypointMarkers, { waypoints }),
+    /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(TravelingMarker, { position: position7, glyph: markerEmoji })
   ] });
+}
+function RouteWithMarkerLegs({
+  waypoints,
+  travelMode,
+  markerEmoji,
+  actionDuration,
+  routeColor,
+  routeWeight
+}) {
+  const legs = useRouteLegs(waypoints, travelMode);
+  const position7 = useAnimatedPositionLegs({ legs, actionDuration });
+  const glyph = position7 ? modeEmoji(position7.mode) : markerEmoji;
+  return /* @__PURE__ */ (0, import_jsx_runtime89.jsxs)(import_jsx_runtime89.Fragment, { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(RoutePolylines, { legs, routeColor, routeWeight }),
+    /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(WaypointMarkers, { waypoints }),
+    /* @__PURE__ */ (0, import_jsx_runtime89.jsx)(TravelingMarker, { position: position7, glyph })
+  ] });
+}
+function useRouteLegs(waypoints, travelMode) {
+  const map9 = useMap();
+  const routesLibrary = useMapsLibrary("routes");
+  const [legs, setLegs] = import_react128.default.useState([]);
+  const handle2 = import_react128.default.useRef(null);
+  import_react128.default.useEffect(() => {
+    if (!routesLibrary || !map9 || waypoints.length < 2) return;
+    let active = true;
+    const renderHandle = delayRender("Loading map directions...");
+    handle2.current = renderHandle;
+    const service = new routesLibrary.DirectionsService();
+    Promise.all(
+      waypoints.slice(0, -1).map((wp, i5) => {
+        const to = waypoints[i5 + 1];
+        const mode = (wp.mode ?? travelMode).toUpperCase();
+        if (isSyntheticMode(mode)) {
+          return Promise.resolve(makeSyntheticLeg(wp, to, mode));
+        }
+        return service.route({
+          origin: wp,
+          destination: to,
+          travelMode: google.maps.TravelMode[mode] ?? google.maps.TravelMode.DRIVING,
+          provideRouteAlternatives: false
+        }).then((response) => {
+          const leg = response.routes[0]?.legs[0];
+          if (!leg) return null;
+          const steps = (leg.steps ?? []).map((s3) => ({
+            path: (s3.path ?? []).map((p4) => ({ lat: p4.lat(), lng: p4.lng() })),
+            durationSec: s3.duration?.value ?? 1
+          }));
+          return {
+            mode,
+            from: wp,
+            to,
+            durationSec: leg.duration?.value ?? (steps.reduce((sum2, st2) => sum2 + st2.durationSec, 0) || 1),
+            steps
+          };
+        }).catch(() => null);
+      })
+    ).then((resolved) => {
+      if (!active) return;
+      setLegs(resolved.filter((l5) => l5 !== null));
+      if (handle2.current !== null) continueRender(handle2.current);
+    });
+    return () => {
+      active = false;
+    };
+  }, [routesLibrary, map9, waypoints, travelMode]);
+  return legs;
+}
+function useAnimatedPositionLegs({
+  legs,
+  actionDuration
+}) {
+  const frame2 = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  return import_react128.default.useMemo(
+    () => routePositionAtLegs(legs, actionDuration, frame2 / fps),
+    [legs, frame2, fps, actionDuration]
+  );
 }
 function useRouteLeg(waypoints, travelMode) {
   const map9 = useMap();
@@ -242842,14 +243071,14 @@ function routePositionAt(leg, waypoints, actionDuration, seconds2) {
   return { lat: pt.lat(), lng: pt.lng() };
 }
 function bearing(a3, b5) {
-  const toRad = (d4) => d4 * Math.PI / 180;
-  const toDeg = (d4) => d4 * 180 / Math.PI;
-  const lat1 = toRad(a3.lat);
-  const lat2 = toRad(b5.lat);
-  const dLng = toRad(b5.lng - a3.lng);
+  const toRad2 = (d4) => d4 * Math.PI / 180;
+  const toDeg2 = (d4) => d4 * 180 / Math.PI;
+  const lat1 = toRad2(a3.lat);
+  const lat2 = toRad2(b5.lat);
+  const dLng = toRad2(b5.lng - a3.lng);
   const y7 = Math.sin(dLng) * Math.cos(lat2);
   const x7 = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
-  return (toDeg(Math.atan2(y7, x7)) + 360) % 360;
+  return (toDeg2(Math.atan2(y7, x7)) + 360) % 360;
 }
 function getCurrentStep(leg, currentInSecond) {
   let elapsedInSeconds = 0;
@@ -258065,7 +258294,8 @@ var mapWaypoint = external_exports.object({
   lat: external_exports.number(),
   lng: external_exports.number(),
   label: external_exports.string().optional(),
-  media: external_exports.string().optional().describe("image/video src for waypoint marker")
+  media: external_exports.string().optional().describe("image/video src for waypoint marker"),
+  mode: external_exports.enum(["DRIVING", "WALKING", "BICYCLING", "TRANSIT", "FLIGHT", "BOAT"]).optional().describe("travel mode for the leg FROM this waypoint to the next; defaults to map travelMode")
 });
 var tweenSpec = external_exports.object({
   __tween: external_exports.array(external_exports.union([external_exports.number(), external_exports.string()]))

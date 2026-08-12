@@ -9956,14 +9956,22 @@ function parseWaypoints(raw) {
     const bits = splitTokens(part.replace(/,/g, " "));
     const lat = Number(bits[0] ?? 0);
     const lng = Number(bits[1] ?? 0);
-    const labelRaw = bits[2];
-    const labelRawUq = labelRaw ? unquote(labelRaw) : void 0;
-    const label = labelRawUq ? labelRawUq : void 0;
-    const mediaRaw = bits[3];
-    const media = mediaRaw ? unquote(mediaRaw) : void 0;
-    return { lat, lng, label, media };
+    let mode;
+    const values = [];
+    for (const tok of bits.slice(2)) {
+      const value2 = unquote(tok);
+      if (!isQuoted(tok) && value2 && KNOWN_TRAVEL_MODES.has(value2.toUpperCase())) {
+        mode = value2.toUpperCase();
+        continue;
+      }
+      values.push(value2);
+    }
+    const label = values[0] || void 0;
+    const media = values[1] || void 0;
+    return { lat, lng, label, media, mode };
   });
 }
+var KNOWN_TRAVEL_MODES = /* @__PURE__ */ new Set(["DRIVING", "WALKING", "BICYCLING", "TRANSIT", "FLIGHT", "BOAT"]);
 function rewriteTweenExprs(s) {
   return s.replace(
     /tween\(\s*([^,()]+?)\s*,\s*([^,()]+?)\s*(?:,\s*([^()]+?))?\s*\)/g,

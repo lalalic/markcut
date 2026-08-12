@@ -955,6 +955,38 @@ layout:parallel
   });
 });
 
+// ── Map Multi-Leg Travel Modes ─────────────────────────────────────────────
+
+describe("map multi-leg travel modes (per-waypoint)", () => {
+  const md = `
+# video
+width:640 height:480 fps:30 layout:series
+
+## Trip
+layout:parallel
+- map view:route duration:12 travelMode:DRIVING
+  waypoints:[37.8199,-122.4783,"SFO",FLIGHT; 33.94,-118.41,"LAX",BOAT; 33.75,-118.28,"Long Beach",WALKING; 33.77,-118.19,"Promenade",DRIVING; 33.94,-118.41,"LAX"]
+`;
+
+  it("parses a per-waypoint travel mode as the 5th field", () => {
+    const parsed = parseMarkdownDescriptive(md);
+    const map = (parsed.children as any[])[0].children.find((c: any) => c.type === "map");
+    expect(map.waypoints.map((w: any) => w.mode)).toEqual([
+      "FLIGHT", "BOAT", "WALKING", "DRIVING", undefined,
+    ]);
+    expect(map.waypoints[0].media).toBeUndefined();
+    expect(map.waypoints[0].label).toBe("SFO");
+  });
+
+  it("compiles waypoint modes into the stream tree", () => {
+    const compiled = compileDescriptiveRoot(parseMarkdownDescriptive(md));
+    const map = (compiled.children as any[])[0].children.find((c: any) => c.type === "map");
+    expect(map.waypoints.map((w: any) => w.mode)).toEqual([
+      "FLIGHT", "BOAT", "WALKING", "DRIVING", undefined,
+    ]);
+  });
+});
+
 // ── Helper ────────────────────────────────────────────────────────────────
 
 function findComponents(node: any): any[] {
