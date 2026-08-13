@@ -224446,6 +224446,19 @@ function MapChildRender({ child }) {
   if (!Renderer) return null;
   return import_react128.default.createElement(Renderer, { stream: child });
 }
+function hideGoogleMapsUi() {
+  if (googleMapsUiHidden || typeof document === "undefined") return;
+  googleMapsUiHidden = true;
+  const style4 = document.createElement("style");
+  style4.textContent = [
+    // Attribution / copyright blocks: "Map data ©Google", "Keyboard shortcuts",
+    // "Terms", "Report a map error" / "Report a problem".
+    ".gm-style-cc { display: none !important; }",
+    // Google logo link ("Google" in the bottom-left).
+    '.gm-style a[href*="maps.google.com/maps"] { display: none !important; }'
+  ].join("\n");
+  document.head.appendChild(style4);
+}
 function MapLeaf({ stream: stream3 }) {
   const [mapInstance, setMapInstance] = import_react128.default.useState(null);
   const { fps } = useVideoConfig();
@@ -224465,6 +224478,7 @@ function MapLeaf({ stream: stream3 }) {
   const mapLoadHandleRef = import_react128.default.useRef(null);
   const mapLoadContinuedRef = import_react128.default.useRef(false);
   import_react128.default.useEffect(() => {
+    hideGoogleMapsUi();
     mapLoadHandleRef.current = delayRender("Waiting for map to load...");
     mapLoadContinuedRef.current = false;
     const fallbackTimer = window.setTimeout(() => {
@@ -224753,10 +224767,20 @@ function StreetViewLeaf({
     if (waitHandleRef.current != null) return;
     waitHandleRef.current = delayRender("Street View pano");
     waitPollRef.current = setInterval(() => {
-      if (statusOk()) {
-        const p4 = panoRef.current;
-        lastGoodPanoRef.current = p4 && typeof p4.getPano === "function" ? p4.getPano() : null;
-        loadedRef.current = true;
+      if (!statusOk()) return;
+      const p4 = panoRef.current;
+      const panoId = p4 && typeof p4.getPano === "function" ? p4.getPano() : null;
+      const isNewPano = panoId !== lastGoodPanoRef.current;
+      lastGoodPanoRef.current = panoId;
+      loadedRef.current = true;
+      if (isNewPano) {
+        clearInterval(waitPollRef.current ?? void 0);
+        waitPollRef.current = null;
+        waitCapRef.current = setTimeout(() => {
+          finishWait();
+          onPanoReady();
+        }, 1200);
+      } else {
         finishWait();
         onPanoReady();
       }
@@ -224812,7 +224836,6 @@ function StreetViewLeaf({
     }
     const onStatus = () => {
       if (typeof pan2.getStatus === "function" && pan2.getStatus() === google.maps.StreetViewStatus.OK) {
-        lastGoodPanoRef.current = typeof pan2.getPano === "function" ? pan2.getPano() : null;
         loadedRef.current = true;
       }
     };
@@ -225149,7 +225172,7 @@ function getCurrentStep(leg, currentInSecond) {
   }
   return { step: null, elapsedInSeconds: 0 };
 }
-var import_react128, import_jsx_runtime90, MapRefContext, PROJECTION_TILE, LeafRenderers;
+var import_react128, import_jsx_runtime90, MapRefContext, PROJECTION_TILE, LeafRenderers, googleMapsUiHidden;
 var init_Map2 = __esm({
   "src/types/Map.tsx"() {
     "use strict";
@@ -225164,6 +225187,7 @@ var init_Map2 = __esm({
     } });
     PROJECTION_TILE = 256;
     LeafRenderers = {};
+    googleMapsUiHidden = false;
   }
 });
 

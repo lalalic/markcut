@@ -282,6 +282,27 @@ function MapChildRender({ child }: { child: Stream }): React.ReactElement | null
 }
 
 // ============================================================
+// Hide Google Maps attribution / UI text (Google logo, "Keyboard
+// shortcuts", "Terms", "Report a map error", "Map data ©...") from the
+// rendered output. Both the 2D map and Street View share the `.gm-style`
+// DOM, so two rules cover every view. Injected once, globally.
+// ============================================================
+let googleMapsUiHidden = false;
+function hideGoogleMapsUi(): void {
+  if (googleMapsUiHidden || typeof document === "undefined") return;
+  googleMapsUiHidden = true;
+  const style = document.createElement("style");
+  style.textContent = [
+    // Attribution / copyright blocks: "Map data ©Google", "Keyboard shortcuts",
+    // "Terms", "Report a map error" / "Report a problem".
+    ".gm-style-cc { display: none !important; }",
+    // Google logo link ("Google" in the bottom-left).
+    '.gm-style a[href*="maps.google.com/maps"] { display: none !important; }',
+  ].join("\n");
+  document.head.appendChild(style);
+}
+
+// ============================================================
 // MapLeaf — entry point, dispatches to the view renderer
 // ============================================================
 export function MapLeaf({ stream }: { stream: MapStream }) {
@@ -306,6 +327,9 @@ export function MapLeaf({ stream }: { stream: MapStream }) {
   const mapLoadContinuedRef = React.useRef(false);
 
   React.useEffect(() => {
+    // Strip Google Maps attribution / UI text from the rendered video.
+    hideGoogleMapsUi();
+
     mapLoadHandleRef.current = delayRender("Waiting for map to load...");
     mapLoadContinuedRef.current = false;
 
@@ -649,10 +673,23 @@ function StreetViewLeaf({
     if (waitHandleRef.current != null) return; // already waiting
     waitHandleRef.current = delayRender("Street View pano");
     waitPollRef.current = setInterval(() => {
-      if (statusOk()) {
-        const p = panoRef.current;
-        lastGoodPanoRef.current = p && typeof p.getPano === "function" ? p.getPano() : null;
-        loadedRef.current = true;
+      if (!statusOk()) return;
+      const p = panoRef.current;
+      const panoId = p && typeof p.getPano === "function" ? p.getPano() : null;
+      // Status OK = imagery metadata ready, but the TILES may not have painted
+      // yet. When a NEW panorama just became OK, wait a grace for tiles; if the
+      // same (already painted) panorama is OK, finish immediately.
+      const isNewPano = panoId !== lastGoodPanoRef.current;
+      lastGoodPanoRef.current = panoId;
+      loadedRef.current = true;
+      if (isNewPano) {
+        clearInterval(waitPollRef.current ?? undefined);
+        waitPollRef.current = null;
+        waitCapRef.current = setTimeout(() => {
+          finishWait();
+          onPanoReady();
+        }, 1200);
+      } else {
         finishWait();
         onPanoReady();
       }
@@ -715,10 +752,10 @@ function StreetViewLeaf({
     if (typeof sv?.zoom === "number") {
       pan.setZoom(sv.zoom);
     }
-    // Keep lastGood fresh whenever the API reports OK (async, never races).
+    // Keep loadedRef fresh whenever the API reports OK (the persistent wait's
+    // poll owns lastGoodPanoRef so it can detect when a NEW pano just loaded).
     const onStatus = () => {
       if (typeof pan.getStatus === "function" && pan.getStatus() === google.maps.StreetViewStatus.OK) {
-        lastGoodPanoRef.current = typeof pan.getPano === "function" ? pan.getPano() : null;
         loadedRef.current = true;
       }
     };
