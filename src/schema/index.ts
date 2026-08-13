@@ -42,6 +42,7 @@ const BaseShape = {
   endAt: z.number().min(0).optional().describe("trim seconds at source end (video/audio)"),
   durationInSeconds: z.number().optional().describe("set by engine; do not edit by hand"),
   on: eventSpec.optional().describe("event that fires at a specific frame, mutating registered component state"),
+  at: z.string().optional().describe("when child of a map: waypoint label to anchor at (renderer positions at that waypoint's screen pixel)"),
 };
 
 export const base = z.object(BaseShape);
@@ -291,6 +292,7 @@ export const mapStream = base.extend({
   cinematic: mapCinematic.optional().describe("cinematic camera behavior"),
   streetView: mapStreetView.optional().describe("immersive street view config"),
   googleMapsApiKey: z.string().optional().describe("injected by compiler from GOOGLE_MAPS_API_KEY env var"),
+  children: z.array(z.lazy((): z.ZodTypeAny => stream)).default(() => []).describe("overlay children rendered on top of the map; use at:\"Label\" to anchor at a waypoint"),
 });
 export type MapStream = z.infer<typeof mapStream>;
 

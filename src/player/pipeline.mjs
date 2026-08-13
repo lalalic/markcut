@@ -243,6 +243,7 @@ function wrapWithEffects(node2, result, parentKind) {
       start: isOutermost && isBgNoEnd ? innerStream.start : effStart,
       end: isOutermost && isBgNoEnd ? void 0 : effEnd,
       visible: innerStream.visible ?? true,
+      at: node2.at,
       ...pickOn(node2)
     };
   }
@@ -261,6 +262,7 @@ function compileLeaf(node2, ctx, parentKind) {
     style: node2.style,
     visible: node2.visible ?? true,
     isBackground: node2.isBackground,
+    at: node2.at,
     start: isBgNoOwnTiming ? typeof node2.start === "number" ? node2.start : void 0 : start,
     end,
     startFrom: isBgNoOwnTiming ? void 0 : node2.type === "video" || node2.type === "audio" ? node2.startFrom : void 0,
@@ -375,7 +377,7 @@ function compileChildren(children, ctx, parentKind) {
     } else if (isRhythm(child)) {
       result = compileRhythm(child, ctx, parentKind);
     } else if (isMap(child)) {
-      result = compileLeaf(child, ctx, parentKind);
+      result = compileMap(child, ctx, parentKind);
     } else {
       result = compileLeaf(child, ctx, parentKind);
     }
@@ -525,6 +527,44 @@ function compileRhythm(node2, ctx, parentKind) {
     ...pickOn(node2)
   };
   return { stream, duration: end };
+}
+function compileMap(node2, ctx, parentKind) {
+  const id = node2.id ?? uid();
+  const start = parentKind === "parallel" ? Math.max(0, node2.start ?? 0) : 0;
+  const ownDuration = deriveLeafDuration(node2, ctx);
+  const end = ownDuration != null ? start + ownDuration : void 0;
+  const children = node2.children ?? [];
+  const compiledChildren = children.length ? compileChildren(children, ctx, "parallel") : [];
+  const maxChildEnd = compiledChildren.reduce((max, c) => Math.max(max, c.duration), 0);
+  const mapDuration = Math.max(end ?? 0, maxChildEnd, ownDuration ?? 0);
+  const stream = {
+    id,
+    type: "map",
+    style: node2.style,
+    visible: node2.visible ?? true,
+    isBackground: node2.isBackground,
+    start,
+    end: mapDuration,
+    durationInSeconds: mapDuration,
+    view: node2.view ?? "route",
+    waypoints: node2.waypoints,
+    routeColor: node2.routeColor ?? "#4285F4",
+    routeWeight: node2.routeWeight ?? 4,
+    zoom: node2.zoom ?? 10,
+    center: node2.center,
+    mapType: node2.mapType ?? "roadmap",
+    language: node2.language,
+    region: node2.region,
+    travelMode: node2.travelMode ?? "DRIVING",
+    routeMarker: node2.routeMarker ?? "\u{1F697}",
+    camera: node2.camera,
+    cinematic: node2.cinematic,
+    streetView: node2.streetView,
+    googleMapsApiKey: ctx.googleMapsApiKey,
+    children: compiledChildren.map((c) => c.stream),
+    ...pickOn(node2)
+  };
+  return { stream, duration: mapDuration };
 }
 function compileContainer(node2, ctx, parentKind) {
   const id = node2.id ?? uid();
@@ -1035,6 +1075,114 @@ var require_format = __commonJS({
         return result;
       }
     })();
+  }
+});
+
+// src/utils/route-legs.ts
+function haversineKm(a, b) {
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * EARTH_RADIUS_KM * Math.asin(Math.sqrt(h));
+}
+function greatCirclePath(a, b, points = 64) {
+  const \u03C61 = toRad(a.lat);
+  const \u03BB1 = toRad(a.lng);
+  const \u03C62 = toRad(b.lat);
+  const \u03BB2 = toRad(b.lng);
+  const d = haversineKm(a, b) / EARTH_RADIUS_KM;
+  const out = [];
+  for (let i = 0; i <= points; i++) {
+    if (d === 0) {
+      out.push({ lat: a.lat, lng: a.lng });
+      continue;
+    }
+    const f = i / points;
+    const A = Math.sin((1 - f) * d) / Math.sin(d);
+    const B = Math.sin(f * d) / Math.sin(d);
+    const x = A * Math.cos(\u03C61) * Math.cos(\u03BB1) + B * Math.cos(\u03C62) * Math.cos(\u03BB2);
+    const y = A * Math.cos(\u03C61) * Math.sin(\u03BB1) + B * Math.cos(\u03C62) * Math.sin(\u03BB2);
+    const z = A * Math.sin(\u03C61) + B * Math.sin(\u03C62);
+    out.push({ lat: toDeg(Math.atan2(z, Math.sqrt(x * x + y * y))), lng: toDeg(Math.atan2(y, x)) });
+  }
+  return out;
+}
+function makeSyntheticLeg(from, to, mode) {
+  const speedKmh = (mode || "").toUpperCase() === "BOAT" ? BOAT_SPEED_KMH : FLIGHT_SPEED_KMH;
+  const durationSec = haversineKm(from, to) / speedKmh * 3600;
+  return {
+    mode: mode.toUpperCase(),
+    from,
+    to,
+    durationSec,
+    steps: [{ path: greatCirclePath(from, to), durationSec }]
+  };
+}
+var FLIGHT_SPEED_KMH, BOAT_SPEED_KMH, EARTH_RADIUS_KM, toRad, toDeg;
+var init_route_legs = __esm({
+  "src/utils/route-legs.ts"() {
+    "use strict";
+    FLIGHT_SPEED_KMH = 850;
+    BOAT_SPEED_KMH = 40;
+    EARTH_RADIUS_KM = 6371;
+    toRad = (d) => d * Math.PI / 180;
+    toDeg = (d) => d * 180 / Math.PI;
+  }
+});
+
+// src/utils/directions.ts
+var directions_exports = {};
+__export(directions_exports, {
+  legDurationSec: () => legDurationSec,
+  routeLegTimings: () => routeLegTimings
+});
+function apiKey() {
+  return typeof process !== "undefined" && process.env.GOOGLE_MAPS_API_KEY || "";
+}
+async function legDurationSec(from, to, mode, key = apiKey()) {
+  const m = (mode || "").toUpperCase();
+  if (!ROAD_MODES.has(m)) {
+    return makeSyntheticLeg(from, to, m).durationSec;
+  }
+  if (!key) {
+    return straightLineSec(from, to);
+  }
+  const url = new URL("https://maps.googleapis.com/maps/api/directions/json");
+  url.searchParams.set("origin", `${from.lat},${from.lng}`);
+  url.searchParams.set("destination", `${to.lat},${to.lng}`);
+  url.searchParams.set("mode", m.toLowerCase());
+  url.searchParams.set("key", key);
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    const dur = data?.routes?.[0]?.legs?.[0]?.duration?.value;
+    if (typeof dur === "number" && dur > 0) return dur;
+    return straightLineSec(from, to);
+  } catch {
+    return straightLineSec(from, to);
+  }
+}
+function straightLineSec(from, to) {
+  return haversineKm(from, to) / 50 * 3600;
+}
+async function routeLegTimings(waypoints, defaultMode = "DRIVING", key = apiKey()) {
+  if (waypoints.length < 2) return [];
+  const out = [];
+  for (let i = 0; i < waypoints.length - 1; i++) {
+    const from = waypoints[i];
+    const to = waypoints[i + 1];
+    const mode = (from.mode ?? defaultMode).toUpperCase();
+    const durationSec = await legDurationSec(from, to, mode, key) ?? 0;
+    out.push({ mode, from, to, durationSec });
+  }
+  return out;
+}
+var ROAD_MODES;
+var init_directions = __esm({
+  "src/utils/directions.ts"() {
+    "use strict";
+    init_route_legs();
+    ROAD_MODES = /* @__PURE__ */ new Set(["DRIVING", "WALKING", "BICYCLING", "TRANSIT"]);
   }
 });
 
@@ -10673,7 +10821,7 @@ function processMDASTListItem(item, parent, lines) {
         Object.assign(node2, attrs);
       }
     } else if (child.type === "list") {
-      if (node2.type === "series" || node2.type === "parallel" || node2.type === "transitionSeries" || node2.type === "effect" || node2.type === "include" || node2.type === "rhythm") {
+      if (node2.type === "series" || node2.type === "parallel" || node2.type === "transitionSeries" || node2.type === "effect" || node2.type === "include" || node2.type === "rhythm" || node2.type === "map") {
         for (const subItem of child.children) {
           processMDASTListItem(subItem, node2, lines);
         }
@@ -10968,13 +11116,15 @@ async function resolveScripts(root, options) {
   const clone = JSON.parse(JSON.stringify(root));
   mkdirSync2(options.outputDir, { recursive: true });
   const allScriptNodes = [];
-  walkDown(clone, (node2) => {
-    if (node2.type !== "audio") return;
-    if (!node2.script || typeof node2.script !== "string") return;
-    if (node2.src) return;
-    const id = node2.id ?? `audio-${allScriptNodes.length}`;
-    allScriptNodes.push({ node: node2, id });
-  });
+  const collect = (node2, inherited) => {
+    const ttsOverride = typeof node2.tts === "string" && node2.tts.length > 0 ? node2.tts : inherited;
+    if (node2.type === "audio" && node2.script && typeof node2.script === "string" && !node2.src) {
+      const id = node2.id ?? `audio-${allScriptNodes.length}`;
+      allScriptNodes.push({ node: node2, id, ttsOverride });
+    }
+    for (const c of node2.children ?? []) collect(c, ttsOverride);
+  };
+  collect(clone);
   const totalScripts = allScriptNodes.length;
   let scriptsDone = 0;
   let cacheHits = 0;
@@ -10982,9 +11132,9 @@ async function resolveScripts(root, options) {
   if (totalScripts > 0) {
     console.log(`  \u{1F50A} TTS: generating ${totalScripts} script${totalScripts > 1 ? "s" : ""}...`);
   }
-  for (const { node: node2, id } of allScriptNodes) {
+  for (const { node: node2, id, ttsOverride } of allScriptNodes) {
     scriptsDone++;
-    let ttsCli = clone.tts ?? options.ttsCli ?? DEFAULT_TTS_CLI;
+    let ttsCli = ttsOverride ?? options.ttsCli ?? DEFAULT_TTS_CLI;
     if (node2.speaker && clone.voices) {
       const speakerVoice = clone.voices[node2.speaker];
       if (speakerVoice) {
@@ -11449,8 +11599,88 @@ async function resolveAll2(root, options) {
       mergedOutputDir: options.subtitleOutputDir
     });
   }
+  result = await resolveRouteStops(result);
   result = relativizeAssetsUnder(result, options.baseDir);
   return result;
+}
+var DEFAULT_CHILD_SECONDS = 3;
+var DEFAULT_MAP_DRIVE_SECONDS = 10;
+async function resolveRouteStops(root) {
+  const { routeLegTimings: routeLegTimings2 } = await Promise.resolve().then(() => (init_directions(), directions_exports));
+  async function resolveMap(node2) {
+    if (!node2 || typeof node2 !== "object") return;
+    if (Array.isArray(node2)) {
+      for (const n of node2) await resolveMap(n);
+      return;
+    }
+    if (node2.type === "map" && Array.isArray(node2.children) && node2.children.length) {
+      const children = node2.children;
+      const anchored = children.filter((c) => c && c.at);
+      if (anchored.length) {
+        await timeMapChildren(node2, anchored, routeLegTimings2);
+      }
+    }
+    for (const child of node2.children ?? []) await resolveMap(child);
+  }
+  await resolveMap(root.children);
+  return root;
+}
+async function timeMapChildren(map, anchored, routeLegTimings2) {
+  const waypoints = map.waypoints ?? [];
+  if (waypoints.length < 2) return;
+  const legs = await routeLegTimings2(waypoints, map.travelMode ?? "DRIVING");
+  const totalDrive = legs.reduce((s, l) => s + (l.durationSec || 0), 0);
+  if (totalDrive <= 0) return;
+  const childDuration = (c) => typeof c.duration === "number" && c.duration > 0 ? c.duration : DEFAULT_CHILD_SECONDS;
+  const dwellAt = /* @__PURE__ */ new Map();
+  for (const c of anchored) {
+    const d = childDuration(c);
+    dwellAt.set(c.at, Math.max(dwellAt.get(c.at) ?? 0, d));
+  }
+  const totalDwell = [...dwellAt.values()].reduce((s, d) => s + d, 0);
+  const hasOwnDur = typeof map.duration === "number" || typeof map.endAt === "number";
+  const totalDwellBudget = Math.max(0, map.duration ?? map.endAt ?? DEFAULT_MAP_DRIVE_SECONDS);
+  const mapDur = hasOwnDur ? map.duration ?? map.endAt ?? totalDwellBudget + totalDwell : totalDwellBudget + totalDwell;
+  const driveBudget = Math.max(0.1, mapDur - totalDwell);
+  const scale = driveBudget / totalDrive;
+  const arrivalAt = /* @__PURE__ */ new Map();
+  const wp0 = waypoints[0];
+  arrivalAt.set(wp0.label ?? String(wp0.lat) + "," + String(wp0.lng), 0);
+  let cumDrive = 0;
+  let cumDwells = 0;
+  for (let i = 0; i < legs.length; i++) {
+    cumDrive += legs[i].durationSec || 0;
+    const wp = waypoints[i + 1];
+    const arrival = cumDrive * scale + cumDwells;
+    arrivalAt.set(wp.label ?? String(wp.lat) + "," + String(wp.lng), arrival);
+    if (dwellAt.has(wp.label)) cumDwells += dwellAt.get(wp.label);
+  }
+  const schedule = [];
+  for (const c of anchored) {
+    const arrival = arrivalAt.get(c.at);
+    if (arrival == null) {
+      console.warn(`  \u26A0 map child at:"${c.at}" \u2014 no waypoint with that label; renders full-screen`);
+      continue;
+    }
+    if (typeof c.start === "number") {
+      schedule.push(`  \u{1F6D1} ${c.at}: manual ${c.start.toFixed(1)}s (unchanged)`);
+      continue;
+    }
+    const dur = childDuration(c);
+    c.start = arrival;
+    c.end = arrival + dur;
+    schedule.push(`  \u{1F6D1} ${c.at}: ${arrival.toFixed(1)}s \u2192 ${(arrival + dur).toFixed(1)}s (${dur.toFixed(1)}s)`);
+  }
+  if (schedule.length) {
+    console.log(`  \u{1F5FA} route stops (${mapDur.toFixed(1)}s total):`);
+    for (const line of schedule) console.log(line);
+  }
+  if (!hasOwnDur) {
+    map.duration = mapDur;
+  } else if ((map.duration ?? 0) < mapDur) {
+    map.duration = mapDur;
+    console.log(`  \u{1F5FA} extended map duration \u2192 ${mapDur.toFixed(1)}s (drives + dwells)`);
+  }
 }
 
 // src/player/pipeline.ts

@@ -17,9 +17,12 @@ import type { Effect as EffectStream } from "../schema/index";
 export function EffectWrapper({
   stream,
   children,
+  contained,
 }: {
   stream: EffectStream;
   children: React.ReactNode;
+  /** Fill the parent box instead of the whole canvas (map overlay children). */
+  contained?: boolean;
 }) {
   const frame = useCurrentFrame();
   const { fps, width, height } = useVideoConfig();
@@ -78,7 +81,15 @@ export function EffectWrapper({
 
   return (
     <div
-      style={Object.assign({ width, height, position: "absolute" as const, inset: 0 }, ...styles)}
+      style={Object.assign(
+        {
+          width: contained ? "100%" : width,
+          height: contained ? "100%" : height,
+          position: "absolute" as const,
+          inset: 0,
+        },
+        ...styles,
+      )}
       className="effect"
     >
       {children}

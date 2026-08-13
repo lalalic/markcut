@@ -147,7 +147,39 @@ Legs above: SFO→LAX by ✈️, LAX→Long Beach by 🚢, Long Beach→Promenad
 Promenade→LAX by 🚗 (the last waypoint has no outgoing leg, so its mode is
 ignored).
 
-## 6. Discovering spots along a route — `markcut spots`
+## 6. Stops & anchored overlays (the vlog pattern)
+
+The typical vlog: the pin moves leg-to-leg, then **stops at a hotspot** while a
+photo/video/narration plays, then continues. Make other streams **children of
+the map** and anchor them with `at:"WaypointLabel"` — the map renders them at
+that waypoint's screen position (projected from the live map), so a photo
+grows out of the pin's location.
+
+```md
+- map view:route duration:16 travelMode:DRIVING
+  waypoints:[37.81,-122.48,"Golden Gate"; 37.77,-122.42,"Civic Center"; 37.62,-122.38,"SFO"]
+  - image src:gg.jpg at:"Golden Gate" duration:3 effects:[zoomIn]
+  - image src:civic.jpg at:"Civic Center" duration:3 effects:[zoomIn]
+```
+
+- `at:"Label"` anchors the child at the waypoint with that label. The renderer
+  projects the waypoint's lat/lng to its screen pixel each frame and centers
+  the child there — combine with `effects:[zoomIn]` for a "grows out of the
+  pin" reveal.
+- Children **without** `at` render full-screen over the map.
+- **Auto-timing (default)** — give the child a `duration` and *no* `start`; at
+  resolve time the map computes each leg's travel time (Directions REST for
+  road modes, cruise speed for `FLIGHT`/`BOAT`) and schedules the child to
+  start **at the pin's arrival** at that waypoint. The pin pauses (dwells)
+  while the child plays, then resumes. Real drive times are used only for
+  *ratios* — the video length stays the map's `duration`, or a default 10s
+  drive budget + dwells when the map has none, so a 40-minute drive still
+  plays as a short clip with the pin timing proportional to each leg.
+- **Manual timing (opt-out)** — set `start` explicitly and the resolver leaves
+  it untouched (it still contributes to the pin's pause window).
+- The map's own `duration`/`end` defines its span; children run inside it.
+
+## 7. Discovering spots along a route — `markcut spots`
 
 Don't hand-pick coordinates for a route video — **discover** interesting stops
 with the spots CLI. It samples points along a route (Directions API) and ranks
@@ -178,7 +210,7 @@ npx @lalalic/markcut spots --waypoints "37.8199,-122.4783;37.6213,-122.3790" \
 
 ---
 
-## 7. Markdown examples (copy-paste)
+## 8. Markdown examples (copy-paste)
 
 ### 6.1 Simple route clip with narration
 
@@ -230,8 +262,14 @@ layout:parallel
 ## A-Quick-Walk
 layout:parallel
 - script "A short stroll down the block."
-- map view:streetview duration:6 streetView:{route:[{lat:37.7793,lng:-122.4193},{lat:37.7785,lng:-122.4185},{lat:37.7777,lng:-122.4178}], radius:50, pov:{heading:tween(0, 40, easeInOut), pitch:-5}}
+- map view:streetview duration:6 streetView:{route:[{lat:37.7785,lng:-122.4185},{lat:37.7777,lng:-122.4178}], radius:50, pov:{heading:tween(0, 40, easeInOut), pitch:-5}}
 ```
+
+> **Walk = snap between covered waypoints.** A `route` walk holds at each
+> waypoint's panorama and jumps between them (not continuous per-frame
+> movement — that would fire hundreds of Street View requests and get
+> rate-limited into black frames). Every waypoint needs imagery; gaps show the
+> last loaded panorama instead of black.
 
 ### 6.4 Full route-vlog recipe (5 scenes)
 
@@ -265,12 +303,12 @@ layout:parallel
 ## Street-View-Walk
 layout:parallel
 - script "A quick walk down the block."
-- map view:streetview duration:6 streetView:{route:[{lat:37.7793,lng:-122.4193},{lat:37.7785,lng:-122.4185},{lat:37.7777,lng:-122.4178},{lat:37.7769,lng:-122.4170}], radius:50, pov:{heading:tween(0, 40, easeInOut), pitch:-5}}
+- map view:streetview duration:6 streetView:{route:[{lat:37.7785,lng:-122.4185},{lat:37.7777,lng:-122.4178}], radius:50, pov:{heading:tween(0, 40, easeInOut), pitch:-5}}
 ```
 
 ---
 
-## 8. Recipe — build a route/vlog clip
+## 9. Recipe — build a route/vlog clip
 
 1. **Get the route** — endpoints from the user's media/GPS, or two landmarks.
 2. **Discover spots** — `markcut spots --waypoints "lat,lng;lat,lng" --photos --markdown`; pick 2–5 that tell the story.
@@ -280,10 +318,10 @@ layout:parallel
 
 ---
 
-## 9. Tips & pitfalls
+## 10. Tips & pitfalls
 
 - **Map + narration**: put `- map ...` and `- script "..."` as sibling bullets in a `layout:parallel` scene so they play together. If the scene is `series`, narration plays alone first and the map shows nothing while speaking.
-- **Street View coverage is not universal** — a spot may have no panorama. If a `streetview` scene looks dark/empty, pick a nearby well-covered location or use `view:cinematic` instead.
+- **Street View coverage is not universal** — a spot may have no panorama (Google returns "no imagery here"); interpolating between sparse points also crosses uncovered blocks. Pick waypoints you've verified have imagery (open the coords in Google Maps, drag the pegman), keep a `route` walk's waypoints on the same covered street, and set `radius` (meters) so the panorama search is constrained nearby. If a `streetview` scene still looks dark, use `view:cinematic` instead.
 - **Route maps need ≥2 waypoints**; a single point falls back to a plain marker.
 - **Media assets** — photo thumbnails (`waypoint.media`), images, bgm etc. should live in the md file's folder (e.g. `assets/...`). See the asset-path rules in `markdown-descriptive.md` §14 (verify enforces md-folder-relative paths).
 - **Don't set duration from script length** — the resolver computes it from TTS audio.

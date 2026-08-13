@@ -190,6 +190,9 @@ export interface DescriptiveMap extends DescriptiveBaseNode {
       pitch?: DescriptiveTweenable;
     };
   };
+  /** Overlay children rendered on top of the map.
+   *  A child with `at:"Label"` is positioned at that waypoint's screen pixel. */
+  children?: DescriptiveNode[];
 }
 
 export interface DescriptiveContainer extends DescriptiveBaseNode {
@@ -533,6 +536,7 @@ function wrapWithEffects(
       start: isOutermost && isBgNoEnd ? innerStream.start : effStart,
       end: isOutermost && isBgNoEnd ? undefined : effEnd,
       visible: innerStream.visible ?? true,
+      at: (node as any).at,
       ...pickOn(node),
     } as Effect;
   }
@@ -562,6 +566,7 @@ function compileLeaf(node: Exclude<DescriptiveNode, DescriptiveContainer | Descr
     style: node.style,
     visible: node.visible ?? true,
     isBackground: node.isBackground,
+    at: (node as any).at,
     start: isBgNoOwnTiming ? (typeof node.start === "number" ? node.start : undefined) : start,
     end,
     startFrom: isBgNoOwnTiming ? undefined : (node.type === "video" || node.type === "audio" ? node.startFrom : undefined),
@@ -679,7 +684,7 @@ function compileChildren(
       } else if (isRhythm(child)) {
         result = compileRhythm(child, ctx, parentKind);
       } else if (isMap(child)) {
-        result = compileLeaf(child, ctx, parentKind);
+        result = compileMap(child, ctx, parentKind);
       } else {
         result = compileLeaf(child, ctx, parentKind);
       }
@@ -893,6 +898,58 @@ function compileRhythm(
   };
 
   return { stream, duration: end };
+}
+
+function compileMap(
+  node: DescriptiveMap,
+  ctx: CompileContext,
+  parentKind: "series" | "parallel" | "transitionSeries",
+): CompileResult {
+  const id = node.id ?? uid();
+  const start = parentKind === "parallel" ? Math.max(0, node.start ?? 0) : 0;
+  const ownDuration = deriveLeafDuration(node as any, ctx);
+  const end = ownDuration != null ? start + ownDuration : undefined;
+
+  // Compile overlay children (they play in parallel on top of the map).
+  // Children with `at:"Label"` carry it through compilation on their base.
+  const children = node.children ?? [];
+  const compiledChildren = children.length
+    ? compileChildren(children, ctx, "parallel")
+    : [];
+
+  // Map duration covers its own span + any children that extend past it.
+  const maxChildEnd = compiledChildren.reduce((max, c) => Math.max(max, c.duration), 0);
+  const mapDuration = Math.max(end ?? 0, maxChildEnd, ownDuration ?? 0);
+
+  const stream: MapStream = {
+    id,
+    type: "map",
+    style: node.style,
+    visible: node.visible ?? true,
+    isBackground: node.isBackground,
+    start,
+    end: mapDuration,
+    durationInSeconds: mapDuration,
+    view: node.view ?? "route",
+    waypoints: node.waypoints,
+    routeColor: node.routeColor ?? "#4285F4",
+    routeWeight: node.routeWeight ?? 4,
+    zoom: node.zoom ?? 10,
+    center: node.center,
+    mapType: node.mapType ?? "roadmap",
+    language: node.language,
+    region: node.region,
+    travelMode: node.travelMode ?? "DRIVING",
+    routeMarker: node.routeMarker ?? "🚗",
+    camera: node.camera,
+    cinematic: node.cinematic,
+    streetView: node.streetView,
+    googleMapsApiKey: ctx.googleMapsApiKey,
+    children: compiledChildren.map((c) => c.stream),
+    ...pickOn(node),
+  };
+
+  return { stream, duration: mapDuration };
 }
 
 function compileContainer(node: DescriptiveContainer, ctx: CompileContext, parentKind: "series" | "parallel" | "transitionSeries"): CompileResult {

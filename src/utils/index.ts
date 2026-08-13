@@ -104,6 +104,17 @@ export function getDurationInSeconds(stream: DurationStream, update = true): num
     return stream.durationInSeconds ?? 0;
   }
 
+  // Map is a leaf whose overlay children are positioned INSIDE it — its own
+  // base timing (end) defines the duration, not max(child durations).
+  if (stream.type === "map") {
+    const d = leafEnd(stream);
+    if (update) {
+      stream.durationInSeconds = d;
+      for (const child of stream.children ?? []) getDurationInSeconds(child, update);
+    }
+    return d;
+  }
+
   // include: if src is set, treat as leaf (duration from base end).
   // Otherwise fall back to inline children (legacy).
   if (stream.type === "include") {

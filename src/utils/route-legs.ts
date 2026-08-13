@@ -139,18 +139,51 @@ export function positionAlongLeg(
 }
 
 /**
+ * A dwell window where the pin holds still at a waypoint (a map overlay
+ * child is showing). `fromSec`/`toSec` are in the same timeline as
+ * `routePositionAtLegs`'s `seconds`.
+ */
+export interface RouteStopWindow {
+  label: string;
+  at: { lat: number; lng: number };
+  mode: string;
+  fromSec: number;
+  toSec: number;
+}
+
+/**
  * Position of the traveling marker at a given timeline second, plus the mode
  * of the leg it is currently on. Time is split across legs proportionally to
- * each leg's duration. Returns null when there is no route.
+ * each leg's duration. When `stops` is provided, the marker holds still at a
+ * waypoint during its dwell window (drive time is compressed around the
+ * dwells, matching the resolver's arrival math). Returns null when there is
+ * no route.
  */
 export function routePositionAtLegs(
   legs: RouteLeg[],
   actionDuration: number,
   seconds: number,
+  stops: RouteStopWindow[] = [],
 ): { lat: number; lng: number; mode: string } | null {
   if (legs.length === 0) return null;
+
+  // Inside a dwell window → hold at that waypoint.
+  const inStop = stops.find((s) => seconds >= s.fromSec && seconds < s.toSec);
+  if (inStop) {
+    return { lat: inStop.at.lat, lng: inStop.at.lng, mode: inStop.mode };
+  }
+
+  // Drive time = timeline seconds with completed/overlapping dwells removed.
+  let dwellBefore = 0;
+  for (const s of stops) {
+    if (seconds >= s.toSec) dwellBefore += s.toSec - s.fromSec;
+    else if (seconds > s.fromSec) dwellBefore += seconds - s.fromSec;
+  }
+  const driveTime = Math.max(0, seconds - dwellBefore);
+  const totalDwell = stops.reduce((s, st) => s + (st.toSec - st.fromSec), 0);
+  const driveBudget = Math.max(0.1, actionDuration - totalDwell);
   const total = legs.reduce((s, l) => s + l.durationSec, 0);
-  const currentInSecond = seconds * (total / Math.max(actionDuration, 0.1));
+  const currentInSecond = driveTime * (total / driveBudget);
   let acc = 0;
   for (const leg of legs) {
     if (currentInSecond <= acc + leg.durationSec) {

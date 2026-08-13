@@ -1,0 +1,36 @@
+{
+  "root": {
+    "type": "root",
+    "width": 640,
+    "height": 480,
+    "fps": 30,
+    "layout": "series",
+    "children": [
+      {
+        "type": "map",
+        "id": "sv-walk",
+        "view": "streetview",
+        "start": 0,
+        "end": 6,
+        "duration": 6,
+        "streetView": {
+          "route": [
+            {
+              "lat": 37.7785,
+              "lng": -122.4185
+            },
+            {
+              "lat": 37.7777,
+              "lng": -122.4178
+            }
+          ],
+          "radius": 50,
+          "pov": {
+            "heading": 15,
+            "pitch": -5
+          }
+        }
+      }
+    ]
+  }
+}

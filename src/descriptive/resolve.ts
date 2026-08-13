@@ -384,15 +384,20 @@ export async function resolveScripts(
   const clone: DescriptiveRoot = JSON.parse(JSON.stringify(root));
   mkdirSync(options.outputDir, { recursive: true });
 
-  // Collect all audio nodes that have script text but no src yet
-  const allScriptNodes: Array<{ node: any; id: string }> = [];
-  walkDown(clone as any, (node) => {
-    if (node.type !== "audio") return;
-    if (!node.script || typeof node.script !== "string") return;
-    if (node.src) return; // already has real source
-    const id = node.id ?? `audio-${allScriptNodes.length}`;
-    allScriptNodes.push({ node, id });
-  });
+  // Collect all audio nodes that have script text but no src yet. Each node
+  // carries the nearest ancestor's `tts` override (root.tts by default), so a
+  // scene-level `tts` wins over root while other scenes keep root's voice.
+  const allScriptNodes: Array<{ node: any; id: string; ttsOverride?: string }> = [];
+  const collect = (node: any, inherited?: string): void => {
+    const ttsOverride =
+      typeof node.tts === "string" && node.tts.length > 0 ? node.tts : inherited;
+    if (node.type === "audio" && node.script && typeof node.script === "string" && !node.src) {
+      const id = node.id ?? `audio-${allScriptNodes.length}`;
+      allScriptNodes.push({ node, id, ttsOverride });
+    }
+    for (const c of node.children ?? []) collect(c, ttsOverride);
+  };
+  collect(clone as any);
 
   const totalScripts = allScriptNodes.length;
   let scriptsDone = 0;
@@ -403,10 +408,10 @@ export async function resolveScripts(
     console.log(`  🔊 TTS: generating ${totalScripts} script${totalScripts > 1 ? "s" : ""}...`);
   }
 
-  for (const { node, id } of allScriptNodes) {
+  for (const { node, id, ttsOverride } of allScriptNodes) {
     scriptsDone++;
-    // TTS CLI from root config only
-    let ttsCli = clone.tts ?? options.ttsCli ?? DEFAULT_TTS_CLI;
+    // TTS CLI: nearest ancestor `tts` (root.tts by default) → options → default
+    let ttsCli = ttsOverride ?? options.ttsCli ?? DEFAULT_TTS_CLI;
 
     // Per-speaker voice appends extra CLI flags from root voices config
     if (node.speaker && clone.voices) {
@@ -1212,6 +1217,11 @@ export async function resolveAll(
     });
   }
 
+  // Step 6: Auto-time map overlay children (at:"Waypoint") from the route —
+  // arrival + dwell, so the author writes no timing. Only maps with anchored
+  // children lacking explicit start trigger Directions calls.
+  result = await resolveRouteStops(result);
+
   // Final step: emit every generated asset path relative to the source .md
   // folder so the compiled JSON carries md-folder-relative paths. Render
   // serves that folder via --public-dir and the preview server serves it as
@@ -1221,3 +1231,137 @@ export async function resolveAll(
 
   return result;
 }
+
+// ── Route stops (auto-time map overlay children) ─────────────────────────
+
+/** Default duration for a map child with no explicit duration / audio. */
+const DEFAULT_CHILD_SECONDS = 3;
+
+/** Default drive budget (seconds) when the map has no explicit duration —
+ *  drives fill this, dwells are added on top. Real Directions durations are
+ *  only used for leg ratios. */
+const DEFAULT_MAP_DRIVE_SECONDS = 10;
+
+/**
+ * For every `map` node with children anchored via `at:"WaypointLabel"`, derive
+ * each child's `start`/`end` from the route's travel times:
+ *
+ *   - leg durations from Directions REST (road modes) or haversine cruise
+ *     speed (FLIGHT/BOAT synthetic) — same math the renderer uses
+ *   - the pin holds (dwells) at a waypoint while its children play
+ *   - drives are scaled proportionally to leg duration across the remaining
+ *     budget, so arrivals match the renderer's `routePositionAtLegs`
+ *
+ * Children that already have an explicit `start` are left untouched (but still
+ * contribute to the pin's pause window). When the map has no explicit duration,
+ * it is set to drives + dwells.
+ */
+export async function resolveRouteStops(
+  root: DescriptiveRoot,
+): Promise<DescriptiveRoot> {
+  const { routeLegTimings } = await import("../utils/directions");
+
+  async function resolveMap(node: any): Promise<void> {
+    if (!node || typeof node !== "object") return;
+    if (Array.isArray(node)) {
+      for (const n of node) await resolveMap(n);
+      return;
+    }
+
+    if (node.type === "map" && Array.isArray(node.children) && node.children.length) {
+      const children = node.children as any[];
+      const anchored = children.filter((c) => c && c.at);
+      if (anchored.length) {
+        await timeMapChildren(node, anchored, routeLegTimings);
+      }
+    }
+
+    for (const child of node.children ?? []) await resolveMap(child);
+  }
+
+  await resolveMap((root as any).children);
+  return root;
+}
+
+async function timeMapChildren(
+  map: any,
+  anchored: any[],
+  routeLegTimings: (waypoints: any[], defaultMode?: string) => Promise<{ durationSec: number }[]>,
+): Promise<void> {
+  const waypoints = map.waypoints ?? [];
+  if (waypoints.length < 2) return;
+
+  // 1. Per-leg travel times.
+  const legs = await routeLegTimings(waypoints, map.travelMode ?? "DRIVING");
+  const totalDrive = legs.reduce((s, l) => s + (l.durationSec || 0), 0);
+  if (totalDrive <= 0) return;
+
+  // 2. Per-waypoint dwell = max duration of anchored children there.
+  const childDuration = (c: any): number =>
+    typeof c.duration === "number" && c.duration > 0 ? c.duration : DEFAULT_CHILD_SECONDS;
+  const dwellAt = new Map<string, number>();
+  for (const c of anchored) {
+    const d = childDuration(c);
+    dwellAt.set(c.at, Math.max(dwellAt.get(c.at) ?? 0, d));
+  }
+  const totalDwell = [...dwellAt.values()].reduce((s, d) => s + d, 0);
+
+  // 3. Timeline: drives scaled proportionally across the drive budget; dwells
+  //    inserted after each arrival. arrival(i) = S·cumDrive(i)/D + cumDwells(<i).
+  //    Real Directions durations only provide RATIOS — the video length is the
+  //    author's map `duration` (or a default), so a 40-minute drive still plays
+  //    as a short clip with the pin timing proportional to each leg.
+  const hasOwnDur = typeof map.duration === "number" || typeof map.endAt === "number";
+  const totalDwellBudget = Math.max(0, map.duration ?? map.endAt ?? DEFAULT_MAP_DRIVE_SECONDS);
+  const mapDur = hasOwnDur
+    ? (map.duration ?? map.endAt ?? totalDwellBudget + totalDwell)
+    : totalDwellBudget + totalDwell;
+  const driveBudget = Math.max(0.1, mapDur - totalDwell);
+  const scale = driveBudget / totalDrive;
+
+  const arrivalAt = new Map<string, number>();
+  // The pin is at waypoint[0] from t=0 — `at` there means "from the start".
+  const wp0 = waypoints[0]!;
+  arrivalAt.set(wp0.label ?? String(wp0.lat) + "," + String(wp0.lng), 0);
+  let cumDrive = 0;
+  let cumDwells = 0;
+  for (let i = 0; i < legs.length; i++) {
+    cumDrive += legs[i]!.durationSec || 0;
+    const wp = waypoints[i + 1]!;
+    const arrival = (cumDrive * scale) + cumDwells;
+    arrivalAt.set(wp.label ?? String(wp.lat) + "," + String(wp.lng), arrival);
+    if (dwellAt.has(wp.label)) cumDwells += dwellAt.get(wp.label)!;
+  }
+
+  // 4. Stamp children that lack explicit timing.
+  const schedule: string[] = [];
+  for (const c of anchored) {
+    const arrival = arrivalAt.get(c.at);
+    if (arrival == null) {
+      console.warn(`  ⚠ map child at:"${c.at}" — no waypoint with that label; renders full-screen`);
+      continue;
+    }
+    if (typeof c.start === "number") {
+      schedule.push(`  🛑 ${c.at}: manual ${c.start.toFixed(1)}s (unchanged)`);
+      continue;
+    }
+    const dur = childDuration(c);
+    c.start = arrival;
+    c.end = arrival + dur;
+    schedule.push(`  🛑 ${c.at}: ${arrival.toFixed(1)}s → ${(arrival + dur).toFixed(1)}s (${dur.toFixed(1)}s)`);
+  }
+
+  if (schedule.length) {
+    console.log(`  🗺 route stops (${mapDur.toFixed(1)}s total):`);
+    for (const line of schedule) console.log(line);
+  }
+
+  // 5. Extend map duration if the author didn't set one (or it's too short).
+  if (!hasOwnDur) {
+    map.duration = mapDur;
+  } else if ((map.duration ?? 0) < mapDur) {
+    map.duration = mapDur;
+    console.log(`  🗺 extended map duration → ${mapDur.toFixed(1)}s (drives + dwells)`);
+  }
+}
+

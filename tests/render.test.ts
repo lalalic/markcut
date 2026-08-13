@@ -21,6 +21,7 @@ import {
   FIXTURES_DIR,
 } from "./utils";
 import { existsSync, rmSync, mkdirSync } from "node:fs";
+import { execSync } from "node:child_process";
 import { resolve } from "node:path";
 
 // Increase timeout for integration tests (rendering + STT can take a while)
@@ -257,6 +258,97 @@ describe("Map Rendering", () => {
     // Map may render blank if Google Maps tiles aren't available (offline/headless).
     // Check file size as proxy for visual content.
     expect(getFrameFileSize(frame)).toBeGreaterThan(1000);
+  });
+
+  it("renders anchored overlay children at waypoints (dwell vs drive)", async () => {
+    const output = renderFixture(fixturePath("map-overlay.json"), {
+      outputName: "map-overlay.mp4",
+      timeout: RENDER_TIMEOUT,
+    });
+
+    const info = getVideoInfo(output);
+    expect(info.width).toBe(640);
+
+    // The map has a solid-magenta photo anchored at "Golden Gate" (0–4s,
+    // zoomIn), then the pin drives to SFO. The photo must be visible during
+    // the dwell and gone during the drive — guards regressions where anchored
+    // overlays silently never render (getProjection() null / lazy effect path).
+    const dwell = outPath("frames/map-overlay-dwell.png");
+    const drive = outPath("frames/map-overlay-drive.png");
+    extractFrame(output, 2.5, dwell);
+    extractFrame(output, 6, drive);
+
+    const magentaFraction = (f: string): number => {
+      const p = execSync(
+        `ffmpeg -loglevel error -i "${f}" -vf scale=160:120 -f rawvideo -pix_fmt rgb24 pipe:1`,
+      );
+      let count = 0;
+      for (let i = 0; i < p.length; i += 3) {
+        if (p[i]! > 200 && p[i + 1]! < 80 && p[i + 2]! > 200) count++;
+      }
+      return count / (p.length / 3);
+    };
+
+    expect(magentaFraction(dwell)).toBeGreaterThan(0.02); // photo visible during dwell
+    expect(magentaFraction(drive)).toBeLessThan(0.001); // gone during drive
+  });
+
+  it("renders street view panoramas non-dark", async () => {
+    const output = renderFixture(fixturePath("map-dynamic.json"), {
+      outputName: "map-dynamic-streetview.mp4",
+      timeout: RENDER_TIMEOUT,
+    });
+
+    // map-dynamic.json is a series: dolly 0–3s, cinematic 3–11s, then the
+    // static streetview-pan scene plays ~11–17s. Its panorama must not be
+    // black — guards regressions where static Street View captures dark frames
+    // (pano_changed race + too-short fallback).
+    const frame = outPath("frames/map-dynamic-streetview.png");
+    extractFrame(output, 13, frame);
+
+    const darkFraction = (f: string): number => {
+      const p = execSync(
+        `ffmpeg -loglevel error -i "${f}" -vf scale=120:90 -f rawvideo -pix_fmt rgb24 pipe:1`,
+      );
+      let dark = 0;
+      for (let i = 0; i < p.length; i += 3) {
+        const v = (p[i]! + p[i + 1]! + p[i + 2]!) / 3;
+        if (v < 20) dark++;
+      }
+      return dark / (p.length / 3);
+    };
+
+    expect(darkFraction(frame)).toBeLessThan(0.5);
+  });
+
+  it("renders street view walk (route) non-dark at both waypoints", async () => {
+    const output = renderFixture(fixturePath("streetview-walk.json"), {
+      outputName: "streetview-walk.mp4",
+      timeout: RENDER_TIMEOUT,
+    });
+
+    // The snap-walk holds at route[0] (101 Grove St) for the first half and
+    // route[1] (95 Hayes St) for the second. Both have imagery; neither frame
+    // should be black. Guards regressions where the walk's per-frame pano
+    // requests get rate-limited (429) and render dark frames.
+    const darkFraction = (f: string): number => {
+      const p = execSync(
+        `ffmpeg -loglevel error -i "${f}" -vf scale=120:90 -f rawvideo -pix_fmt rgb24 pipe:1`,
+      );
+      let dark = 0;
+      for (let i = 0; i < p.length; i += 3) {
+        const v = (p[i]! + p[i + 1]! + p[i + 2]!) / 3;
+        if (v < 20) dark++;
+      }
+      return dark / (p.length / 3);
+    };
+
+    const wp0 = outPath("frames/streetview-walk-wp0.png");
+    const wp1 = outPath("frames/streetview-walk-wp1.png");
+    extractFrame(output, 2, wp0);
+    extractFrame(output, 4.5, wp1);
+    expect(darkFraction(wp0)).toBeLessThan(0.5);
+    expect(darkFraction(wp1)).toBeLessThan(0.5);
   });
 });
 

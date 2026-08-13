@@ -962,3 +962,101 @@ describe("resolveIncludes — variant overrides", () => {
     expect(incNode.durationInSeconds).toBe(2);
   });
 });
+
+// ── resolveRouteStops (map overlay auto-timing) ─────────────────────────────
+
+describe("resolveRouteStops", () => {
+  it("auto-times map children from synthetic FLIGHT leg durations (no network)", async () => {
+    const { resolveRouteStops } = await import("./resolve");
+    const root: any = {
+      type: "root",
+      children: [
+        {
+          type: "scene",
+          children: [
+            {
+              type: "map",
+              view: "route",
+              travelMode: "FLIGHT",
+              waypoints: [
+                { lat: 37.7749, lng: -122.4194, label: "SF" },
+                { lat: 34.0522, lng: -118.2437, label: "LA" },
+                { lat: 33.9425, lng: -118.4081, label: "PIER" },
+              ],
+              children: [
+                { type: "image", at: "LA", duration: 4 },
+                { type: "image", at: "PIER", duration: 2 },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    await resolveRouteStops(root);
+
+    const map = root.children[0].children[0];
+    const [la, pier] = map.children;
+
+    // Map duration = default drive budget (10s) + dwells (4 + 2) = 16s.
+    expect(map.duration).toBeCloseTo(16, 1);
+
+    // First child arrives at LA after leg 1 (SF→LA ≈ 2367s of 2481s total)
+    // scaled into the 10s drive budget → ≈ 9.5s, dwells 4s.
+    expect(la.start).toBeGreaterThan(9);
+    expect(la.start).toBeLessThan(10);
+    expect(la.end - la.start).toBeCloseTo(4, 6);
+
+    // Second child arrives at PIER after leg 2 + the LA dwell → ≈ 14s.
+    expect(pier.start).toBeGreaterThan(13.5);
+    expect(pier.start).toBeLessThan(14.5);
+    expect(pier.end - pier.start).toBeCloseTo(2, 6);
+
+    // Children with explicit `start` are left untouched.
+    const explicit: any = {
+      type: "map",
+      view: "route",
+      travelMode: "FLIGHT",
+      waypoints: [
+        { lat: 37.7749, lng: -122.4194, label: "SF" },
+        { lat: 34.0522, lng: -118.2437, label: "LA" },
+      ],
+      children: [{ type: "image", at: "LA", duration: 4, start: 3, end: 7 }],
+    };
+    const explicitRoot: any = { type: "root", children: [explicit] };
+    await resolveRouteStops(explicitRoot);
+    expect(explicit.children[0].start).toBe(3);
+    expect(explicit.children[0].end).toBe(7);
+  });
+
+  it("respects an explicit map duration (drives shrink to fit drives+dwells)", async () => {
+    const { resolveRouteStops } = await import("./resolve");
+    const root: any = {
+      type: "root",
+      children: [
+        {
+          type: "map",
+          view: "route",
+          duration: 20,
+          travelMode: "FLIGHT",
+          waypoints: [
+            { lat: 37.7749, lng: -122.4194, label: "SF" },
+            { lat: 34.0522, lng: -118.2437, label: "LA" },
+            { lat: 33.9425, lng: -118.4081, label: "PIER" },
+          ],
+          children: [{ type: "image", at: "LA", duration: 4 }],
+        },
+      ],
+    };
+
+    await resolveRouteStops(root);
+
+    const map = root.children[0];
+    expect(map.duration).toBe(20);
+    // Dwell 4s stays; drives get the remaining 16s budget proportionally.
+    const la = map.children[0];
+    expect(la.start).toBeGreaterThan(14);
+    expect(la.start).toBeLessThan(17);
+    expect(la.end - la.start).toBeCloseTo(4, 6);
+  });
+});

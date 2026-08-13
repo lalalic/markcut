@@ -29,7 +29,7 @@
  *   }
  */
 import React from "react";
-import { Sequence, useCurrentFrame, useVideoConfig, delayRender, continueRender } from "remotion";
+import { Sequence, AbsoluteFill, useCurrentFrame, useVideoConfig, delayRender, continueRender } from "remotion";
 import { useFrameEvents } from "../context/index";
 import {
   APIProvider, Map as GoogleMap, useMap, useMapsLibrary, useMap3D,
@@ -43,8 +43,9 @@ import {
   routePositionAtLegs,
   modeEmoji,
   type RouteLeg,
+  type RouteStopWindow,
 } from "../utils/route-legs";
-import type { MapStream } from "../schema/index";
+import type { MapStream, Stream } from "../schema/index";
 
 // API key is injected by the compiler onto the stream node (see compileLeaf in compiler.ts).
 // This fallback handles the case where Map.tsx is used directly without the compiler.
@@ -68,9 +69,223 @@ function resolveMapLocale(language?: string, region?: string): { language?: stri
 }
 
 // ============================================================
+// MapRefContext — shares the live google.maps.Map instance
+// between the view renderer and the overlay layer so anchored
+// children can project lat/lng → screen pixel each frame.
+// ============================================================
+const MapRefContext = React.createContext<{
+  map: google.maps.Map | null;
+  setMap: (m: google.maps.Map | null) => void;
+}>({ map: null, setMap: () => {} });
+
+/** Invisible bridge rendered inside <GoogleMap> to capture the map instance. */
+function MapBridge() {
+  const map = useMap();
+  const { setMap } = React.useContext(MapRefContext);
+  React.useEffect(() => {
+    setMap(map);
+    return () => setMap(null);
+  }, [map, setMap]);
+  return null;
+}
+
+// ============================================================
+// Pure Mercator projection — converts a lat/lng to the map
+// container's screen pixel, given the live center/zoom/size.
+//
+// `map.getProjection()` returns null until the map finishes
+// initializing, which never happens reliably during Remotion's
+// per-frame renders. This replicates `fromLatLngToPoint` with
+// the same 256px-at-zoom-0 world coordinates, so anchored
+// overlays align with the map deterministically every frame.
+// ============================================================
+const PROJECTION_TILE = 256;
+function worldPoint(lat: number, lng: number): { x: number; y: number } {
+  const sin = Math.sin((lat * Math.PI) / 180);
+  return {
+    x: PROJECTION_TILE * (0.5 + lng / 360),
+    y: PROJECTION_TILE * (0.5 - Math.log((1 + sin) / (1 - sin)) / (4 * Math.PI)),
+  };
+}
+
+/** Screen pixel of a lat/lng inside the map container (Mercator, no projection API). */
+function latLngToScreen(
+  map: google.maps.Map,
+  lat: number,
+  lng: number,
+): { x: number; y: number } | null {
+  const center = map.getCenter();
+  if (!center) return null;
+  const zoom = map.getZoom() ?? 10;
+  const container = map.getDiv();
+  const w = container.offsetWidth;
+  const h = container.offsetHeight;
+  if (!w || !h) return null;
+  const scale = Math.pow(2, zoom);
+  const wp = worldPoint(lat, lng);
+  const cp = worldPoint(center.lat(), center.lng());
+  return {
+    x: w / 2 + (wp.x - cp.x) * scale,
+    y: h / 2 + (wp.y - cp.y) * scale,
+  };
+}
+
+/**
+ * Default size of an anchored overlay box — a fraction of the map's smaller
+ * dimension. Children render at 100%×100% of this box (`objectFit` keeps the
+ * media proportional), so without explicit dimensions the wrapper would
+ * collapse to 0×0 and nothing would draw.
+ */
+function anchoredOverlaySize(map: google.maps.Map): number {
+  const d = map.getDiv();
+  const w = d.offsetWidth || 640;
+  const h = d.offsetHeight || 480;
+  return Math.round(Math.min(w, h) * 0.5);
+}
+
+// ============================================================
+// MapOverlays — renders the map's children as overlay layers.
+// Children with `at:"Label"` are positioned at that waypoint's
+// screen pixel (projected from the live map each frame).
+// ============================================================
+const LeafRenderers: Record<string, React.ComponentType<any>> = {};
+async function ensureLeafRenderers() {
+  if (Object.keys(LeafRenderers).length) return;
+  const [v, a, i, c, e, f] = await Promise.all([
+    import("./Video"), import("./Audio"), import("./Image"), import("./Component"),
+    import("./Effect"), import("./Folder"),
+  ]);
+  LeafRenderers.video = v.VideoLeaf;
+  LeafRenderers.audio = a.AudioLeaf;
+  LeafRenderers.image = i.ImageLeaf;
+  LeafRenderers.component = c.ComponentLeaf;
+  LeafRenderers.effect = e.EffectWrapper;
+  LeafRenderers.folder = f.FolderLeaf;
+}
+
+function MapOverlays({
+  children, waypoints,
+}: {
+  children: Stream[];
+  waypoints: { lat: number; lng: number; label?: string }[];
+}) {
+  const { fps } = useVideoConfig();
+  const frame = useCurrentFrame();
+  const { map } = React.useContext(MapRefContext);
+  const [renderersReady, setRenderersReady] = React.useState(Object.keys(LeafRenderers).length > 0);
+
+  React.useEffect(() => {
+    ensureLeafRenderers().then(() => setRenderersReady(true));
+  }, []);
+
+  if (!renderersReady || !children || children.length === 0) return null;
+
+  return (
+    <AbsoluteFill style={{ pointerEvents: "none" }}>
+      {children.map((child, i) => {
+        const childStart = child.start ?? 0;
+        const childEnd = child.end ?? childStart + (child.duration ?? 1);
+        const durFrames = Math.max(1, Math.floor(fps * (childEnd - childStart)));
+        const fromFrame = Math.floor(fps * childStart);
+
+        // Look up waypoint lat/lng for anchored children.
+        const anchorLabel = (child as any).at as string | undefined;
+        const wp = anchorLabel
+          ? waypoints.find((w) => w.label === anchorLabel)
+          : undefined;
+
+        return (
+          <Sequence key={i} durationInFrames={durFrames} from={fromFrame} layout="none">
+            <MapChildPositioner map={map} anchorLatLng={wp ? { lat: wp.lat, lng: wp.lng } : undefined} frame={frame} fps={fps}>
+              <MapChildRender child={child} />
+            </MapChildPositioner>
+          </Sequence>
+        );
+      })}
+    </AbsoluteFill>
+  );
+}
+
+/** Positions a child overlay: full-screen or anchored to a lat/lng on the map. */
+function MapChildPositioner({
+  map, anchorLatLng, frame, fps, children,
+}: {
+  map: google.maps.Map | null;
+  anchorLatLng?: { lat: number; lng: number };
+  frame: number;
+  fps: number;
+  children: React.ReactNode;
+}) {
+  // Unanchored: full-screen overlay
+  if (!anchorLatLng) {
+    return <AbsoluteFill>{children}</AbsoluteFill>;
+  }
+
+  // Anchored: project lat/lng → container pixel each frame. Uses pure
+  // Mercator math (not map.getProjection(), which is null until the map
+  // initializes and never reliably during Remotion frame renders).
+  const overlay = React.useMemo(() => {
+    if (!map) return null;
+    return latLngToScreen(map, anchorLatLng.lat, anchorLatLng.lng);
+  }, [map, anchorLatLng?.lat, anchorLatLng?.lng, frame]);
+
+  if (!overlay) {
+    return <AbsoluteFill style={{ display: "none" }}>{children}</AbsoluteFill>;
+  }
+
+  const box = map ? anchoredOverlaySize(map) : 0;
+
+  return (
+    <div style={{
+      position: "absolute",
+      left: overlay.x,
+      top: overlay.y,
+      width: box,
+      height: box,
+      transform: "translate(-50%, -50%)",
+    }}>
+      {children}
+    </div>
+  );
+}
+
+/** Renders a single compiled child stream inside a map overlay. */
+function MapChildRender({ child }: { child: Stream }): React.ReactElement | null {
+  const type = child.type;
+
+  // Effect: render its children with the animation applied. Uses `contained`
+  // so the animated box fills the anchored overlay box (not the whole canvas),
+  // and preloaded renderers (no React.lazy — lazy chunks never resolve before
+  // Remotion captures the frame).
+  if (type === "effect") {
+    const EW = LeafRenderers.effect as React.ComponentType<{ stream: any; contained?: boolean; children?: React.ReactNode }>;
+    if (!EW) return null;
+    const effectChildren = ((child as any).children ?? []) as Stream[];
+    return React.createElement(
+      EW,
+      { stream: child, contained: true },
+      ...effectChildren.map((c, i) =>
+        React.createElement(MapChildRender, { key: i, child: c }),
+      ),
+    );
+  }
+
+  if (type === "folder") {
+    const FolderLeaf = LeafRenderers.folder;
+    if (!FolderLeaf) return null;
+    return React.createElement(FolderLeaf, { stream: child });
+  }
+
+  const Renderer = LeafRenderers[type];
+  if (!Renderer) return null;
+  return React.createElement(Renderer, { stream: child });
+}
+
+// ============================================================
 // MapLeaf — entry point, dispatches to the view renderer
 // ============================================================
 export function MapLeaf({ stream }: { stream: MapStream }) {
+  const [mapInstance, setMapInstance] = React.useState<google.maps.Map | null>(null);
   const { fps } = useVideoConfig();
   const waypoints = stream.waypoints ?? [];
   const start = stream.start ?? 0;
@@ -137,12 +352,15 @@ export function MapLeaf({ stream }: { stream: MapStream }) {
         language={mapLocale.language}
         region={mapLocale.region}
       >
-        {view === "overview" && <OverviewMap stream={stream} onTilesLoaded={handleMapReady} />}
-        {view === "cinematic" && (use3d
-          ? <CinematicMap3D stream={stream} onReady={handleMapReady} />
-          : <CinematicMap stream={stream} onTilesLoaded={handleMapReady} />)}
-        {view === "streetview" && <StreetViewLeaf stream={stream} onPanoReady={handleMapReady} />}
-        {view === "route" && <RouteMap stream={stream} onTilesLoaded={handleMapReady} />}
+        <MapRefContext.Provider value={{ map: mapInstance, setMap: setMapInstance }}>
+          {view === "overview" && <OverviewMap stream={stream} onTilesLoaded={handleMapReady} />}
+          {view === "cinematic" && (use3d
+            ? <CinematicMap3D stream={stream} onReady={handleMapReady} />
+            : <CinematicMap stream={stream} onTilesLoaded={handleMapReady} />)}
+          {view === "streetview" && <StreetViewLeaf stream={stream} onPanoReady={handleMapReady} />}
+          {view === "route" && <RouteMap stream={stream} onTilesLoaded={handleMapReady} />}
+          <MapOverlays children={(stream.children as Stream[]) ?? []} waypoints={stream.waypoints} />
+        </MapRefContext.Provider>
       </APIProvider>
     </Sequence>
   );
@@ -178,7 +396,9 @@ function OverviewMap({
       zoomControl={false}
       onTilesLoaded={onTilesLoaded}
       style={{ width: "100%", height: "100%", position: "absolute" }}
-    />
+    >
+      <MapBridge />
+    </GoogleMap>
   );
 }
 
@@ -210,6 +430,7 @@ function RouteMap({
       onTilesLoaded={onTilesLoaded}
       style={{ width: "100%", height: "100%", position: "absolute" }}
     >
+      <MapBridge />
       <RouteWithMarkerLegs
         waypoints={waypoints}
         travelMode={stream.travelMode ?? "DRIVING"}
@@ -217,6 +438,7 @@ function RouteMap({
         actionDuration={end - start}
         routeColor={stream.routeColor ?? "#4285F4"}
         routeWeight={stream.routeWeight ?? 4}
+        children={stream.children as Stream[]}
       />
     </GoogleMap>
   );
@@ -377,24 +599,112 @@ function StreetViewLeaf({
   const containerRef = React.useRef<HTMLDivElement>(null);
   const svLibrary = useMapsLibrary("streetView");
   const [pano, setPano] = React.useState<google.maps.StreetViewPanorama | null>(null);
+  const panoRef = React.useRef<google.maps.StreetViewPanorama | null>(null);
+  // Tracks whether the current panorama's imagery has reached StreetViewStatus.OK.
+  const loadedRef = React.useRef(false);
+  // Id of the last panorama that reached StreetViewStatus.OK — used to hold a
+  // loaded view when a walk waypoint has no imagery (instead of flashing black).
+  const lastGoodPanoRef = React.useRef<string | null>(null);
+  // Index of the waypoint the walk's panorama is currently parked at (snap walk).
+  const lastWpIndexRef = React.useRef(-1);
+
+  // ── Persistent pano-load gate ────────────────────────────────────────────
+  // Unlike a per-frame delayRender, this wait SURVIVES per-frame effect
+  // re-runs. In the Player, frames advance faster than a pano loads, and a
+  // per-frame delayRender is continued by the next frame's cleanup before the
+  // imagery arrives — capturing black frames when a scene is entered by
+  // playback. The wait completes only when the pano actually reaches OK.
+  const waitHandleRef = React.useRef<number | null>(null);
+  const waitPollRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+  const waitCapRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const { fps } = useVideoConfig();
   const frame = useCurrentFrame();
   const start = stream.start ?? 0;
   const end = stream.end ?? start + (stream.duration ?? 1);
   const sv = stream.streetView;
+  const svRadius = typeof sv?.radius === "number" && sv.radius > 0 ? sv.radius : 50;
+
+  const finishWait = React.useCallback(() => {
+    if (waitHandleRef.current != null) {
+      continueRender(waitHandleRef.current);
+      waitHandleRef.current = null;
+    }
+    if (waitPollRef.current != null) {
+      clearInterval(waitPollRef.current);
+      waitPollRef.current = null;
+    }
+    if (waitCapRef.current != null) {
+      clearTimeout(waitCapRef.current);
+      waitCapRef.current = null;
+    }
+  }, []);
+
+  const statusOk = React.useCallback(() => {
+    const p = panoRef.current;
+    return !!p && typeof p.getStatus === "function" && p.getStatus() === google.maps.StreetViewStatus.OK;
+  }, []);
+
+  const startWait = React.useCallback(() => {
+    if (waitHandleRef.current != null) return; // already waiting
+    waitHandleRef.current = delayRender("Street View pano");
+    waitPollRef.current = setInterval(() => {
+      if (statusOk()) {
+        const p = panoRef.current;
+        lastGoodPanoRef.current = p && typeof p.getPano === "function" ? p.getPano() : null;
+        loadedRef.current = true;
+        finishWait();
+        onPanoReady();
+      }
+    }, 200);
+    // Generous cap for slow or rate-limited loads (Google 429s under load).
+    // On cap without OK, hold the last loaded panorama instead of showing black.
+    waitCapRef.current = setTimeout(() => {
+      if (statusOk()) {
+        const p = panoRef.current;
+        lastGoodPanoRef.current = p && typeof p.getPano === "function" ? p.getPano() : null;
+        loadedRef.current = true;
+        finishWait();
+        onPanoReady();
+        return;
+      }
+      const fallbackId = lastGoodPanoRef.current;
+      const p = panoRef.current;
+      if (fallbackId && p && typeof p.setPano === "function") {
+        p.setPano(fallbackId);
+        setTimeout(() => {
+          finishWait();
+          onPanoReady();
+        }, 400);
+      } else {
+        finishWait();
+        onPanoReady();
+      }
+    }, 8000);
+  }, [statusOk, finishWait, onPanoReady]);
+
+  // Unmount: always finish any pending wait so Remotion never hangs.
+  React.useEffect(() => finishWait, [finishWait]);
 
   // Create the panorama once (no React wrapper component in this library version).
   React.useEffect(() => {
     if (!svLibrary || !containerRef.current) return;
+    loadedRef.current = false;
+    lastWpIndexRef.current = -1;
     const pan = new svLibrary.StreetViewPanorama(containerRef.current, {
       disableDefaultUI: true,
     });
+    panoRef.current = pan;
+    // setPosition(latLng, radius?) — radius (m) constrains the panorama search.
+    // The public typings only expose the 1-arg overload, so cast the call.
+    const panSetPosition = (loc: google.maps.LatLngLiteral) =>
+      (pan.setPosition as unknown as (l: google.maps.LatLngLiteral, r: number) => void)(loc, svRadius);
     if (sv?.pano) {
       pan.setPano(sv.pano);
     } else if (sv?.location) {
-      pan.setPosition(sv.location);
+      panSetPosition(sv.location);
     } else if (sv?.route?.length) {
-      pan.setPosition(sv.route[0]!);
+      panSetPosition(sv.route[0]!);
     }
     if (sv?.pov) {
       pan.setPov({
@@ -405,19 +715,27 @@ function StreetViewLeaf({
     if (typeof sv?.zoom === "number") {
       pan.setZoom(sv.zoom);
     }
+    // Keep lastGood fresh whenever the API reports OK (async, never races).
+    const onStatus = () => {
+      if (typeof pan.getStatus === "function" && pan.getStatus() === google.maps.StreetViewStatus.OK) {
+        lastGoodPanoRef.current = typeof pan.getPano === "function" ? pan.getPano() : null;
+        loadedRef.current = true;
+      }
+    };
+    pan.addListener("status_changed", onStatus);
     setPano(pan);
+    // Gate the initial load (persistent — see startWait).
+    startWait();
     return () => {
+      loadedRef.current = false;
+      panoRef.current = null;
       pan.setVisible(false);
     };
-  }, [svLibrary, stream.id, sv?.pano, sv?.location, sv?.route, sv?.pov, sv?.zoom]);
+  }, [svLibrary, stream.id, sv?.pano, sv?.location, sv?.route, sv?.pov, sv?.zoom, svRadius, startWait]);
 
-  // Per-frame POV + walk/drive position, with per-frame tile-load gating.
-  //
-  // Street View imagery loads asynchronously after setPosition/pano_changed, so
-  // signaling ready on the metadata event alone captures dark frames. Each frame
-  // change delays render until the panorama's imagery is actually loaded (with a
-  // grace period for tile fetch), so every captured frame has visible content.
-  // POV-only changes (no position change → no new pano) settle quickly.
+  // Per-frame POV + snap-walk position. The panorama only MOVES when the walk
+  // crosses a waypoint boundary; a new pano load is gated by the persistent
+  // startWait (never a per-frame finish, so playback can't capture black).
   React.useEffect(() => {
     if (!pano) return;
     const pov = pano.getPov();
@@ -427,45 +745,25 @@ function StreetViewLeaf({
     const zoom = resolveTween(frame, fps, sv?.zoom, start, end, pano.getZoom() ?? 0);
     pano.setZoom(zoom);
 
-    let movedPosition = false;
     if (sv?.route && sv.route.length > 1) {
+      // Discrete "snap walk": hold at the nearest waypoint and jump between
+      // waypoints. Continuous per-frame interpolation requests a (slightly
+      // different) panorama every frame — hundreds of Google Street View API
+      // calls per render, which gets rate-limited (429) and renders black.
       const t = Math.min(Math.max((frame / fps) / Math.max(0.1, end - start), 0), 1);
-      const total = sv.route.length - 1;
-      const segI = Math.min(Math.floor(t * total), total - 1);
-      const segT = t * total - segI;
-      const a = sv.route[segI]!;
-      const b = sv.route[segI + 1]!;
-      pano.setPosition({
-        lat: a.lat + (b.lat - a.lat) * segT,
-        lng: a.lng + (b.lng - a.lng) * segT,
-      });
-      movedPosition = true;
+      const wpIndex = Math.min(Math.floor(t * sv.route.length), sv.route.length - 1);
+      if (wpIndex !== lastWpIndexRef.current) {
+        lastWpIndexRef.current = wpIndex;
+        const pt = sv.route[wpIndex]!;
+        (pano.setPosition as unknown as (l: google.maps.LatLngLiteral, r: number) => void)(pt, svRadius);
+        // New waypoint → new panorama may be needed; gate until it loads.
+        startWait();
+      }
+    } else if (!loadedRef.current) {
+      // Static/POV-only scene: keep the initial load gated until ready.
+      startWait();
     }
-
-    // Gate this frame on the panorama's imagery actually loading.
-    const handle = delayRender(`Street View frame ${frame}`);
-    let done = false;
-    const finish = () => {
-      if (done) return;
-      done = true;
-      continueRender(handle);
-      onPanoReady();
-    };
-    // pano_changed fires when a new panorama's metadata+imagery request resolves.
-    // Add a grace period so tiles finish rendering before capture.
-    const graceMs = movedPosition ? 1200 : 400;
-    const onPano = () => setTimeout(finish, graceMs);
-    const lPano = pano.addListener("pano_changed", onPano);
-    // POV-only frames (no position change) settle fast; if no pano change fires,
-    // the imagery is already present — settle after a short buffer.
-    const fallback = setTimeout(finish, movedPosition ? 3000 : 600);
-
-    return () => {
-      google.maps.event.removeListener(lPano);
-      clearTimeout(fallback);
-      finish();
-    };
-  }, [pano, frame, fps, start, end, sv?.route, sv?.pov, sv?.zoom, onPanoReady]);
+  }, [pano, frame, fps, start, end, sv?.route, sv?.pov, sv?.zoom, svRadius, startWait]);
 
   return (
     <div
@@ -627,7 +925,7 @@ function RouteWithMarker({
 // (✈️ 🚢 🚶 🚲 🚌 🚗).
 // ============================================================
 function RouteWithMarkerLegs({
-  waypoints, travelMode, markerEmoji, actionDuration, routeColor, routeWeight,
+  waypoints, travelMode, markerEmoji, actionDuration, routeColor, routeWeight, children,
 }: {
   waypoints: { lat: number; lng: number; label?: string; media?: string; mode?: string }[];
   travelMode: string;
@@ -635,9 +933,11 @@ function RouteWithMarkerLegs({
   actionDuration: number;
   routeColor: string;
   routeWeight: number;
+  children?: Stream[];
 }) {
   const legs = useRouteLegs(waypoints, travelMode);
-  const position = useAnimatedPositionLegs({ legs, actionDuration });
+  const stops = useRouteStops(children, waypoints, legs);
+  const position = useAnimatedPositionLegs({ legs, actionDuration, stops });
   const glyph = position ? modeEmoji(position.mode) : markerEmoji;
 
   return (
@@ -648,6 +948,43 @@ function RouteWithMarkerLegs({
     </>
   );
 }
+
+// ============================================================
+// useRouteStops — derives the pin's dwell windows from the map's
+// overlay children (each has at:"Label" + start/end). The pin holds
+// at that waypoint while its child plays. Windows at the same
+// waypoint are merged.
+// ============================================================
+function useRouteStops(
+  children: Stream[] | undefined,
+  waypoints: { lat: number; lng: number; label?: string; mode?: string }[],
+  legs: RouteLeg[],
+): RouteStopWindow[] {
+  return React.useMemo(() => {
+    if (!children || children.length === 0) return [];
+    const byLabel = new Map<string, RouteStopWindow>();
+    for (const child of children) {
+      const label = (child as any).at as string | undefined;
+      if (!label) continue;
+      const wp = waypoints.find((w) => w.label === label);
+      if (!wp) continue;
+      const fromSec = child.start ?? 0;
+      const toSec = child.end ?? fromSec + (child.duration ?? 1);
+      // Mode of the leg that arrives at this waypoint (leg i → waypoint i+1).
+      const idx = waypoints.findIndex((w) => w.label === label) - 1;
+      const mode = legs[idx]?.mode ?? "DRIVING";
+      const existing = byLabel.get(label);
+      if (existing) {
+        existing.fromSec = Math.min(existing.fromSec, fromSec);
+        existing.toSec = Math.max(existing.toSec, toSec);
+      } else {
+        byLabel.set(label, { label, at: { lat: wp.lat, lng: wp.lng }, mode, fromSec, toSec });
+      }
+    }
+    return [...byLabel.values()];
+  }, [children, waypoints, legs]);
+}
+
 
 // ============================================================
 // useRouteLegs — loads one Directions leg per consecutive waypoint
@@ -722,16 +1059,17 @@ function useRouteLegs(
 // (view:"route"): returns { lat, lng, mode } for the current frame
 // ============================================================
 function useAnimatedPositionLegs({
-  legs, actionDuration,
+  legs, actionDuration, stops = [],
 }: {
   legs: RouteLeg[];
   actionDuration: number;
+  stops?: RouteStopWindow[];
 }) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   return React.useMemo(
-    () => routePositionAtLegs(legs, actionDuration, frame / fps),
-    [legs, frame, fps, actionDuration],
+    () => routePositionAtLegs(legs, actionDuration, frame / fps, stops),
+    [legs, frame, fps, actionDuration, stops],
   );
 }
 

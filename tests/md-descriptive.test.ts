@@ -987,6 +987,49 @@ layout:parallel
   });
 });
 
+// ── Map Overlay Children (at:"Waypoint") ──────────────────────────────────
+
+describe("map overlay children (at:\"Waypoint\")", () => {
+  const md = `
+# video
+width:640 height:480 fps:30 layout:series
+
+## Tour
+layout:parallel
+- map view:route duration:12 travelMode:DRIVING
+  waypoints:[37.81,-122.48,"Golden Gate"; 37.77,-122.42,"Civic Center"]
+  - image src:gg.jpg at:"Golden Gate" start:3 duration:3 effects:[zoomIn]
+  - image src:civic.jpg at:"Civic Center" start:7 duration:3 effects:[zoomIn]
+`;
+
+  it("parses nested children with at onto the map node", () => {
+    const parsed = parseMarkdownDescriptive(md);
+    const map = (parsed.children as any[])[0].children.find((c: any) => c.type === "map");
+    expect(map.children).toHaveLength(2);
+    expect(map.children[0].type).toBe("image");
+    expect(map.children[0].at).toBe("Golden Gate");
+    expect(map.children[1].at).toBe("Civic Center");
+  });
+
+  it("compiles children into the map stream and propagates at through effects", () => {
+    const compiled = compileDescriptiveRoot(parseMarkdownDescriptive(md));
+    const map = (compiled.children as any[])[0].children.find((c: any) => c.type === "map");
+    expect(map.children).toHaveLength(2);
+    // effects:[zoomIn] wraps each child in an effect node that carries `at`
+    expect(map.children[0].type).toBe("effect");
+    expect(map.children[0].at).toBe("Golden Gate");
+    expect(map.children[0].start).toBe(3);
+    expect(map.children[1].at).toBe("Civic Center");
+  });
+
+  it("keeps the map duration from its own end, not max(children)", () => {
+    const compiled = compileDescriptiveRoot(parseMarkdownDescriptive(md));
+    const map = (compiled.children as any[])[0].children.find((c: any) => c.type === "map");
+    expect(map.durationInSeconds).toBe(12);
+    expect(map.end).toBe(12);
+  });
+});
+
 // ── Helper ────────────────────────────────────────────────────────────────
 
 function findComponents(node: any): any[] {

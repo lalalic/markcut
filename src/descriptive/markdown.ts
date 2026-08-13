@@ -588,7 +588,8 @@ function processMDASTListItem(item: any, parent: ParentNode, lines: string[]): v
         node.type === "transitionSeries" ||
         node.type === "effect" ||
         node.type === "include" ||
-        node.type === "rhythm"
+        node.type === "rhythm" ||
+        node.type === "map"
       ) {
         for (const subItem of child.children) {
           processMDASTListItem(subItem, node as ParentNode, lines);

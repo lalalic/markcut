@@ -147,4 +147,32 @@ describe("routePositionAtLegs", () => {
     expect(end.lat).toBeCloseTo(PIER.lat, 5);
     expect(end.mode).toBe("DRIVING");
   });
+
+  it("holds at a waypoint during a dwell window", () => {
+    const stops = [{ label: "LA", at: LA, mode: "FLIGHT", fromSec: 8, toSec: 12 }];
+    // Inside the dwell → pin holds at LA, not on the flight arc.
+    const during = routePositionAtLegs(legs, 40, 10, stops)!;
+    expect(during.mode).toBe("FLIGHT");
+    expect(during.lat).toBeCloseTo(LA.lat, 4);
+    expect(during.lng).toBeCloseTo(LA.lng, 4);
+
+    // At toSec the dwell is over and motion resumes (no longer holding at LA).
+    const resumed = routePositionAtLegs(legs, 40, 12, stops)!;
+    expect(resumed.mode).toBe("FLIGHT");
+    expect(resumed.lat).toBeGreaterThan(LA.lat);
+  });
+
+  it("compresses drive time around dwells (dwell removed from drive budget)", () => {
+    const stops = [{ label: "LA", at: LA, mode: "FLIGHT", fromSec: 8, toSec: 12 }];
+    // With the 4s dwell at LA, at wall-clock t=12 the pin is only ~89% along
+    // the flight arc (still north of LA) because the drive budget shrank.
+    const withStop = routePositionAtLegs(legs, 40, 12, stops)!;
+    expect(withStop.mode).toBe("FLIGHT");
+    expect(withStop.lat).toBeGreaterThan(LA.lat);
+    expect(withStop.lat).toBeLessThan(SF.lat);
+
+    // Without the stop, t=12 is already 20% into the LA→PIER driving leg.
+    const noStop = routePositionAtLegs(legs, 40, 12)!;
+    expect(noStop.mode).toBe("DRIVING");
+  });
 });

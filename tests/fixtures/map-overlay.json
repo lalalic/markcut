@@ -1,0 +1,56 @@
+{
+  "root": {
+    "type": "root",
+    "width": 640,
+    "height": 480,
+    "fps": 30,
+    "layout": "series",
+    "children": [
+      {
+        "type": "map",
+        "id": "map-overlay-test",
+        "view": "route",
+        "travelMode": "DRIVING",
+        "mapType": "roadmap",
+        "routeColor": "#4285F4",
+        "routeWeight": 5,
+        "waypoints": [
+          {
+            "lat": 37.8199,
+            "lng": -122.4783,
+            "label": "Golden Gate"
+          },
+          {
+            "lat": 37.6213,
+            "lng": -122.379,
+            "label": "SFO"
+          }
+        ],
+        "start": 0,
+        "end": 12,
+        "duration": 12,
+        "children": [
+          {
+            "type": "effect",
+            "animation": "zoomIn",
+            "animationIterationCount": 1,
+            "start": 0,
+            "end": 4,
+            "at": "Golden Gate",
+            "children": [
+              {
+                "type": "image",
+                "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAACXBIWXMAAAAAAAAAAQCEeRdzAAAAYUlEQVR4nO3PwQkAIBDAMAX3X/kcwkcQmgnaPWvWz44OeNWA1oDWgNaA1oDWgNaA1oDWgNaA1oDWgNaA1oDWgNaA1oDWgNaA1oDWgNaA1oDWgNaA1oDWgNaA1oDWgNaAdgFCjAL8Lb/n7gAAAABJRU5ErkJggg==",
+                "fit": "contain",
+                "start": 0,
+                "end": 4,
+                "at": "Golden Gate"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "seed": 592821268
+  }
+}

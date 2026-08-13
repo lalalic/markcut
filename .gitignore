@@ -8,6 +8,7 @@ public/.component-cache/
 public/
 labels.json
 tests/fixtures/templates/assets/
+tests/fixtures/md/assets/
 .DS_Store
 .venv/
 .env
