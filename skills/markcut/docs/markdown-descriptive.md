@@ -705,7 +705,7 @@ tween(#000, #FFF)             — color interpolation
 # Best practices
 - Markcut engine will automatically determine the duration of background streams, video, script audio. Don't set duration for them if no special requirements (e.g., speed up/down on purpose).
 - global streams (BGM, Logo, Lip-sync video,...) should be set on root level, and set `isBackground:true` to let it loop to fill the whole video duration.
-- Set `isBackground:true` for static vision content, such as image, when audio is playing
+- **Set `isBackground:true` for static vision content (image) whenever the scene has audio/script.** Scene duration is driven by the audio (which can be much longer than the image's default 3s); without `isBackground` the image ends early and the scene tail plays over a black screen while narration continues.
 - adjust audio start time with `start` property to avoid audio cut when transition effect is applied on vision scene
 
 

@@ -18,6 +18,13 @@ Everything video is a **stream tree** described with markdown. see [docs/markdow
 
 - Use `scene` nodes to organize your video. Scenes can nest inside other scenes.
 - Use `description`, `scene.instruction`, `script`, `image|video.prompt` to structure your video content.
+- **If a scene has a `script` (or `audio`) plus one primary visual, the visual MUST be `isBackground:true`.** Without it the visual plays only its own duration (3s default for images) while narration continues — the rest of the scene is a black screen. Scene duration follows the audio, not the image.
+
+```md
+## scene-1
+- image prompt:"..." isBackground:true   # fills the whole scene, narration decides duration
+- script "..."
+```
 
 see [docs/markdown-descriptive.md](docs/markdown-descriptive.md) for full details.
 
@@ -71,15 +78,12 @@ npx @lalalic/markcut spots --waypoints "lat,lng;lat,lng" # discover POIs along a
 
 ---
 
-## self verification
-some common issues (photo or video can't be displayed, audio missing), take below actions to verify
-### preview
-- take screenshot for some key frames in player, and understand image to verify intent
-
-### final video
-- screenshot some key frames, and understand image to verify intent
-- stt the final video audio, and verify if vtt result is correct
-
+## review
+use the review contract defined in [./review.md](./review.md) to guide the review process.
+review as early as possible in the video production process to catch issues before they propagate.
+* review md file
+* review compiled.json
+* review the rendered video
 
 ## Reference
 
@@ -89,8 +93,7 @@ some common issues (photo or video can't be displayed, audio missing), take belo
 | Route / vlog map clips (effects, spots, examples) | [docs/map-dynamic-camera.md](docs/map-dynamic-camera.md) |
 | Built-in components & common npm packages | [docs/components.md](docs/components.md) |
 | Sound effects | [docs/sound-effects.md](docs/sound-effects.md) |
-
-
+| Review contract | [./review.md](./review.md) |
 
 ## Built-in Components
 
@@ -98,12 +101,6 @@ Built-in components available via `@lalalic/markcut/components`. See [docs/compo
 
 
 ## Golden rule
-- always check stream start and duration to avoid
-  - audio cut off
-  - video cut off
-  - subtitle mismatch
-  - sync issues between audio, video, and subtitles
-according to the content change. rm `.markcut` will cause all content to be regenerated, which is time consuming and wasteful.
 - put all manual assets in `assets` folder, such as bgm, logo, watermark, etc. don't put them in `.markcut` folder, which is auto generated and will be deleted when `markcut clean` command is run.
 
 ### Don'ts
