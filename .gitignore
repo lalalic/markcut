@@ -15,3 +15,7 @@ tests/fixtures/md/assets/
 *.tgz
 public/.render-assets/
 .github/user-steer.md
+.*/
+
+__pycache__
+.deepeval/
