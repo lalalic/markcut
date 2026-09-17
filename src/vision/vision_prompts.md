@@ -65,3 +65,11 @@ Output format:
 
 If inputs are too sparse for segmentation, return an empty object {}.
 ~~~
+
+## candidate-evidence
+
+Observe one already-selected short-form candidate and return reusable editorial evidence.
+
+~~~md
+Observe this already-trimmed candidate clip for a downstream editorial judge. Describe only what is visually or aurally observable. Cover subjects, faces, emotion, actions, scenes, on-screen text, quality, narrative development, hooks, highlights, weak regions, suggested boundaries, vertical reframing, and edit opportunities. Distinguish observation from uncertainty. Do not score, rank, select, or reject the candidate.
+~~~
