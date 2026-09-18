@@ -1177,7 +1177,7 @@ export async function main(args) {
   for (const [name, value] of promptOverrides) prompts.set(name, value);
 
   if (candidateMode) {
-    if (statSync(folder).isFile() && !VIDEO_EXTS.has(extname(folder).toLowerCase())) {
+    if (statSync(folder).isFile() && !VIDEO_EXTS.has(extname(folder).toLowerCase()) && extname(folder).toLowerCase() !== ".json") {
       emitError("Candidate mode accepts one video file or a JSON candidate manifest.");
       process.exit(1);
     }

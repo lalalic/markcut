@@ -129,6 +129,13 @@ function durationOf(path) {
   return Number.parseFloat(output.trim()) || 0;
 }
 
+function numericBound(value) {
+  const parsed = typeof value === "number"
+    ? value
+    : typeof value === "string" && value.trim() !== "" ? Number(value) : Number.NaN;
+  return Number.isFinite(parsed) ? parsed : Number.NaN;
+}
+
 function normalizeWhitespace(value) {
   return String(value).replace(/\s+/g, " ").trim();
 }
@@ -292,31 +299,38 @@ export async function runCandidateVision(inputPath, options) {
     };
   } else {
     const input = JSON.parse(readFileSync(resolved, "utf-8"));
-    const sourcePath = resolve(dirname(resolved), input.source?.path || input.sourcePath || input.source);
-    const candidatePath = input.candidate?.path || input.candidatePath || input.candidate;
-    const start = input.source?.start ?? input.start;
-    const end = input.source?.end ?? input.end;
+    const sourceValue = input.source;
+    const candidateValue = input.candidate;
+    const sourcePath = resolve(dirname(resolved), sourceValue?.path || input.sourcePath || (typeof sourceValue === "string" ? sourceValue : ""));
+    const candidatePath = typeof candidateValue === "string"
+      ? ""
+      : candidateValue?.path || input.candidatePath || "";
+    const candidateId = candidateValue?.id || input.candidateId || (typeof candidateValue === "string" ? candidateValue : "");
+    const start = numericBound(sourceValue?.start ?? input.start ?? input.sourceStartSec);
+    const end = numericBound(sourceValue?.end ?? input.end ?? input.sourceEndSec);
+    const candidateStart = numericBound(candidateValue?.start ?? input.candidateStartSec);
+    const candidateEnd = numericBound(candidateValue?.end ?? input.candidateEndSec);
     if (!sourcePath || !Number.isFinite(start) || !Number.isFinite(end) || end <= start) {
       throw new Error("candidate manifest requires source path and numeric start/end bounds");
+    }
+    if (candidatePath && (!Number.isFinite(candidateStart) || !Number.isFinite(candidateEnd) || candidateEnd <= candidateStart)) {
+      throw new Error("candidate path manifests require complete numeric candidate bounds; zero is valid for candidateStartSec");
     }
     manifest = {
       source: { id: input.source?.id || input.sourceId || basename(sourcePath), path: sourcePath, start, end },
       candidate: {
-        id: input.candidate?.id || input.candidateId || `${input.sourceId || basename(sourcePath)}-${start}-${end}`,
+        id: candidateId || input.candidateId || `${input.sourceId || basename(sourcePath)}-${start}-${end}`,
         path: candidatePath ? resolve(dirname(resolved), candidatePath) : sourcePath,
-        start,
-        end,
+        start: candidatePath ? candidateStart : start,
+        end: candidatePath ? candidateEnd : end,
+        needsSlice: !candidatePath,
       },
     };
   }
 
   if (!Number.isFinite(manifest.candidate.start)) manifest.candidate.start = manifest.source.start;
   if (!Number.isFinite(manifest.candidate.end)) manifest.candidate.end = manifest.source.end;
-  if (extension !== ".json") {
-    manifest.candidate.isTrimmedCandidate = true;
-  } else {
-    manifest.candidate.needsSlice = !input.candidate?.path && !input.candidatePath && !input.candidate;
-  }
+  manifest.candidate.isTrimmedCandidate = extension !== ".json" || !manifest.candidate.needsSlice;
 
   const prepared = prepareCandidate(
     { ...manifest, candidate: { ...manifest.candidate, path: manifest.candidate.path || manifest.source.path } },

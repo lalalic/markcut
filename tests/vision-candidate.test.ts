@@ -1,6 +1,6 @@
 import { execSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { basename, join, resolve } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 process.env.MARKCUT_VTT_CLI = "printf 'whole video'";
@@ -97,6 +97,7 @@ function fixture(path: string, value: unknown): string {
 describe("candidate-only vision", () => {
   let candidate: string;
   let validFixture: string;
+  let trimmedCandidate: string;
 
   beforeAll(() => {
     mkdirSync(ROOT, { recursive: true });
@@ -108,6 +109,7 @@ describe("candidate-only vision", () => {
     validFixture = fixture(join(ROOT, "valid.json"), evidenceResponse({
       quote: "This is the best part",
     }));
+    trimmedCandidate = createVideo(ROOT, "trimmed.mp4", 2.5);
   }, 30_000);
 
   afterAll(() => {
@@ -158,6 +160,39 @@ describe("candidate-only vision", () => {
       "--output", output,
     ])).rejects.toThrow(/invalid JSON/);
     expect(existsSync(output)).toBe(false);
+  });
+
+  it("accepts zero and preserves explicit pre-trimmed candidate intervals", async () => {
+    const manifestPath = join(ROOT, "zero-candidate-interval.json");
+    const output = join(ROOT, "zero-interval-evidence.json");
+    const noTranscriptFixture = fixture(join(ROOT, "valid-no-transcript.json"), evidenceResponse({ uncertainty: true }));
+    writeFileSync(manifestPath, JSON.stringify({
+      source: {
+        id: "source-22",
+        path: basename(trimmedCandidate),
+        start: 12,
+        end: 14.5,
+      },
+      candidatePath: basename(trimmedCandidate),
+      candidateId: "candidate-zero",
+      candidateStartSec: 0,
+      candidateEndSec: 2.5,
+    }));
+
+    await main([
+      "node", "cli.mjs", "vision", manifestPath, "--candidate",
+      "--model-command", `cat ${quote(noTranscriptFixture)}`,
+      "--output", output,
+    ]);
+
+    const artifact = JSON.parse(readFileSync(output, "utf-8"));
+    expect(artifact.source).toMatchObject({ id: "source-22", start: 12, end: 14.5 });
+    expect(artifact.candidate).toMatchObject({
+      id: "candidate-zero",
+      start: 0,
+      end: 2.5,
+      path: trimmedCandidate,
+    });
   });
 
   it("rejects fabricated transcript quotes", () => {
