@@ -214,3 +214,37 @@ uvx --from mlx-vlm mlx_vlm.generate \
 ```
 
 Browser path used the `chatgpt-browser-worker` skill plus `browser-harness`; no ChatGPT API call, copied cookie, or MacDeveloperBridge ChatGPT runtime was used.
+
+## Re-benchmark after browser-worker attachment and tab-lifecycle fixes
+
+A second pass was run after Neo main added verified attachment submission (`defe80d`) and operation-owned tab cleanup (`3b4331e`). This changed the result in two useful ways:
+
+- attachment submission itself is now materially safer: a prior smoke run observed the requested filename, prompt text, a new durable user turn, and a real user message ID before reporting success;
+- `result --expect-json` now rejects malformed/truncated assistant output instead of treating it as completed. A deliberately observed truncated response failed with `assistant result is not valid JSON`, which closes the false-completion path seen in the first pass;
+- operation-owned tab cleanup was verified by comparing page targets before and after an operation that opened a temporary thread tab; the target sets were identical after return.
+
+The re-benchmark also exposed a new blocking failure at the durable-thread boundary. Threads that are visible and usable when reached through the existing ChatGPT sidebar can load as a shell-only page when opened directly by their durable conversation URL in a fresh tab. In the observed failures, the URL and Project sidebar loaded, but the conversation had **0 visible user messages, 0 visible assistant messages, and 0 composer surfaces**. `operate_bh.py` therefore correctly failed with `ChatGPT composer was not observed` rather than sending into an ambiguous page.
+
+This matters because the current worker contract reopens a durable thread by URL for `send`, `status`, and `result`. A Vision backend cannot be considered reliable if durable thread recovery depends on whether the ChatGPT SPA was entered through sidebar navigation versus direct URL navigation.
+
+### Updated failure boundary
+
+```mermaid
+flowchart TD
+    A[Markcut media input] --> B[chatgpt-browser-worker send]
+    B --> C{attachment + durable user turn verified?}
+    C -->|yes| D[assistant generation]
+    C -->|no| X[fail safely]
+    D --> E{result JSON valid?}
+    E -->|no| X
+    E -->|yes| F[backend result]
+    R[resume/reopen thread by durable URL] --> G{conversation UI + composer restored?}
+    G -->|current rerun: not reliably| X
+    G -->|future| B
+```
+
+### Updated recommendation
+
+The browser-worker changes fix two important defects from the first pass—attachment-submit evidence and structured-result validation—but PR #3 should still remain research-only. The remaining blocker is now narrower and clearer: **reliable durable-thread reopening / SPA recovery**. Until the worker can reopen the exact `thread_id` and observe the same conversation state independent of navigation path, direct image/video benchmarking cannot be considered repeatable enough for a Markcut backend.
+
+The next browser-worker fix should therefore target thread reopening semantics: prefer semantic sidebar navigation to the exact observed thread when direct URL hydration yields an empty shell, verify the requested `thread_id` after navigation, and only then expose the composer or result operations. After that, rerun the same PNG and MP4 fixtures without changing Markcut itself.
