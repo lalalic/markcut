@@ -342,3 +342,27 @@ flowchart LR
 | `--show-prompts` | Print the prompts template file and exit |
 
 ## Architecture
+
+
+### Browser ChatGPT Vision backend
+
+Markcut can use the Neo `chatgpt-browser-worker` agent as the configurable ITT/VTT backend without changing the default local VLMs. The facade creates one unique temporary file-output contract per invocation, submits only through the configured browser-worker launcher, waits for that file, prints the answer on stdout, then removes only its own temporary files.
+
+For an installed package, select it with the existing CLI-template surface:
+
+```bash
+export MARKCUT_ITT_CLI='markcut vision-chatgpt --mode image --prompt "{prompt}" --input {input}'
+export MARKCUT_VTT_CLI='markcut vision-chatgpt --mode video --prompt "{prompt}" --input {input}'
+```
+
+For a source checkout, replace `markcut` above with `node src/render/cli.mjs`.
+
+The facade intentionally does not call `chatgpt-browser-worker/scripts/*` or automate Chrome itself. Set `MARKCUT_CHATGPT_BROWSER_WORKER_CLI` to the local agent-host command that launches the Neo **browser-worker agent**. That launcher receives these environment variables:
+
+- `MARKCUT_CHATGPT_PROMPT_FILE` — complete one-shot prompt, including the exact unique `Output: file` contract.
+- `MARKCUT_CHATGPT_MEDIA_FILES_JSON` — JSON array of attachments. Images are passed directly; video is deterministically reduced to a chronological contact sheet of representative frames plus timing context.
+- `MARKCUT_CHATGPT_OUTPUT_FILE` — authoritative result path that the delegated ChatGPT task must write.
+
+The launcher should return after the browser-worker verifies the Temporary Chat submission. The Markcut facade then waits up to `MARKCUT_CHATGPT_VISION_TIMEOUT_MS` (default 10 minutes) for the durable output file and exits nonzero on launcher failure, timeout, preprocessing failure, or an empty result.
+
+Current runtime gap: `chatgpt-browser-worker` exposes the `browser-worker.agent.md` contract, but does not yet expose a stable caller-facing synchronous CLI for arbitrary local tools. The launcher hook above is the minimal Markcut-side bridge: it keeps browser ownership in the existing worker/agent runtime and avoids a second Chrome automation implementation. Once Neo publishes a stable browser-worker launcher CLI, point `MARKCUT_CHATGPT_BROWSER_WORKER_CLI` at that command; no Markcut Vision pipeline change is required.
