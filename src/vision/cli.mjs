@@ -32,6 +32,8 @@
  *
  * Prompt overrides:
  *   --<prompt-name> "text"  Override any prompt template from vision_prompts.md
+ *   Use `--candidate-evidence "..."` in candidate mode to replace only the domain
+ *   instructions; the machine-readable JSON envelope remains fixed.
  */
 
 import { execSync, spawn } from "node:child_process";
@@ -46,6 +48,7 @@ import {
   MAX_IMAGE_DIMENSION, MAX_VIDEO_DURATION, MAX_VIDEO_DIMENSION,
   DEFAULT_ITT_CLI, DEFAULT_VTT_SAMPLE_INTERVAL, DEFAULT_VTT_CLI, DEFAULT_STT_CLI, DEFAULT_AGENT_CLI,
 } from "../config.mjs";
+import { runCandidateVision } from "./candidate.mjs";
 
 // ── Paths ─────────────────────────────────────────────────────────────────
 
@@ -788,7 +791,7 @@ function buildMergedCues(userHint, cues, sceneChangesMs, totalDurationMs) {
   return merged;
 }
 
-function analyzeVideo(videoPath, normInfo, normDir, prompts, context = "", userHint = "", sampleInterval = DEFAULT_VTT_SAMPLE_INTERVAL, userHints = null) {
+function analyzeVideo(videoPath, normInfo, normDir, prompts, context = "", userHint = "", sampleInterval = DEFAULT_VTT_SAMPLE_INTERVAL, userHints = null, skipSTT = false) {
   let ctxParts = [];
   if (context) ctxParts.push(`Context: ${context}`);
   if (userHint && typeof userHint === "string") ctxParts.push(`User hint: ${userHint}`);
@@ -803,8 +806,13 @@ function analyzeVideo(videoPath, normInfo, normDir, prompts, context = "", userH
   perception.desc = descText.slice(0, 500) || looseJSONParse(descRaw)?.desc || descRaw.slice(0, 500);
 
   // 2. STT → VTT subtitle
-  emitInfo(`  Running speech-to-text...`);
-  perception.subtitle = runSTT(videoPath, normDir, DEFAULT_STT_CLI);
+  if (skipSTT) {
+    emitInfo(`  Skipping speech-to-text...`);
+    perception.subtitle = null;
+  } else {
+    emitInfo(`  Running speech-to-text...`);
+    perception.subtitle = runSTT(videoPath, normDir, DEFAULT_STT_CLI);
+  }
 
   // 3. Build merged cue timeline from VTT + user hints + ffprobe
   emitInfo(`  Building merged segment boundaries...`);
@@ -1073,7 +1081,7 @@ async function runNormalizeAndPercept(folder, metadataPath, prompts, context, pi
       perception = cache[cacheKey];
       emitInfo(`  (cached)`);
     } else {
-      perception = analyzeVideo(vidPath, normInfo, normDir, prompts, context, userHint, vttSampleInterval, userHints);
+      perception = analyzeVideo(vidPath, normInfo, normDir, prompts, context, userHint, vttSampleInterval, userHints, skipSTT);
       if (perception.desc) cache[cacheKey] = perception;
     }
 
@@ -1123,6 +1131,14 @@ export async function main(args) {
   let skipSTT = false;
   let dryRun = false;
   let doLabel = false;
+  let candidateMode = false;
+  let output = "";
+  let modelCommand = "";
+  let transcriptFile = "";
+  let candidateId = "";
+  let sourceId = "";
+  let start = Number.NaN;
+  let end = Number.NaN;
   const pickSet = new Set();
   const promptOverrides = new Map();
 
@@ -1134,10 +1150,18 @@ export async function main(args) {
     const flag = args[i++];
     if (flag === "--help") { printUsage(); return; }
     else if (flag === "--label") { doLabel = true; }
+    else if (flag === "--candidate") { candidateMode = true; }
+    else if (flag === "--output" && args[i]) { output = resolve(args[i++]); }
+    else if (flag === "--model-command" && args[i]) { modelCommand = args[i++]; }
+    else if (flag === "--transcript-file" && args[i]) { transcriptFile = resolve(args[i++]); }
+    else if (flag === "--candidate-id" && args[i]) { candidateId = args[i++]; }
+    else if (flag === "--source-id" && args[i]) { sourceId = args[i++]; }
+    else if (flag === "--start" && args[i]) { start = Number.parseFloat(args[i++]); }
+    else if (flag === "--end" && args[i]) { end = Number.parseFloat(args[i++]); }
 
     else if (flag === "--prompts-file" && args[i]) { promptsFile = resolve(args[i++]); }
     else if (flag === "--vtt-sample-interval" && args[i]) { vttSampleInterval = parseInt(args[i++], 10) || DEFAULT_VTT_SAMPLE_INTERVAL; }
-    else if (flag === "--instruct" && args[i]) { context = args[i++]; }
+    else if (flag === "--instruct" && args[i] || flag === "--context" && args[i]) { context = args[i++]; }
     else if (flag === "--show-prompts") { console.log(readFileSync(promptsFile, "utf-8")); return; }
     else if (flag === "--skip-stt") { skipSTT = true; }
     else if (flag === "--pick" && args[i]) { for (const f of args[i++].split(",")) pickSet.add(f.trim()); }
@@ -1151,6 +1175,25 @@ export async function main(args) {
 
   const prompts = loadPrompts(promptsFile);
   for (const [name, value] of promptOverrides) prompts.set(name, value);
+
+  if (candidateMode) {
+    if (statSync(folder).isFile() && !VIDEO_EXTS.has(extname(folder).toLowerCase()) && extname(folder).toLowerCase() !== ".json") {
+      emitError("Candidate mode accepts one video file or a JSON candidate manifest.");
+      process.exit(1);
+    }
+    await runCandidateVision(folder, {
+      context,
+      output,
+      modelCommand,
+      transcriptFile,
+      candidateId,
+      sourceId,
+      start,
+      end,
+      prompts,
+    });
+    return;
+  }
 
   if (doLabel) {
     // Full pipeline with interactive labeling
