@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 import { execFileSync, execSync } from "node:child_process";
-import { randomUUID } from "node:crypto";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, extname, join, resolve } from "node:path";
 
@@ -47,7 +46,10 @@ export function prepareMedia(mode, inputs, workDir, maxFrames = 8) {
   const videoPath = inputs[0];
   if (!VIDEO_EXTS.has(extname(videoPath).toLowerCase())) throw new Error(`Unsupported video input: ${videoPath}`);
   const duration = ffprobeDuration(videoPath);
-  const count = Math.max(1, Math.min(maxFrames, Math.ceil(duration / 5)));
+  // Preserve chronology even for short clips. A one-frame fallback cannot
+  // distinguish ordering, so request at least two samples whenever maxFrames
+  // permits it; longer videos still scale at roughly one sample per 5 seconds.
+  const count = Math.max(1, Math.min(maxFrames, Math.max(2, Math.ceil(duration / 5))));
   const framesDir = join(workDir, "frames");
   mkdirSync(framesDir, { recursive: true });
   const pattern = join(framesDir, "frame-%03d.jpg");
@@ -66,43 +68,60 @@ export function prepareMedia(mode, inputs, workDir, maxFrames = 8) {
   return { files: [contact], context: `Video: ${basename(videoPath)}\nDuration: ${duration.toFixed(2)}s\nRepresentative frames are chronological, left-to-right then top-to-bottom.\nTiming: ${timing}` };
 }
 
-function waitForResult(outputPath, timeoutMs) {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    if (existsSync(outputPath)) {
-      const text = readFileSync(outputPath, "utf8").trim();
-      if (text) return text;
-    }
-    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 250);
-  }
-  throw new Error(`Timed out waiting for Browser ChatGPT result: ${outputPath}`);
+function runInference(launcher, prompt, files, timeoutMs, env) {
+  const expectJson = /\bjson\b/i.test(prompt);
+  const attemptSeconds = Math.max(30, Math.floor(timeoutMs / 1000 / 3));
+  const parts = [launcher, "--prompt", shellQuote(prompt), "--result-timeout", String(attemptSeconds), "--attempts", "3"];
+  if (expectJson) parts.push("--expect-json");
+  for (const file of files) parts.push("--file", shellQuote(file));
+  return execSync(parts.join(" "), { env, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: timeoutMs }).trim();
+}
+
+function mediaPrompt(prompt, context) {
+  return `${prompt}\n\nMedia context:\n${context}\n\nAnalyze only the attached media. Preserve chronology for video.`;
 }
 
 export function runVision({ mode, inputs, prompt, timeoutMs, maxFrames }, env = process.env) {
-  const launcher = env.MARKCUT_CHATGPT_BROWSER_WORKER_AGENT_CLI || env.MARKCUT_CHATGPT_BROWSER_WORKER_CLI;
-  if (!launcher) {
-    throw new Error("MARKCUT_CHATGPT_BROWSER_WORKER_AGENT_CLI is required; it must launch the Neo browser-worker agent runtime");
-  }
+  const launcher = env.MARKCUT_CHATGPT_BROWSER_INFER_CLI || "chatgpt-browser-infer";
   const workDir = mkdtempSync(join(tmpdir(), "markcut-chatgpt-vision-"));
-  const outputPath = join(workDir, "result.txt");
+  const deadline = Date.now() + timeoutMs;
+  const remaining = () => {
+    const value = deadline - Date.now();
+    if (value <= 0) throw new Error("ChatGPT browser vision overall timeout expired");
+    return value;
+  };
   try {
-    const media = prepareMedia(mode, inputs, workDir, maxFrames);
-    const jobId = `markcut-vision-${randomUUID()}`;
-    const taskId = `browser-vision-${randomUUID()}`;
-    const fullPrompt = `${prompt}\n\nMedia context:\n${media.context}\n\nAnalyze only the attached media. Preserve chronology for video. Write only the final answer to the declared file output.\n\nExecution event contract:\n- Job: ${jobId}\n- Task: ${taskId}\n- Publish exactly one worker-owned task.started before analysis.\n- Publish exactly one worker-owned task.completed only after the output file is durable; publish task.failed instead if execution cannot complete.\n- task.process.* events are carrier lifecycle only and never substitute for task lifecycle.\n\nOutput:\nfile\n${outputPath}`;
-    const promptPath = join(workDir, "prompt.txt");
-    writeFileSync(promptPath, fullPrompt, "utf8");
-    const childEnv = {
-      ...env,
-      MARKCUT_CHATGPT_PROMPT_FILE: promptPath,
-      MARKCUT_CHATGPT_MEDIA_FILES_JSON: JSON.stringify(media.files),
-      MARKCUT_CHATGPT_OUTPUT_FILE: outputPath,
-      MARKCUT_CHATGPT_TAB_CLOSE_POLICY: "after-terminal",
-      NEO_JOB_ID: jobId,
-      NEO_TASK_ID: taskId,
-    };
-    execSync(launcher, { env: childEnv, stdio: ["ignore", "pipe", "pipe"], timeout: timeoutMs });
-    return waitForResult(outputPath, timeoutMs);
+    if (mode === "image") {
+      const media = prepareMedia("image", inputs, workDir, maxFrames);
+      return runInference(launcher, mediaPrompt(prompt, media.context), media.files, remaining(), env);
+    }
+    if (inputs.length !== 1) throw new Error("video mode accepts exactly one input video");
+    const videoPath = inputs[0];
+    let directError = null;
+    if (env.MARKCUT_CHATGPT_DIRECT_VIDEO === "1") {
+      const directContext = `Video: ${basename(videoPath)}\nAnalyze the video directly and preserve chronology.`;
+      try {
+        // Direct MP4 analysis is experimental because the web client may accept
+        // the upload without exposing usable temporal media to the model. Never
+        // let it consume the entire caller budget needed for frame fallback.
+        const directBudget = Math.max(1, Math.min(remaining(), Math.floor(timeoutMs / 2)));
+        return runInference(launcher, mediaPrompt(prompt, directContext), [videoPath], directBudget, env);
+      } catch (error) {
+        directError = error;
+      }
+    }
+    const fallback = prepareMedia("video", inputs, workDir, maxFrames);
+    try {
+      const fallbackContext = directError
+        ? `${fallback.context}\nDirect video upload failed; using deterministic frame analysis.`
+        : `${fallback.context}\nUsing deterministic frame analysis.`;
+      return runInference(launcher, mediaPrompt(prompt, fallbackContext), fallback.files, remaining(), env);
+    } catch (fallbackError) {
+      const fallbackMessage = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
+      if (!directError) throw new Error(`ChatGPT video frame inference failed: ${fallbackMessage}`);
+      const directMessage = directError instanceof Error ? directError.message : String(directError);
+      throw new Error(`ChatGPT video inference failed directly and via frame fallback. direct=${directMessage}; fallback=${fallbackMessage}`);
+    }
   } finally {
     rmSync(workDir, { recursive: true, force: true });
   }
