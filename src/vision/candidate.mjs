@@ -230,7 +230,10 @@ function cacheKey(candidate, transcript, context, prompt, modelCommand, contract
     contract,
     source: { id: candidate.source.id, fingerprint: fingerprint(candidate.source.path), bounds: [candidate.source.start, candidate.source.end] },
     candidate: { id: candidate.candidate.id, fingerprint: fingerprint(candidate.candidate.path), bounds: [candidate.candidate.start, candidate.candidate.end] },
-    transcript: transcript.supplied ? { fingerprint: fingerprint(transcript.input), supplied: true } : { supplied: false },
+    transcript: transcript.supplied ? {
+      supplied: true,
+      contentHash: createHash("sha256").update(transcript.text || "").digest("hex"),
+    } : { supplied: false },
     context,
     prompt,
     modelCommand,
@@ -260,7 +263,7 @@ function prepareCandidate(candidate, workingDir) {
       path: mediaPath,
       duration: actualDuration,
       normalizedMediaPath: normalizedPath,
-      isTrimmedCandidate: !candidate.candidate.needsSlice,
+      isTrimmedCandidate: true,
     },
   };
 }
@@ -295,7 +298,13 @@ export async function runCandidateVision(inputPath, options) {
     if (end <= start) throw new Error("candidate end must exceed start");
     manifest = {
       source: { id: options.sourceId || basename(resolved, extension), path: resolved, start, end },
-      candidate: { id: options.candidateId || `${basename(resolved, extension)}-${start}-${end}`, path: resolved, start, end },
+      candidate: {
+        id: options.candidateId || `${basename(resolved, extension)}-${start}-${end}`,
+        path: resolved,
+        start,
+        end,
+        needsSlice: start > 0 || end < duration,
+      },
     };
   } else {
     const input = JSON.parse(readFileSync(resolved, "utf-8"));
@@ -330,7 +339,7 @@ export async function runCandidateVision(inputPath, options) {
 
   if (!Number.isFinite(manifest.candidate.start)) manifest.candidate.start = manifest.source.start;
   if (!Number.isFinite(manifest.candidate.end)) manifest.candidate.end = manifest.source.end;
-  manifest.candidate.isTrimmedCandidate = extension !== ".json" || !manifest.candidate.needsSlice;
+  manifest.candidate.isTrimmedCandidate = !manifest.candidate.needsSlice;
 
   const prepared = prepareCandidate(
     { ...manifest, candidate: { ...manifest.candidate, path: manifest.candidate.path || manifest.source.path } },

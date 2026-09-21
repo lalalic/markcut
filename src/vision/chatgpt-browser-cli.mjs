@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { execFileSync, execSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, extname, join, resolve } from "node:path";
@@ -78,13 +79,17 @@ function waitForResult(outputPath, timeoutMs) {
 }
 
 export function runVision({ mode, inputs, prompt, timeoutMs, maxFrames }, env = process.env) {
-  const launcher = env.MARKCUT_CHATGPT_BROWSER_WORKER_CLI;
-  if (!launcher) throw new Error("MARKCUT_CHATGPT_BROWSER_WORKER_CLI is required; it must launch the Neo browser-worker agent");
+  const launcher = env.MARKCUT_CHATGPT_BROWSER_WORKER_AGENT_CLI || env.MARKCUT_CHATGPT_BROWSER_WORKER_CLI;
+  if (!launcher) {
+    throw new Error("MARKCUT_CHATGPT_BROWSER_WORKER_AGENT_CLI is required; it must launch the Neo browser-worker agent runtime");
+  }
   const workDir = mkdtempSync(join(tmpdir(), "markcut-chatgpt-vision-"));
   const outputPath = join(workDir, "result.txt");
   try {
     const media = prepareMedia(mode, inputs, workDir, maxFrames);
-    const fullPrompt = `${prompt}\n\nMedia context:\n${media.context}\n\nAnalyze only the attached media. Preserve chronology for video. Write only the final answer to the declared file output.\n\nOutput:\nfile\n${outputPath}`;
+    const jobId = `markcut-vision-${randomUUID()}`;
+    const taskId = `browser-vision-${randomUUID()}`;
+    const fullPrompt = `${prompt}\n\nMedia context:\n${media.context}\n\nAnalyze only the attached media. Preserve chronology for video. Write only the final answer to the declared file output.\n\nExecution event contract:\n- Job: ${jobId}\n- Task: ${taskId}\n- Publish exactly one worker-owned task.started before analysis.\n- Publish exactly one worker-owned task.completed only after the output file is durable; publish task.failed instead if execution cannot complete.\n- task.process.* events are carrier lifecycle only and never substitute for task lifecycle.\n\nOutput:\nfile\n${outputPath}`;
     const promptPath = join(workDir, "prompt.txt");
     writeFileSync(promptPath, fullPrompt, "utf8");
     const childEnv = {
@@ -92,8 +97,11 @@ export function runVision({ mode, inputs, prompt, timeoutMs, maxFrames }, env = 
       MARKCUT_CHATGPT_PROMPT_FILE: promptPath,
       MARKCUT_CHATGPT_MEDIA_FILES_JSON: JSON.stringify(media.files),
       MARKCUT_CHATGPT_OUTPUT_FILE: outputPath,
+      MARKCUT_CHATGPT_TAB_CLOSE_POLICY: "after-terminal",
+      NEO_JOB_ID: jobId,
+      NEO_TASK_ID: taskId,
     };
-    execSync(launcher, { env: childEnv, stdio: ["ignore", "pipe", "pipe"], timeout: Math.min(timeoutMs, 120_000) });
+    execSync(launcher, { env: childEnv, stdio: ["ignore", "pipe", "pipe"], timeout: timeoutMs });
     return waitForResult(outputPath, timeoutMs);
   } finally {
     rmSync(workDir, { recursive: true, force: true });

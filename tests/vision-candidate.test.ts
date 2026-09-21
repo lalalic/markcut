@@ -136,6 +136,13 @@ describe("candidate-only vision", () => {
     expect(artifact.observations).toHaveProperty("summary");
     expect(artifact.observations.uncertainty.length).toBeGreaterThan(0);
     expect(readFileSync(invocationCount, "utf-8").trim().split("\n")).toHaveLength(1);
+    expect(artifact.candidate.path).not.toBe(candidate);
+    const boundedDuration = Number(execSync(
+      `ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 ${quote(artifact.candidate.path)}`,
+      { encoding: "utf-8" },
+    ).trim());
+    expect(boundedDuration).toBeGreaterThanOrEqual(1.9);
+    expect(boundedDuration).toBeLessThanOrEqual(2.1);
 
     const mediaDir = join(ROOT, ".markcut-candidate-vision");
     const generated = execSync(`find ${quote(mediaDir)} -maxdepth 1 -type f -print`, { encoding: "utf-8" }).trim().split("\n");
@@ -219,6 +226,30 @@ describe("candidate-only vision", () => {
       candidate: { ...identity.candidate, start: 1, end: 2 },
     };
     expect(cacheKey(changedBounds as any, transcript as any, "", "prompt", "model", "v1")).not.toBe(base);
+  });
+
+  it("invalidates cache when normalized transcript content changes", () => {
+    const transcriptPath = join(ROOT, "cache-transcript.vtt");
+    const identity = {
+      source: { id: "source", path: candidate, start: 0, end: 1 },
+      candidate: { id: "candidate", path: candidate, start: 0, end: 1 },
+    };
+    writeFileSync(
+      transcriptPath,
+      "WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nAlpha transcript line\n",
+    );
+    const firstTranscript = normalizeTranscript(transcriptPath);
+    const first = cacheKey(identity as any, firstTranscript as any, "", "prompt", "model", "v1");
+
+    writeFileSync(
+      transcriptPath,
+      "WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nBravo transcript line\n",
+    );
+    const secondTranscript = normalizeTranscript(transcriptPath);
+    const second = cacheKey(identity as any, secondTranscript as any, "", "prompt", "model", "v1");
+
+    expect(secondTranscript.text).not.toBe(firstTranscript.text);
+    expect(second).not.toBe(first);
   });
 
   it("honors --skip-stt in normal vision mode", async () => {

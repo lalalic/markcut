@@ -346,7 +346,7 @@ flowchart LR
 
 ### Browser ChatGPT Vision backend
 
-Markcut can use the Neo `chatgpt-browser-worker` agent as the configurable ITT/VTT backend without changing the default local VLMs. The facade creates one unique temporary file-output contract per invocation, submits only through the configured browser-worker launcher, waits for that file, prints the answer on stdout, then removes only its own temporary files.
+Markcut can use the Neo `chatgpt-browser-worker` agent as the configurable ITT/VTT backend without changing the default local VLMs. Each invocation creates one unique durable file output plus unique Neo job/task correlation, then hands the complete one-shot request to the existing browser-worker agent runtime.
 
 For an installed package, select it with the existing CLI-template surface:
 
@@ -357,12 +357,12 @@ export MARKCUT_VTT_CLI='markcut vision-chatgpt --mode video --prompt "{prompt}" 
 
 For a source checkout, replace `markcut` above with `node src/render/cli.mjs`.
 
-The facade intentionally does not call `chatgpt-browser-worker/scripts/*` or automate Chrome itself. Set `MARKCUT_CHATGPT_BROWSER_WORKER_CLI` to the local agent-host command that launches the Neo **browser-worker agent**. That launcher receives these environment variables:
+The facade intentionally does not call `chatgpt-browser-worker/scripts/*` or automate Chrome itself. Set `MARKCUT_CHATGPT_BROWSER_WORKER_AGENT_CLI` to the local command that launches the Neo **browser-worker agent/runtime**. The older `MARKCUT_CHATGPT_BROWSER_WORKER_CLI` name remains as a compatibility fallback.
 
-- `MARKCUT_CHATGPT_PROMPT_FILE` — complete one-shot prompt, including the exact unique `Output: file` contract.
+- `MARKCUT_CHATGPT_PROMPT_FILE` — complete one-shot prompt, including the exact `Output: file` contract and worker-owned event IDs.
 - `MARKCUT_CHATGPT_MEDIA_FILES_JSON` — JSON array of attachments. Images are passed directly; video is deterministically reduced to a chronological contact sheet of representative frames plus timing context.
 - `MARKCUT_CHATGPT_OUTPUT_FILE` — authoritative result path that the delegated ChatGPT task must write.
+- `NEO_JOB_ID` / `NEO_TASK_ID` — unique correlation for the delegated worker's canonical `task.started` and terminal task event.
+- `MARKCUT_CHATGPT_TAB_CLOSE_POLICY=after-terminal` — requests that only the isolated worker-owned tab remain open until the exact task terminal event.
 
-The launcher should return after the browser-worker verifies the Temporary Chat submission. The Markcut facade then waits up to `MARKCUT_CHATGPT_VISION_TIMEOUT_MS` (default 10 minutes) for the durable output file and exits nonzero on launcher failure, timeout, preprocessing failure, or an empty result.
-
-Current runtime gap: `chatgpt-browser-worker` exposes the `browser-worker.agent.md` contract, but does not yet expose a stable caller-facing synchronous CLI for arbitrary local tools. The launcher hook above is the minimal Markcut-side bridge: it keeps browser ownership in the existing worker/agent runtime and avoids a second Chrome automation implementation. Once Neo publishes a stable browser-worker launcher CLI, point `MARKCUT_CHATGPT_BROWSER_WORKER_CLI` at that command; no Markcut Vision pipeline change is required.
+The launcher may stay active through `after-terminal`; launcher/process exit is not treated as task completion. Markcut's only result is the declared durable output file, and it exits nonzero on launcher failure, timeout, preprocessing failure, or an empty/missing result. Carrier-only `task.process.launched`, `task.process.exited`, and `task.process.async_exited` events never substitute for worker-owned task lifecycle.
