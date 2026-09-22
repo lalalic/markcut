@@ -342,22 +342,3 @@ flowchart LR
 | `--show-prompts` | Print the prompts template file and exit |
 
 ## Architecture
-
-
-### Browser ChatGPT Vision backend
-
-Markcut can use the authenticated Neo Browser ChatGPT inference command as its configurable ITT/VTT backend without changing the default local VLMs. Each inference uses a fresh worker-owned Temporary Chat tab, uploads the media, waits for a verified user turn and complete assistant result in the same tab, then closes that owned tab. It does not depend on reopening a ChatGPT conversation.
-
-Expose the Neo inference command on `PATH` as `chatgpt-browser-infer`, or point Markcut at it explicitly:
-
-```bash
-export MARKCUT_CHATGPT_BROWSER_INFER_CLI='/path/to/neo/skills/chatgpt-browser-worker/bin/chatgpt-browser-infer'
-export MARKCUT_ITT_CLI='markcut vision-chatgpt --mode image --prompt "{prompt}" --input {input}'
-export MARKCUT_VTT_CLI='markcut vision-chatgpt --mode video --prompt "{prompt}" --input {input}'
-```
-
-For a source checkout, replace `markcut` above with `node src/render/cli.mjs`.
-
-Image inputs are uploaded directly. Video uses deterministic chronological frame sampling by default, builds a contact sheet with timing context, and analyzes that image through the same inference surface. This is the production path because direct MP4 upload through the current ChatGPT web client was materially slower and did not complete reliably in E2E testing. Set `MARKCUT_CHATGPT_DIRECT_VIDEO=1` only to experiment with direct MP4 first; failure still falls back to frames. Prompts requesting JSON enable strict whole-response JSON validation; truncated or prose-wrapped JSON is never accepted as success (a single whole-response JSON code fence is normalized), and incomplete/failed inference attempts are retried in a fresh owned tab.
-
-`MARKCUT_CHATGPT_VISION_TIMEOUT_MS` controls the overall Markcut-side timeout. The inference command itself owns attachment readiness, submission verification, complete-result detection, retries, and owned-tab cleanup.

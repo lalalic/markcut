@@ -81,11 +81,6 @@ Commands:
     --label                            Add interactive labeling step before AI pipeline
     --instruct "text"                   Background context about people/places (injected into prompts)
 
-  vision-chatgpt                       Browser ChatGPT ITT/VTT facade
-    --mode image|video|auto            Media mode (default: auto)
-    --prompt "text"                    Vision instructions
-    --input <path...>                  Local media input(s)
-
   spots --waypoints "lat,lng;..."      Discover POIs along a route (Directions + Places API)
     --travelMode DRIVING               DRIVING | WALKING | BICYCLING (default DRIVING)
     --limit 8                          Max spots after ranking
@@ -226,11 +221,6 @@ edit=${DEFAULT_EDIT_CLI}`);
     const { main: visionMain } = await import("../vision/cli.mjs");
     await visionMain(process.argv);
     process.exit(0);
-  }
-
-  if (args.command === "vision-chatgpt") {
-    const { main: visionChatGptMain } = await import("../vision/chatgpt-browser-cli.mjs");
-    process.exit(visionChatGptMain(process.argv.slice(3)));
   }
 
   if (args.command === "spots") {
