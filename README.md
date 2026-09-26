@@ -341,4 +341,32 @@ flowchart LR
 | `--dry-run` | Show what would be processed without running AI |
 | `--show-prompts` | Print the prompts template file and exit |
 
+### Default Vision backend priority
+
+Markcut Vision is remote-first by default so ordinary perception does not require a heavy local VLM on the host Mac. Explicit `--itt` / `--vtt` flags and `MARKCUT_ITT_CLI` / `MARKCUT_VTT_CLI` environment variables still override these defaults.
+
+Default ITT tries, in order:
+
+1. **Browser ChatGPT Temporary Chat** through `chatgpt-browser-infer` (or `MARKCUT_CHATGPT_BROWSER_INFER_CLI`). The Neo runtime owns browser automation, isolation, attachment readiness, retries, and cleanup.
+2. **Codex CLI remote vision**, trying profiles from `MARKCUT_CODEX_VISION_PROFILES` (default `zai,default`). On this Mac that means the lightweight Z.ai profile first, then the normal Codex/OpenAI profile.
+3. **Local MLX MiniCPM** as the final fallback only. Override its model with `MARKCUT_LOCAL_VISION_MODEL`.
+
+Default VTT is intentionally empty. Markcut therefore performs its existing deterministic chronological frame extraction (5–10 representative frames, controlled by `--vtt-sample-interval`) and sends those frames through the same ITT priority chain. Set `--vtt` or `MARKCUT_VTT_CLI` when a dedicated video backend is explicitly desired.
+
+To expose the Neo Browser ChatGPT runtime on this Mac:
+
+```bash
+ln -sf "$HOME/Workspace/neo/skills/chatgpt-browser-worker/bin/chatgpt-browser-infer" "$HOME/.local/bin/chatgpt-browser-infer"
+```
+
+Useful policy overrides:
+
+```bash
+export MARKCUT_CODEX_VISION_PROFILES='zai,default'
+export MARKCUT_CHATGPT_BROWSER_INFER_CLI='/path/to/chatgpt-browser-infer'
+# Explicit custom backends still win:
+export MARKCUT_ITT_CLI='my-image-backend --prompt "{prompt}" {input}'
+export MARKCUT_VTT_CLI='my-video-backend --prompt "{prompt}" {input}'
+```
+
 ## Architecture
