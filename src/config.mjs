@@ -1,3 +1,5 @@
+import { fileURLToPath } from "node:url";
+
 /**
  * Default CLI templates and constants for the markcut pipeline.
  *
@@ -96,7 +98,8 @@ export const DEFAULT_EDIT_CLI = args.cliOverrides.editCli || process.env.MARKCUT
 export const DEFAULT_TTI_CLI = args.cliOverrides.tti || process.env.MARKCUT_TTI_CLI || 'uvx --from mflux mflux-generate-flux2 --model flux2-klein-4b --steps 2 --prompt "{input}" --output "{output}" --seed {seed}';
 /** Text-to-video CLI. Override via --ttv flag or MARKCUT_TTV_CLI env var. */
 export const DEFAULT_TTV_CLI = args.cliOverrides.ttv || process.env.MARKCUT_TTV_CLI || '';
+const DEFAULT_VISION_INFER = fileURLToPath(new URL("./vision/default-infer.mjs", import.meta.url));
 /** Image-to-text CLI. Override via --itt flag or MARKCUT_ITT_CLI env var. */
-export const DEFAULT_ITT_CLI = args.cliOverrides.itt || process.env.MARKCUT_ITT_CLI || 'uvx --from mlx-vlm mlx_vlm.generate --model mlx-community/MiniCPM-V-4.6-bf16 --max-tokens 2048 --prompt "{prompt}" --image {input} --temperature 0.0 --thinking-mode disabled';;
-/** Video-to-text CLI. Override via --vtt flag or MARKCUT_VTT_CLI env var. */
-export const DEFAULT_VTT_CLI = args.cliOverrides.vtt || process.env.MARKCUT_VTT_CLI || 'uvx --from mlx-vlm mlx_vlm.generate --model mlx-community/MiniCPM-V-4.6-bf16 --max-tokens 2048 --prompt "{prompt}" --video {input} --temperature 0.0 --processor-kwargs \'{"max_num_frames": 32, "stack_frames": 1, "max_slice_nums": 1, "use_image_id": false}\'';
+export const DEFAULT_ITT_CLI = args.cliOverrides.itt || process.env.MARKCUT_ITT_CLI || `node ${JSON.stringify(DEFAULT_VISION_INFER)} --prompt "{prompt}" {input}`;
+/** Video-to-text CLI. Override via --vtt flag or MARKCUT_VTT_CLI env var. Empty by default so Vision uses chronological frame extraction through ITT. */
+export const DEFAULT_VTT_CLI = args.cliOverrides.vtt || process.env.MARKCUT_VTT_CLI || '';

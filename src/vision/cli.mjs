@@ -395,7 +395,8 @@ function extractVideoFrames(videoPath, intervalSeconds = DEFAULT_VTT_SAMPLE_INTE
   catch (e) { try { rmSync(tmpDir, { recursive: true, force: true }); } catch {} throw new Error(`Frame extraction failed: ${e.message}`); }
   const frames = readdirSync(tmpDir).filter((f) => f.startsWith(baseName) && f.endsWith(".jpg")).sort().map((f) => join(tmpDir, f));
   if (frames.length === 0) { try { rmSync(tmpDir, { recursive: true, force: true }); } catch {} throw new Error("No frames extracted from video"); }
-  return { frames, cleanup: () => { try { rmSync(tmpDir, { recursive: true, force: true }); } catch {} } };
+  const timing = frames.map((frame, i) => ({ frame, seconds: ((i + 0.5) * Math.max(duration || 5, 1)) / frames.length }));
+  return { frames, timing, cleanup: () => { try { rmSync(tmpDir, { recursive: true, force: true }); } catch {} } };
 }
 
 function runVTT(videoPath, promptText, vttCli, ittCli, sampleInterval = DEFAULT_VTT_SAMPLE_INTERVAL) {
@@ -416,7 +417,11 @@ function runVTT(videoPath, promptText, vttCli, ittCli, sampleInterval = DEFAULT_
   let extracted;
   try { extracted = extractVideoFrames(videoPath, sampleInterval); }
   catch (e) { emitWarn(`  ${e.message}`); return ""; }
-  const result = runITT(extracted.frames, promptText, ittCli);
+  const timingContext = extracted.timing
+    .map((item, i) => `Frame ${i + 1}: approximately ${item.seconds.toFixed(1)}s`)
+    .join("\n");
+  const framePrompt = `${promptText}\n\nThe attached frames are ordered chronologically. Approximate timing:\n${timingContext}`;
+  const result = runITT(extracted.frames, framePrompt, ittCli);
   extracted.cleanup();
   return result;
 }
