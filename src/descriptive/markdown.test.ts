@@ -864,3 +864,41 @@ layout:parallel
     });
   });
 });
+
+// HTML comments are an intentional out-of-band metadata channel. remark-parse
+// emits them as `html` nodes; Markcut ignores those nodes completely.
+describe("HTML comments", () => {
+  it("ignores generic HTML comments", () => {
+    const doc = `# video
+<!-- arbitrary metadata -->
+## Scene
+- image src:a.jpg duration:1`;
+    const parsed = parseMarkdownDescriptive(doc);
+    expect(parsed.children).toHaveLength(1);
+    const scene = parsed.children[0] as any;
+    expect(scene.name).toBe("Scene");
+    expect(scene.children).toHaveLength(1);
+    expect(scene.children[0].type).toBe("image");
+  });
+
+  it("ignores execution metadata comments between scene metadata and media", () => {
+    const doc = `# video
+width:1920 height:1080 fps:30 layout:series
+
+## profiles
+title:"Reveal profiles" instruction:"Each child has a distinct profile"
+<!-- execution {"id":"profiles-demo","type":"demo","scene_id":"profiles","output":"assets/profiles-demo.mp4"} -->
+- video src:"assets/profiles-demo.mp4" duration:6`;
+    const parsed = parseMarkdownDescriptive(doc);
+    const scene = parsed.children[0] as any;
+    expect(scene.name).toBe("profiles");
+    expect(scene.title).toBe("Reveal profiles");
+    expect(scene.instruction).toBe("Each child has a distinct profile");
+    expect(scene.children).toHaveLength(1);
+    expect(scene.children[0]).toMatchObject({
+      type: "video",
+      src: "assets/profiles-demo.mp4",
+      duration: 6,
+    });
+  });
+});
