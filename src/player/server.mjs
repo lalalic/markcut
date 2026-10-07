@@ -1158,6 +1158,18 @@ Edit request: ${text}`;
       return;
     }
 
+    // API: lightweight readiness probe for embedded MCP App previews.
+    if (path === "/api/ready" && req.method === "GET") {
+      const ready = compiledRootCache.has(variantLabel);
+      res.writeHead(200, {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+        "Access-Control-Allow-Origin": "*",
+      });
+      res.end(JSON.stringify({ ready }));
+      return;
+    }
+
     // API: Get video.json data for a specific variant
     if (path === "/api/video-data") {
       try {
