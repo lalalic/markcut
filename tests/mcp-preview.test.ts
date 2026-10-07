@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { buildPreviewHtml, readMarkdownPreview, reviewResult, validateMarkdownPath } from "../src/mcp/preview.mjs";
+import { buildPreviewHtml, readMarkdownPreview, reviewMessage, reviewResult, validateMarkdownPath } from "../src/mcp/preview.mjs";
 
 describe("MarkCut MCP Markdown preview", () => {
   it("requires an absolute .md path", () => {
@@ -20,6 +20,11 @@ describe("MarkCut MCP Markdown preview", () => {
     expect(html).toContain("This is a review.");
     expect(html).toContain("Approve");
     expect(html).toContain("Request changes");
+    expect(html).toContain("ui/initialize");
+    expect(html).toContain("ui/notifications/tool-result");
+    expect(html).toContain("tools/call");
+    expect(html).toContain("ui/message");
+    expect(html).toContain("review.md");
   });
 
   it("returns approved", () => {
@@ -31,5 +36,15 @@ describe("MarkCut MCP Markdown preview", () => {
     expect(reviewResult("changes_requested", " Fix the title ")).toEqual({
       decision: "changes_requested", feedback: "Fix the title",
     });
+  });
+
+  it("formats decisions as an MCP Apps ui/message notification", () => {
+    expect(reviewMessage({ decision: "approved" })).toEqual({
+      jsonrpc: "2.0",
+      method: "ui/message",
+      params: { role: "user", content: [{ type: "text", text: '{"decision":"approved"}' }] },
+    });
+    expect(reviewMessage({ decision: "changes_requested", feedback: "Fix the title" }).params.content[0].text)
+      .toBe('{"decision":"changes_requested","feedback":"Fix the title"}');
   });
 });

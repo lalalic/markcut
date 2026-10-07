@@ -6,7 +6,7 @@ import {
   ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import {
-  TOOL_NAME, RESOURCE_URI, buildPreviewHtml, readMarkdownPreview,
+  TOOL_NAME, SUBMIT_TOOL_NAME, RESOURCE_URI, buildPreviewHtml, readMarkdownPreview, reviewResult,
 } from "./preview.mjs";
 
 const server = new Server(
@@ -23,6 +23,18 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       required: ["path"], additionalProperties: false,
     },
     _meta: { "ui/resourceUri": RESOURCE_URI, ui: { resourceUri: RESOURCE_URI } },
+  }, {
+    name: SUBMIT_TOOL_NAME,
+    description: "Submit the review decision from the Markdown preview UI.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        decision: { type: "string", enum: ["approved", "changes_requested"] },
+        feedback: { type: "string" },
+      },
+      required: ["decision"], additionalProperties: false,
+    },
+    _meta: { ui: { visibility: ["app"] } },
   }],
 }));
 
@@ -37,6 +49,11 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => ({
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   try {
     const input = request.params.arguments ?? {};
+    if (request.params.name === SUBMIT_TOOL_NAME) {
+      const decision = reviewResult(input.decision, input.feedback);
+      return { content: [{ type: "text", text: JSON.stringify(decision) }], structuredContent: decision };
+    }
+    if (request.params.name !== TOOL_NAME) throw new Error(`unknown tool: ${request.params.name}`);
     const { path, markdown } = await readMarkdownPreview(input.path);
     return {
       content: [{ type: "text", text: `Markdown ready for review: ${path}` }],
