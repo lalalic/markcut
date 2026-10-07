@@ -3,7 +3,16 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import vm from "node:vm";
-import { buildPreviewHtml, readMarkdownPreview, reviewMessage, reviewResult, validateMarkdownPath } from "../src/mcp/preview.mjs";
+import {
+  buildPreviewHtml,
+  buildPreviewResourceResult,
+  readMarkdownPreview,
+  RESOURCE_MIME_TYPE,
+  RESOURCE_URI,
+  reviewMessage,
+  reviewResult,
+  validateMarkdownPath,
+} from "../src/mcp/preview.mjs";
 import { buildPreviewBridgeScript } from "../src/mcp/bridge.mjs";
 
 describe("MarkCut MCP Markdown preview", () => {
@@ -27,6 +36,19 @@ describe("MarkCut MCP Markdown preview", () => {
     expect(html).toContain("tools/call");
     expect(html).toContain("ui/message");
     expect(html).toContain("review.md");
+  });
+
+  it("returns Codex-compatible private no-cache resource metadata", () => {
+    const result = buildPreviewResourceResult();
+    expect(result.ttlMs).toBe(0);
+    expect(result.cacheScope).toBe("private");
+    expect(result.contents).toHaveLength(1);
+    expect(result.contents[0]).toMatchObject({
+      uri: RESOURCE_URI,
+      mimeType: RESOURCE_MIME_TYPE,
+    });
+    expect(result.contents[0].text).toContain("ui/initialize");
+    expect(result.contents[0].text).toContain("ui/notifications/initialized");
   });
 
   it("returns approved", () => {

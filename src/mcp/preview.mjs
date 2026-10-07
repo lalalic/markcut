@@ -5,6 +5,25 @@ import { buildPreviewBridgeScript } from "./bridge.mjs";
 export const TOOL_NAME = "markcut.preview";
 export const SUBMIT_TOOL_NAME = "markcut.preview.submit";
 export const RESOURCE_URI = "ui://markcut/markdown-preview-v2.html";
+export const RESOURCE_MIME_TYPE = "text/html;profile=mcp-app";
+
+export function buildPreviewResourceResult() {
+  return {
+    ttlMs: 0,
+    cacheScope: "private",
+    contents: [{
+      uri: RESOURCE_URI,
+      mimeType: RESOURCE_MIME_TYPE,
+      text: buildPreviewHtml({ path: "", markdown: "" }),
+      _meta: {
+        ui: {
+          prefersBorder: true,
+          csp: { connectDomains: [], resourceDomains: [] },
+        },
+      },
+    }],
+  };
+}
 
 export function validateMarkdownPath(value) {
   if (typeof value !== "string" || !isAbsolute(value)) {
