@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 import { McpServer } from "@modelcontextprotocol/server";
 import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
-import { registerAppResource, registerAppTool, RESOURCE_MIME_TYPE } from "@modelcontextprotocol/ext-apps/server";
+import { registerAppResource, registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import { z } from "zod";
 import {
-  TOOL_NAME, SUBMIT_TOOL_NAME, RESOURCE_URI, buildPreviewHtml, readMarkdownPreview, reviewResult,
+  TOOL_NAME, SUBMIT_TOOL_NAME, RESOURCE_URI, buildPreviewResourceResult, readMarkdownPreview, reviewResult,
 } from "./preview.mjs";
 
 const server = new McpServer({ name: "markcut", version: "3.2.0" });
@@ -82,19 +82,7 @@ registerAppResource(
       },
     },
   },
-  async () => ({
-    contents: [{
-      uri: RESOURCE_URI,
-      mimeType: RESOURCE_MIME_TYPE,
-      text: buildPreviewHtml({ path: "", markdown: "" }),
-      _meta: {
-        ui: {
-          prefersBorder: true,
-          csp: { connectDomains: [], resourceDomains: [] },
-        },
-      },
-    }],
-  }),
+  async () => buildPreviewResourceResult(),
 );
 
 await server.connect(new StdioServerTransport());
