@@ -53,8 +53,26 @@ describe("MarkCut MCP Markdown preview", () => {
   it("performs the MCP Apps handshake and awaits a successful submit", async () => {
     const harness = createBridgeHarness();
     harness.run();
-    expect(harness.messages[0]).toMatchObject({ id: 1, method: "ui/initialize" });
-    harness.respond({ id: 1, result: { protocolVersion: "2026-01-26" } });
+    expect(harness.messages[0]).toEqual({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "ui/initialize",
+      params: {
+        appInfo: { name: "Markcut Preview", version: "1.0.0" },
+        appCapabilities: {},
+        protocolVersion: "2026-01-26",
+      },
+    });
+    expect(harness.messages.some((message) => message.method === "ui/notifications/initialized")).toBe(false);
+    harness.respond({
+      id: 1,
+      result: {
+        protocolVersion: "2026-01-26",
+        hostInfo: { name: "test-host", version: "1" },
+        hostCapabilities: {},
+        hostContext: {},
+      },
+    });
     await tick();
     expect(harness.messages[1]).toMatchObject({ method: "ui/notifications/initialized" });
 
