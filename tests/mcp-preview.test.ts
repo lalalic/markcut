@@ -6,7 +6,7 @@ import vm from "node:vm";
 import {
   buildPreviewHtml,
   buildPreviewResourceResult,
-  readMarkdownPreview,
+  PLAYER_ORIGIN,
   RESOURCE_MIME_TYPE,
   RESOURCE_URI,
   reviewMessage,
@@ -21,21 +21,15 @@ describe("MarkCut MCP Markdown preview", () => {
     expect(() => validateMarkdownPath("/tmp/notes.txt")).toThrow(/Markdown/);
   });
 
-  it("reads Markdown and builds a reviewable UI resource", async () => {
-    const directory = mkdtempSync(join(tmpdir(), "markcut-mcp-"));
-    const path = join(directory, "review.md");
-    writeFileSync(path, "# Hello\n\nThis is a review.");
-    const preview = await readMarkdownPreview(path);
-    const html = buildPreviewHtml(preview);
-    expect(preview.markdown).toContain("# Hello");
-    expect(html).toContain("This is a review.");
+  it("builds a video-player review UI instead of rendering Markdown", () => {
+    const html = buildPreviewHtml();
+    expect(html).toContain('id="video-player"');
+    expect(html).toContain("Review video");
     expect(html).toContain("Approve");
     expect(html).toContain("Request changes");
-    expect(html).toContain("ui/initialize");
     expect(html).toContain("ui/notifications/tool-result");
-    expect(html).toContain("tools/call");
-    expect(html).toContain("ui/message");
-    expect(html).toContain("review.md");
+    expect(html).toContain("previewUrl");
+    expect(html).not.toContain("<article>");
   });
 
   it("returns Codex-compatible private no-cache resource metadata", () => {
@@ -49,6 +43,7 @@ describe("MarkCut MCP Markdown preview", () => {
     });
     expect(result.contents[0].text).toContain("ui/initialize");
     expect(result.contents[0].text).toContain("ui/notifications/initialized");
+    expect(result.contents[0]._meta.ui.csp.frameDomains).toEqual([PLAYER_ORIGIN]);
   });
 
   it("returns approved", () => {
@@ -80,7 +75,7 @@ describe("MarkCut MCP Markdown preview", () => {
       id: 1,
       method: "ui/initialize",
       params: {
-        appInfo: { name: "Markcut Preview", version: "1.0.0" },
+        appInfo: { name: "Markcut Preview", version: "1.1.0" },
         appCapabilities: {},
         protocolVersion: "2026-01-26",
       },
@@ -97,6 +92,11 @@ describe("MarkCut MCP Markdown preview", () => {
     });
     await tick();
     expect(harness.messages[1]).toMatchObject({ method: "ui/notifications/initialized" });
+
+    harness.toolResult({ path: "/tmp/video.md", previewUrl: PLAYER_ORIGIN + "/" });
+    await tick();
+    expect(harness.elements.player.src).toBe(PLAYER_ORIGIN + "/");
+    expect(harness.elements.pathLabel.textContent).toBe("/tmp/video.md");
 
     harness.elements.approve.onclick();
     expect(harness.messages[2]).toMatchObject({ id: 2, method: "tools/call" });
@@ -136,23 +136,30 @@ function createBridgeHarness() {
   const elements = {
     feedback: element(),
     status: element(),
-    article: element(),
+    player: element(),
     pathLabel: element(),
     approve: element(),
     changes: element(),
   };
   const parent = { postMessage(message: any) { messages.push(message); } };
   const document = {
-    getElementById(id: string) { return id === "feedback" ? elements.feedback : id === "status" ? elements.status : id === "approve" ? elements.approve : elements.changes; },
-    querySelector(selector: string) { return selector === "article" ? elements.article : elements.pathLabel; },
+    getElementById(id: string) {
+      if (id === "feedback") return elements.feedback;
+      if (id === "status") return elements.status;
+      if (id === "video-player") return elements.player;
+      if (id === "path-label") return elements.pathLabel;
+      if (id === "approve") return elements.approve;
+      return elements.changes;
+    },
   };
   const window = { parent, addEventListener(_type: string, listener: (event: any) => void) { listeners.push(listener); } };
-  const context = vm.createContext({ window, document });
+  const context = vm.createContext({ window, document, setTimeout, fetch: async () => ({ ok: true, json: async () => ({ ready: true }) }) });
   return {
     messages,
     elements,
     run() { vm.runInContext(buildPreviewBridgeScript("markcut.preview.submit"), context); },
     dispatch(event: any) { listeners.forEach((listener) => listener(event)); },
     respond(message: any) { this.dispatch({ source: parent, data: { jsonrpc: "2.0", ...message } }); },
+    toolResult(structuredContent: any) { this.dispatch({ source: parent, data: { jsonrpc: "2.0", method: "ui/notifications/tool-result", params: { result: { structuredContent } } } }); },
   };
 }

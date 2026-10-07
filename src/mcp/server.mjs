@@ -4,7 +4,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 import { registerAppResource, registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import { z } from "zod";
 import {
-  TOOL_NAME, SUBMIT_TOOL_NAME, RESOURCE_URI, buildPreviewResourceResult, readMarkdownPreview, reviewResult,
+  TOOL_NAME, SUBMIT_TOOL_NAME, RESOURCE_URI, PLAYER_ORIGIN, buildPreviewResourceResult, ensureVideoPreview, reviewResult,
 } from "./preview.mjs";
 
 const server = new McpServer({ name: "markcut", version: "3.2.0" });
@@ -13,7 +13,7 @@ registerAppTool(
   server,
   TOOL_NAME,
   {
-    description: "Ask a human to review a Markdown file and return an approval or requested changes.",
+    description: "Show the Markcut video player for a Markdown video definition and ask a human to approve it or request changes.",
     inputSchema: z.object({
       path: z.string().describe("Absolute path to a .md file"),
     }),
@@ -23,9 +23,9 @@ registerAppTool(
   },
   async ({ path }) => {
     try {
-      const preview = await readMarkdownPreview(path);
+      const preview = await ensureVideoPreview(path);
       return {
-        content: [{ type: "text", text: `Markdown ready for review: ${preview.path}` }],
+        content: [{ type: "text", text: `Video ready for review: ${preview.path}` }],
         structuredContent: { ...preview, resourceUri: RESOURCE_URI },
         _meta: {
           ui: { resourceUri: RESOURCE_URI, props: preview },
@@ -45,7 +45,7 @@ registerAppTool(
   server,
   SUBMIT_TOOL_NAME,
   {
-    description: "Submit the review decision from the Markdown preview UI.",
+    description: "Submit the review decision from the Markcut video preview UI.",
     inputSchema: z.object({
       decision: z.enum(["approved", "changes_requested"]),
       feedback: z.string().optional(),
@@ -72,13 +72,13 @@ registerAppTool(
 
 registerAppResource(
   server,
-  "MarkCut Markdown review",
+  "Markcut video review",
   RESOURCE_URI,
   {
     _meta: {
       ui: {
         prefersBorder: true,
-        csp: { connectDomains: [], resourceDomains: [] },
+        csp: { connectDomains: [PLAYER_ORIGIN], resourceDomains: [], frameDomains: [PLAYER_ORIGIN] },
       },
     },
   },
