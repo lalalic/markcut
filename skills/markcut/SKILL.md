@@ -78,10 +78,20 @@ npx @lalalic/markcut spots --waypoints "lat,lng;lat,lng" # discover POIs along a
 
 ---
 
+## MCP Markdown Review
+
+Use the model-visible MCP tool `markcut.preview({ path })` when a human needs to review a Markdown artifact. This is a generic Markdown review surface and is separate from the video-specific `npx @lalalic/markcut preview <file>` CLI.
+
+- `path` must be an absolute path to a Markdown file.
+- The user sees the rendered Markdown and can either **Approve** or submit feedback with **Request changes**.
+- Markcut does not edit the file. The calling agent owns all source changes.
+- On `approved`, continue the workflow.
+- On `changes_requested`, apply the feedback to the source Markdown, then call `markcut.preview({ path })` again for another review round.
+
 ## review
 use the review contract defined in [./review.md](./review.md) to guide the review process.
 review as early as possible in the video production process to catch issues before they propagate.
-* review md file
+* review md file with `markcut.preview({ path })` when the MCP tool is available
 * review compiled.json
 * review the rendered video
 
