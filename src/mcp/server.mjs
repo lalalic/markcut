@@ -39,11 +39,21 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
 }));
 
 server.setRequestHandler(ListResourcesRequestSchema, async () => ({
-  resources: [{ uri: RESOURCE_URI, name: "MarkCut Markdown review", mimeType: "text/html;profile=mcp-app" }],
+  resources: [{
+    uri: RESOURCE_URI,
+    name: "MarkCut Markdown review",
+    mimeType: "text/html;profile=mcp-app",
+    _meta: { ui: { prefersBorder: true, csp: { connectDomains: [], resourceDomains: [] } } },
+  }],
 }));
 
 server.setRequestHandler(ReadResourceRequestSchema, async (request) => ({
-  contents: [{ uri: RESOURCE_URI, mimeType: "text/html;profile=mcp-app", text: buildPreviewHtml({ path: "", markdown: "" }) }],
+  contents: [{
+    uri: RESOURCE_URI,
+    mimeType: "text/html;profile=mcp-app",
+    text: buildPreviewHtml({ path: "", markdown: "" }),
+    _meta: { ui: { prefersBorder: true, csp: { connectDomains: [], resourceDomains: [] } } },
+  }],
 }));
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {

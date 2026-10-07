@@ -4,7 +4,7 @@ import { buildPreviewBridgeScript } from "./bridge.mjs";
 
 export const TOOL_NAME = "markcut.preview";
 export const SUBMIT_TOOL_NAME = "markcut.preview.submit";
-export const RESOURCE_URI = "ui://markcut/markdown-preview.html";
+export const RESOURCE_URI = "ui://markcut/markdown-preview-v2.html";
 
 export function validateMarkdownPath(value) {
   if (typeof value !== "string" || !isAbsolute(value)) {

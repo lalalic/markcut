@@ -82,7 +82,7 @@ describe("MarkCut MCP Markdown preview", () => {
     harness.respond({ id: 2, result: { structuredContent: { decision: "approved" } } });
     await tick();
     expect(harness.messages[3]).toMatchObject({ method: "ui/message" });
-    expect(new Set(harness.messages.filter((message) => "id" in message).map((message) => message.id)).size).toBe(2);
+    expect(new Set(harness.messages.filter((message) => "id" in message).map((message) => message.id)).size).toBe(3);
   });
 
   it("surfaces submit errors without sending a decision message and rejects invalid bridge messages", async () => {
