@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { isAbsolute, extname } from "node:path";
+import { buildPreviewBridgeScript } from "./bridge.mjs";
 
 export const TOOL_NAME = "markcut.preview";
 export const SUBMIT_TOOL_NAME = "markcut.preview.submit";
@@ -72,18 +73,5 @@ export function buildPreviewHtml({ path = "", markdown = "" }) {
 <body><main><h1>Review Markdown</h1><p><code>${safePath}</code></p><article>${rendered}</article>
 <label for="feedback">Feedback (required for requested changes)</label><textarea id="feedback" placeholder="What should be changed?"></textarea><div id="status" role="status"></div>
 <button id="approve">Approve</button><button id="changes">Request changes</button></main>
-<script>
-const feedback=document.getElementById('feedback'),status=document.getElementById('status'),article=document.querySelector('article'),pathLabel=document.querySelector('main>p code');
-let requestId=0,initialized=false;
-function send(message){window.parent.postMessage(message,'*');}
-function submit(decision){const value=feedback.value.trim();if(decision==='changes_requested'&&!value){status.textContent='Feedback is required.';feedback.focus();return;}const result={decision};if(value&&decision==='changes_requested')result.feedback=value;
-  send({jsonrpc:'2.0',id:++requestId,method:'tools/call',params:{name:'${SUBMIT_TOOL_NAME}',arguments:result}});
-  send({jsonrpc:'2.0',method:'ui/message',params:{role:'user',content:[{type:'text',text:JSON.stringify(result)}]}});
-  status.textContent=decision==='approved'?'Approved.':'Changes requested.';
-}
-function applyToolResult(params){const result=params?.result||params||{},data=result.structuredContent||result.structured_content||{};if(typeof data.path==='string')pathLabel.textContent=data.path;if(typeof data.markdown==='string'){article.innerHTML=data.markdown.split(/\\r?\\n/).map(line=>{const escaped=line.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));if(line.startsWith('### '))return '<h3>'+escaped.slice(4)+'</h3>';if(line.startsWith('## '))return '<h2>'+escaped.slice(3)+'</h2>';if(line.startsWith('# '))return '<h1>'+escaped.slice(2)+'</h1>';if(line.startsWith('- '))return '<li>'+escaped.slice(2)+'</li>';return line.trim()?'<p>'+escaped+'</p>':''}).join('\\n');}}
-window.addEventListener('message',event=>{const message=event.data;if(!message||typeof message!=='object')return;if(message.method==='ui/notifications/tool-result'){applyToolResult(message.params);return;}if(message.method==='ui/notifications/tool-input'){return;}if(message.id===1&&message.result){initialized=true;status.textContent='Ready for review.';}});
-send({jsonrpc:'2.0',id:1,method:'ui/initialize',params:{protocolVersion:'2026-01-26',capabilities:{},clientInfo:{name:'markcut-preview',version:'1'}}});
-document.getElementById('approve').onclick=()=>submit('approved');document.getElementById('changes').onclick=()=>submit('changes_requested');
-</script></body></html>`;
+<script>${buildPreviewBridgeScript(SUBMIT_TOOL_NAME)}</script></body></html>`;
 }
