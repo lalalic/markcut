@@ -22,6 +22,7 @@
     "render:demo": "node src/render/cli.mjs render src/demo-components.json",
     "templates": "node src/render/cli.mjs templates",
     "preview": "node src/render/cli.mjs preview",
+    "mcp": "node src/mcp/server.mjs",
     "verify": "node src/render/cli.mjs verify",
     "resolve": "node src/render/cli.mjs resolve",
     "render:pixelle": "remotion render examples/pixelle/index.tsx Root out/pixelle-asset-default.mp4 --props=./examples/pixelle/asset-default.json",
@@ -37,6 +38,7 @@
   },
   "dependencies": {
     "@babel/standalone": "^8.0.3",
+    "@modelcontextprotocol/sdk": "^1.32.1",
     "@remotion/cli": "4.0.469",
     "@remotion/media-parser": "4.0.469",
     "@remotion/media-utils": "4.0.469",
