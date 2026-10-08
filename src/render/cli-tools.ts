@@ -11,6 +11,7 @@
  * Override via MARKCUT_TTS_CLI / MARKCUT_STT_CLI / MARKCUT_TTI_CLI / MARKCUT_TTV_CLI.
  */
 import { execSync, exec } from "node:child_process";
+import { queueCommand } from "../queue-cli.mjs";
 import { existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import {
@@ -89,7 +90,7 @@ export function generateTTS(text: string, outputPath: string, cli?: string): str
   mkdirSync(dirname(outputPath), { recursive: true });
   const cmd = substituteCli(cli ?? DEFAULT_TTS_CLI, text, outputPath);
   try {
-    execSync(cmd, { stdio: "pipe" });
+    execSync(queueCommand(cmd), { stdio: "pipe" });
   } catch (e: any) {
     console.warn(`  ⚠ TTS failed: ${e.message}`);
     return "";
@@ -104,7 +105,7 @@ export function generateTTS(text: string, outputPath: string, cli?: string): str
 export async function generateSTT(audioPath: string, outputDir: string, cli?: string): Promise<void> {
   const cmd = substituteCli(cli ?? DEFAULT_STT_CLI, audioPath, outputDir);
   try {
-    execSync(cmd, { stdio: "pipe" });
+    execSync(queueCommand(cmd), { stdio: "pipe" });
   } catch (e: any) {
     console.warn(`  ⚠ STT failed: ${e.message}`);
   }
@@ -119,7 +120,7 @@ export function generateTTI(prompt: string, outputPath: string, cli?: string, se
   mkdirSync(dirname(outputPath), { recursive: true });
   const cmd = substituteCli(cli ?? DEFAULT_TTI_CLI, prompt, outputPath, seed);
   try {
-    execSync(cmd, {
+    execSync(queueCommand(cmd), {
       encoding: "utf-8",
       stdio: ["pipe", "pipe", "pipe"],
       timeout: 300_000,
@@ -162,7 +163,7 @@ export function generateTTV(
     }
     try {
       execSync(
-        `ffmpeg -y -loop 1 -i "${pngPath}" -c:v libx264 -t 3 -pix_fmt yuv420p "${outputPath}"`,
+        queueCommand(`ffmpeg -y -loop 1 -i "${pngPath}" -c:v libx264 -t 3 -pix_fmt yuv420p "${outputPath}"`),
         { stdio: ["pipe", "pipe", "pipe"], timeout: 60_000 },
       );
     } catch (e: any) {
@@ -177,7 +178,7 @@ export function generateTTV(
   // Custom CLI mode: substitute template and run
   const cmd = substituteCli(cli, prompt, outputPath, seed);
   try {
-    execSync(cmd, {
+    execSync(queueCommand(cmd), {
       encoding: "utf-8",
       stdio: ["pipe", "pipe", "pipe"],
       timeout: 300_000,

@@ -37,6 +37,7 @@
  */
 
 import { execSync, spawn } from "node:child_process";
+import { queueCommand } from "../queue-cli.mjs";
 import { createHash } from "node:crypto";
 import {
   existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, statSync, renameSync, rmSync,
@@ -67,7 +68,7 @@ function emitWarn(msg) { console.error(`⚠️  ${msg}`); }
 function emitError(msg) { console.error(`❌ ${msg}`); }
 
 function run(cmd, opts = {}) {
-  return execSync(cmd, {
+  return execSync(queueCommand(cmd), {
     encoding: "utf-8",
     stdio: ["pipe", "pipe", "pipe"],
     timeout: 300_000,

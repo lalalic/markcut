@@ -5,6 +5,7 @@ import {
 import { basename, dirname, extname, join, resolve } from "node:path";
 import { z } from "zod";
 import { execSync } from "node:child_process";
+import { queueCommand } from "../queue-cli.mjs";
 import { VIDEO_EXTS, DEFAULT_VTT_SAMPLE_INTERVAL } from "../config.mjs";
 
 export const CANDIDATE_CONTRACT_VERSION = 1;
@@ -107,7 +108,7 @@ function shQuote(value) {
 }
 
 function run(command, options = {}) {
-  return execSync(command, {
+  return execSync(queueCommand(command), {
     encoding: "utf-8",
     stdio: ["pipe", "pipe", "pipe"],
     timeout: 300_000,
