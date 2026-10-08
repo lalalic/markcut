@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { spawnSync } from "node:child_process";
+import { queueArgv } from "../queue-cli.mjs";
 import { accessSync, constants, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -28,7 +29,8 @@ function which(name) {
 }
 
 function run(command, args, options = {}) {
-  const r = spawnSync(command, args, { encoding: "utf8", timeout: options.timeout || 600_000, env: process.env });
+  const queued = queueArgv(command, args);
+  const r = spawnSync(queued.command, queued.argv, { encoding: "utf8", timeout: options.timeout || 600_000, env: process.env });
   return { ok: r.status === 0, stdout: (r.stdout || "").trim(), stderr: (r.stderr || "").trim(), status: r.status };
 }
 
