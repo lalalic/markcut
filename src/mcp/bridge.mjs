@@ -1,6 +1,6 @@
 export function buildPreviewBridgeScript(submitToolName) {
   return `
-const feedback=document.getElementById('feedback'),status=document.getElementById('status'),player=document.getElementById('video-player'),pathLabel=document.getElementById('path-label');
+const feedback=document.getElementById('feedback'),status=document.getElementById('status'),player=document.getElementById('video-player'),pathLabel=document.getElementById('path-label'),playerShell=document.getElementById('player-shell');
 let nextRequestId=0;
 const pendingRequests=new Map();
 function send(message){window.parent.postMessage(message,'*');}
@@ -12,5 +12,6 @@ async function initializeBridge(){try{await rpcRequest('ui/initialize',{appInfo:
 async function submit(decision){const value=feedback.value.trim();if(decision==='changes_requested'&&!value){status.textContent='Feedback is required.';feedback.focus();return;}const result={decision};if(value&&decision==='changes_requested')result.feedback=value;status.textContent='Submitting...';try{await rpcRequest('tools/call',{name:'${submitToolName}',arguments:result});await rpcRequest('ui/message',{role:'user',content:[{type:'text',text:JSON.stringify(result)}]});status.textContent=decision==='approved'?'Approved.':'Changes requested.';}catch(error){status.textContent=error.message||'Unable to submit review.';}}
 initializeBridge();
 document.getElementById('approve').onclick=()=>submit('approved');document.getElementById('changes').onclick=()=>submit('changes_requested');
+const fullscreen=document.getElementById('fullscreen');if(fullscreen&&fullscreen.id==='fullscreen')fullscreen.onclick=()=>{const target=playerShell||player;const request=target.requestFullscreen||target.webkitRequestFullscreen;if(request)request.call(target);};
 `;
 }

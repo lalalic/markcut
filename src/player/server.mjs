@@ -721,8 +721,13 @@ function parseVariantFromPath(urlPath) {
 function resolveAsset(urlPath, variantLabel) {
   // Bundle dir for the Remotion Player (same for all variants)
   if (urlPath === "/player.js") return join(ROOT, "src", "player", "bundle", "player.js");
-  // Absolute filesystem path — serve directly
-  if (urlPath.startsWith("/") && existsSync(urlPath)) return urlPath;
+  // Absolute compiled asset paths are allowed only beneath this document's
+  // directory or its generated cache. Never expose arbitrary host files.
+  if (urlPath.startsWith("/")) {
+    const candidate = resolve(urlPath);
+    const allowed = [dirname(VIDEO_JSON), MARKCUT_BASE].some((root) => candidate === root || candidate.startsWith(root + "/"));
+    if (allowed && existsSync(candidate)) return candidate;
+  }
   // Serve from variant dir, then .markcut/, then ROOT/public, etc.
   const vDir = variantDir(variantLabel || "default");
   const jsonDir = dirname(VIDEO_JSON);

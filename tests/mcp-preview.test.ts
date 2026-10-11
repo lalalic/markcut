@@ -14,6 +14,7 @@ import {
   validateMarkdownPath,
 } from "../src/mcp/preview.mjs";
 import { buildPreviewBridgeScript } from "../src/mcp/bridge.mjs";
+import { documentId, startSharedPreviewServer } from "../src/mcp/shared-preview-server.mjs";
 
 describe("MarkCut MCP Markdown preview", () => {
   it("requires an absolute .md path", () => {
@@ -30,6 +31,25 @@ describe("MarkCut MCP Markdown preview", () => {
     expect(html).toContain("ui/notifications/tool-result");
     expect(html).toContain("previewUrl");
     expect(html).not.toContain("<article>");
+    expect(html).toContain('id="fullscreen"');
+    expect(html).toContain("requestFullscreen");
+    expect(html).toContain("picture-in-picture");
+  });
+
+  it("uses stable isolated route IDs and protects registration", async () => {
+    const app = startSharedPreviewServer({ port: 0, token: "test-token", playerServer: "/tmp/unused-player.mjs" });
+    await new Promise((resolve) => app.server.once("listening", resolve));
+    const address = app.server.address() as any;
+    const same = documentId("/tmp/a.md");
+    expect(same).toBe(documentId("/tmp/a.md"));
+    expect(documentId("/tmp/a.md")).not.toBe(documentId("/tmp/b.md"));
+    const denied = await fetch(`http://127.0.0.1:${address.port}/api/register`, {
+      method: "POST", body: JSON.stringify({ path: "/tmp/a.md" }),
+    });
+    expect(denied.status).toBe(401);
+    const unknown = await fetch(`http://127.0.0.1:${address.port}/d/${same}/`);
+    expect(unknown.status).toBe(404);
+    app.close();
   });
 
   it("returns Codex-compatible private no-cache resource metadata", () => {
