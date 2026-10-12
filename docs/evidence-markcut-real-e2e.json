@@ -1,0 +1,267 @@
+{
+  "timestamp": "2026-10-12T17:52:32.082Z",
+  "dir": "/var/folders/pr/rymvcpd54mzdg4kv34r3ht300000gn/T/markcut-real-e2e-htX0UB",
+  "checks": [
+    {
+      "label": "A-v1 and B-v1 parallel real MCP calls",
+      "status": "PASS",
+      "detail": {
+        "A": "http://127.0.0.1:4571/p/5cdb7daa-332f-4e44-b319-88b1635175b1/",
+        "B": "http://127.0.0.1:4571/p/d251d006-0956-464b-b1d3-b2b677a67334/"
+      }
+    },
+    {
+      "label": "HTTP readiness and identity A/B",
+      "status": "PASS",
+      "detail": {
+        "AIdentity": "Alpha v1",
+        "BIdentity": "Beta v1"
+      }
+    },
+    {
+      "label": "HTTP player HTML and bundled JavaScript per revision",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "label": "revisit both URLs",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "label": "repeat identical path deduplicates",
+      "status": "PASS",
+      "detail": "5cdb7daa-332f-4e44-b319-88b1635175b1"
+    },
+    {
+      "label": "A-v2 revision, immutable A-v1",
+      "status": "PASS",
+      "detail": {
+        "A1": "http://127.0.0.1:4571/p/5cdb7daa-332f-4e44-b319-88b1635175b1/",
+        "A2": "http://127.0.0.1:4571/p/4d64c6ae-1af9-4122-8fa1-ac943a611cae/"
+      }
+    },
+    {
+      "label": "parallel repeat calls",
+      "status": "PASS",
+      "detail": {
+        "calls": 12,
+        "instances": 1
+      }
+    },
+    {
+      "label": "invalid paths rejected by actual MCP",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "label": "cross-origin browser request rejected",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "label": "bounded six revisions and graceful seventh refusal",
+      "status": "PASS",
+      "detail": "6 active slots maximum"
+    },
+    {
+      "label": "cleanup manager and child processes",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "label": "foreign process on 4571 is not killed or reused",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "label": "restart expires old URLs (no historical persistence advertised)",
+      "status": "PASS",
+      "detail": {
+        "old": "http://127.0.0.1:4571/p/5cdb7daa-332f-4e44-b319-88b1635175b1/",
+        "oldStatus": 404,
+        "new": "http://127.0.0.1:4571/p/2b13789a-b004-4b0c-a51d-8e5450ffb79d/"
+      }
+    },
+    {
+      "label": "restart cleanup",
+      "status": "PASS",
+      "detail": ""
+    }
+  ],
+  "previews": [
+    {
+      "id": "d251d006-0956-464b-b1d3-b2b677a67334",
+      "revisionId": "d251d006-0956-464b-b1d3-b2b677a67334",
+      "contentHash": "d48c6a5da387d62cf15acecf0f34c6b3c4b3666b756cba418192445f7158c64b",
+      "path": "/private/var/folders/pr/rymvcpd54mzdg4kv34r3ht300000gn/T/markcut-real-e2e-htX0UB/B.md",
+      "previewUrl": "http://127.0.0.1:4571/p/d251d006-0956-464b-b1d3-b2b677a67334/",
+      "resourceUri": "ui://markcut/video-preview-v3.html"
+    },
+    {
+      "id": "5cdb7daa-332f-4e44-b319-88b1635175b1",
+      "revisionId": "5cdb7daa-332f-4e44-b319-88b1635175b1",
+      "contentHash": "1f612ea3c2796d617df80e31a3890b27d6b093399395eff5759e0b8d79dfd07b",
+      "path": "/private/var/folders/pr/rymvcpd54mzdg4kv34r3ht300000gn/T/markcut-real-e2e-htX0UB/A.md",
+      "previewUrl": "http://127.0.0.1:4571/p/5cdb7daa-332f-4e44-b319-88b1635175b1/",
+      "resourceUri": "ui://markcut/video-preview-v3.html"
+    },
+    {
+      "id": "5cdb7daa-332f-4e44-b319-88b1635175b1",
+      "revisionId": "5cdb7daa-332f-4e44-b319-88b1635175b1",
+      "contentHash": "1f612ea3c2796d617df80e31a3890b27d6b093399395eff5759e0b8d79dfd07b",
+      "path": "/private/var/folders/pr/rymvcpd54mzdg4kv34r3ht300000gn/T/markcut-real-e2e-htX0UB/A.md",
+      "previewUrl": "http://127.0.0.1:4571/p/5cdb7daa-332f-4e44-b319-88b1635175b1/",
+      "resourceUri": "ui://markcut/video-preview-v3.html"
+    },
+    {
+      "id": "4d64c6ae-1af9-4122-8fa1-ac943a611cae",
+      "revisionId": "4d64c6ae-1af9-4122-8fa1-ac943a611cae",
+      "contentHash": "9a0fe26791bed4f8aa7d0d75b9badeee025acc2784a0628e23bcd99d5aa5b6c5",
+      "path": "/private/var/folders/pr/rymvcpd54mzdg4kv34r3ht300000gn/T/markcut-real-e2e-htX0UB/A.md",
+      "previewUrl": "http://127.0.0.1:4571/p/4d64c6ae-1af9-4122-8fa1-ac943a611cae/",
+      "resourceUri": "ui://markcut/video-preview-v3.html"
+    },
+    {
+      "id": "4d64c6ae-1af9-4122-8fa1-ac943a611cae",
+      "revisionId": "4d64c6ae-1af9-4122-8fa1-ac943a611cae",
+      "contentHash": "9a0fe26791bed4f8aa7d0d75b9badeee025acc2784a0628e23bcd99d5aa5b6c5",
+      "path": "/private/var/folders/pr/rymvcpd54mzdg4kv34r3ht300000gn/T/markcut-real-e2e-htX0UB/A.md",
+      "previewUrl": "http://127.0.0.1:4571/p/4d64c6ae-1af9-4122-8fa1-ac943a611cae/",
+      "resourceUri": "ui://markcut/video-preview-v3.html"
+    },
+    {
+      "id": "4d64c6ae-1af9-4122-8fa1-ac943a611cae",
+      "revisionId": "4d64c6ae-1af9-4122-8fa1-ac943a611cae",
+      "contentHash": "9a0fe26791bed4f8aa7d0d75b9badeee025acc2784a0628e23bcd99d5aa5b6c5",
+      "path": "/private/var/folders/pr/rymvcpd54mzdg4kv34r3ht300000gn/T/markcut-real-e2e-htX0UB/A.md",
+      "previewUrl": "http://127.0.0.1:4571/p/4d64c6ae-1af9-4122-8fa1-ac943a611cae/",
+      "resourceUri": "ui://markcut/video-preview-v3.html"
+    },
+    {
+      "id": "4d64c6ae-1af9-4122-8fa1-ac943a611cae",
+      "revisionId": "4d64c6ae-1af9-4122-8fa1-ac943a611cae",
+      "contentHash": "9a0fe26791bed4f8aa7d0d75b9badeee025acc2784a0628e23bcd99d5aa5b6c5",
+      "path": "/private/var/folders/pr/rymvcpd54mzdg4kv34r3ht300000gn/T/markcut-real-e2e-htX0UB/A.md",
+      "previewUrl": "http://127.0.0.1:4571/p/4d64c6ae-1af9-4122-8fa1-ac943a611cae/",
+      "resourceUri": "ui://markcut/video-preview-v3.html"
+    },
+    {
+      "id": "4d64c6ae-1af9-4122-8fa1-ac943a611cae",
+      "revisionId": "4d64c6ae-1af9-4122-8fa1-ac943a611cae",
+      "contentHash": "9a0fe26791bed4f8aa7d0d75b9badeee025acc2784a0628e23bcd99d5aa5b6c5",
+      "path": "/private/var/folders/pr/rymvcpd54mzdg4kv34r3ht300000gn/T/markcut-real-e2e-htX0UB/A.md",
+      "previewUrl": "http://127.0.0.1:4571/p/4d64c6ae-1af9-4122-8fa1-ac943a611cae/",
+      "resourceUri": "ui://markcut/video-preview-v3.html"
+    },
+    {
+      "id": "4d64c6ae-1af9-4122-8fa1-ac943a611cae",
+      "revisionId": "4d64c6ae-1af9-4122-8fa1-ac943a611cae",
+      "contentHash": "9a0fe26791bed4f8aa7d0d75b9badeee025acc2784a0628e23bcd99d5aa5b6c5",
+      "path": "/private/var/folders/pr/rymvcpd54mzdg4kv34r3ht300000gn/T/markcut-real-e2e-htX0UB/A.md",
+      "previewUrl": "http://127.0.0.1:4571/p/4d64c6ae-1af9-4122-8fa1-ac943a611cae/",
+      "resourceUri": "ui://markcut/video-preview-v3.html"
+    },
+    {
+      "id": "4d64c6ae-1af9-4122-8fa1-ac943a611cae",
+      "revisionId": "4d64c6ae-1af9-4122-8fa1-ac943a611cae",
+      "contentHash": "9a0fe26791bed4f8aa7d0d75b9badeee025acc2784a0628e23bcd99d5aa5b6c5",
+      "path": "/private/var/folders/pr/rymvcpd54mzdg4kv34r3ht300000gn/T/markcut-real-e2e-htX0UB/A.md",
+      "previewUrl": "http://127.0.0.1:4571/p/4d64c6ae-1af9-4122-8fa1-ac943a611cae/",
+      "resourceUri": "ui://markcut/video-preview-v3.html"
+    },
+    {
+      "id": "4d64c6ae-1af9-4122-8fa1-ac943a611cae",
+      "revisionId": "4d64c6ae-1af9-4122-8fa1-ac943a611cae",
+      "contentHash": "9a0fe26791bed4f8aa7d0d75b9badeee025acc2784a0628e23bcd99d5aa5b6c5",
+      "path": "/private/var/folders/pr/rymvcpd54mzdg4kv34r3ht300000gn/T/markcut-real-e2e-htX0UB/A.md",
+      "previewUrl": "http://127.0.0.1:4571/p/4d64c6ae-1af9-4122-8fa1-ac943a611cae/",
+      "resourceUri": "ui://markcut/video-preview-v3.html"
+    },
+    {
+      "id": "4d64c6ae-1af9-4122-8fa1-ac943a611cae",
+      "revisionId": "4d64c6ae-1af9-4122-8fa1-ac943a611cae",
+      "contentHash": "9a0fe26791bed4f8aa7d0d75b9badeee025acc2784a0628e23bcd99d5aa5b6c5",
+      "path": "/private/var/folders/pr/rymvcpd54mzdg4kv34r3ht300000gn/T/markcut-real-e2e-htX0UB/A.md",
+      "previewUrl": "http://127.0.0.1:4571/p/4d64c6ae-1af9-4122-8fa1-ac943a611cae/",
+      "resourceUri": "ui://markcut/video-preview-v3.html"
+    },
+    {
+      "id": "4d64c6ae-1af9-4122-8fa1-ac943a611cae",
+      "revisionId": "4d64c6ae-1af9-4122-8fa1-ac943a611cae",
+      "contentHash": "9a0fe26791bed4f8aa7d0d75b9badeee025acc2784a0628e23bcd99d5aa5b6c5",
+      "path": "/private/var/folders/pr/rymvcpd54mzdg4kv34r3ht300000gn/T/markcut-real-e2e-htX0UB/A.md",
+      "previewUrl": "http://127.0.0.1:4571/p/4d64c6ae-1af9-4122-8fa1-ac943a611cae/",
+      "resourceUri": "ui://markcut/video-preview-v3.html"
+    },
+    {
+      "id": "4d64c6ae-1af9-4122-8fa1-ac943a611cae",
+      "revisionId": "4d64c6ae-1af9-4122-8fa1-ac943a611cae",
+      "contentHash": "9a0fe26791bed4f8aa7d0d75b9badeee025acc2784a0628e23bcd99d5aa5b6c5",
+      "path": "/private/var/folders/pr/rymvcpd54mzdg4kv34r3ht300000gn/T/markcut-real-e2e-htX0UB/A.md",
+      "previewUrl": "http://127.0.0.1:4571/p/4d64c6ae-1af9-4122-8fa1-ac943a611cae/",
+      "resourceUri": "ui://markcut/video-preview-v3.html"
+    },
+    {
+      "id": "4d64c6ae-1af9-4122-8fa1-ac943a611cae",
+      "revisionId": "4d64c6ae-1af9-4122-8fa1-ac943a611cae",
+      "contentHash": "9a0fe26791bed4f8aa7d0d75b9badeee025acc2784a0628e23bcd99d5aa5b6c5",
+      "path": "/private/var/folders/pr/rymvcpd54mzdg4kv34r3ht300000gn/T/markcut-real-e2e-htX0UB/A.md",
+      "previewUrl": "http://127.0.0.1:4571/p/4d64c6ae-1af9-4122-8fa1-ac943a611cae/",
+      "resourceUri": "ui://markcut/video-preview-v3.html"
+    },
+    {
+      "id": "4d64c6ae-1af9-4122-8fa1-ac943a611cae",
+      "revisionId": "4d64c6ae-1af9-4122-8fa1-ac943a611cae",
+      "contentHash": "9a0fe26791bed4f8aa7d0d75b9badeee025acc2784a0628e23bcd99d5aa5b6c5",
+      "path": "/private/var/folders/pr/rymvcpd54mzdg4kv34r3ht300000gn/T/markcut-real-e2e-htX0UB/A.md",
+      "previewUrl": "http://127.0.0.1:4571/p/4d64c6ae-1af9-4122-8fa1-ac943a611cae/",
+      "resourceUri": "ui://markcut/video-preview-v3.html"
+    },
+    {
+      "id": "b454809d-be2d-4924-aca8-50dd1cca851a",
+      "revisionId": "b454809d-be2d-4924-aca8-50dd1cca851a",
+      "contentHash": "383b5cbc87c3faa165c604858360cadd038e00abd457307f570018fd536d2466",
+      "path": "/private/var/folders/pr/rymvcpd54mzdg4kv34r3ht300000gn/T/markcut-real-e2e-htX0UB/extra0.md",
+      "previewUrl": "http://127.0.0.1:4571/p/b454809d-be2d-4924-aca8-50dd1cca851a/",
+      "resourceUri": "ui://markcut/video-preview-v3.html"
+    },
+    {
+      "id": "3511ad26-3282-499e-ad67-e256bd821a5d",
+      "revisionId": "3511ad26-3282-499e-ad67-e256bd821a5d",
+      "contentHash": "8f21105b4b452cb0f94626b35ddc5c95636b70a847abe35b28c601cf471261e0",
+      "path": "/private/var/folders/pr/rymvcpd54mzdg4kv34r3ht300000gn/T/markcut-real-e2e-htX0UB/extra1.md",
+      "previewUrl": "http://127.0.0.1:4571/p/3511ad26-3282-499e-ad67-e256bd821a5d/",
+      "resourceUri": "ui://markcut/video-preview-v3.html"
+    },
+    {
+      "id": "91a6ecd5-2995-47cc-8c43-126addfd22fa",
+      "revisionId": "91a6ecd5-2995-47cc-8c43-126addfd22fa",
+      "contentHash": "9103393b1898e5a18c68c371adf7d2342def8eb43ebbf55f508714a22c881c75",
+      "path": "/private/var/folders/pr/rymvcpd54mzdg4kv34r3ht300000gn/T/markcut-real-e2e-htX0UB/extra2.md",
+      "previewUrl": "http://127.0.0.1:4571/p/91a6ecd5-2995-47cc-8c43-126addfd22fa/",
+      "resourceUri": "ui://markcut/video-preview-v3.html"
+    },
+    {
+      "id": "2b13789a-b004-4b0c-a51d-8e5450ffb79d",
+      "revisionId": "2b13789a-b004-4b0c-a51d-8e5450ffb79d",
+      "contentHash": "d48c6a5da387d62cf15acecf0f34c6b3c4b3666b756cba418192445f7158c64b",
+      "path": "/private/var/folders/pr/rymvcpd54mzdg4kv34r3ht300000gn/T/markcut-real-e2e-htX0UB/B.md",
+      "previewUrl": "http://127.0.0.1:4571/p/2b13789a-b004-4b0c-a51d-8e5450ffb79d/",
+      "resourceUri": "ui://markcut/video-preview-v3.html"
+    }
+  ],
+  "processes": {
+    "active": [
+      "37262 37261 /opt/homebrew/Cellar/node/25.6.0/bin/node /Users/chengli/Workspace/.worktrees/agents-relay/lalalic-markcut-job-j-7-lalalic-markcut-1-81c1cdf85fb2/job/src/mcp/managed-player.mjs",
+      "37263 37262 /opt/homebrew/Cellar/node/25.6.0/bin/node /Users/chengli/Workspace/.worktrees/agents-relay/lalalic-markcut-job-j-7-lalalic-markcut-1-81c1cdf85fb2/job/src/player/server.mjs /private/var/folders/pr/rymvcpd54mzdg4kv34r3ht300000gn/T/markcut-real-e2e-htX0UB/.markcut-preview-2fa5d5effbe2c64e7ba48774f3f998de4ea3bc9aaac0c4945ed253e600277cd2.md --port=4580",
+      "37264 37262 /opt/homebrew/Cellar/node/25.6.0/bin/node /Users/chengli/Workspace/.worktrees/agents-relay/lalalic-markcut-job-j-7-lalalic-markcut-1-81c1cdf85fb2/job/src/player/server.mjs /private/var/folders/pr/rymvcpd54mzdg4kv34r3ht300000gn/T/markcut-real-e2e-htX0UB/.markcut-preview-554b0f84458574180ca5df5e6aac063e172749bc7d8dc046a244439761c5bb2d.md --port=4581",
+      "37304 37262 /opt/homebrew/Cellar/node/25.6.0/bin/node /Users/chengli/Workspace/.worktrees/agents-relay/lalalic-markcut-job-j-7-lalalic-markcut-1-81c1cdf85fb2/job/src/player/server.mjs /private/var/folders/pr/rymvcpd54mzdg4kv34r3ht300000gn/T/markcut-real-e2e-htX0UB/.markcut-preview-98d96411aca7ad6fed182d9a1fc4677c7d3d31e37d7d6cfb7e05b9d5c186eed3.md --port=4582",
+      "37325 37262 /opt/homebrew/Cellar/node/25.6.0/bin/node /Users/chengli/Workspace/.worktrees/agents-relay/lalalic-markcut-job-j-7-lalalic-markcut-1-81c1cdf85fb2/job/src/player/server.mjs /private/var/folders/pr/rymvcpd54mzdg4kv34r3ht300000gn/T/markcut-real-e2e-htX0UB/.markcut-preview-d1d430ee335b5b126e0798bb164caa3e425bde7280834195d14847d42880c808.md --port=4583",
+      "37326 37262 /opt/homebrew/Cellar/node/25.6.0/bin/node /Users/chengli/Workspace/.worktrees/agents-relay/lalalic-markcut-job-j-7-lalalic-markcut-1-81c1cdf85fb2/job/src/player/server.mjs /private/var/folders/pr/rymvcpd54mzdg4kv34r3ht300000gn/T/markcut-real-e2e-htX0UB/.markcut-preview-be493d761a8e910144e48c6cf69bc10545a3ba42b4821d6d8bf359d6fb5c6fa4.md --port=4584",
+      "37409 37262 /opt/homebrew/Cellar/node/25.6.0/bin/node /Users/chengli/Workspace/.worktrees/agents-relay/lalalic-markcut-job-j-7-lalalic-markcut-1-81c1cdf85fb2/job/src/player/server.mjs /private/var/folders/pr/rymvcpd54mzdg4kv34r3ht300000gn/T/markcut-real-e2e-htX0UB/.markcut-preview-66503a90a1cc11219f9a69a3455ea4005f9c29f19215461fee504f6ba124fde0.md --port=4585"
+    ],
+    "afterClose": []
+  },
+  "completedAt": "2026-10-12T17:52:39.282Z"
+}

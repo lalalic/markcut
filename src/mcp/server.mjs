@@ -4,10 +4,18 @@ import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 import { registerAppResource, registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import { z } from "zod";
 import {
-  TOOL_NAME, SUBMIT_TOOL_NAME, RESOURCE_URI, PLAYER_ORIGIN, buildPreviewResourceResult, ensureVideoPreview, reviewResult,
+  TOOL_NAME, SUBMIT_TOOL_NAME, RESOURCE_URI, PLAYER_ORIGIN, buildPreviewResourceResult, ensureVideoPreview, reviewResult, stopManagedVideoPreview,
 } from "./preview.mjs";
 
 const server = new McpServer({ name: "markcut", version: "3.2.0" });
+process.once("exit", stopManagedVideoPreview);
+// Stdio clients commonly terminate the server via SIGTERM rather than EOF.
+// Node's default signal termination does not reliably run exit handlers.
+for (const signal of ["SIGTERM", "SIGINT"]) {
+  process.once(signal, () => { stopManagedVideoPreview(); process.exit(0); });
+}
+process.stdin.once("end", stopManagedVideoPreview);
+process.stdin.once("close", stopManagedVideoPreview);
 
 const registeredPreviewResources = new Set([RESOURCE_URI]);
 
@@ -60,7 +68,7 @@ registerAppTool(
   server,
   SUBMIT_TOOL_NAME,
   {
-    description: "Submit the review decision from the Markcut video preview UI.",
+    description: "Legacy standalone review payload validation only; embedded UI delivers via ui/message exclusively.",
     inputSchema: z.object({
       decision: z.enum(["approved", "changes_requested"]),
       feedback: z.string().optional(),
