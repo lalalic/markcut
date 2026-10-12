@@ -14,6 +14,7 @@ const MAX = 6;
 const slots = new Map();
 const byKey = new Map();
 const pending = new Map();
+const reservedPorts = new Set();
 const respond = (res, code, data) => { res.writeHead(code, {"content-type":"application/json", "cache-control":"no-store"});res.end(JSON.stringify(data)); };
 function waitReady(port, child) {
   return new Promise((resolveReady, reject) => {
@@ -56,8 +57,8 @@ async function create(path) {
     let child;
     let port;
     for (let candidate=4580;candidate<4599;candidate++) {
-      if ([...slots.values()].some(s=>s.port===candidate)) continue;
-      port=candidate;break;
+      if (reservedPorts.has(candidate)) continue;
+      port=candidate;reservedPorts.add(candidate);break;
     }
     if (!port) throw new Error("no child port available");
     child = spawn(process.execPath,[PLAYER,snapshot,"--port="+port],{cwd:ROOT,stdio:["ignore","pipe","pipe"]});
@@ -66,9 +67,9 @@ async function create(path) {
     const info = {id, revisionId:id, contentHash, path:canonical, previewUrl:ORIGIN+"/p/"+id+"/"};
     const slot={id,key,port,child,snapshot,info};
     slots.set(id,slot);byKey.set(key,id);
-    child.once("exit",()=>{slots.delete(id);byKey.delete(key);});
+    child.once("exit",()=>{slots.delete(id);byKey.delete(key);reservedPorts.delete(port);});
     try { await waitReady(port,child); } catch(err) {
-      child.kill("SIGTERM");slots.delete(id);byKey.delete(key);await unlink(snapshot).catch(()=>{});throw err;
+      child.kill("SIGTERM");slots.delete(id);byKey.delete(key);reservedPorts.delete(port);await unlink(snapshot).catch(()=>{});throw err;
     }
     // Pin the exact compiled tree once at creation. Reloads and sibling
     // compilations must never change a previously issued revision URL.
@@ -87,7 +88,7 @@ async function stop() {
     await unlink(s.snapshot).catch(()=>{});
     await rm(join(dirname(s.snapshot),".markcut",".markcut-preview-"+s.key),{recursive:true,force:true}).catch(()=>{});
   }));
-  slots.clear();byKey.clear();
+  slots.clear();byKey.clear();reservedPorts.clear();
 }
 function selectSlot(req, url) {
   const match=url.pathname.match(/^\/p\/([0-9a-f-]{36})(\/.*)?$/);

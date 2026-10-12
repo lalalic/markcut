@@ -72,3 +72,12 @@ npm test
 - Nine failures originate in `tests/render.test.ts`: audio track rendering, audio extraction, full-feature audio, combined feature renders, STT, parallel audio/image/subtitle, and video trimming. One failure is `src/descriptive/compiler.test.ts` expecting unique generated IDs, and one is `src/descriptive/markdown.test.ts` expecting an empty standalone script to throw. No source in these test areas was modified during the Markcut preview work; baseline equivalence is unverified.
 - Raw stderr and stdout: local Neo shell job `1791827301578-0896f7bff8-markcut-relevant-full-test`, `~/Library/Application Support/NeoY/core/jobs/1791827301578-0896f7bff8-markcut-relevant-full-test.{stderr,stdout}.log`.
 - Final acceptance of full regression and independent review remains **BLOCKED/FAIL**; the passing focused/real preview checks do not override it.
+
+## Fresh validation, execution attempt 2 (2026-10-12 14:53 America/Toronto)
+
+- `node scripts/verify-mcp-preview.mjs > /tmp/markcut-postfix-e2e.log 2>&1`: PASS (exit 0), real MCP + HTTP. Latest raw results committed in `docs/evidence-markcut-real-e2e.json`.
+- `npm test -- --run tests/mcp-preview.test.ts`: PASS (8/8).
+- `node --check src/mcp/managed-player.mjs`: PASS.
+- Concurrent child-port reservation hardened: one candidate port cannot be issued twice during asynchronous snapshot creation, and reservation released on exit/failure/shutdown.
+- Full suite previously FAILED (454 pass, 11 fail, 2 skip); typecheck previously FAILED; see original report for exact errors. These results are NOT superseded by focused checks.
+- Actual external MCP application host `ui/message` delivery: BLOCKED (no observed host-inbound event). Independent review: BLOCKED pending Relay-managed reviewer.
