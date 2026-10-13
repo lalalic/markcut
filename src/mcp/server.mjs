@@ -9,6 +9,20 @@ import {
 
 const server = new McpServer({ name: "markcut", version: "3.2.0" });
 
+const registeredPreviewResources = new Set([RESOURCE_URI]);
+
+function ensurePreviewResourceRegistered(resourceUri) {
+  if (registeredPreviewResources.has(resourceUri)) return;
+  registerAppResource(
+    server,
+    `Markcut video review ${resourceUri.slice(-12)}`,
+    resourceUri,
+    { _meta: { ui: { prefersBorder: true, csp: { connectDomains: [PLAYER_ORIGIN], resourceDomains: [], frameDomains: [PLAYER_ORIGIN] } } } },
+    async () => buildPreviewResourceResult(resourceUri),
+  );
+  registeredPreviewResources.add(resourceUri);
+}
+
 registerAppTool(
   server,
   TOOL_NAME,
@@ -24,12 +38,13 @@ registerAppTool(
   async ({ path }) => {
     try {
       const preview = await ensureVideoPreview(path);
+      ensurePreviewResourceRegistered(preview.resourceUri);
       return {
         content: [{ type: "text", text: `Video ready for review: ${preview.path}` }],
-        structuredContent: { ...preview, resourceUri: RESOURCE_URI },
+        structuredContent: { ...preview },
         _meta: {
-          ui: { resourceUri: RESOURCE_URI, props: preview },
-          "ui/resourceUri": RESOURCE_URI,
+          ui: { resourceUri: preview.resourceUri, props: preview },
+          "ui/resourceUri": preview.resourceUri,
         },
       };
     } catch (error) {

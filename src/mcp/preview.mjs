@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
-import { access } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import { constants as fsConstants } from "node:fs";
+import { createHash } from "node:crypto";
 import { isAbsolute, extname, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildPreviewBridgeScript } from "./bridge.mjs";
@@ -18,12 +19,16 @@ const managedPlayers = new Map();
 const startPromises = new Map();
 let nextPlayerPort = PLAYER_PORT;
 
-export function buildPreviewResourceResult() {
+export function previewResourceUri(revisionHash) {
+  return `${RESOURCE_URI}/${revisionHash}`;
+}
+
+export function buildPreviewResourceResult(resourceUri = RESOURCE_URI) {
   return {
     ttlMs: 0,
     cacheScope: "private",
     contents: [{
-      uri: RESOURCE_URI,
+      uri: resourceUri,
       mimeType: RESOURCE_MIME_TYPE,
       text: buildPreviewHtml(),
       _meta: { ui: { prefersBorder: true, csp: {
@@ -42,11 +47,13 @@ export function validateMarkdownPath(value) {
 export async function ensureVideoPreview(path, options = {}) {
   const validatedPath = validateMarkdownPath(path);
   await access(validatedPath, fsConstants.R_OK);
-  const existing = managedPlayers.get(validatedPath);
+  const revisionHash = createHash("sha256").update(await readFile(validatedPath)).digest("hex");
+  const revisionKey = `${validatedPath}:${revisionHash}`;
+  const existing = managedPlayers.get(revisionKey);
   if (existing && existing.child.exitCode == null && !existing.child.killed) {
-    return { path: validatedPath, previewUrl: existing.previewUrl };
+    return { path: validatedPath, revisionHash, resourceUri: previewResourceUri(revisionHash), previewUrl: existing.previewUrl };
   }
-  if (startPromises.has(validatedPath)) return startPromises.get(validatedPath);
+  if (startPromises.has(revisionKey)) return startPromises.get(revisionKey);
 
   const port = options.port ?? nextPlayerPort++;
   const previewUrl = `http://127.0.0.1:${port}/`;
@@ -57,27 +64,27 @@ export async function ensureVideoPreview(path, options = {}) {
       cwd: resolve(moduleDir, "../.."),
       stdio: ["ignore", "pipe", "pipe"],
     });
-    managedPlayers.set(validatedPath, { child, previewUrl });
+    managedPlayers.set(revisionKey, { child, previewUrl });
     let stderr = "";
     let settled = false;
     const finish = (error) => {
       if (settled) return;
       settled = true;
-      startPromises.delete(validatedPath);
+      startPromises.delete(revisionKey);
       if (error) {
-        if (managedPlayers.get(validatedPath)?.child === child) managedPlayers.delete(validatedPath);
+        if (managedPlayers.get(revisionKey)?.child === child) managedPlayers.delete(revisionKey);
         rejectPromise(error);
-      } else resolvePromise({ path: validatedPath, previewUrl });
+      } else resolvePromise({ path: validatedPath, revisionHash, resourceUri: previewResourceUri(revisionHash), previewUrl });
     };
     child.stderr?.on("data", (chunk) => { stderr += chunk.toString(); });
     child.once("error", (error) => finish(new Error(`unable to start Markcut player: ${error.message}`)));
     child.once("exit", (code, signal) => {
-      if (managedPlayers.get(validatedPath)?.child === child) managedPlayers.delete(validatedPath);
+      if (managedPlayers.get(revisionKey)?.child === child) managedPlayers.delete(revisionKey);
       if (!settled) finish(new Error(`Markcut player exited during startup (${signal || code || "unknown"})${stderr ? `: ${stderr.trim()}` : ""}`));
     });
     setTimeout(() => { if (!settled) finish(); }, settleMs);
   });
-  startPromises.set(validatedPath, start);
+  startPromises.set(revisionKey, start);
   return start;
 }
 

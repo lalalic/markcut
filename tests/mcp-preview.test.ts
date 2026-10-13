@@ -126,6 +126,27 @@ describe("MarkCut MCP Markdown preview", () => {
     expect(harness.elements.status.textContent).toBe("submit failed");
     expect(harness.messages.some((message) => message.method === "ui/message")).toBe(false);
   });
+  it("gives changed content an immutable distinct app resource URI", async () => {
+    const root = mkdtempSync(join(tmpdir(), "markcut-mcp-revision-"));
+    const file = join(root, "video.md");
+    const children: any[] = [];
+    const spawnImpl = (_cmd: string, _args: string[]) => {
+      const child: any = new EventEmitter();
+      child.exitCode = null; child.killed = false; child.stderr = new EventEmitter();
+      child.kill = () => { child.killed = true; child.exitCode = 0; child.emit("exit", 0, null); return true; };
+      children.push(child); return child;
+    };
+    writeFileSync(file, "# Version 1\n");
+    const v1 = await ensureVideoPreview(file, { spawnImpl, settleMs: 0, port: 4611 });
+    writeFileSync(file, "# Version 2\n");
+    const v2 = await ensureVideoPreview(file, { spawnImpl, settleMs: 0, port: 4612 });
+    expect(v1.revisionHash).not.toBe(v2.revisionHash);
+    expect(v1.resourceUri).not.toBe(v2.resourceUri);
+    expect(v1.resourceUri).toContain(v1.revisionHash);
+    expect(v2.resourceUri).toContain(v2.revisionHash);
+    stopManagedVideoPreview();
+  });
+
   it("keeps independent preview players for distinct revisions", async () => {
     const root = mkdtempSync(join(tmpdir(), "markcut-mcp-multi-"));
     const a = join(root, "a.md");
