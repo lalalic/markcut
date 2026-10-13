@@ -8,6 +8,7 @@ import {
   buildPreviewHtml,
   buildPreviewResourceResult,
   ensureVideoPreview,
+  previewResourceUri,
   stopManagedVideoPreview,
   PLAYER_ORIGIN,
   RESOURCE_MIME_TYPE,
@@ -131,46 +132,27 @@ describe("MarkCut MCP Markdown preview", () => {
     expect(harness.elements.status.textContent).toBe("submit failed");
     expect(harness.messages.filter((message) => message.method === "ui/message")).toHaveLength(1);
   });
-  it("gives changed content an immutable distinct app resource URI", async () => {
-    const root = mkdtempSync(join(tmpdir(), "markcut-mcp-revision-"));
-    const file = join(root, "video.md");
-    const children: any[] = [];
-    const spawnImpl = (_cmd: string, _args: string[]) => {
-      const child: any = new EventEmitter();
-      child.exitCode = null; child.killed = false; child.stderr = new EventEmitter();
-      child.kill = () => { child.killed = true; child.exitCode = 0; child.emit("exit", 0, null); return true; };
-      children.push(child); return child;
-    };
-    writeFileSync(file, "# Version 1\n");
-    const v1 = await ensureVideoPreview(file, { spawnImpl, settleMs: 0, port: 4611 });
-    writeFileSync(file, "# Version 2\n");
-    const v2 = await ensureVideoPreview(file, { spawnImpl, settleMs: 0, port: 4612 });
-    expect(v1.revisionHash).not.toBe(v2.revisionHash);
-    expect(v1.resourceUri).not.toBe(v2.resourceUri);
-    expect(v1.resourceUri).toContain(v1.revisionHash);
-    expect(v2.resourceUri).toContain(v2.revisionHash);
-    stopManagedVideoPreview();
+  it("gives distinct revisions distinct app resource URIs", () => {
+    const v1 = previewResourceUri("hash-v1");
+    const v2 = previewResourceUri("hash-v2");
+    expect(v1).not.toBe(v2);
+    expect(v1).toBe(`${RESOURCE_URI}/hash-v1`);
+    expect(v2).toBe(`${RESOURCE_URI}/hash-v2`);
   });
 
-  it("keeps independent preview players for distinct revisions", async () => {
+  it("serves independent revisions behind the shared preview origin", async () => {
     const root = mkdtempSync(join(tmpdir(), "markcut-mcp-multi-"));
     const a = join(root, "a.md");
     const b = join(root, "b.md");
     writeFileSync(a, "# A\n");
     writeFileSync(b, "# B\n");
-    const children: any[] = [];
-    const spawnImpl = (_cmd: string, args: string[]) => {
-      const child: any = new EventEmitter();
-      child.exitCode = null; child.killed = false; child.stderr = new EventEmitter();
-      child.kill = () => { child.killed = true; child.exitCode = 0; child.emit("exit", 0, null); return true; };
-      child.args = args; children.push(child); return child;
-    };
-    const one = await ensureVideoPreview(a, { spawnImpl, settleMs: 0, port: 4601 });
-    const two = await ensureVideoPreview(b, { spawnImpl, settleMs: 0, port: 4602 });
-    expect(one.previewUrl).toBe("http://127.0.0.1:4601/");
-    expect(two.previewUrl).toBe("http://127.0.0.1:4602/");
-    expect(children).toHaveLength(2);
-    expect(children[0].killed).toBe(false);
+    const one = await ensureVideoPreview(a);
+    const two = await ensureVideoPreview(b);
+    expect(one.previewUrl).toMatch(/^http:\/\/127\.0\.0\.1:4571\/p\/[0-9a-f-]{36}\/$/);
+    expect(two.previewUrl).toMatch(/^http:\/\/127\.0\.0\.1:4571\/p\/[0-9a-f-]{36}\/$/);
+    expect(one.previewUrl).not.toBe(two.previewUrl);
+    expect(one.resourceUri).toContain(one.contentHash);
+    expect(two.resourceUri).toContain(two.contentHash);
     stopManagedVideoPreview();
   });
 
