@@ -116,6 +116,26 @@ const server=createServer(async(req,res)=>{
     res.writeHead(200,{"content-type":"application/json","cache-control":"no-store"});
     return res.end(slot.compiledBody);
   }
+  if(req.method==="GET" && path.split("?")[0]==="/") {
+    // Keep the bundled player script in the exact revision namespace,
+    // instead of the root-relative /player.js route.
+    const upstream=httpRequest({hostname:"127.0.0.1",port:slot.port,path:"/",method:"GET"},up=>{
+      const chunks=[];
+      up.on("data",chunk=>chunks.push(chunk));
+      up.on("end",async()=>{
+        try {
+          const html=Buffer.concat(chunks).toString("utf8");
+          const tag='<script src="/player.js" type="module"></script>';
+          if(!html.includes(tag)) throw new Error("player script tag missing");
+          res.writeHead(up.statusCode??200,{"content-type":"text/html; charset=utf-8","cache-control":"no-store"});
+          res.end(html.replace(tag,`<script src="/p/${slot.id}/player.js" type="module"></script>`));
+        } catch(e) {if(!res.headersSent)respond(res,502,{error:e.message});else res.end();}
+      });
+    });
+    upstream.on("error",e=>respond(res,502,{error:e.message}));
+    upstream.end();
+    return;
+  }
   const upstream=httpRequest({hostname:"127.0.0.1",port:slot.port,path,method:req.method,headers:{...req.headers,host:"127.0.0.1:"+slot.port}},up=>{
     res.writeHead(up.statusCode,up.headers);up.pipe(res);
   });

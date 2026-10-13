@@ -4,7 +4,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 import { registerAppResource, registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import { z } from "zod";
 import {
-  TOOL_NAME, RESOURCE_URI, PLAYER_ORIGIN, buildPreviewResourceResult, ensureVideoPreview, stopManagedVideoPreview,
+  TOOL_NAME, RESOURCE_URI, buildPreviewResourceResult, ensureVideoPreview, stopManagedVideoPreview,
 } from "./preview.mjs";
 
 const server = new McpServer({ name: "markcut", version: "3.2.0" });
@@ -25,7 +25,7 @@ function ensurePreviewResourceRegistered(resourceUri) {
     server,
     `Markcut video review ${resourceUri.slice(-12)}`,
     resourceUri,
-    { _meta: { ui: { prefersBorder: true, csp: { connectDomains: [PLAYER_ORIGIN], resourceDomains: [], frameDomains: [PLAYER_ORIGIN] } } } },
+    { _meta: { ui: { prefersBorder: true, csp: { connectDomains: [], resourceDomains: [], frameDomains: [] } } } },
     async () => buildPreviewResourceResult(resourceUri),
   );
   registeredPreviewResources.add(resourceUri);
@@ -72,7 +72,7 @@ registerAppResource(
     _meta: {
       ui: {
         prefersBorder: true,
-        csp: { connectDomains: [PLAYER_ORIGIN], resourceDomains: [], frameDomains: [PLAYER_ORIGIN] },
+        csp: { connectDomains: [], resourceDomains: [], frameDomains: [] },
       },
     },
   },

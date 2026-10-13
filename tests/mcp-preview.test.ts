@@ -33,6 +33,8 @@ describe("MarkCut MCP Markdown preview", () => {
     expect(html).toContain("Request changes");
     expect(html).toContain("ui/notifications/tool-result");
     expect(html).toContain("previewUrl");
+    expect(html).toContain("controls playsinline");
+    expect(html).not.toContain("<iframe");
     expect(html).not.toContain("<article>");
   });
 
@@ -47,7 +49,8 @@ describe("MarkCut MCP Markdown preview", () => {
     });
     expect(result.contents[0].text).toContain("ui/initialize");
     expect(result.contents[0].text).toContain("ui/notifications/initialized");
-    expect(result.contents[0]._meta.ui.csp.frameDomains).toEqual([PLAYER_ORIGIN]);
+    expect(result.contents[0]._meta.ui.csp.frameDomains).toEqual([]);
+    expect(result.contents[0].text).not.toContain("127.0.0.1");
   });
 
   it("returns approved", () => {
@@ -99,7 +102,7 @@ describe("MarkCut MCP Markdown preview", () => {
 
     harness.toolResult({ path: "/tmp/video.md", previewUrl: PLAYER_ORIGIN + "/p/instance/", id: "instance", revisionId: "revision", contentHash: "hash" });
     await tick();
-    expect(harness.elements.player.src).toBe(PLAYER_ORIGIN + "/p/instance/");
+    expect(harness.elements.player.src).toBe("");
     expect(harness.elements.pathLabel.textContent).toBe("/tmp/video.md");
 
     harness.elements.approve.onclick();
@@ -144,8 +147,8 @@ describe("MarkCut MCP Markdown preview", () => {
     const root = mkdtempSync(join(tmpdir(), "markcut-mcp-multi-"));
     const a = join(root, "a.md");
     const b = join(root, "b.md");
-    writeFileSync(a, "# A\n");
-    writeFileSync(b, "# B\n");
+    writeFileSync(a, "# video\nwidth:320 height:240 fps:15\n## Scene-A\n- component duration:1 jsx:\"<div style={{color:'white'}}>A</div>\"\n");
+    writeFileSync(b, "# video\nwidth:320 height:240 fps:15\n## Scene-B\n- component duration:1 jsx:\"<div style={{color:'white'}}>B</div>\"\n");
     const one = await ensureVideoPreview(a);
     const two = await ensureVideoPreview(b);
     expect(one.previewUrl).toMatch(/^http:\/\/127\.0\.0\.1:4571\/p\/[0-9a-f-]{36}\/$/);
@@ -153,6 +156,12 @@ describe("MarkCut MCP Markdown preview", () => {
     expect(one.previewUrl).not.toBe(two.previewUrl);
     expect(one.resourceUri).toContain(one.contentHash);
     expect(two.resourceUri).toContain(two.contentHash);
+    for (const preview of [one, two]) {
+      const resource = buildPreviewResourceResult(preview.resourceUri).contents[0].text;
+      expect(resource).toContain("data-video-base64=");
+      expect(resource).toContain('poster="data:image/jpeg;base64,');
+      expect(resource).not.toContain("127.0.0.1");
+    }
     stopManagedVideoPreview();
   });
 
@@ -165,7 +174,7 @@ function tick() {
 function createBridgeHarness() {
   const messages: any[] = [];
   const listeners: ((event: any) => void)[] = [];
-  const element = (value = "") => ({ value, textContent: "", innerHTML: "", onclick: undefined as (() => void) | undefined, focus() {} });
+  const element = (value = "") => ({ value, src:"", dataset:{}, textContent: "", innerHTML: "", onclick: undefined as (() => void) | undefined, getAttribute(_name:string){return this.src||null;}, addEventListener(_event:string,_cb:unknown){}, readyState:0, focus() {} });
   const elements = {
     feedback: element(),
     status: element(),
