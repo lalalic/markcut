@@ -4,7 +4,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 import { registerAppResource, registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import { z } from "zod";
 import {
-  TOOL_NAME, SUBMIT_TOOL_NAME, RESOURCE_URI, PLAYER_ORIGIN, buildPreviewResourceResult, ensureVideoPreview, reviewResult, stopManagedVideoPreview,
+  TOOL_NAME, RESOURCE_URI, PLAYER_ORIGIN, buildPreviewResourceResult, ensureVideoPreview, stopManagedVideoPreview,
 } from "./preview.mjs";
 
 const server = new McpServer({ name: "markcut", version: "3.2.0" });
@@ -54,35 +54,6 @@ registerAppTool(
           ui: { resourceUri: preview.resourceUri, props: preview },
           "ui/resourceUri": preview.resourceUri,
         },
-      };
-    } catch (error) {
-      return {
-        isError: true,
-        content: [{ type: "text", text: error instanceof Error ? error.message : String(error) }],
-      };
-    }
-  },
-);
-
-registerAppTool(
-  server,
-  SUBMIT_TOOL_NAME,
-  {
-    description: "Legacy standalone review payload validation only; embedded UI delivers via ui/message exclusively.",
-    inputSchema: z.object({
-      decision: z.enum(["approved", "changes_requested"]),
-      feedback: z.string().optional(),
-    }),
-    _meta: {
-      ui: { visibility: ["app"] },
-    },
-  },
-  async ({ decision, feedback }) => {
-    try {
-      const result = reviewResult(decision, feedback);
-      return {
-        content: [{ type: "text", text: JSON.stringify(result) }],
-        structuredContent: result,
       };
     } catch (error) {
       return {

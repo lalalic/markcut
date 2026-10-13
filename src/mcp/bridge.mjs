@@ -1,4 +1,4 @@
-export function buildPreviewBridgeScript(submitToolName) {
+export function buildPreviewBridgeScript() {
   return `
 const feedback=document.getElementById('feedback'),status=document.getElementById('status'),player=document.getElementById('video-player'),pathLabel=document.getElementById('path-label');
 let nextRequestId=0;

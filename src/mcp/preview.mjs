@@ -6,7 +6,6 @@ import { fileURLToPath } from "node:url";
 import { buildPreviewBridgeScript } from "./bridge.mjs";
 
 export const TOOL_NAME = "markcut.preview";
-export const SUBMIT_TOOL_NAME = "markcut.preview.submit";
 export const RESOURCE_URI = "ui://markcut/video-preview-v3.html";
 export const RESOURCE_MIME_TYPE = "text/html;profile=mcp-app";
 export const PLAYER_PORT = 4571;
@@ -129,5 +128,5 @@ export function buildPreviewHtml() {
 <body><main><div class="meta"><h1>Review video</h1><div class="path" id="path-label"></div></div><div class="player"><iframe id="video-player" title="Markcut video preview" allow="autoplay; fullscreen"></iframe></div>
 <label for="feedback">Feedback (required for requested changes)</label><textarea id="feedback" placeholder="What should be changed?"></textarea><div id="status" role="status">Starting preview…</div>
 <button id="approve">Approve</button><button id="changes">Request changes</button></main>
-<script>${buildPreviewBridgeScript(SUBMIT_TOOL_NAME)}</script></body></html>`;
+<script>${buildPreviewBridgeScript()}</script></body></html>`;
 }
