@@ -3,9 +3,13 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import vm from "node:vm";
+import { EventEmitter } from "node:events";
 import {
   buildPreviewHtml,
   buildPreviewResourceResult,
+  ensureVideoPreview,
+  previewResourceUri,
+  stopManagedVideoPreview,
   PLAYER_ORIGIN,
   RESOURCE_MIME_TYPE,
   RESOURCE_URI,
@@ -93,18 +97,21 @@ describe("MarkCut MCP Markdown preview", () => {
     await tick();
     expect(harness.messages[1]).toMatchObject({ method: "ui/notifications/initialized" });
 
-    harness.toolResult({ path: "/tmp/video.md", previewUrl: PLAYER_ORIGIN + "/" });
+    harness.toolResult({ path: "/tmp/video.md", previewUrl: PLAYER_ORIGIN + "/p/instance/", id: "instance", revisionId: "revision", contentHash: "hash" });
     await tick();
-    expect(harness.elements.player.src).toBe(PLAYER_ORIGIN + "/");
+    expect(harness.elements.player.src).toBe(PLAYER_ORIGIN + "/p/instance/");
     expect(harness.elements.pathLabel.textContent).toBe("/tmp/video.md");
 
     harness.elements.approve.onclick();
-    expect(harness.messages[2]).toMatchObject({ id: 2, method: "tools/call" });
-    expect(harness.messages).not.toContainEqual(expect.objectContaining({ method: "ui/message" }));
-    harness.respond({ id: 2, result: { structuredContent: { decision: "approved" } } });
+    expect(harness.messages[2]).toMatchObject({ id: 2, method: "ui/message" });
+    expect(JSON.parse(harness.messages[2].params.content[0].text)).toEqual({previewId:"instance",revisionId:"revision",contentHash:"hash",decision:"approved"});
+    expect(harness.messages.some(m => m.method === "tools/call")).toBe(false);
+    harness.elements.approve.onclick();
+    expect(harness.messages.filter(m => m.method === "ui/message")).toHaveLength(1);
+    harness.respond({ id: 2, result: {} });
     await tick();
-    expect(harness.messages[3]).toMatchObject({ method: "ui/message" });
-    expect(new Set(harness.messages.filter((message) => "id" in message).map((message) => message.id)).size).toBe(3);
+    expect(harness.elements.status.textContent).toBe("Approved.");
+    expect(new Set(harness.messages.filter((message) => "id" in message).map((message) => message.id)).size).toBe(2);
   });
 
   it("surfaces submit errors without sending a decision message and rejects invalid bridge messages", async () => {
@@ -114,6 +121,8 @@ describe("MarkCut MCP Markdown preview", () => {
     expect(harness.elements.status.textContent).toBe("");
     harness.respond({ id: 1, result: {} });
     await tick();
+    harness.toolResult({ id:"instance", revisionId:"revision", contentHash:"hash", previewUrl:PLAYER_ORIGIN+"/p/instance/" });
+    await tick();
     harness.elements.changes.onclick();
     expect(harness.elements.status.textContent).toBe("Feedback is required.");
     harness.elements.feedback.value = "Fix the title";
@@ -121,8 +130,32 @@ describe("MarkCut MCP Markdown preview", () => {
     harness.respond({ id: 2, error: { message: "submit failed" } });
     await tick();
     expect(harness.elements.status.textContent).toBe("submit failed");
-    expect(harness.messages.some((message) => message.method === "ui/message")).toBe(false);
+    expect(harness.messages.filter((message) => message.method === "ui/message")).toHaveLength(1);
   });
+  it("gives distinct revisions distinct app resource URIs", () => {
+    const v1 = previewResourceUri("hash-v1");
+    const v2 = previewResourceUri("hash-v2");
+    expect(v1).not.toBe(v2);
+    expect(v1).toBe(`${RESOURCE_URI}/hash-v1`);
+    expect(v2).toBe(`${RESOURCE_URI}/hash-v2`);
+  });
+
+  it("serves independent revisions behind the shared preview origin", async () => {
+    const root = mkdtempSync(join(tmpdir(), "markcut-mcp-multi-"));
+    const a = join(root, "a.md");
+    const b = join(root, "b.md");
+    writeFileSync(a, "# A\n");
+    writeFileSync(b, "# B\n");
+    const one = await ensureVideoPreview(a);
+    const two = await ensureVideoPreview(b);
+    expect(one.previewUrl).toMatch(/^http:\/\/127\.0\.0\.1:4571\/p\/[0-9a-f-]{36}\/$/);
+    expect(two.previewUrl).toMatch(/^http:\/\/127\.0\.0\.1:4571\/p\/[0-9a-f-]{36}\/$/);
+    expect(one.previewUrl).not.toBe(two.previewUrl);
+    expect(one.resourceUri).toContain(one.contentHash);
+    expect(two.resourceUri).toContain(two.contentHash);
+    stopManagedVideoPreview();
+  });
+
 });
 
 function tick() {

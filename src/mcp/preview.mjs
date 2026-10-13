@@ -13,17 +13,31 @@ export const PLAYER_PORT = 4571;
 export const PLAYER_ORIGIN = `http://127.0.0.1:${PLAYER_PORT}`;
 
 const moduleDir = dirname(fileURLToPath(import.meta.url));
-const playerServer = resolve(moduleDir, "../player/server.mjs");
+const playerServer = resolve(moduleDir, "managed-player.mjs");
 let managedPlayer = null;
-let managedPath = null;
 let startPromise = null;
+async function managerRunning() {
+  try {
+    const response = await fetch(PLAYER_ORIGIN + "/__markcut/health", {signal: AbortSignal.timeout(1000)});
+    return response.ok && (await response.json()).service === "markcut-preview-manager";
+  } catch { return false; }
+}
 
-export function buildPreviewResourceResult() {
+async function submitPreview(path) {
+  const response = await fetch(PLAYER_ORIGIN + "/__markcut/previews", {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({path}),signal:AbortSignal.timeout(150000)});
+  const result = await response.json(); if (!response.ok) throw new Error(result.error || "preview creation failed"); return result;
+}
+
+export function previewResourceUri(contentHash) {
+  return `${RESOURCE_URI}/${contentHash}`;
+}
+
+export function buildPreviewResourceResult(resourceUri = RESOURCE_URI) {
   return {
     ttlMs: 0,
     cacheScope: "private",
     contents: [{
-      uri: RESOURCE_URI,
+      uri: resourceUri,
       mimeType: RESOURCE_MIME_TYPE,
       text: buildPreviewHtml(),
       _meta: {
@@ -53,55 +67,39 @@ export function validateMarkdownPath(value) {
 export async function ensureVideoPreview(path, options = {}) {
   const validatedPath = validateMarkdownPath(path);
   await access(validatedPath, fsConstants.R_OK);
-  if (managedPlayer && managedPath === validatedPath && managedPlayer.exitCode == null && !managedPlayer.killed) {
-    return { path: validatedPath, previewUrl: `${PLAYER_ORIGIN}/` };
+  if (!await managerRunning()) {
+    if (!startPromise) {
+      startPromise = (async () => {
+        const child = spawn(process.execPath, [playerServer], {
+          cwd: resolve(moduleDir, "../.."), stdio: ["ignore", "ignore", "pipe"], detached: process.platform !== "win32",
+        });
+        managedPlayer = child;
+        let stderr = "";
+        child.stderr.on("data", b => { stderr += String(b).slice(-4000); });
+        child.once("exit", () => { if (managedPlayer === child) managedPlayer = null; });
+        for (let attempt = 0; attempt < 50; attempt++) {
+          if (await managerRunning()) return;
+          if (child.exitCode !== null) break;
+          await new Promise(r => setTimeout(r, 100));
+        }
+        child.kill("SIGTERM");
+        throw new Error("port 4571 unavailable or manager failed: " + stderr);
+      })().finally(() => { startPromise = null; });
+    }
+    await startPromise;
   }
-  if (startPromise && managedPath === validatedPath) return startPromise;
-
-  if (managedPlayer && managedPlayer.exitCode == null && !managedPlayer.killed) {
-    managedPlayer.kill("SIGTERM");
-  }
-  managedPlayer = null;
-  managedPath = validatedPath;
-
-  const spawnImpl = options.spawnImpl || spawn;
-  const settleMs = options.settleMs ?? 250;
-  startPromise = new Promise((resolvePromise, rejectPromise) => {
-    const child = spawnImpl(process.execPath, [playerServer, validatedPath, `--port=${PLAYER_PORT}`], {
-      cwd: resolve(moduleDir, "../.."),
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-    managedPlayer = child;
-    let stderr = "";
-    let settled = false;
-    const finish = (error) => {
-      if (settled) return;
-      settled = true;
-      startPromise = null;
-      if (error) {
-        if (managedPlayer === child) managedPlayer = null;
-        rejectPromise(error);
-      } else {
-        resolvePromise({ path: validatedPath, previewUrl: `${PLAYER_ORIGIN}/` });
-      }
-    };
-    child.stderr?.on("data", (chunk) => { stderr += chunk.toString(); });
-    child.once("error", (error) => finish(new Error(`unable to start Markcut player: ${error.message}`)));
-    child.once("exit", (code, signal) => {
-      if (managedPlayer === child) managedPlayer = null;
-      if (!settled) finish(new Error(`Markcut player exited during startup (${signal || code || "unknown"})${stderr ? `: ${stderr.trim()}` : ""}`));
-    });
-    setTimeout(() => {
-      if (!settled) finish();
-    }, settleMs);
-  });
-  return startPromise;
+  const preview = await submitPreview(validatedPath);
+  return { ...preview, resourceUri: previewResourceUri(preview.contentHash) };
 }
 
 export function stopManagedVideoPreview() {
-  if (managedPlayer && managedPlayer.exitCode == null && !managedPlayer.killed) managedPlayer.kill("SIGTERM");
+  if (managedPlayer && managedPlayer.exitCode == null) {
+    try {
+      if (process.platform !== "win32" && managedPlayer.pid) process.kill(-managedPlayer.pid, "SIGTERM");
+      else managedPlayer.kill("SIGTERM");
+    } catch { managedPlayer.kill("SIGTERM"); }
+  }
   managedPlayer = null;
-  managedPath = null;
   startPromise = null;
 }
 
