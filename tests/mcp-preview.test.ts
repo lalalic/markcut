@@ -3,9 +3,12 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import vm from "node:vm";
+import { EventEmitter } from "node:events";
 import {
   buildPreviewHtml,
   buildPreviewResourceResult,
+  ensureVideoPreview,
+  stopManagedVideoPreview,
   PLAYER_ORIGIN,
   RESOURCE_MIME_TYPE,
   RESOURCE_URI,
@@ -123,6 +126,28 @@ describe("MarkCut MCP Markdown preview", () => {
     expect(harness.elements.status.textContent).toBe("submit failed");
     expect(harness.messages.some((message) => message.method === "ui/message")).toBe(false);
   });
+  it("keeps independent preview players for distinct revisions", async () => {
+    const root = mkdtempSync(join(tmpdir(), "markcut-mcp-multi-"));
+    const a = join(root, "a.md");
+    const b = join(root, "b.md");
+    writeFileSync(a, "# A\n");
+    writeFileSync(b, "# B\n");
+    const children: any[] = [];
+    const spawnImpl = (_cmd: string, args: string[]) => {
+      const child: any = new EventEmitter();
+      child.exitCode = null; child.killed = false; child.stderr = new EventEmitter();
+      child.kill = () => { child.killed = true; child.exitCode = 0; child.emit("exit", 0, null); return true; };
+      child.args = args; children.push(child); return child;
+    };
+    const one = await ensureVideoPreview(a, { spawnImpl, settleMs: 0, port: 4601 });
+    const two = await ensureVideoPreview(b, { spawnImpl, settleMs: 0, port: 4602 });
+    expect(one.previewUrl).toBe("http://127.0.0.1:4601/");
+    expect(two.previewUrl).toBe("http://127.0.0.1:4602/");
+    expect(children).toHaveLength(2);
+    expect(children[0].killed).toBe(false);
+    stopManagedVideoPreview();
+  });
+
 });
 
 function tick() {

@@ -9,14 +9,14 @@ export const TOOL_NAME = "markcut.preview";
 export const SUBMIT_TOOL_NAME = "markcut.preview.submit";
 export const RESOURCE_URI = "ui://markcut/video-preview-v3.html";
 export const RESOURCE_MIME_TYPE = "text/html;profile=mcp-app";
-export const PLAYER_PORT = 4571;
-export const PLAYER_ORIGIN = `http://127.0.0.1:${PLAYER_PORT}`;
+export const PLAYER_PORT = 4572;
+export const PLAYER_ORIGIN = "http://127.0.0.1:*";
 
 const moduleDir = dirname(fileURLToPath(import.meta.url));
 const playerServer = resolve(moduleDir, "../player/server.mjs");
-let managedPlayer = null;
-let managedPath = null;
-let startPromise = null;
+const managedPlayers = new Map();
+const startPromises = new Map();
+let nextPlayerPort = PLAYER_PORT;
 
 export function buildPreviewResourceResult() {
   return {
@@ -26,83 +26,67 @@ export function buildPreviewResourceResult() {
       uri: RESOURCE_URI,
       mimeType: RESOURCE_MIME_TYPE,
       text: buildPreviewHtml(),
-      _meta: {
-        ui: {
-          prefersBorder: true,
-          csp: {
-            connectDomains: [PLAYER_ORIGIN],
-            resourceDomains: [],
-            frameDomains: [PLAYER_ORIGIN],
-          },
-        },
-      },
+      _meta: { ui: { prefersBorder: true, csp: {
+        connectDomains: [PLAYER_ORIGIN], resourceDomains: [], frameDomains: [PLAYER_ORIGIN],
+      } } },
     }],
   };
 }
 
 export function validateMarkdownPath(value) {
-  if (typeof value !== "string" || !isAbsolute(value)) {
-    throw new Error("path must be an absolute filesystem path");
-  }
-  if (extname(value).toLowerCase() !== ".md") {
-    throw new Error("path must point to a Markdown file (.md)");
-  }
+  if (typeof value !== "string" || !isAbsolute(value)) throw new Error("path must be an absolute filesystem path");
+  if (extname(value).toLowerCase() !== ".md") throw new Error("path must point to a Markdown file (.md)");
   return value;
 }
 
 export async function ensureVideoPreview(path, options = {}) {
   const validatedPath = validateMarkdownPath(path);
   await access(validatedPath, fsConstants.R_OK);
-  if (managedPlayer && managedPath === validatedPath && managedPlayer.exitCode == null && !managedPlayer.killed) {
-    return { path: validatedPath, previewUrl: `${PLAYER_ORIGIN}/` };
+  const existing = managedPlayers.get(validatedPath);
+  if (existing && existing.child.exitCode == null && !existing.child.killed) {
+    return { path: validatedPath, previewUrl: existing.previewUrl };
   }
-  if (startPromise && managedPath === validatedPath) return startPromise;
+  if (startPromises.has(validatedPath)) return startPromises.get(validatedPath);
 
-  if (managedPlayer && managedPlayer.exitCode == null && !managedPlayer.killed) {
-    managedPlayer.kill("SIGTERM");
-  }
-  managedPlayer = null;
-  managedPath = validatedPath;
-
+  const port = options.port ?? nextPlayerPort++;
+  const previewUrl = `http://127.0.0.1:${port}/`;
   const spawnImpl = options.spawnImpl || spawn;
   const settleMs = options.settleMs ?? 250;
-  startPromise = new Promise((resolvePromise, rejectPromise) => {
-    const child = spawnImpl(process.execPath, [playerServer, validatedPath, `--port=${PLAYER_PORT}`], {
+  const start = new Promise((resolvePromise, rejectPromise) => {
+    const child = spawnImpl(process.execPath, [playerServer, validatedPath, `--port=${port}`], {
       cwd: resolve(moduleDir, "../.."),
       stdio: ["ignore", "pipe", "pipe"],
     });
-    managedPlayer = child;
+    managedPlayers.set(validatedPath, { child, previewUrl });
     let stderr = "";
     let settled = false;
     const finish = (error) => {
       if (settled) return;
       settled = true;
-      startPromise = null;
+      startPromises.delete(validatedPath);
       if (error) {
-        if (managedPlayer === child) managedPlayer = null;
+        if (managedPlayers.get(validatedPath)?.child === child) managedPlayers.delete(validatedPath);
         rejectPromise(error);
-      } else {
-        resolvePromise({ path: validatedPath, previewUrl: `${PLAYER_ORIGIN}/` });
-      }
+      } else resolvePromise({ path: validatedPath, previewUrl });
     };
     child.stderr?.on("data", (chunk) => { stderr += chunk.toString(); });
     child.once("error", (error) => finish(new Error(`unable to start Markcut player: ${error.message}`)));
     child.once("exit", (code, signal) => {
-      if (managedPlayer === child) managedPlayer = null;
+      if (managedPlayers.get(validatedPath)?.child === child) managedPlayers.delete(validatedPath);
       if (!settled) finish(new Error(`Markcut player exited during startup (${signal || code || "unknown"})${stderr ? `: ${stderr.trim()}` : ""}`));
     });
-    setTimeout(() => {
-      if (!settled) finish();
-    }, settleMs);
+    setTimeout(() => { if (!settled) finish(); }, settleMs);
   });
-  return startPromise;
+  startPromises.set(validatedPath, start);
+  return start;
 }
 
 export function stopManagedVideoPreview() {
-  if (managedPlayer && managedPlayer.exitCode == null && !managedPlayer.killed) managedPlayer.kill("SIGTERM");
-  managedPlayer = null;
-  managedPath = null;
-  startPromise = null;
+  for (const { child } of managedPlayers.values()) {
+    if (child.exitCode == null && !child.killed) child.kill("SIGTERM");
+  }
+  managedPlayers.clear();
+  startPromises.clear();
 }
 
 export function reviewResult(decision, feedback = "") {
