@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Local-only bounded preview gateway. CLI player behavior is unchanged.
 import { createServer, request as httpRequest } from "node:http";
+import { createServer as createTcpServer } from "node:net";
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { realpath, readFile, writeFile, unlink, stat, rm } from "node:fs/promises";
@@ -33,6 +34,15 @@ function waitReady(port, child) {
     poll();
   });
 }
+async function portIsFree(port) {
+  return new Promise(resolvePort => {
+    const probe = createTcpServer();
+    probe.once("error", () => resolvePort(false));
+    probe.listen(port, "127.0.0.1", () => {
+      probe.close(() => resolvePort(true));
+    });
+  });
+}
 async function create(path) {
   if (typeof path !== "string" || !path.startsWith("/") || !path.toLowerCase().endsWith(".md")) throw new Error("absolute .md path required");
   const canonical = await realpath(path);
@@ -54,7 +64,7 @@ async function create(path) {
     let child;
     let port;
     for (let candidate=4580;candidate<4599;candidate++) {
-      if (reservedPorts.has(candidate)) continue;
+      if (reservedPorts.has(candidate) || !await portIsFree(candidate)) continue;
       port=candidate;reservedPorts.add(candidate);break;
     }
     if (!port) throw new Error("no child port available");

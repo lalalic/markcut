@@ -22,7 +22,7 @@ process.stdin.once("close", stopManagedVideoPreview);
 server.registerTool(
   "markcut.preview.media",
   {
-    description: "Read inline video and poster data for an existing Markcut preview revision.",
+    description: "Read compiled Remotion scene data for an existing Markcut preview revision.",
     inputSchema: z.object({contentHash:z.string().regex(/^[a-f0-9]{64}$/)}),
     _meta: { ui: { visibility: ["app"] } },
   },
@@ -50,11 +50,15 @@ registerAppTool(
   async ({ path }) => {
     try {
       const preview = await ensureVideoPreview(path);
+      // Deliver bytes with the initiating tool result; MCP App tool re-requests
+      // are not consistently routable through the ChatGPT federation host.
+      const media = getPreviewMedia(preview.contentHash);
+      const payload = { ...preview, ...media };
       return {
         content: [{ type: "text", text: `Video ready for review: ${preview.path}` }],
-        structuredContent: { ...preview },
+        structuredContent: payload,
         _meta: {
-          ui: { resourceUri: preview.resourceUri, props: preview },
+          ui: { resourceUri: preview.resourceUri, props: payload },
           "ui/resourceUri": preview.resourceUri,
         },
       };
