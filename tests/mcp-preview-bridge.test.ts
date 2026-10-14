@@ -1,8 +1,9 @@
 import {describe,it,expect} from 'vitest';
 import vm from 'node:vm';
+import {webcrypto} from 'node:crypto';
 import {buildPreviewBridgeScript} from '../src/mcp/bridge.mjs';
 
-function harness() {
+function harness(remoteData?:any) {
  const messages:any[]=[];
  const listeners:Record<string,Array<(evt:any)=>void>>={};
  const element=()=>({value:'',textContent:'',onclick:null as null|(()=>void)});
@@ -16,16 +17,26 @@ function harness() {
   addEventListener:(type:string,listener:(evt:any)=>void)=>(listeners[type]??=[]).push(listener),
   dispatchEvent:(evt:any)=>{events.push(evt);return true},
  };
- const context=vm.createContext({window,document:{getElementById:(id:string)=>nodes[id]},CustomEvent:class {type:string;detail:any;constructor(t:string,opts:any){this.type=t;this.detail=opts.detail}}});
+ const fetch=async()=>({ok:true,json:async()=>remoteData});
+ const context=vm.createContext({crypto:webcrypto,TextEncoder,fetch,setTimeout,window,document:{getElementById:(id:string)=>nodes[id]},CustomEvent:class {type:string;detail:any;constructor(t:string,opts:any){this.type=t;this.detail=opts.detail}}});
  const dispatch=(message:any,source=parent)=>(listeners.message??[]).forEach(listener=>listener({source,data:{jsonrpc:'2.0',...message}}));
  const result=(data:any)=>dispatch({method:'ui/notifications/tool-result',params:{result:{structuredContent:data}}});
  const respond=(id:number,result:any={})=>dispatch({id,result});
- vm.runInContext(buildPreviewBridgeScript(),context);
+ vm.runInContext(buildPreviewBridgeScript().replaceAll("__MARKCUT_ORIGIN__",JSON.stringify("https://neoy.qili2.com")),context);
  return {messages,nodes,events,dispatch,result,respond};
 }
 const nextTick=()=>new Promise(resolve=>setTimeout(resolve,0));
 
 describe('MCP Remotion bridge',()=>{
+ it('hydrates scenes from NeoY when ChatGPT does not deliver tool-result',async()=>{
+  const path='https://neoy.qili2.com/files/markcut-review/video-a-v4.md';
+  const data={id:'remote',revisionId:'remote-r1',contentHash:'sha',path,requestedPath:path,compiled:{children:[{type:'scene'}]}};
+  const h=harness(data);
+  h.dispatch({method:'ui/notifications/tool-input',params:{arguments:{path}}});
+  for(let i=0;i<12&&!h.events.some(e=>e.detail?.revisionId==='remote-r1');i++)await nextTick();
+  expect(h.events.at(-1)?.detail?.revisionId).toBe('remote-r1');
+  expect(h.nodes.status.textContent).toBe('Remotion scenes loaded for review.');
+ });
  it('initializes, delivers compiled scenes and submits review without secondary MCP calls',async()=>{
   const h=harness();
   expect(h.messages[0]).toMatchObject({id:1,method:'ui/initialize'});
