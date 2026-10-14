@@ -14,7 +14,7 @@ function applyToolInput(params){
  showVideoName(expectedPath);
  const cached=resultsByPath.get(expectedPath);
  if(cached){renderRevision(cached);return;}
- if(window.__markcutRevision?.path!==expectedPath){
+ if(window.__markcutRevision?.path!==expectedPath && window.__markcutRevision?.requestedPath!==expectedPath){
   identity=null;
   window.__markcutRevision=null;
   window.dispatchEvent(new CustomEvent('markcut:revision',{detail:null}));
@@ -26,7 +26,8 @@ function applyToolResult(params){
  const result=params?.result||params||{};
  const data=result.structuredContent||result.structured_content||result._meta?.ui?.props||{};
  if(typeof data.path==='string')resultsByPath.set(data.path,data);
- if(expectedPath&&data.path!==expectedPath)return;
+ if(typeof data.requestedPath==='string')resultsByPath.set(data.requestedPath,data);
+ if(expectedPath&&data.path!==expectedPath&&data.requestedPath!==expectedPath)return;
  renderRevision(data);
 }
 function renderRevision(data){

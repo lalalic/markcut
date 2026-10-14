@@ -54,7 +54,7 @@ registerAppTool(
       // Deliver bytes with the initiating tool result; MCP App tool re-requests
       // are not consistently routable through the ChatGPT federation host.
       const media = getPreviewMedia(preview.contentHash);
-      const payload = { ...preview, ...media, ...(relay ? {relay} : {}) };
+      const payload = { ...preview, ...media, requestedPath: path, ...(relay ? {relay} : {}) };
       return {
         content: [{ type: "text", text: `Video ready for review: ${preview.path}` }],
         structuredContent: payload,

@@ -76,6 +76,20 @@ describe('MCP Remotion bridge',()=>{
   a.result(bData);
   expect(a.events.at(-1).detail.revisionId).toBe('ra');
  });
+ it('accepts a URL invocation whose result resolves to an absolute local path in either notification order',()=>{
+  const url='https://neoy.qili2.com/files/markcut-review/video-a-v4.md';
+  const data={id:'u',revisionId:'url-rev',contentHash:'hash',path:'/Users/chengli/Workspace/markcut-manual-review-20261013/video-a-v4.md',requestedPath:url,compiled:{children:[]}};
+  const first=harness();
+  first.dispatch({method:'ui/notifications/tool-input',params:{arguments:{path:url}}});
+  first.result(data);
+  expect(first.events.at(-1).detail.revisionId).toBe('url-rev');
+  const second=harness();
+  second.result(data);
+  second.dispatch({method:'ui/notifications/tool-input',params:{arguments:{path:url}}});
+  expect(second.events.at(-1).detail.revisionId).toBe('url-rev');
+  second.nodes.approve.onclick?.();
+  expect(JSON.parse(second.messages.at(-1).params.content[0].text).revisionId).toBe('url-rev');
+ });
  it('preserves optional Relay job/task context across review decisions',()=>{
   const h=harness();
   const relay={jobId:'job-7',taskId:19,executionId:'exec-1'};
