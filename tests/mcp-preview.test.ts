@@ -14,6 +14,9 @@ describe('Markcut Remotion MCP App',()=>{
   expect(encoded).toBeTruthy();
   const js=Buffer.from(encoded!, 'base64').toString('utf8');
   expect(js).toContain('remotion-preview');
+  expect(js).toContain('preview-version');
+  expect(js).toContain('preview-audio-status');
+  expect(js).toContain('v12');
   expect(js).not.toContain('remotion-toggle');
   expect(html.length).toBeGreaterThan(1000000);
   expect(html).not.toContain('<video id="video-player"');

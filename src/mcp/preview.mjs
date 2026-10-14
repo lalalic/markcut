@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { buildPreviewBridgeScript } from "./bridge.mjs";
 
 export const TOOL_NAME = "markcut.preview";
-export const RESOURCE_URI = "ui://markcut/video-preview-v11.html";
+export const RESOURCE_URI = "ui://markcut/video-preview-v12.html";
 // Legacy entrypoints remain registered, but serve the current implementation.
 export const LEGACY_RESOURCE_URIS = [
   "ui://markcut/video-preview-v3.html",
@@ -17,6 +17,7 @@ export const LEGACY_RESOURCE_URIS = [
   "ui://markcut/video-preview-v8.html",
   "ui://markcut/video-preview-v9.html",
   "ui://markcut/video-preview-v10.html",
+  "ui://markcut/video-preview-v11.html",
 ];
 export const RESOURCE_MIME_TYPE = "text/html;profile=mcp-app";
 export const PLAYER_PORT = 4571;
