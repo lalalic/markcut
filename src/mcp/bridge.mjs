@@ -6,10 +6,12 @@ const pending=new Map();
 const resultsByPath=new Map();
 function send(msg){window.parent.postMessage(msg,'*');}
 function request(method,params){const id=++nextId;send({jsonrpc:'2.0',id,method,params});return new Promise((resolve,reject)=>pending.set(id,{resolve,reject}));}
+function showVideoName(path){const el=document.getElementById('video-md-version');if(el&&typeof path==='string')el.textContent=path.split('/').pop();}
 function applyToolInput(params){
  const input=params?.arguments||params?.input||params?.toolInput||params||{};
  if(typeof input.path!=='string')return;
  expectedPath=input.path;
+ showVideoName(expectedPath);
  const cached=resultsByPath.get(expectedPath);
  if(cached){renderRevision(cached);return;}
  if(window.__markcutRevision?.path!==expectedPath){
@@ -28,7 +30,7 @@ function applyToolResult(params){
  renderRevision(data);
 }
 function renderRevision(data){
- if(data.path)pathLabel.textContent=data.path;
+ if(data.path){pathLabel.textContent=data.path;showVideoName(data.path);}
  if(!data.compiled){status.textContent='Compiled Remotion scenes unavailable';return;}
  identity={previewId:data.id,revisionId:data.revisionId,contentHash:data.contentHash};
  activePath=data.path||expectedPath||null;

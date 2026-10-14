@@ -7,7 +7,7 @@ function harness() {
  const listeners:Record<string,Array<(evt:any)=>void>>={};
  const element=()=>({value:'',textContent:'',onclick:null as null|(()=>void)});
  const nodes:Record<string,ReturnType<typeof element>>={
-  feedback:element(),status:element(),'path-label':element(),approve:element(),changes:element()
+  feedback:element(),status:element(),'path-label':element(),'video-md-version':element(),approve:element(),changes:element()
  };
  const parent={postMessage:(m:any)=>messages.push(m)};
  const events:any[]=[];
@@ -37,6 +37,7 @@ describe('MCP Remotion bridge',()=>{
   expect(h.events.map(e=>e.type)).toEqual(['markcut:revision']);
   expect(h.events[0].detail.compiled).toEqual(compiled);
   expect(h.nodes['path-label'].textContent).toBe('/tmp/a.md');
+  expect(h.nodes['video-md-version'].textContent).toBe('a.md');
   expect(h.messages.filter(m=>m.method==='tools/call')).toHaveLength(0);
   h.nodes.approve.onclick?.();
   expect(h.messages[2]).toMatchObject({id:2,method:'ui/message'});
