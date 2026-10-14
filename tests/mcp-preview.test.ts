@@ -14,6 +14,7 @@ import {
   PLAYER_ORIGIN,
   RESOURCE_MIME_TYPE,
   RESOURCE_URI,
+  LEGACY_RESOURCE_URIS,
   reviewMessage,
   reviewResult,
   validateMarkdownPath,
@@ -54,6 +55,22 @@ describe("MarkCut MCP Markdown preview", () => {
     expect(result.contents[0].text).toContain("ui/notifications/initialized");
     expect(result.contents[0]._meta.ui.csp.frameDomains).toEqual([]);
     expect(result.contents[0].text).not.toContain("127.0.0.1");
+  });
+
+  it("serves current player HTML from every legacy resource URI", () => {
+    expect(LEGACY_RESOURCE_URIS).toEqual([
+      "ui://markcut/video-preview-v3.html",
+      "ui://markcut/video-preview-v4.html",
+    ]);
+    const latest = buildPreviewResourceResult().contents[0].text;
+    for (const uri of LEGACY_RESOURCE_URIS) {
+      const resource = buildPreviewResourceResult(uri);
+      expect(resource.contents[0].uri).toBe(uri);
+      expect(resource.contents[0].text).toBe(latest);
+      expect(resource.contents[0].text).toContain("markcut.preview.media");
+      expect(resource.contents[0].text).not.toContain("<iframe");
+      expect(resource.contents[0].text).not.toContain("/api/ready");
+    }
   });
 
   it("reads revision-specific media using the static app-only tool without localhost or blob URLs", async () => {

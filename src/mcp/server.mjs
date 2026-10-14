@@ -4,7 +4,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 import { registerAppResource, registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import { z } from "zod";
 import {
-  TOOL_NAME, RESOURCE_URI, buildPreviewResourceResult, getPreviewMedia, ensureVideoPreview, stopManagedVideoPreview,
+  TOOL_NAME, RESOURCE_URI, LEGACY_RESOURCE_URIS, buildPreviewResourceResult, getPreviewMedia, ensureVideoPreview, stopManagedVideoPreview,
 } from "./preview.mjs";
 
 const server = new McpServer({ name: "markcut", version: "3.2.0" });
@@ -67,19 +67,23 @@ registerAppTool(
   },
 );
 
-registerAppResource(
-  server,
-  "Markcut video review",
-  RESOURCE_URI,
-  {
-    _meta: {
-      ui: {
-        prefersBorder: true,
-        csp: { connectDomains: [], resourceDomains: [], frameDomains: [] },
+// All historical static entrypoints resolve to the latest bridge/player HTML.
+// Register at startup so federation can discover every alias.
+for (const uri of [RESOURCE_URI, ...LEGACY_RESOURCE_URIS]) {
+  registerAppResource(
+    server,
+    `Markcut video review (latest; alias ${uri})`,
+    uri,
+    {
+      _meta: {
+        ui: {
+          prefersBorder: true,
+          csp: { connectDomains: [], resourceDomains: [], frameDomains: [] },
+        },
       },
     },
-  },
-  async () => buildPreviewResourceResult(),
-);
+    async () => buildPreviewResourceResult(uri),
+  );
+}
 
 await server.connect(new StdioServerTransport());
