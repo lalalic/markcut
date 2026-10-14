@@ -1,7 +1,9 @@
 import * as React from 'react';
 import {createRoot} from 'react-dom/client';
 import {Player} from '@remotion/player';
+import {Html5Audio} from 'remotion';
 import {MarkCut, getDurationInSeconds} from '../entry';
+function PreviewComposition({root,audioSrc}:{root:any,audioSrc?:string}){return <><MarkCut root={root}/>{audioSrc?<Html5Audio src={audioSrc}/>:null}</>}
 function App(){
  const [revision,setRevision]=React.useState<any>(()=>(window as any).__markcutRevision||null);
  const ref=React.useRef<any>(null);
@@ -17,7 +19,7 @@ function App(){
  const seek=(value:number)=>ref.current?.seekTo(Math.min(duration-1,Math.max(0,value)));
  return <div id="remotion-preview" data-revision={revision.revisionId}>
  <div id="remotion-canvas" style={{width:'100%',aspectRatio:`${data.width||1080}/${data.height||1920}`,maxHeight:'65vh',margin:'auto'}}>
- <Player key={revision.revisionId} ref={ref} component={MarkCut} inputProps={{root:data}} durationInFrames={duration} fps={fps} compositionWidth={data.width||1080} compositionHeight={data.height||1920} style={{height:'100%',width:'100%'}} controls={false} autoPlay={false} initiallyMuted={true}/>
+ <Player key={revision.revisionId} ref={ref} component={PreviewComposition} inputProps={{root:data,audioSrc:revision.audioSrc}} durationInFrames={duration} fps={fps} compositionWidth={data.width||1080} compositionHeight={data.height||1920} style={{height:'100%',width:'100%'}} controls={false} autoPlay={false} initiallyMuted={false}/>
  </div>
  <div className="transport"><button type="button" id="remotion-toggle" onClick={()=>playing?ref.current?.pause():ref.current?.play()}>{playing?'Pause':'Play'}</button>
  <input id="remotion-seek" type="range" min={0} max={duration-1} value={frame} onChange={e=>seek(Number(e.target.value))}/>

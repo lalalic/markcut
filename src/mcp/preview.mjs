@@ -1,12 +1,12 @@
 import { spawn } from "node:child_process";
-import { access } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import { constants as fsConstants, readFileSync } from "node:fs";
 import { isAbsolute, extname, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildPreviewBridgeScript } from "./bridge.mjs";
 
 export const TOOL_NAME = "markcut.preview";
-export const RESOURCE_URI = "ui://markcut/video-preview-v8.html";
+export const RESOURCE_URI = "ui://markcut/video-preview-v9.html";
 // Legacy entrypoints remain registered, but serve the current implementation.
 export const LEGACY_RESOURCE_URIS = [
   "ui://markcut/video-preview-v3.html",
@@ -14,6 +14,7 @@ export const LEGACY_RESOURCE_URIS = [
   "ui://markcut/video-preview-v5.html",
   "ui://markcut/video-preview-v6.html",
   "ui://markcut/video-preview-v7.html",
+  "ui://markcut/video-preview-v8.html",
 ];
 export const RESOURCE_MIME_TYPE = "text/html;profile=mcp-app";
 export const PLAYER_PORT = 4571;
@@ -80,6 +81,20 @@ export function validateMarkdownPath(value) {
   return value;
 }
 
+export async function readPreviewAudio(path) {
+  const markdown = await readFile(path, "utf8");
+  const match = markdown.match(/^audio:\s*([^\r\n]+)\s*$/m);
+  if (!match) return {};
+  const filename = match[1].trim();
+  if (!/^[\w. -]+\.(wav|mp3|m4a|ogg)$/i.test(filename) || filename.startsWith(".")) throw new Error("audio must be a local audio filename in the Markdown directory");
+  const file = resolve(dirname(path), filename);
+  const data = await readFile(file);
+  if (data.length > 2 * 1024 * 1024) throw new Error("audio file exceeds 2 MB preview limit");
+  const ext = filename.split(".").pop().toLowerCase();
+  const mime = {wav:"audio/wav",mp3:"audio/mpeg",m4a:"audio/mp4",ogg:"audio/ogg"}[ext];
+  return {audioSrc:`data:${mime};base64,${data.toString("base64")}`};
+}
+
 export async function ensureVideoPreview(path, options = {}) {
   const validatedPath = validateMarkdownPath(path);
   await access(validatedPath, fsConstants.R_OK);
@@ -112,7 +127,8 @@ export async function ensureVideoPreview(path, options = {}) {
   const response = await fetch(preview.previewUrl + "api/video-data", {signal:AbortSignal.timeout(30000)});
   if (!response.ok) throw new Error("Unable to read compiled Remotion scenes");
   const compiled = await response.json();
-  compiledResources.set(resourceUri, {compiled});
+  const audio = await readPreviewAudio(validatedPath);
+  compiledResources.set(resourceUri, {compiled,...audio});
   // The federated host resolves the static UI resource at startup.
   // The initial tool result carries compiled scenes, without an iframe request.
   return { ...preview, resourceUri: RESOURCE_URI };

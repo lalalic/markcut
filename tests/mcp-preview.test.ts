@@ -1,6 +1,9 @@
 import {describe,it,expect} from 'vitest';
-import {buildPreviewHtml,buildPreviewResourceResult,RESOURCE_URI,LEGACY_RESOURCE_URIS,validateMarkdownPath,reviewResult,getPreviewMedia} from '../src/mcp/preview.mjs';
+import {buildPreviewHtml,buildPreviewResourceResult,RESOURCE_URI,LEGACY_RESOURCE_URIS,validateMarkdownPath,reviewResult,getPreviewMedia,readPreviewAudio} from '../src/mcp/preview.mjs';
 import {buildPreviewBridgeScript} from '../src/mcp/bridge.mjs';
+import {mkdtemp,writeFile,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
 describe('Markcut Remotion MCP App',()=>{
  it('requires absolute Markdown path',()=>{expect(()=>validateMarkdownPath('a.md')).toThrow(/absolute/);expect(()=>validateMarkdownPath('/tmp/a.txt')).toThrow(/Markdown/);});
  it('ships React Remotion Player JS inside registered static HTML',()=>{
@@ -12,6 +15,7 @@ describe('Markcut Remotion MCP App',()=>{
   const js=Buffer.from(encoded!, 'base64').toString('utf8');
   expect(js).toContain('remotion-toggle');
   expect(js).toContain('remotion-seek');
+  expect(js).toContain('audioSrc');
   expect(html.length).toBeGreaterThan(1000000);
   expect(html).not.toContain('<video id="video-player"');
   expect(html).not.toContain('data:video/mp4');
@@ -37,6 +41,18 @@ describe('Markcut Remotion MCP App',()=>{
  });
  it('prevents reading unregistered compiled scenes',()=>{
   expect(()=>getPreviewMedia('a'.repeat(64))).toThrow(/Unknown or expired/);
+ });
+ it('includes a local audio track for Remotion playback',async()=>{
+  const dir=await mkdtemp(join(tmpdir(),'markcut-audio-'));
+  try {
+   await writeFile(join(dir,'clip.md'),'# video\naudio: sample.wav\n');
+   await writeFile(join(dir,'sample.wav'),Buffer.from([82,73,70,70]));
+   const media=await readPreviewAudio(join(dir,'clip.md'));
+   expect(media.audioSrc).toMatch(/^data:audio\/wav;base64,/);
+   expect(media.audioSrc).toContain('UklGRg==');
+   await writeFile(join(dir,'clip.md'),'# video\naudio: ../secret.wav\n');
+   await expect(readPreviewAudio(join(dir,'clip.md'))).rejects.toThrow(/audio must/);
+  } finally {await rm(dir,{recursive:true,force:true});}
  });
  it('requires review feedback',()=>{
   expect(reviewResult('approved')).toEqual({decision:'approved'});
