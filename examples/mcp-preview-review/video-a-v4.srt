@@ -1,0 +1,11 @@
+1
+00:00:00,000 --> 00:00:02,000
+Opening: remote media test
+
+2
+00:00:02,000 --> 00:00:04,000
+Video scene from NeoY URL
+
+3
+00:00:04,000 --> 00:00:06,000
+Audio and transcript complete
