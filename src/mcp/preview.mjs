@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { access, readFile } from "node:fs/promises";
 import { constants as fsConstants, readFileSync } from "node:fs";
-import { isAbsolute, extname, dirname, resolve } from "node:path";
+import { isAbsolute, extname, dirname, resolve, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildPreviewBridgeScript } from "./bridge.mjs";
 
@@ -84,11 +84,11 @@ export function validateMarkdownPath(value) {
 export async function readPreviewAudio(path) {
   const markdown = await readFile(path, "utf8");
   const match = markdown.match(/^audio:\s*([^\r\n]+)\s*$/m);
-  if (!match) return {};
-  const filename = match[1].trim();
+  const filename = match ? match[1].trim() : `${basename(path, ".md")}.wav`;
   if (!/^[\w. -]+\.(wav|mp3|m4a|ogg)$/i.test(filename) || filename.startsWith(".")) throw new Error("audio must be a local audio filename in the Markdown directory");
   const file = resolve(dirname(path), filename);
-  const data = await readFile(file);
+  let data;
+  try { data = await readFile(file); } catch (e) { if (!match && e.code === "ENOENT") return {}; throw e; }
   if (data.length > 2 * 1024 * 1024) throw new Error("audio file exceeds 2 MB preview limit");
   const ext = filename.split(".").pop().toLowerCase();
   const mime = {wav:"audio/wav",mp3:"audio/mpeg",m4a:"audio/mp4",ogg:"audio/ogg"}[ext];

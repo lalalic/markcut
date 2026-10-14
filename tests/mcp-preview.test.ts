@@ -52,6 +52,9 @@ describe('Markcut Remotion MCP App',()=>{
    expect(media.audioSrc).toContain('UklGRg==');
    await writeFile(join(dir,'clip.md'),'# video\naudio: ../secret.wav\n');
    await expect(readPreviewAudio(join(dir,'clip.md'))).rejects.toThrow(/audio must/);
+   await writeFile(join(dir,'clip.md'),'# video\n');
+   await writeFile(join(dir,'clip.wav'),Buffer.from([82,73,70,70]));
+   expect((await readPreviewAudio(join(dir,'clip.md'))).audioSrc).toContain('UklGRg==');
   } finally {await rm(dir,{recursive:true,force:true});}
  });
  it('requires review feedback',()=>{
