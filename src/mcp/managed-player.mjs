@@ -3,8 +3,8 @@
 import { createServer, request as httpRequest } from "node:http";
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { realpath, readFile, writeFile, unlink, stat, lstat, rm } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { realpath, readFile, writeFile, unlink, stat, rm } from "node:fs/promises";
+import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { randomUUID } from "node:crypto";
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -46,13 +46,10 @@ async function create(path) {
   const work = (async () => {
     if (slots.size + pending.size >= MAX) throw new Error("preview capacity exceeded (6 active revisions); restart manager to release");
     // Snapshots are siblings of original to preserve relative media resolution.
-    const snapshot = join(dirname(canonical), ".markcut-preview-" + key + ".md");
-    await writeFile(snapshot, bytes, {flag:"wx",mode:0o600}).catch(async error => {
-      if (error.code !== "EEXIST") throw error;
-      const saved = await lstat(snapshot);
-      if (!saved.isFile() || saved.isSymbolicLink() || !(await readFile(snapshot)).equals(bytes))
-        throw new Error("conflicting or unsafe preview snapshot");
-    });
+    // The player compiler adds a seed to its input file. A deterministic
+    // snapshot name would collide with that modified file on manager restart.
+    const snapshot = join(dirname(canonical), ".markcut-preview-" + key + "-" + randomUUID() + ".md");
+    await writeFile(snapshot, bytes, {flag:"wx",mode:0o600});
     const id = randomUUID();
     let child;
     let port;
@@ -67,9 +64,9 @@ async function create(path) {
     const info = {id, revisionId:id, contentHash, path:canonical, previewUrl:ORIGIN+"/p/"+id+"/"};
     const slot={id,key,port,child,snapshot,info};
     slots.set(id,slot);byKey.set(key,id);
-    child.once("exit",()=>{slots.delete(id);byKey.delete(key);reservedPorts.delete(port);});
+    child.once("exit",()=>{slots.delete(id);byKey.delete(key);reservedPorts.delete(port);void cleanupSnapshot(snapshot);});
     try { await waitReady(port,child); } catch(err) {
-      child.kill("SIGTERM");slots.delete(id);byKey.delete(key);reservedPorts.delete(port);await unlink(snapshot).catch(()=>{});throw err;
+      child.kill("SIGTERM");slots.delete(id);byKey.delete(key);reservedPorts.delete(port);await cleanupSnapshot(snapshot);throw err;
     }
     // Pin the exact compiled tree once at creation. Reloads and sibling
     // compilations must never change a previously issued revision URL.
@@ -81,12 +78,15 @@ async function create(path) {
   pending.set(key,work);
   try { return await work; } finally {pending.delete(key); }
 }
+async function cleanupSnapshot(snapshot) {
+  await unlink(snapshot).catch(()=>{});
+  await rm(join(dirname(snapshot), ".markcut", basename(snapshot, ".md")), {recursive:true,force:true}).catch(()=>{});
+}
 async function stop() {
   const workers=[...slots.values()];
   for (const slot of workers) slot.child.kill("SIGTERM");
   await Promise.all(workers.map(async s=>{
-    await unlink(s.snapshot).catch(()=>{});
-    await rm(join(dirname(s.snapshot),".markcut",".markcut-preview-"+s.key),{recursive:true,force:true}).catch(()=>{});
+    await cleanupSnapshot(s.snapshot);
   }));
   slots.clear();byKey.clear();reservedPorts.clear();
 }

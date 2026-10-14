@@ -7,6 +7,7 @@ import { EventEmitter } from "node:events";
 import {
   buildPreviewHtml,
   buildPreviewResourceResult,
+  getPreviewMedia,
   ensureVideoPreview,
   previewResourceUri,
   stopManagedVideoPreview,
@@ -34,6 +35,8 @@ describe("MarkCut MCP Markdown preview", () => {
     expect(html).toContain("ui/notifications/tool-result");
     expect(html).toContain("previewUrl");
     expect(html).toContain("controls playsinline");
+    expect(html).toContain("data:video/mp4;base64,");
+    expect(html).not.toContain("createObjectURL");
     expect(html).not.toContain("<iframe");
     expect(html).not.toContain("<article>");
   });
@@ -51,6 +54,21 @@ describe("MarkCut MCP Markdown preview", () => {
     expect(result.contents[0].text).toContain("ui/notifications/initialized");
     expect(result.contents[0]._meta.ui.csp.frameDomains).toEqual([]);
     expect(result.contents[0].text).not.toContain("127.0.0.1");
+  });
+
+  it("reads revision-specific media using the static app-only tool without localhost or blob URLs", async () => {
+    const h = createBridgeHarness();
+    h.run();
+    h.respond({id:1,result:{hostInfo:{name:"test",version:"1"},hostCapabilities:{},protocolVersion:"2026-01-26"}});
+    await tick();
+    const contentHash="a".repeat(64);
+    h.toolResult({id:"a",revisionId:"a",contentHash,previewUrl:"http://127.0.0.1:4571/p/a/",resourceUri:RESOURCE_URI});
+    expect(h.messages.at(-1)).toMatchObject({id:2,method:"tools/call",params:{name:"markcut.preview.media",arguments:{contentHash}}});
+    h.respond({id:2,result:{structuredContent:{videoBase64:"YQ==",posterBase64:"Yg=="}}});
+    await tick();
+    expect(h.elements.player.src).toBe("data:video/mp4;base64,YQ==");
+    expect(h.elements.player.poster).toBe("data:image/jpeg;base64,Yg==");
+    expect(h.messages.filter(m=>m.method==="tools/call")).toHaveLength(1);
   });
 
   it("returns approved", () => {
@@ -82,7 +100,7 @@ describe("MarkCut MCP Markdown preview", () => {
       id: 1,
       method: "ui/initialize",
       params: {
-        appInfo: { name: "Markcut Preview", version: "1.1.0" },
+        appInfo: { name: "Markcut Preview", version: "1.2.0" },
         appCapabilities: {},
         protocolVersion: "2026-01-26",
       },
@@ -102,19 +120,22 @@ describe("MarkCut MCP Markdown preview", () => {
 
     harness.toolResult({ path: "/tmp/video.md", previewUrl: PLAYER_ORIGIN + "/p/instance/", id: "instance", revisionId: "revision", contentHash: "hash" });
     await tick();
-    expect(harness.elements.player.src).toBe("");
+    expect(harness.messages[2]).toMatchObject({ id: 2, method: "tools/call" });
+    harness.respond({ id: 2, result: { structuredContent: {videoBase64:"YQ==",posterBase64:"Yg=="} } });
+    await tick();
+    expect(harness.elements.player.src).toBe("data:video/mp4;base64,YQ==");
     expect(harness.elements.pathLabel.textContent).toBe("/tmp/video.md");
 
     harness.elements.approve.onclick();
-    expect(harness.messages[2]).toMatchObject({ id: 2, method: "ui/message" });
-    expect(JSON.parse(harness.messages[2].params.content[0].text)).toEqual({previewId:"instance",revisionId:"revision",contentHash:"hash",decision:"approved"});
-    expect(harness.messages.some(m => m.method === "tools/call")).toBe(false);
+    expect(harness.messages[3]).toMatchObject({ id: 3, method: "ui/message" });
+    expect(JSON.parse(harness.messages[3].params.content[0].text)).toEqual({previewId:"instance",revisionId:"revision",contentHash:"hash",decision:"approved"});
+    expect(harness.messages.filter(m => m.method === "tools/call")).toHaveLength(1);
     harness.elements.approve.onclick();
     expect(harness.messages.filter(m => m.method === "ui/message")).toHaveLength(1);
-    harness.respond({ id: 2, result: {} });
+    harness.respond({ id: 3, result: {} });
     await tick();
     expect(harness.elements.status.textContent).toBe("Approved.");
-    expect(new Set(harness.messages.filter((message) => "id" in message).map((message) => message.id)).size).toBe(2);
+    expect(new Set(harness.messages.filter((message) => "id" in message).map((message) => message.id)).size).toBe(3);
   });
 
   it("surfaces submit errors without sending a decision message and rejects invalid bridge messages", async () => {
@@ -125,12 +146,13 @@ describe("MarkCut MCP Markdown preview", () => {
     harness.respond({ id: 1, result: {} });
     await tick();
     harness.toolResult({ id:"instance", revisionId:"revision", contentHash:"hash", previewUrl:PLAYER_ORIGIN+"/p/instance/" });
+    harness.respond({ id: 2, result: { structuredContent: {videoBase64:"YQ==",posterBase64:"Yg=="} } });
     await tick();
     harness.elements.changes.onclick();
     expect(harness.elements.status.textContent).toBe("Feedback is required.");
     harness.elements.feedback.value = "Fix the title";
     harness.elements.changes.onclick();
-    harness.respond({ id: 2, error: { message: "submit failed" } });
+    harness.respond({ id: 3, error: { message: "submit failed" } });
     await tick();
     expect(harness.elements.status.textContent).toBe("submit failed");
     expect(harness.messages.filter((message) => message.method === "ui/message")).toHaveLength(1);
@@ -154,12 +176,18 @@ describe("MarkCut MCP Markdown preview", () => {
     expect(one.previewUrl).toMatch(/^http:\/\/127\.0\.0\.1:4571\/p\/[0-9a-f-]{36}\/$/);
     expect(two.previewUrl).toMatch(/^http:\/\/127\.0\.0\.1:4571\/p\/[0-9a-f-]{36}\/$/);
     expect(one.previewUrl).not.toBe(two.previewUrl);
-    expect(one.resourceUri).toContain(one.contentHash);
-    expect(two.resourceUri).toContain(two.contentHash);
+    expect(one.resourceUri).toBe(RESOURCE_URI);
+    expect(two.resourceUri).toBe(RESOURCE_URI);
+    expect(buildPreviewResourceResult().contents[0].text).not.toContain("data-video-base64=");
+    const mediaA=getPreviewMedia(one.contentHash);
+    const mediaB=getPreviewMedia(two.contentHash);
+    expect(mediaA.videoBase64).not.toBe(mediaB.videoBase64);
+    expect(mediaA.posterBase64).toBeTruthy();
+    expect(() => getPreviewMedia("f".repeat(64))).toThrow(/Unknown/);
     for (const preview of [one, two]) {
       const resource = buildPreviewResourceResult(preview.resourceUri).contents[0].text;
-      expect(resource).toContain("data-video-base64=");
-      expect(resource).toContain('poster="data:image/jpeg;base64,');
+      expect(resource).toContain("data:video/mp4;base64,");
+      expect(getPreviewMedia(preview.contentHash).videoBase64).toBeTruthy();
       expect(resource).not.toContain("127.0.0.1");
     }
     stopManagedVideoPreview();
@@ -174,7 +202,7 @@ function tick() {
 function createBridgeHarness() {
   const messages: any[] = [];
   const listeners: ((event: any) => void)[] = [];
-  const element = (value = "") => ({ value, src:"", dataset:{}, textContent: "", innerHTML: "", onclick: undefined as (() => void) | undefined, getAttribute(_name:string){return this.src||null;}, addEventListener(_event:string,_cb:unknown){}, readyState:0, focus() {} });
+  const element = (value = "") => ({ value, src:"", dataset:{}, textContent: "", innerHTML: "", onclick: undefined as (() => void) | undefined, getAttribute(_name:string){return this.src||null;}, addEventListener(_event:string,_cb:unknown){}, readyState:0, poster:"", load(){}, removeAttribute(name:string){if(name==="data-video-base64")delete this.dataset.videoBase64;}, focus() {} });
   const elements = {
     feedback: element(),
     status: element(),

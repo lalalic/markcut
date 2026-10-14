@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 import { buildPreviewBridgeScript } from "./bridge.mjs";
 
 export const TOOL_NAME = "markcut.preview";
-export const RESOURCE_URI = "ui://markcut/video-preview-v4.html";
+export const RESOURCE_URI = "ui://markcut/video-preview-v5.html";
 export const RESOURCE_MIME_TYPE = "text/html;profile=mcp-app";
 export const PLAYER_PORT = 4571;
 export const PLAYER_ORIGIN = `http://127.0.0.1:${PLAYER_PORT}`;
@@ -33,6 +33,13 @@ async function managerRunning() {
 async function submitPreview(path) {
   const response = await fetch(PLAYER_ORIGIN + "/__markcut/previews", {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({path}),signal:AbortSignal.timeout(150000)});
   const result = await response.json(); if (!response.ok) throw new Error(result.error || "preview creation failed"); return result;
+}
+
+export function getPreviewMedia(contentHash) {
+  if (!/^[a-f0-9]{64}$/.test(contentHash)) throw new Error("Invalid Markcut content hash");
+  const rendered = renderedResources.get(previewResourceUri(contentHash));
+  if (!rendered) throw new Error("Unknown or expired Markcut preview media");
+  return rendered;
 }
 
 export function previewResourceUri(contentHash) {
@@ -128,7 +135,9 @@ export async function ensureVideoPreview(path, options = {}) {
       await rm(directory, { recursive: true, force: true });
     }
   }
-  return { ...preview, resourceUri };
+  // The federated host resolves UI resources from startup registration.
+  // Media is fetched independently through the app-only tool by content hash.
+  return { ...preview, resourceUri: RESOURCE_URI };
 }
 
 export function stopManagedVideoPreview() {

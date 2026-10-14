@@ -4,7 +4,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 import { registerAppResource, registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import { z } from "zod";
 import {
-  TOOL_NAME, RESOURCE_URI, buildPreviewResourceResult, ensureVideoPreview, stopManagedVideoPreview,
+  TOOL_NAME, RESOURCE_URI, buildPreviewResourceResult, getPreviewMedia, ensureVideoPreview, stopManagedVideoPreview,
 } from "./preview.mjs";
 
 const server = new McpServer({ name: "markcut", version: "3.2.0" });
@@ -17,19 +17,23 @@ for (const signal of ["SIGTERM", "SIGINT"]) {
 process.stdin.once("end", stopManagedVideoPreview);
 process.stdin.once("close", stopManagedVideoPreview);
 
-const registeredPreviewResources = new Set([RESOURCE_URI]);
-
-function ensurePreviewResourceRegistered(resourceUri) {
-  if (registeredPreviewResources.has(resourceUri)) return;
-  registerAppResource(
-    server,
-    `Markcut video review ${resourceUri.slice(-12)}`,
-    resourceUri,
-    { _meta: { ui: { prefersBorder: true, csp: { connectDomains: [], resourceDomains: [], frameDomains: [] } } } },
-    async () => buildPreviewResourceResult(resourceUri),
-  );
-  registeredPreviewResources.add(resourceUri);
-}
+// Discoverable at federation startup: unlike dynamically added resource URIs,
+// an app-only tool remains routable for every independently identified preview.
+server.registerTool(
+  "markcut.preview.media",
+  {
+    description: "Read inline video and poster data for an existing Markcut preview revision.",
+    inputSchema: z.object({contentHash:z.string().regex(/^[a-f0-9]{64}$/)}),
+    _meta: { ui: { visibility: ["app"] } },
+  },
+  async ({contentHash}) => {
+    try {
+      return {content:[{type:"text",text:"Preview media ready"}], structuredContent:getPreviewMedia(contentHash)};
+    } catch (error) {
+      return {isError:true,content:[{type:"text",text:error.message||String(error)}]};
+    }
+  },
+);
 
 registerAppTool(
   server,
@@ -46,7 +50,6 @@ registerAppTool(
   async ({ path }) => {
     try {
       const preview = await ensureVideoPreview(path);
-      ensurePreviewResourceRegistered(preview.resourceUri);
       return {
         content: [{ type: "text", text: `Video ready for review: ${preview.path}` }],
         structuredContent: { ...preview },
