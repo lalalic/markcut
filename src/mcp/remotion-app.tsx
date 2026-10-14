@@ -3,7 +3,7 @@ import {createRoot} from 'react-dom/client';
 import {Player} from '@remotion/player';
 import {MarkCut, getDurationInSeconds} from '../entry';
 function App(){
- const [revision,setRevision]=React.useState<any>(null);
+ const [revision,setRevision]=React.useState<any>(()=>(window as any).__markcutRevision||null);
  const ref=React.useRef<any>(null);
  const [frame,setFrame]=React.useState(0);
  const [playing,setPlaying]=React.useState(false);

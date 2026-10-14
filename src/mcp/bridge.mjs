@@ -11,6 +11,7 @@ function applyToolResult(params){
  if(data.path)pathLabel.textContent=data.path;
  if(!data.compiled){status.textContent='Compiled Remotion scenes unavailable';return;}
  identity={previewId:data.id,revisionId:data.revisionId,contentHash:data.contentHash};
+ window.__markcutRevision=data;
  window.dispatchEvent(new CustomEvent('markcut:revision',{detail:data}));
  status.textContent='Remotion scenes loaded for review.';
 }
