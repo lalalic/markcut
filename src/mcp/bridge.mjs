@@ -28,7 +28,7 @@ async function loadRemoteScenes(path){
 }
 function send(msg){window.parent.postMessage(msg,'*');}
 function request(method,params){const id=++nextId;send({jsonrpc:'2.0',id,method,params});return new Promise((resolve,reject)=>pending.set(id,{resolve,reject}));}
-function showVideoName(path){const el=document.getElementById('video-md-version');if(el&&typeof path==='string')el.textContent=path.split('/').pop();}
+function showVideoName(path,title){const el=document.getElementById('video-md-version');if(!el)return;const file=typeof path==='string'?decodeURIComponent(path.split('/').pop()||'video.md'):'video.md';el.textContent=typeof title==='string'&&title.trim()?title.trim():file.replace(/\.md$/i,'').replace(/[-_]+/g,' ');}
 function applyToolInput(params){
  const input=params?.arguments||params?.input||params?.toolInput||params||{};
  if(typeof input.path!=='string')return;
@@ -54,7 +54,7 @@ function applyToolResult(params){
  renderRevision(data);
 }
 function renderRevision(data){
- if(data.path){pathLabel.textContent=data.path;showVideoName(data.path);}
+ if(data.path){pathLabel.textContent=data.path;showVideoName(data.path,data.title||data.videoTitle);}
  if(!data.compiled){status.textContent='Compiled Remotion scenes unavailable';return;}
  identity={previewId:data.id,revisionId:data.revisionId,contentHash:data.contentHash};
  activePath=data.path||expectedPath||null;

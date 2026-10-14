@@ -191,11 +191,11 @@ export function buildPreviewHtml() {
   // Base64 keeps HTML parser-sensitive sequences inside the large JS bundle
   // from terminating the embedding script tag or leaking source into the DOM.
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Markcut Remotion Preview</title>
-<style>body{font:14px system-ui;margin:0;background:#fff;color:#17202a}main{padding:12px;max-width:960px;margin:auto}h1{font-size:17px}.path{font-size:12px;overflow-wrap:anywhere}.transport{display:flex;align-items:center;gap:10px;padding:12px 0}.transport input{flex:1;min-width:50px}button{cursor:pointer;padding:8px;border-radius:6px;border:1px solid #a8a8a8}#approve{background:#198038;color:white}#changes{background:#c72b29;color:white}textarea{width:100%;box-sizing:border-box;min-height:66px}#remotion-canvas{background:#090b12}#status{padding:8px 0}</style></head>
-<body><main><h1>Review video — Remotion</h1><div id="player-version" style="font-weight:600;font-size:13px">Player v16 · Video <span id="video-md-version">Waiting for video...</span></div><div class="path" id="path-label"></div><div id="remotion-root"></div>
+<title>Markcut Preview</title>
+<style>body{font:14px system-ui;margin:0;background:#fff;color:#17202a}main{padding:12px;max-width:960px;margin:auto}h1{font-size:17px}.path{font-size:12px;overflow-wrap:anywhere}.transport{display:flex;align-items:center;gap:10px;padding:12px 0}.transport input{flex:1;min-width:50px}button{cursor:pointer;padding:8px;border-radius:6px;border:1px solid #a8a8a8}#approve{background:#198038;color:white}#changes{background:#c72b29;color:white}textarea{width:100%;box-sizing:border-box;min-height:66px}.review-actions{display:flex;justify-content:space-between;align-items:center;width:100%;gap:16px}.review-actions button{min-width:150px}#remotion-canvas{background:#090b12}#status{padding:8px 0}</style></head>
+<body><main><h1>Markcut · Video Review</h1><div id="player-version" style="font-weight:600;font-size:13px">Player v16 · Video <span id="video-md-version">Waiting for video...</span></div><div class="path" id="path-label" hidden></div><div id="remotion-root"></div>
 <label for="feedback">Review feedback</label><textarea id="feedback"></textarea><div id="status" role="status">Starting preview…</div>
-<button id="approve">Approve</button><button id="changes">Request changes</button></main>
+<div class="review-actions"><button id="changes">Request changes</button><button id="approve">Approve</button></div></main>
 <script src="${playerScriptUrl}"></script>
 <script>${buildPreviewBridgeScript().replaceAll("__MARKCUT_ORIGIN__",JSON.stringify(publicOrigin()))}</script></body></html>`;
 }

@@ -12,13 +12,13 @@ function App(){
  const {playbackRoot,status}=useWebAudioPreview(data,ref);
  if(!revision)return <div id="remotion-waiting">Player {PLAYER_VERSION} · Waiting for compiled scenes…</div>;
  if(!data)return <div>Missing compiled scene tree</div>;
- const videoName=String(revision.path||'unknown.md').split('/').pop();
+ const videoName=String(revision.title||revision.videoTitle||revision.path?.split('/').pop()?.replace(/\.md$/i,'').replace(/[-_]+/g,' ')||'Video');
  return <div id="remotion-preview" data-revision={revision.revisionId}>
   <div id="preview-version" style={{fontSize:12,padding:'4px 0',overflowWrap:'anywhere'}}>Player {PLAYER_VERSION} · Video {videoName} · Revision {String(revision.revisionId||'').slice(0,8)}</div>
   <div id="remotion-canvas" style={{width:'100%',aspectRatio:`${data.width||1080}/${data.height||1920}`,maxHeight:'65vh',margin:'auto'}}>
    <SharedPlayer key={revision.revisionId} root={playbackRoot} playerRef={ref} style={{width:'100%',height:'100%'}} />
   </div>
-  <div id="preview-audio-status" role="status" style={{fontSize:12,padding:'4px 0'}}>{status}</div>
+  {status && !/initializing|ready|paused/i.test(status) && <div id="preview-audio-status" role="status" style={{fontSize:12,padding:'4px 0'}}>{status.replace(/^Web Audio /,'Audio ')}</div>}
  </div>;
 }
 const el=document.getElementById('remotion-root');

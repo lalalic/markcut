@@ -19,7 +19,7 @@ const reservedPorts = new Set();
 const respond = (res, code, data) => { res.writeHead(code, {"content-type":"application/json", "cache-control":"no-store"});res.end(JSON.stringify(data)); };
 function waitReady(port, child) {
   return new Promise((resolveReady, reject) => {
-    const deadline = Date.now() + 120000;
+    const deadline = Date.now() + 600000;
     const poll = () => {
       if (child.exitCode !== null || child.signalCode) return reject(new Error("player exited before ready"));
       const req = httpRequest({hostname:"127.0.0.1",port,path:"/api/ready",timeout:1500}, res => {

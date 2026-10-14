@@ -2,7 +2,7 @@ import * as React from 'react';
 import type {PlayerRef} from '@remotion/player';
 
 export function useWebAudioPreview(root:any, playerRef:React.RefObject<PlayerRef|null>) {
- const [status,setStatus]=React.useState('Web Audio initializing');
+ const [status,setStatus]=React.useState('');
  const audio=React.useMemo(()=>root?.children?.find((x:any)=>x.type==='audio'&&String(x.src).startsWith('https://')),[root]);
  const playbackRoot=React.useMemo(()=>audio?{...root,children:root.children.filter((x:any)=>x!==audio)}:root,[root,audio]);
  React.useEffect(()=>{

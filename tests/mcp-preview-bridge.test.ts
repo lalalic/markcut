@@ -48,7 +48,7 @@ describe('MCP Remotion bridge',()=>{
   expect(h.events.map(e=>e.type)).toEqual(['markcut:revision']);
   expect(h.events[0].detail.compiled).toEqual(compiled);
   expect(h.nodes['path-label'].textContent).toBe('/tmp/a.md');
-  expect(h.nodes['video-md-version'].textContent).toBe('a.md');
+  expect(h.nodes['video-md-version'].textContent).toBe('a');
   expect(h.messages.filter(m=>m.method==='tools/call')).toHaveLength(0);
   h.nodes.approve.onclick?.();
   expect(h.messages[2]).toMatchObject({id:2,method:'ui/message'});
