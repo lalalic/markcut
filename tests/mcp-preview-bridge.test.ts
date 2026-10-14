@@ -60,4 +60,19 @@ describe('MCP Remotion bridge',()=>{
   expect(JSON.parse(a.messages[2].params.content[0].text)).toMatchObject({previewId:'a',decision:'changes_requested',feedback:'Shorten the opening'});
   expect(b.messages.filter(m=>m.method==='ui/message')).toHaveLength(0);
  });
+ it('does not show the latest B result inside an A-bound iframe',()=>{
+  const a=harness(),b=harness();
+  const aData={id:'a',revisionId:'ra',contentHash:'a',path:'/a.md',compiled:{children:[{name:'A'}]}};
+  const bData={id:'b',revisionId:'rb',contentHash:'b',path:'/b.md',compiled:{children:[{name:'B'}]}};
+  a.dispatch({method:'ui/notifications/tool-input',params:{arguments:{path:'/a.md'}}});
+  b.dispatch({method:'ui/notifications/tool-input',params:{arguments:{path:'/b.md'}}});
+  a.result(bData);b.result(bData);
+  expect(a.nodes['path-label'].textContent).toBe('/a.md');
+  expect(a.events.filter(e=>e.detail?.revisionId)).toHaveLength(0);
+  expect(b.events.at(-1).detail.revisionId).toBe('rb');
+  a.result(aData);
+  expect(a.events.at(-1).detail.revisionId).toBe('ra');
+  a.result(bData);
+  expect(a.events.at(-1).detail.revisionId).toBe('ra');
+ });
 });

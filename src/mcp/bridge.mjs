@@ -1,13 +1,33 @@
 export function buildPreviewBridgeScript() {
 return `
 const feedback=document.getElementById('feedback'),status=document.getElementById('status'),pathLabel=document.getElementById('path-label');
-let nextId=0,identity=null,busy=false;
+let nextId=0,identity=null,busy=false,expectedPath=null;
 const pending=new Map();
+const resultsByPath=new Map();
 function send(msg){window.parent.postMessage(msg,'*');}
 function request(method,params){const id=++nextId;send({jsonrpc:'2.0',id,method,params});return new Promise((resolve,reject)=>pending.set(id,{resolve,reject}));}
+function applyToolInput(params){
+ const input=params?.arguments||params?.input||params?.toolInput||params||{};
+ if(typeof input.path!=='string')return;
+ expectedPath=input.path;
+ const cached=resultsByPath.get(expectedPath);
+ if(cached){renderRevision(cached);return;}
+ if(window.__markcutRevision?.path!==expectedPath){
+  identity=null;
+  window.__markcutRevision=null;
+  window.dispatchEvent(new CustomEvent('markcut:revision',{detail:null}));
+  pathLabel.textContent=expectedPath;
+  status.textContent='Waiting for matching video scenes…';
+ }
+}
 function applyToolResult(params){
  const result=params?.result||params||{};
  const data=result.structuredContent||result.structured_content||result._meta?.ui?.props||{};
+ if(typeof data.path==='string')resultsByPath.set(data.path,data);
+ if(expectedPath&&data.path!==expectedPath)return;
+ renderRevision(data);
+}
+function renderRevision(data){
  if(data.path)pathLabel.textContent=data.path;
  if(!data.compiled){status.textContent='Compiled Remotion scenes unavailable';return;}
  identity={previewId:data.id,revisionId:data.revisionId,contentHash:data.contentHash};
@@ -23,7 +43,8 @@ window.addEventListener('message',event=>{
   const item=pending.get(message.id);pending.delete(message.id);
   if(message.error)item.reject(new Error(message.error.message||'MCP request failed'));
   else item.resolve(message.result);
- }else if(message.method==='ui/notifications/tool-result')applyToolResult(message.params);
+ }else if(message.method==='ui/notifications/tool-input')applyToolInput(message.params);
+ else if(message.method==='ui/notifications/tool-result')applyToolResult(message.params);
 });
 async function initialize(){
  try {await request('ui/initialize',{appInfo:{name:'Markcut Preview',version:'2.0.0'},appCapabilities:{},protocolVersion:'2026-01-26'});send({jsonrpc:'2.0',method:'ui/notifications/initialized'});}
