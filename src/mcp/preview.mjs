@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { buildPreviewBridgeScript } from "./bridge.mjs";
 
 export const TOOL_NAME = "markcut.preview";
-export const RESOURCE_URI = "ui://markcut/video-preview-v14.html";
+export const RESOURCE_URI = "ui://markcut/video-preview-v15.html";
 // Legacy entrypoints remain registered, but serve the current implementation.
 export const LEGACY_RESOURCE_URIS = [
   "ui://markcut/video-preview-v3.html",
@@ -20,6 +20,7 @@ export const LEGACY_RESOURCE_URIS = [
   "ui://markcut/video-preview-v11.html",
   "ui://markcut/video-preview-v12.html",
   "ui://markcut/video-preview-v13.html",
+  "ui://markcut/video-preview-v14.html",
 ];
 export const RESOURCE_MIME_TYPE = "text/html;profile=mcp-app";
 export const PLAYER_PORT = 4571;
@@ -186,7 +187,7 @@ export function buildPreviewHtml() {
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Markcut Remotion Preview</title>
 <style>body{font:14px system-ui;margin:0;background:#fff;color:#17202a}main{padding:12px;max-width:960px;margin:auto}h1{font-size:17px}.path{font-size:12px;overflow-wrap:anywhere}.transport{display:flex;align-items:center;gap:10px;padding:12px 0}.transport input{flex:1;min-width:50px}button{cursor:pointer;padding:8px;border-radius:6px;border:1px solid #a8a8a8}#approve{background:#198038;color:white}#changes{background:#c72b29;color:white}textarea{width:100%;box-sizing:border-box;min-height:66px}#remotion-canvas{background:#090b12}#status{padding:8px 0}</style></head>
-<body><main><h1>Review video — Remotion</h1><div id="player-version" style="font-weight:600;font-size:13px">Player v14 · Video <span id="video-md-version">Waiting for video...</span></div><div class="path" id="path-label"></div><div id="remotion-root"></div>
+<body><main><h1>Review video — Remotion</h1><div id="player-version" style="font-weight:600;font-size:13px">Player v15 · Video <span id="video-md-version">Waiting for video...</span></div><div class="path" id="path-label"></div><div id="remotion-root"></div>
 <label for="feedback">Review feedback</label><textarea id="feedback"></textarea><div id="status" role="status">Starting preview…</div>
 <button id="approve">Approve</button><button id="changes">Request changes</button></main>
 <script id="remotion-bundle" type="application/octet-stream">${bundle}</script>
