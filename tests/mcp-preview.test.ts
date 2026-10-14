@@ -10,7 +10,7 @@ describe('Markcut Remotion MCP App',()=>{
   const html=buildPreviewHtml();
   expect(html).toContain('id="remotion-root"');
   expect(html).toContain('id="player-version"');
-  expect(html).toContain('Player v13');
+  expect(html).toContain('Player v14');
   expect(html).toContain('id="video-md-version"');
   // Controls are bundled as base64 to avoid HTML parser script termination.
   const encoded=html.match(/<script id="remotion-bundle" type="application\/octet-stream">([^<]+)<\/script>/)?.[1];
@@ -19,7 +19,9 @@ describe('Markcut Remotion MCP App',()=>{
   expect(js).toContain('remotion-preview');
   expect(js).toContain('preview-version');
   expect(js).toContain('preview-audio-status');
-  expect(js).toContain('v12');
+  expect(js).toContain('v14');
+  expect(js).toContain('networkState');
+  expect(js).toContain('createObjectURL');
   expect(js).not.toContain('remotion-toggle');
   expect(html.length).toBeGreaterThan(1000000);
   expect(html).not.toContain('<video id="video-player"');
