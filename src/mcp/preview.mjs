@@ -197,5 +197,5 @@ export function buildPreviewHtml() {
 <label for="feedback">Review feedback</label><textarea id="feedback"></textarea><div id="status" role="status">Starting preview…</div>
 <button id="approve">Approve</button><button id="changes">Request changes</button></main>
 <script src="${playerScriptUrl}"></script>
-<script>${buildPreviewBridgeScript()}</script></body></html>`;
+<script>${buildPreviewBridgeScript().replaceAll("__MARKCUT_ORIGIN__",JSON.stringify(publicOrigin()))}</script></body></html>`;
 }

@@ -36,7 +36,8 @@ describe('Markcut Remotion MCP App',()=>{
   expect(script).toContain('data.compiled');
   expect(script).not.toContain("'tools/call'");
   expect(script).not.toContain('videoBase64');
-  expect(script).not.toContain('fetch(');
+  expect(script).toContain('fetch(');
+  expect(script).toContain('/files/_neoy/markcut/revisions/');
  });
  it('prevents reading unregistered compiled scenes',()=>{
   expect(()=>getPreviewMedia('a'.repeat(64))).toThrow(/Unknown or expired/);

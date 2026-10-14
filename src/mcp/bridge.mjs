@@ -4,6 +4,28 @@ const feedback=document.getElementById('feedback'),status=document.getElementByI
 let nextId=0,identity=null,busy=false,expectedPath=null,activePath=null,activeRelay=null,submittedRevision=null;
 const pending=new Map();
 const resultsByPath=new Map();
+let fallbackGeneration=0;
+async function loadRemoteScenes(path){
+ const generation=++fallbackGeneration;
+ try{
+  const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(path));
+  const hash=Array.from(new Uint8Array(digest),x=>x.toString(16).padStart(2,'0')).join('');
+  const url=__MARKCUT_ORIGIN__+'/files/_neoy/markcut/revisions/'+hash+'.json';
+  for(let attempt=0;attempt<25 && generation===fallbackGeneration;attempt++){
+   try{
+    const response=await fetch(url+'?try='+attempt,{cache:'no-store'});
+    if(response.ok){const data=await response.json();
+      if(data.requestedPath===path && data.compiled && generation===fallbackGeneration){
+       if(window.__markcutRevision?.requestedPath===path)return;
+       resultsByPath.set(path,data);renderRevision(data);return;
+      }
+    }
+   }catch(e){if(attempt===24)status.textContent='Scene fetch failed: '+String(e);}
+   await new Promise(resolve=>setTimeout(resolve,600));
+  }
+  if(generation===fallbackGeneration && !window.__markcutRevision)status.textContent='Scene data unavailable from NeoY';
+ }catch(e){status.textContent='Scene lookup failed: '+String(e);}
+}
 function send(msg){window.parent.postMessage(msg,'*');}
 function request(method,params){const id=++nextId;send({jsonrpc:'2.0',id,method,params});return new Promise((resolve,reject)=>pending.set(id,{resolve,reject}));}
 function showVideoName(path){const el=document.getElementById('video-md-version');if(el&&typeof path==='string')el.textContent=path.split('/').pop();}
@@ -11,6 +33,7 @@ function applyToolInput(params){
  const input=params?.arguments||params?.input||params?.toolInput||params||{};
  if(typeof input.path!=='string')return;
  expectedPath=input.path;
+ loadRemoteScenes(expectedPath);
  showVideoName(expectedPath);
  const cached=resultsByPath.get(expectedPath);
  if(cached){renderRevision(cached);return;}

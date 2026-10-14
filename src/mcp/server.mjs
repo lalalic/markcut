@@ -3,6 +3,7 @@ import { McpServer } from "@modelcontextprotocol/server";
 import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 import { registerAppResource, registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import { z } from "zod";
+import {publishPreviewRevision} from "./remote-assets.mjs";
 import {
   TOOL_NAME, RESOURCE_URI, LEGACY_RESOURCE_URIS, buildPreviewResourceResult, getPreviewMedia, ensureVideoPreview, stopManagedVideoPreview,
 } from "./preview.mjs";
@@ -55,6 +56,7 @@ registerAppTool(
       // are not consistently routable through the ChatGPT federation host.
       const media = getPreviewMedia(preview.contentHash);
       const payload = { ...preview, ...media, requestedPath: path, ...(relay ? {relay} : {}) };
+      publishPreviewRevision(path,{id:payload.id,revisionId:payload.revisionId,contentHash:payload.contentHash,requestedPath:path,path,compiled:payload.compiled});
       return {
         content: [{ type: "text", text: `Video ready for review: ${preview.path}` }],
         structuredContent: payload,

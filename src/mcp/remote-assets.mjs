@@ -1,4 +1,4 @@
-import {readFileSync,mkdirSync,writeFileSync,existsSync,realpathSync} from "node:fs";
+import {readFileSync,mkdirSync,writeFileSync,existsSync,realpathSync,renameSync} from "node:fs";
 import {homedir} from "node:os";
 import {join,resolve,sep,isAbsolute} from "node:path";
 import {fileURLToPath} from "node:url";
@@ -122,4 +122,16 @@ export function externalizePreviewMedia(compiled,revisionId,origin=publicOrigin(
     return value;
   }
   return {compiled:replace(compiled),assets};
+}
+
+// Fallback for hosts that deliver tool-input but omit tool-result notifications.
+export function publishPreviewRevision(requestedPath,payload) {
+  const key=createHash("sha256").update(requestedPath).digest("hex");
+  const dir=join(EXPORT_ROOT,"revisions");
+  mkdirSync(dir,{recursive:true});
+  const target=join(dir,key+".json");
+  const temp=join(dir,key+"."+process.pid+".tmp");
+  writeFileSync(temp,JSON.stringify(payload),{mode:0o644});
+  renameSync(temp,target);
+  return publicOrigin()+"/files/_neoy/markcut/revisions/"+key+".json";
 }
