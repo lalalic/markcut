@@ -146,13 +146,18 @@ export function reviewMessage(result) {
 }
 
 export function buildPreviewHtml() {
-  const bundle = readFileSync(bundlePath, "utf8").replace(/<\/script/gi, "<\\/script");
+  // Base64 keeps HTML parser-sensitive sequences inside the large JS bundle
+  // from terminating the embedding script tag or leaking source into the DOM.
+  const bundle = readFileSync(bundlePath).toString("base64");
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Markcut Remotion Preview</title>
 <style>body{font:14px system-ui;margin:0;background:#fff;color:#17202a}main{padding:12px;max-width:960px;margin:auto}h1{font-size:17px}.path{font-size:12px;overflow-wrap:anywhere}.transport{display:flex;align-items:center;gap:10px;padding:12px 0}.transport input{flex:1;min-width:50px}button{cursor:pointer;padding:8px;border-radius:6px;border:1px solid #a8a8a8}#approve{background:#198038;color:white}#changes{background:#c72b29;color:white}textarea{width:100%;box-sizing:border-box;min-height:66px}#remotion-canvas{background:#090b12}#status{padding:8px 0}</style></head>
 <body><main><h1>Review video — Remotion</h1><div class="path" id="path-label"></div><div id="remotion-root"></div>
 <label for="feedback">Review feedback</label><textarea id="feedback"></textarea><div id="status" role="status">Starting preview…</div>
 <button id="approve">Approve</button><button id="changes">Request changes</button></main>
-<script>${bundle}</script>
+<script id="remotion-bundle" type="application/octet-stream">${bundle}</script>
+<script>
+(function(){const source=atob(document.getElementById("remotion-bundle").textContent);const bytes=new Uint8Array(source.length);for(let i=0;i<source.length;i++)bytes[i]=source.charCodeAt(i);const url=URL.createObjectURL(new Blob([bytes],{type:"text/javascript"}));const script=document.createElement("script");script.src=url;script.onload=()=>URL.revokeObjectURL(url);document.head.appendChild(script);})();
+</script>
 <script>${buildPreviewBridgeScript()}</script></body></html>`;
 }

@@ -6,8 +6,12 @@ describe('Markcut Remotion MCP App',()=>{
  it('ships React Remotion Player JS inside registered static HTML',()=>{
   const html=buildPreviewHtml();
   expect(html).toContain('id="remotion-root"');
-  expect(html).toContain('remotion-toggle');
-  expect(html).toContain('remotion-seek');
+  // Controls are bundled as base64 to avoid HTML parser script termination.
+  const encoded=html.match(/<script id="remotion-bundle" type="application\/octet-stream">([^<]+)<\/script>/)?.[1];
+  expect(encoded).toBeTruthy();
+  const js=Buffer.from(encoded!, 'base64').toString('utf8');
+  expect(js).toContain('remotion-toggle');
+  expect(js).toContain('remotion-seek');
   expect(html.length).toBeGreaterThan(1000000);
   expect(html).not.toContain('<video id="video-player"');
   expect(html).not.toContain('data:video/mp4');
