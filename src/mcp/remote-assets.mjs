@@ -1,4 +1,4 @@
-import {readFileSync,mkdirSync,writeFileSync,existsSync} from "node:fs";
+import {readFileSync,mkdirSync,writeFileSync,existsSync,realpathSync} from "node:fs";
 import {homedir} from "node:os";
 import {join,resolve,sep,isAbsolute} from "node:path";
 import {fileURLToPath} from "node:url";
@@ -38,6 +38,27 @@ export function resolveMountedFile(path,origin=null,mountedRoots=null) {
     return (origin||publicOrigin())+"/files/"+encodeURIComponent(name)+"/"+relative.map(encodeURIComponent).join("/");
   }
   return null;
+}
+
+export function resolvePreviewPath(input, origin=publicOrigin(), mountedRoots=null) {
+  if(typeof input!=="string")throw new Error("Preview path must be a string");
+  if(isAbsolute(input) && !input.startsWith("/files/"))return input;
+  const url=new URL(input.startsWith("/files/") ? origin+input : input);
+  if(url.origin!==origin || url.search || url.hash || !url.pathname.startsWith("/files/"))
+    throw new Error("Only NeoY file URLs under /files/<mount>/ are accepted");
+  const parts=url.pathname.slice("/files/".length).split("/").map(decodeURIComponent);
+  const [name,...relative]=parts;
+  if(!name || name==="_neoy" || !/^[a-z0-9_-]{1,64}$/i.test(name) || !relative.length ||
+     relative.some(part=>!part || part==="." || part===".." || part.startsWith(".") || part.includes("/")))
+    throw new Error("Invalid mounted preview path");
+  let roots=mountedRoots||{};
+  if(!mountedRoots)try{roots=JSON.parse(readFileSync(join(supportDir,"file-mounts.json"),"utf8"));}catch{}
+  const base=roots[name];
+  if(typeof base!=="string" || !base.startsWith("/"))throw new Error("Unknown NeoY file mount: "+name);
+  const root=realpathSync(base);
+  const file=realpathSync(resolve(root,...relative));
+  if(!file.startsWith(root+sep))throw new Error("Preview path escapes NeoY mounted root");
+  return file;
 }
 
 export function publishPlayerBundle(bundlePath, origin=publicOrigin()) {

@@ -4,7 +4,7 @@ import { constants as fsConstants } from "node:fs";
 import { isAbsolute, extname, dirname, resolve, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildPreviewBridgeScript } from "./bridge.mjs";
-import { externalizePreviewMedia, publicOrigin, resolveMountedFile, publishPlayerBundle } from "./remote-assets.mjs";
+import { externalizePreviewMedia, publicOrigin, resolveMountedFile, resolvePreviewPath, publishPlayerBundle } from "./remote-assets.mjs";
 
 export const TOOL_NAME = "markcut.preview";
 export const RESOURCE_URI = "ui://markcut/video-preview-v16.html";
@@ -115,7 +115,7 @@ export function withPreviewAudio(compiled, audioSrc) {
 }
 
 export async function ensureVideoPreview(path, options = {}) {
-  const validatedPath = validateMarkdownPath(path);
+  const validatedPath = validateMarkdownPath(resolvePreviewPath(path));
   await access(validatedPath, fsConstants.R_OK);
   if (!await managerRunning()) {
     if (!startPromise) {

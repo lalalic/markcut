@@ -1,7 +1,8 @@
 import {describe,it,expect} from "vitest";
-import {externalizePreviewMedia,resolveMountedFile,resolvePreviewSource,publishPlayerBundle,publicOrigin,EXPORT_ROOT} from "../src/mcp/remote-assets.mjs";
-import {readFileSync,rmSync,writeFileSync,mkdirSync} from "node:fs";
+import {externalizePreviewMedia,resolveMountedFile,resolvePreviewSource,resolvePreviewPath,publishPlayerBundle,publicOrigin,EXPORT_ROOT} from "../src/mcp/remote-assets.mjs";
+import {readFileSync,rmSync,writeFileSync,mkdirSync,mkdtempSync,symlinkSync,realpathSync} from "node:fs";
 import {join} from "node:path";
+import {tmpdir} from "node:os";
 const id="11111111-2222-4333-8444-555555555555";
 describe("NeoY backed preview files",()=>{
   it("publishes generated media as persistent files under NeoY export root",()=>{
@@ -29,6 +30,21 @@ describe("NeoY backed preview files",()=>{
     const url=resolvePreviewSource("./assets/shot.mp4","/tmp/vlog/runs/20260909","https://example.org",{vlog:"/tmp/vlog"});
     expect(url).toBe("https://example.org/files/vlog/runs/20260909/assets/shot.mp4");
     expect(()=>resolvePreviewSource("../secret.mp4","/tmp/vlog","https://example.org",{vlog:"/tmp/vlog"})).toThrow(/mounted root/);
+  });
+  it("resolves only allowlisted NeoY Markdown URLs to absolute files",()=>{
+    const base=mkdtempSync(join(tmpdir(),"markcut-mount-"));
+    const file=join(base,"video.md");
+    const outside=join(base,"..","secret.md");
+    writeFileSync(file,"# video");
+    symlinkSync("/etc/hosts",join(base,"escape.md"));
+    try{
+      const roots={vlog:base};
+      expect(resolvePreviewPath("https://example.org/files/vlog/video.md","https://example.org",roots)).toBe(realpathSync(file));
+      expect(resolvePreviewPath("/files/vlog/video.md","https://example.org",roots)).toBe(realpathSync(file));
+      expect(()=>resolvePreviewPath("https://other.org/files/vlog/video.md","https://example.org",roots)).toThrow(/Only NeoY/);
+      expect(()=>resolvePreviewPath("/files/vlog/escape.md","https://example.org",roots)).toThrow(/escapes/);
+      expect(()=>resolvePreviewPath("/files/_neoy/markcut/generated/a.md","https://example.org",roots)).toThrow(/Invalid/);
+    }finally{rmSync(base,{recursive:true,force:true});}
   });
   it("publishes hashed player script under NeoY exports",()=>{
     const script=join(EXPORT_ROOT,"test-fixture.js");
