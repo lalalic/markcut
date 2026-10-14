@@ -39,7 +39,7 @@ registerAppTool(
   server,
   TOOL_NAME,
   {
-    description: "Show the Markcut video player for a Markdown video definition and ask a human to approve it or request changes.",
+    description: "Show the Markcut video player for a Markdown video definition and ask a human to approve it or request changes. When a review ui/message arrives with decision=changes_requested, edit the supplied path using feedback and call markcut.preview again with the same path; do not consider it approved. When decision=approved, treat only that contentHash/revisionId as approved and stop the review loop. Never approve a newer revision from an older message.",
     inputSchema: z.object({
       path: z.string().describe("Absolute path to a .md file"),
     }),

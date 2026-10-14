@@ -40,7 +40,7 @@ describe('MCP Remotion bridge',()=>{
   expect(h.messages.filter(m=>m.method==='tools/call')).toHaveLength(0);
   h.nodes.approve.onclick?.();
   expect(h.messages[2]).toMatchObject({id:2,method:'ui/message'});
-  expect(JSON.parse(h.messages[2].params.content[0].text)).toEqual({previewId:'one',revisionId:'rev1',contentHash:'abcdef',decision:'approved'});
+  expect(JSON.parse(h.messages[2].params.content[0].text)).toEqual({previewId:'one',revisionId:'rev1',contentHash:'abcdef',path:'/tmp/a.md',decision:'approved'});
   h.respond(2);
   await nextTick();
   expect(h.nodes.status.textContent).toBe('Approved.');
@@ -75,4 +75,22 @@ describe('MCP Remotion bridge',()=>{
   a.result(bData);
   expect(a.events.at(-1).detail.revisionId).toBe('ra');
  });
+ it('handles request changes followed by a new revision and approval in the same app',async()=>{
+  const h=harness();h.respond(1);await nextTick();
+  const first={id:'first',revisionId:'r1',contentHash:'sha1',path:'/video.md',compiled:{children:[{name:'First'}]}};
+  const next={id:'second',revisionId:'r2',contentHash:'sha2',path:'/video.md',compiled:{children:[{name:'Next'}]}};
+  h.result(first);
+  h.nodes.feedback.value='lowercase title';h.nodes.changes.onclick?.();
+  expect(JSON.parse(h.messages[2].params.content[0].text)).toMatchObject({path:'/video.md',revisionId:'r1',decision:'changes_requested',feedback:'lowercase title'});
+  h.respond(2);await nextTick();
+  expect(h.nodes.status.textContent).toContain('Waiting for the updated preview');
+  h.nodes.approve.onclick?.();
+  expect(h.messages.filter(m=>m.method==='ui/message')).toHaveLength(1);
+  h.result(next);
+  h.nodes.approve.onclick?.();
+  const decisions=h.messages.filter(m=>m.method==='ui/message').map(m=>JSON.parse(m.params.content[0].text));
+  expect(decisions).toHaveLength(2);
+  expect(decisions[1]).toMatchObject({path:'/video.md',revisionId:'r2',contentHash:'sha2',decision:'approved'});
+ });
+
 });

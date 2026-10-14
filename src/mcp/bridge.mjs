@@ -1,7 +1,7 @@
 export function buildPreviewBridgeScript() {
 return `
 const feedback=document.getElementById('feedback'),status=document.getElementById('status'),pathLabel=document.getElementById('path-label');
-let nextId=0,identity=null,busy=false,expectedPath=null;
+let nextId=0,identity=null,busy=false,expectedPath=null,activePath=null,submittedRevision=null;
 const pending=new Map();
 const resultsByPath=new Map();
 function send(msg){window.parent.postMessage(msg,'*');}
@@ -31,6 +31,8 @@ function renderRevision(data){
  if(data.path)pathLabel.textContent=data.path;
  if(!data.compiled){status.textContent='Compiled Remotion scenes unavailable';return;}
  identity={previewId:data.id,revisionId:data.revisionId,contentHash:data.contentHash};
+ activePath=data.path||expectedPath||null;
+ if(submittedRevision!==data.revisionId){busy=false;submittedRevision=null;}
  window.__markcutRevision=data;
  window.dispatchEvent(new CustomEvent('markcut:revision',{detail:data}));
  status.textContent='Remotion scenes loaded for review.';
@@ -56,9 +58,11 @@ async function submit(decision){
  if(decision==='changes_requested'&&!value){status.textContent='Feedback is required.';return;}
  if(!identity){status.textContent='Preview identity unavailable.';return;}
  const result={...identity,decision};
+ if(activePath)result.path=activePath;
  if(decision==='changes_requested')result.feedback=value;
  busy=true;status.textContent='Submitting…';
- try{await request('ui/message',{role:'user',content:[{type:'text',text:JSON.stringify(result)}]});status.textContent=decision==='approved'?'Approved.':'Changes requested.';}
+ const submittedId=result.revisionId;
+ try{await request('ui/message',{role:'user',content:[{type:'text',text:JSON.stringify(result)}]});if(identity?.revisionId===submittedId){submittedRevision=submittedId;status.textContent=decision==='approved'?'Approved.':'Changes requested. Waiting for the updated preview.';}}
  catch(e){busy=false;status.textContent=e.message||'Unable to submit review';}
 }
 document.getElementById('approve').onclick=()=>submit('approved');
