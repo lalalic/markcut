@@ -13,6 +13,7 @@ import { createRoot } from "react-dom/client";
 import * as ReactDOM from "react-dom";
 import * as Remotion from "remotion";
 import { Player } from "@remotion/player";
+import { SharedPlayer } from "./SharedPlayer";
 import { MarkCut, getDurationInSeconds } from "../entry";
 import { HeaderBar, EditControls, EditMessagePanel, LabelControls, SceneThumbnails, VariantBar } from "./components/index";
 import type { EditEntry } from "./components/EditMessagePanel";
@@ -528,22 +529,7 @@ function PlayerApp() {
 
       {/* ── Player frame ── */}
       <div id="player-frame" style={{ flex: 1, width: "100%", maxWidth: 480, minHeight: 0 }}>
-        <Player
-          ref={playerRef}
-          component={MarkCut}
-          inputProps={inputProps}
-          durationInFrames={durationInFrames}
-          fps={fps}
-          compositionWidth={width}
-          compositionHeight={height}
-          style={{ width: "100%", height: "100%" }}
-          controls={true}
-          showPlaybackRateControl={true}
-          allowFullscreen={true}
-          clickToPlay={false}
-          doubleClickToFullscreen={true}
-          autoPlay={autoPlay}
-        />
+        <SharedPlayer root={data} playerRef={playerRef} style={{ width: "100%", height: "100%" }} autoPlay={autoPlay} />
 
         {/* ── Edit message overlay (shown while waiting, then auto-hides) ── */}
         {mode === "edit" && showEditOverlay && (

@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { buildPreviewBridgeScript } from "./bridge.mjs";
 
 export const TOOL_NAME = "markcut.preview";
-export const RESOURCE_URI = "ui://markcut/video-preview-v9.html";
+export const RESOURCE_URI = "ui://markcut/video-preview-v11.html";
 // Legacy entrypoints remain registered, but serve the current implementation.
 export const LEGACY_RESOURCE_URIS = [
   "ui://markcut/video-preview-v3.html",
@@ -15,6 +15,8 @@ export const LEGACY_RESOURCE_URIS = [
   "ui://markcut/video-preview-v6.html",
   "ui://markcut/video-preview-v7.html",
   "ui://markcut/video-preview-v8.html",
+  "ui://markcut/video-preview-v9.html",
+  "ui://markcut/video-preview-v10.html",
 ];
 export const RESOURCE_MIME_TYPE = "text/html;profile=mcp-app";
 export const PLAYER_PORT = 4571;
@@ -95,6 +97,15 @@ export async function readPreviewAudio(path) {
   return {audioSrc:`data:${mime};base64,${data.toString("base64")}`};
 }
 
+export function withPreviewAudio(compiled, audioSrc) {
+  if (!audioSrc) return compiled;
+  const root = compiled.root || compiled;
+  const children = root.children || [];
+  const duration = root.durationInSeconds || children.filter(child=>!child.isBackground).reduce((sum,child)=>sum+(child.durationInSeconds||child.duration||0),0);
+  if (!duration) throw new Error('compiled preview has no duration for audio track');
+  return {...compiled, ...(compiled.root ? {root:{...root,children:[...children,{id:'mcp-preview-audio',type:'audio',src:audioSrc,volume:1,isBackground:true,start:0,end:duration,duration,durationInSeconds:duration}]}} : {children:[...children,{id:'mcp-preview-audio',type:'audio',src:audioSrc,volume:1,isBackground:true,start:0,end:duration,duration,durationInSeconds:duration}]})};
+}
+
 export async function ensureVideoPreview(path, options = {}) {
   const validatedPath = validateMarkdownPath(path);
   await access(validatedPath, fsConstants.R_OK);
@@ -128,7 +139,8 @@ export async function ensureVideoPreview(path, options = {}) {
   if (!response.ok) throw new Error("Unable to read compiled Remotion scenes");
   const compiled = await response.json();
   const audio = await readPreviewAudio(validatedPath);
-  compiledResources.set(resourceUri, {compiled,...audio});
+  const audioCompiled = withPreviewAudio(compiled,audio.audioSrc);
+  compiledResources.set(resourceUri, {compiled:audioCompiled});
   // The federated host resolves the static UI resource at startup.
   // The initial tool result carries compiled scenes, without an iframe request.
   return { ...preview, resourceUri: RESOURCE_URI };

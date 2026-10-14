@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest';
-import {buildPreviewHtml,buildPreviewResourceResult,RESOURCE_URI,LEGACY_RESOURCE_URIS,validateMarkdownPath,reviewResult,getPreviewMedia,readPreviewAudio} from '../src/mcp/preview.mjs';
+import {buildPreviewHtml,buildPreviewResourceResult,RESOURCE_URI,LEGACY_RESOURCE_URIS,validateMarkdownPath,reviewResult,getPreviewMedia,readPreviewAudio,withPreviewAudio} from '../src/mcp/preview.mjs';
 import {buildPreviewBridgeScript} from '../src/mcp/bridge.mjs';
 import {mkdtemp,writeFile,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
@@ -13,9 +13,8 @@ describe('Markcut Remotion MCP App',()=>{
   const encoded=html.match(/<script id="remotion-bundle" type="application\/octet-stream">([^<]+)<\/script>/)?.[1];
   expect(encoded).toBeTruthy();
   const js=Buffer.from(encoded!, 'base64').toString('utf8');
-  expect(js).toContain('remotion-toggle');
-  expect(js).toContain('remotion-seek');
-  expect(js).toContain('audioSrc');
+  expect(js).toContain('remotion-preview');
+  expect(js).not.toContain('remotion-toggle');
   expect(html.length).toBeGreaterThan(1000000);
   expect(html).not.toContain('<video id="video-player"');
   expect(html).not.toContain('data:video/mp4');
@@ -56,6 +55,13 @@ describe('Markcut Remotion MCP App',()=>{
    await writeFile(join(dir,'clip.wav'),Buffer.from([82,73,70,70]));
    expect((await readPreviewAudio(join(dir,'clip.md'))).audioSrc).toContain('UklGRg==');
   } finally {await rm(dir,{recursive:true,force:true});}
+ });
+ it('uses native MarkCut AudioLeaf as a background track without changing original duration',()=>{
+  const compiled={root:{id:'root',type:'root',isSeries:true,durationInSeconds:6,children:[{id:'scene',type:'component',durationInSeconds:6}]}};
+  const mixed=withPreviewAudio(compiled,'data:audio/wav;base64,QQ==');
+  expect(mixed.root.children[1]).toMatchObject({type:'audio',isBackground:true,start:0,end:6,volume:1});
+  expect(compiled.root.children).toHaveLength(1);
+  expect(mixed.root.durationInSeconds).toBe(6);
  });
  it('requires review feedback',()=>{
   expect(reviewResult('approved')).toEqual({decision:'approved'});
