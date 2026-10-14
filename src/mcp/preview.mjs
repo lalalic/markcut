@@ -1,12 +1,13 @@
 import { spawn } from "node:child_process";
 import { access, readFile } from "node:fs/promises";
-import { constants as fsConstants, readFileSync } from "node:fs";
+import { constants as fsConstants } from "node:fs";
 import { isAbsolute, extname, dirname, resolve, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildPreviewBridgeScript } from "./bridge.mjs";
+import { externalizePreviewMedia, publicOrigin, resolveMountedFile, publishPlayerBundle } from "./remote-assets.mjs";
 
 export const TOOL_NAME = "markcut.preview";
-export const RESOURCE_URI = "ui://markcut/video-preview-v15.html";
+export const RESOURCE_URI = "ui://markcut/video-preview-v16.html";
 // Legacy entrypoints remain registered, but serve the current implementation.
 export const LEGACY_RESOURCE_URIS = [
   "ui://markcut/video-preview-v3.html",
@@ -21,6 +22,7 @@ export const LEGACY_RESOURCE_URIS = [
   "ui://markcut/video-preview-v12.html",
   "ui://markcut/video-preview-v13.html",
   "ui://markcut/video-preview-v14.html",
+  "ui://markcut/video-preview-v15.html",
 ];
 export const RESOURCE_MIME_TYPE = "text/html;profile=mcp-app";
 export const PLAYER_PORT = 4571;
@@ -28,7 +30,7 @@ export const PLAYER_ORIGIN = `http://127.0.0.1:${PLAYER_PORT}`;
 
 const moduleDir = dirname(fileURLToPath(import.meta.url));
 const playerServer = resolve(moduleDir, "managed-player.mjs");
-const bundlePath = resolve(moduleDir, "remotion-app.bundle.js");
+const bundlePath = resolve(moduleDir,"remotion-app.bundle.js");
 const compiledResources = new Map();
 let managedPlayer = null;
 let startPromise = null;
@@ -67,8 +69,8 @@ export function buildPreviewResourceResult(resourceUri = RESOURCE_URI) {
         ui: {
           prefersBorder: true,
           csp: {
-            connectDomains: [],
-            resourceDomains: [],
+            connectDomains: [publicOrigin()],
+            resourceDomains: [publicOrigin()],
             frameDomains: [],
           },
         },
@@ -93,9 +95,11 @@ export async function readPreviewAudio(path) {
   const filename = match ? match[1].trim() : `${basename(path, ".md")}.wav`;
   if (!/^[\w. -]+\.(wav|mp3|m4a|ogg)$/i.test(filename) || filename.startsWith(".")) throw new Error("audio must be a local audio filename in the Markdown directory");
   const file = resolve(dirname(path), filename);
-  let data;
-  try { data = await readFile(file); } catch (e) { if (!match && e.code === "ENOENT") return {}; throw e; }
-  if (data.length > 2 * 1024 * 1024) throw new Error("audio file exceeds 2 MB preview limit");
+  try { await access(file, fsConstants.R_OK); } catch (e) { if (!match && e.code === "ENOENT") return {}; throw e; }
+  const remote = resolveMountedFile(file);
+  if (remote) return {audioSrc: remote};
+  const data = await readFile(file);
+  if (data.length > 2 * 1024 * 1024) throw new Error("audio file exceeds 2 MB preview limit for unmounted media");
   const ext = filename.split(".").pop().toLowerCase();
   const mime = {wav:"audio/wav",mp3:"audio/mpeg",m4a:"audio/mp4",ogg:"audio/ogg"}[ext];
   return {audioSrc:`data:${mime};base64,${data.toString("base64")}`};
@@ -144,10 +148,12 @@ export async function ensureVideoPreview(path, options = {}) {
   const compiled = await response.json();
   const audio = await readPreviewAudio(validatedPath);
   const audioCompiled = withPreviewAudio(compiled,audio.audioSrc);
-  compiledResources.set(resourceUri, {compiled:audioCompiled});
+  const {compiled:remoteCompiled} = externalizePreviewMedia(audioCompiled,preview.id,publicOrigin(),dirname(validatedPath));
+  compiledResources.set(resourceUri,{compiled:remoteCompiled});
   // The federated host resolves the static UI resource at startup.
   // The initial tool result carries compiled scenes, without an iframe request.
-  return { ...preview, resourceUri: RESOURCE_URI };
+  const {previewUrl:localPreviewUrl,...publicPreview}=preview;
+  return {...publicPreview,assetBaseUrl:publicOrigin()+"/files/_neoy/markcut/generated/"+preview.id+"/",resourceUri:RESOURCE_URI};
 }
 
 export function stopManagedVideoPreview() {
@@ -181,18 +187,15 @@ export function reviewMessage(result) {
 }
 
 export function buildPreviewHtml() {
+  const playerScriptUrl = publishPlayerBundle(bundlePath);
   // Base64 keeps HTML parser-sensitive sequences inside the large JS bundle
   // from terminating the embedding script tag or leaking source into the DOM.
-  const bundle = readFileSync(bundlePath).toString("base64");
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Markcut Remotion Preview</title>
 <style>body{font:14px system-ui;margin:0;background:#fff;color:#17202a}main{padding:12px;max-width:960px;margin:auto}h1{font-size:17px}.path{font-size:12px;overflow-wrap:anywhere}.transport{display:flex;align-items:center;gap:10px;padding:12px 0}.transport input{flex:1;min-width:50px}button{cursor:pointer;padding:8px;border-radius:6px;border:1px solid #a8a8a8}#approve{background:#198038;color:white}#changes{background:#c72b29;color:white}textarea{width:100%;box-sizing:border-box;min-height:66px}#remotion-canvas{background:#090b12}#status{padding:8px 0}</style></head>
-<body><main><h1>Review video — Remotion</h1><div id="player-version" style="font-weight:600;font-size:13px">Player v15 · Video <span id="video-md-version">Waiting for video...</span></div><div class="path" id="path-label"></div><div id="remotion-root"></div>
+<body><main><h1>Review video — Remotion</h1><div id="player-version" style="font-weight:600;font-size:13px">Player v16 · Video <span id="video-md-version">Waiting for video...</span></div><div class="path" id="path-label"></div><div id="remotion-root"></div>
 <label for="feedback">Review feedback</label><textarea id="feedback"></textarea><div id="status" role="status">Starting preview…</div>
 <button id="approve">Approve</button><button id="changes">Request changes</button></main>
-<script id="remotion-bundle" type="application/octet-stream">${bundle}</script>
-<script>
-(function(){const source=atob(document.getElementById("remotion-bundle").textContent);const bytes=new Uint8Array(source.length);for(let i=0;i<source.length;i++)bytes[i]=source.charCodeAt(i);const url=URL.createObjectURL(new Blob([bytes],{type:"text/javascript"}));const script=document.createElement("script");script.src=url;script.onload=()=>URL.revokeObjectURL(url);document.head.appendChild(script);})();
-</script>
+<script src="${playerScriptUrl}"></script>
 <script>${buildPreviewBridgeScript()}</script></body></html>`;
 }

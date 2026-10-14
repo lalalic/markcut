@@ -3,18 +3,16 @@ import type {PlayerRef} from '@remotion/player';
 
 export function useWebAudioPreview(root:any, playerRef:React.RefObject<PlayerRef|null>) {
  const [status,setStatus]=React.useState('Web Audio initializing');
- const audio=React.useMemo(()=>root?.children?.find((x:any)=>x.type==='audio'&&String(x.src).startsWith('data:audio/')),[root]);
+ const audio=React.useMemo(()=>root?.children?.find((x:any)=>x.type==='audio'&&String(x.src).startsWith('https://')),[root]);
  const playbackRoot=React.useMemo(()=>audio?{...root,children:root.children.filter((x:any)=>x!==audio)}:root,[root,audio]);
  React.useEffect(()=>{
   if(!audio)return;
-  const match=/^data:audio\/[^;,]+;base64,(.*)$/s.exec(audio.src);
-  if(!match?.[1]){setStatus('Invalid audio data');return;}
   const ctx=new AudioContext();
   let buffer:AudioBuffer|null=null,source:AudioBufferSourceNode|null=null,gain:GainNode|null=null,disposed=false;
   let generation=0;
   const stop=()=>{generation++;if(source){source.onended=null;try{source.stop()}catch{}source.disconnect();source=null;}gain?.disconnect();gain=null;};
-  const bytes=Uint8Array.from(atob(match[1]),c=>c.charCodeAt(0));
-  ctx.decodeAudioData(bytes.buffer).then(b=>{buffer=b;if(!disposed)setStatus(`Web Audio ready · ${b.duration.toFixed(2)}s`);}).catch(e=>setStatus('Decode failed: '+String(e)));
+  fetch(audio.src,{mode:'cors'}).then(response=>{if(!response.ok)throw new Error('HTTP '+response.status);return response.arrayBuffer();})
+  .then(bytes=>ctx.decodeAudioData(bytes)).then(b=>{buffer=b;if(!disposed)setStatus(`Web Audio ready · ${b.duration.toFixed(2)}s`);}).catch(e=>setStatus('Decode failed: '+String(e)));
   const play=async()=>{
    const ticket=++generation;
    try{

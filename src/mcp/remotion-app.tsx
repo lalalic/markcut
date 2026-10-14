@@ -3,7 +3,7 @@ import {createRoot} from 'react-dom/client';
 import type {PlayerRef} from '@remotion/player';
 import {SharedPlayer} from '../player/SharedPlayer';
 import {useWebAudioPreview} from './web-audio-preview';
-const PLAYER_VERSION='v15';
+const PLAYER_VERSION='v16';
 function App(){
  const [revision,setRevision]=React.useState<any>(()=>(window as any).__markcutRevision||null);
  const ref=React.useRef<PlayerRef|null>(null);

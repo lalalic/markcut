@@ -38,7 +38,7 @@ async function portIsFree(port) {
   return new Promise(resolvePort => {
     const probe = createTcpServer();
     probe.once("error", () => resolvePort(false));
-    probe.listen(port, "127.0.0.1", () => {
+    probe.listen(port, () => {
       probe.close(() => resolvePort(true));
     });
   });
