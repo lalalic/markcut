@@ -42,18 +42,19 @@ registerAppTool(
     description: "Show the Markcut video player for a Markdown video definition and ask a human to approve it or request changes. When a review ui/message arrives with decision=changes_requested, edit the supplied path using feedback and call markcut.preview again with the same path; do not consider it approved. When decision=approved, treat only that contentHash/revisionId as approved and stop the review loop. Never approve a newer revision from an older message.",
     inputSchema: z.object({
       path: z.string().describe("Absolute path to a .md file"),
+      relay: z.object({jobId:z.string(),taskId:z.union([z.string(),z.number()]),executionId:z.string().optional()}).optional().describe("Optional Agents Relay task correlation. No Relay dependency for standalone ChatGPT/Work reviews."),
     }),
     _meta: {
       ui: { resourceUri: RESOURCE_URI },
     },
   },
-  async ({ path }) => {
+  async ({ path, relay }) => {
     try {
       const preview = await ensureVideoPreview(path);
       // Deliver bytes with the initiating tool result; MCP App tool re-requests
       // are not consistently routable through the ChatGPT federation host.
       const media = getPreviewMedia(preview.contentHash);
-      const payload = { ...preview, ...media };
+      const payload = { ...preview, ...media, ...(relay ? {relay} : {}) };
       return {
         content: [{ type: "text", text: `Video ready for review: ${preview.path}` }],
         structuredContent: payload,

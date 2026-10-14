@@ -1,7 +1,7 @@
 export function buildPreviewBridgeScript() {
 return `
 const feedback=document.getElementById('feedback'),status=document.getElementById('status'),pathLabel=document.getElementById('path-label');
-let nextId=0,identity=null,busy=false,expectedPath=null,activePath=null,submittedRevision=null;
+let nextId=0,identity=null,busy=false,expectedPath=null,activePath=null,activeRelay=null,submittedRevision=null;
 const pending=new Map();
 const resultsByPath=new Map();
 function send(msg){window.parent.postMessage(msg,'*');}
@@ -32,6 +32,7 @@ function renderRevision(data){
  if(!data.compiled){status.textContent='Compiled Remotion scenes unavailable';return;}
  identity={previewId:data.id,revisionId:data.revisionId,contentHash:data.contentHash};
  activePath=data.path||expectedPath||null;
+ activeRelay=data.relay||null;
  if(submittedRevision!==data.revisionId){busy=false;submittedRevision=null;}
  window.__markcutRevision=data;
  window.dispatchEvent(new CustomEvent('markcut:revision',{detail:data}));
@@ -59,6 +60,7 @@ async function submit(decision){
  if(!identity){status.textContent='Preview identity unavailable.';return;}
  const result={...identity,decision};
  if(activePath)result.path=activePath;
+ if(activeRelay)result.relay=activeRelay;
  if(decision==='changes_requested')result.feedback=value;
  busy=true;status.textContent='Submitting…';
  const submittedId=result.revisionId;

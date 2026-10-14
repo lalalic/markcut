@@ -75,6 +75,13 @@ describe('MCP Remotion bridge',()=>{
   a.result(bData);
   expect(a.events.at(-1).detail.revisionId).toBe('ra');
  });
+ it('preserves optional Relay job/task context across review decisions',()=>{
+  const h=harness();
+  const relay={jobId:'job-7',taskId:19,executionId:'exec-1'};
+  h.result({id:'r',revisionId:'r',contentHash:'hash',path:'/video.md',relay,compiled:{children:[]}});
+  h.nodes.feedback.value='shorter title';h.nodes.changes.onclick?.();
+  expect(JSON.parse(h.messages.at(-1).params.content[0].text).relay).toEqual(relay);
+ });
  it('handles request changes followed by a new revision and approval in the same app',async()=>{
   const h=harness();h.respond(1);await nextTick();
   const first={id:'first',revisionId:'r1',contentHash:'sha1',path:'/video.md',compiled:{children:[{name:'First'}]}};
