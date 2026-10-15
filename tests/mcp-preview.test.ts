@@ -11,9 +11,13 @@ describe('Markcut Remotion MCP App',()=>{
   const html=buildPreviewHtml();
   expect(html).toContain('id="remotion-root"');
   expect(html).toContain('id="player-version"');
-  expect(html).toContain('Player v18');
+  expect(html).toContain('Player v19');
   expect(html).toContain('id="video-md-version"');
   expect(html).toContain('https://neoy.example.test/files/_neoy/markcut/player/');
+  // Host notifications can arrive during slow downloads of the ~5 MB player bundle.
+  // The lightweight bridge must attach its message handler first.
+  expect(html.indexOf("window.addEventListener('message'")).toBeGreaterThan(0);
+  expect(html.indexOf("window.addEventListener('message'")).toBeLessThan(html.indexOf('<script src="https://neoy.example.test/files/_neoy/markcut/player/'));
   expect(html).not.toContain('id="remotion-bundle"');
   expect(html.length).toBeLessThan(20000);
   expect(html).not.toContain('<video id="video-player"');
