@@ -1,13 +1,14 @@
-import { spawn } from "node:child_process";
+import { createHash } from "node:crypto";
+import { mkdir, writeFile, readdir, rename, rm, stat, utimes } from "node:fs/promises";
 import { access, readFile } from "node:fs/promises";
-import { constants as fsConstants } from "node:fs";
+import { constants as fsConstants, readFileSync } from "node:fs";
 import { isAbsolute, extname, dirname, resolve, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildPreviewBridgeScript } from "./bridge.mjs";
-import { externalizePreviewMedia, publicOrigin, resolveMountedFile, resolvePreviewPath, publishPlayerBundle } from "./remote-assets.mjs";
+import { externalizePreviewMedia, publicOrigin, resolveMountedFile, resolvePreviewPath, publishPlayerBundle, publishCompiledCache, prunePublishedCache, EXPORT_ROOT } from "./remote-assets.mjs";
 
 export const TOOL_NAME = "markcut.preview";
-export const RESOURCE_URI = "ui://markcut/video-preview-v18.html";
+export const RESOURCE_URI = "ui://markcut/video-preview-v20.html";
 // Legacy entrypoints remain registered, but serve the current implementation.
 export const LEGACY_RESOURCE_URIS = [
   "ui://markcut/video-preview-v3.html",
@@ -25,6 +26,8 @@ export const LEGACY_RESOURCE_URIS = [
   "ui://markcut/video-preview-v15.html",
   "ui://markcut/video-preview-v16.html",
   "ui://markcut/video-preview-v17.html",
+  "ui://markcut/video-preview-v18.html",
+  "ui://markcut/video-preview-v19.html",
 ];
 export const RESOURCE_MIME_TYPE = "text/html;profile=mcp-app";
 // Google Maps JS loads libraries, tiles and Routes RPCs from these HTTPS origins.
@@ -42,32 +45,17 @@ export function previewCsp() {
     frameDomains: [],
   };
 }
-export const PLAYER_PORT = 4571;
-export const PLAYER_ORIGIN = `http://127.0.0.1:${PLAYER_PORT}`;
-
 const moduleDir = dirname(fileURLToPath(import.meta.url));
-const playerServer = resolve(moduleDir, "managed-player.mjs");
 const bundlePath = resolve(moduleDir,"remotion-app.bundle.js");
-const compiledResources = new Map();
-let managedPlayer = null;
-let startPromise = null;
-async function managerRunning() {
-  try {
-    const response = await fetch(PLAYER_ORIGIN + "/__markcut/health", {signal: AbortSignal.timeout(1000)});
-    return response.ok && (await response.json()).service === "markcut-preview-manager";
-  } catch { return false; }
-}
-
-async function submitPreview(path) {
-  const response = await fetch(PLAYER_ORIGIN + "/__markcut/previews", {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({path}),signal:AbortSignal.timeout(150000)});
-  const result = await response.json(); if (!response.ok) throw new Error(result.error || "preview creation failed"); return result;
-}
+const pendingCompiles = new Map();
+const activeCompilesByPath = new Map();
+const KEEP = 10;
 
 export function getPreviewMedia(contentHash) {
   if (!/^[a-f0-9]{64}$/.test(contentHash)) throw new Error("Invalid Markcut content hash");
-  const rendered = compiledResources.get(previewResourceUri(contentHash));
-  if (!rendered) throw new Error("Unknown or expired Markcut compiled scenes");
-  return rendered;
+  try {
+    return {compiled:JSON.parse(readFileSync(resolve(EXPORT_ROOT,"cache",contentHash+".json"),"utf8"))};
+  } catch {throw new Error("Unknown or expired Markcut compiled scenes");}
 }
 
 export function previewResourceUri(contentHash) {
@@ -110,7 +98,7 @@ export async function readPreviewAudio(path) {
   const file = resolve(dirname(path), filename);
   try { await access(file, fsConstants.R_OK); } catch (e) { if (!match && e.code === "ENOENT") return {}; throw e; }
   const remote = resolveMountedFile(file);
-  if (remote) return {audioSrc: remote};
+  if (remote) return {audioSrc: file}; // Freeze mounted local audio into this immutable preview.
   const data = await readFile(file);
   if (data.length > 2 * 1024 * 1024) throw new Error("audio file exceeds 2 MB preview limit for unmounted media");
   const ext = filename.split(".").pop().toLowerCase();
@@ -127,58 +115,119 @@ export function withPreviewAudio(compiled, audioSrc) {
   return {...compiled, ...(compiled.root ? {root:{...root,children:[...children,{id:'mcp-preview-audio',type:'audio',src:audioSrc,volume:1,isBackground:true,start:0,end:duration,duration,durationInSeconds:duration}]}} : {children:[...children,{id:'mcp-preview-audio',type:'audio',src:audioSrc,volume:1,isBackground:true,start:0,end:duration,duration,durationInSeconds:duration}]})};
 }
 
+async function atomicJson(path, value) {
+  const temp = path + "." + process.pid + "." + Math.random().toString(16).slice(2) + ".tmp";
+  await writeFile(temp, JSON.stringify(value, null, 2), {flag:"wx"});
+  try { await rename(temp, path); }
+  finally { await rm(temp, {force:true}); }
+}
+
+async function pruneCache(dir, indexFile, entries, currentHash) {
+  const unique=[currentHash,...entries.filter(hash=>hash!==currentHash)];
+  const kept=unique.slice(0,KEEP);
+  const retired=unique.slice(KEEP);
+  const index={latest:currentHash, entries:kept};
+  await atomicJson(indexFile,index);
+  // Only prune local entries that are not used by another variant index.
+  for(const hash of retired) {
+    const siblings=await readdir(resolve(dir,".."),{withFileTypes:true});
+    let referenced=false;
+    for(const folder of siblings) {
+      if(!folder.isDirectory() || folder.name==="cache" || folder.name==="generated")continue;
+      const variants=await readdir(resolve(dir,"..",folder.name),{withFileTypes:true}).catch(()=>[]);
+      for(const variant of variants) {
+        if(!variant.isDirectory())continue;
+        const data=await readFile(resolve(dir,"..",folder.name,variant.name,"cache-index.json"),"utf8").catch(()=>"");
+        try {if(JSON.parse(data).entries?.includes(hash))referenced=true;} catch{}
+      }
+    }
+    if(!referenced){
+      await rm(resolve(dir,hash+".json"),{force:true});
+      await prunePublishedCache(hash);
+    }
+  }
+}
+
 export async function ensureVideoPreview(path, options = {}) {
   const validatedPath = validateMarkdownPath(resolvePreviewPath(path));
   await access(validatedPath, fsConstants.R_OK);
-  if (!await managerRunning()) {
-    if (!startPromise) {
-      startPromise = (async () => {
-        const child = spawn(process.execPath, [playerServer], {
-          cwd: resolve(moduleDir, "../.."), stdio: ["ignore", "ignore", "pipe"], detached: process.platform !== "win32",
-        });
-        managedPlayer = child;
-        let stderr = "";
-        child.stderr.on("data", b => { stderr += String(b).slice(-4000); });
-        child.once("exit", () => { if (managedPlayer === child) managedPlayer = null; });
-        for (let attempt = 0; attempt < 50; attempt++) {
-          if (await managerRunning()) return;
-          if (child.exitCode !== null) break;
-          await new Promise(r => setTimeout(r, 100));
-        }
-        child.kill("SIGTERM");
-        throw new Error("port 4571 unavailable or manager failed: " + stderr);
-      })().finally(() => { startPromise = null; });
+  const source=await readFile(validatedPath,"utf8");
+  const sourceHash=createHash("sha256").update(source).digest("hex");
+  const key=validatedPath+"\0"+sourceHash;
+  if(pendingCompiles.has(key))return pendingCompiles.get(key);
+  const prior=activeCompilesByPath.get(validatedPath)||Promise.resolve();
+  const task=prior.catch(()=>{}).then(async()=>{
+    const {resolveAndCompileMarkdown}=await import("../player/pipeline.mjs");
+    const baseDir=dirname(validatedPath);
+    const outputRoot=resolve(baseDir,".markcut");
+    const generated=resolve(outputRoot,"generated");
+    const dir=resolve(outputRoot,basename(validatedPath,".md"),"default");
+    const cacheDir=resolve(outputRoot,"cache");
+    const indexFile=resolve(dir,"cache-index.json");
+    const audio=await readPreviewAudio(validatedPath);
+    const referencedAssets=[];
+    for(const match of source.matchAll(/\b(?:src|audio)\s*:\s*["']?([^"'\s;]+\.(?:png|jpe?g|webp|svg|gif|mp4|mov|webm|wav|mp3|m4a|ogg|vtt|srt))/gi)){
+      const candidate=match[1];
+      if(candidate.includes("://")||candidate.startsWith("/"))continue;
+      try {
+        const info=await stat(resolve(baseDir,candidate));
+        if(info.isFile())referencedAssets.push([candidate,info.size,info.mtimeMs]);
+      }catch{}
     }
-    await startPromise;
+    referencedAssets.sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
+    // Compilation generates random scene ids. Identity must be based on inputs,
+    // not on non-semantic runtime ids, so unchanged files reuse identical cache.
+    if(audio.audioSrc && audio.audioSrc.startsWith("/")){
+      const info=await stat(audio.audioSrc);
+      referencedAssets.push([audio.audioSrc,info.size,info.mtimeMs]);
+    }
+    const hash=createHash("sha256").update(validatedPath).update("\0")
+      .update(source).update("\0").update(JSON.stringify(referencedAssets)).update("\0").update(audio.audioSrc||"")
+      .update("\0").update(process.env.GOOGLE_MAPS_API_KEY||"").digest("hex");
+    const id=hash;
+    let index={entries:[]};
+    try {index=JSON.parse(await readFile(indexFile,"utf8"));} catch{}
+    const cached=resolve(cacheDir,hash+".json");
+    let finalCompiled;
+    try {finalCompiled=JSON.parse(await readFile(cached,"utf8"));} catch{}
+    if(!finalCompiled) {
+    const compiled=await resolveAndCompileMarkdown(source,{
+      sourcePath:validatedPath, baseDir,
+      seed:parseInt(sourceHash.slice(0,8),16), // avoid resolver mutating the latest video.md
+      scriptOutputDir:resolve(generated,"tts"),
+      mediaOutputDir:resolve(generated,"media"),
+      includeOutputDir:resolve(generated,"includes"),
+    });
+    const withAudio=withPreviewAudio(compiled,audio.audioSrc);
+    const external=externalizePreviewMedia(withAudio,id,publicOrigin(),baseDir);
+    finalCompiled=external.compiled;
+    await mkdir(cacheDir,{recursive:true});
+    try {await writeFile(cached,JSON.stringify(finalCompiled,null,2),{flag:"wx"});}
+    catch(error){if(error.code!=="EEXIST")throw error;}
+    }
+    await mkdir(dir,{recursive:true});
+    // Static publication is completed before updating the latest pointer.
+    const compiledUrl=publishCompiledCache(hash, finalCompiled);
+    await atomicJson(resolve(dir,"compiled.json"),finalCompiled);
+    await utimes(cached,new Date(),new Date());
+    await pruneCache(cacheDir,indexFile,index.entries||[],hash);
+    const preview={
+      id,revisionId:id,contentHash:hash,sourceHash,path:validatedPath,
+      compiledUrl, resourceUri:RESOURCE_URI,
+      assetBaseUrl:publicOrigin()+"/files/_neoy/markcut/generated/"+id+"/",
+    };
+    return preview;
+  });
+  activeCompilesByPath.set(validatedPath,task);
+  pendingCompiles.set(key,task);
+  try{return await task;} finally{
+    pendingCompiles.delete(key);
+    if(activeCompilesByPath.get(validatedPath)===task)activeCompilesByPath.delete(validatedPath);
   }
-  const preview = await submitPreview(validatedPath);
-  const resourceUri = previewResourceUri(preview.contentHash);
-  // Re-read the manager-pinned compilation for every issued revision. A process
-  // may outlive a manager restart; a content-hash cache must never serve a
-  // compilation pinned by an earlier, now-expired preview instance.
-  const response = await fetch(preview.previewUrl + "api/video-data", {signal:AbortSignal.timeout(30000)});
-  if (!response.ok) throw new Error("Unable to read compiled Remotion scenes");
-  const compiled = await response.json();
-  const audio = await readPreviewAudio(validatedPath);
-  const audioCompiled = withPreviewAudio(compiled,audio.audioSrc);
-  const {compiled:remoteCompiled} = externalizePreviewMedia(audioCompiled,preview.id,publicOrigin(),dirname(validatedPath));
-  compiledResources.set(resourceUri,{compiled:remoteCompiled});
-  // The federated host resolves the static UI resource at startup.
-  // The initial tool result carries compiled scenes, without an iframe request.
-  const {previewUrl:localPreviewUrl,...publicPreview}=preview;
-  return {...publicPreview,assetBaseUrl:publicOrigin()+"/files/_neoy/markcut/generated/"+preview.id+"/",resourceUri:RESOURCE_URI};
 }
 
-export function stopManagedVideoPreview() {
-  if (managedPlayer && managedPlayer.exitCode == null) {
-    try {
-      if (process.platform !== "win32" && managedPlayer.pid) process.kill(-managedPlayer.pid, "SIGTERM");
-      else managedPlayer.kill("SIGTERM");
-    } catch { managedPlayer.kill("SIGTERM"); }
-  }
-  managedPlayer = null;
-  startPromise = null;
-}
+// Compatibility export: there is no longer a managed player to stop.
+export function stopManagedVideoPreview() {}
 
 export function reviewResult(decision, feedback = "") {
   if (decision === "approved") return { decision };
@@ -206,7 +255,7 @@ export function buildPreviewHtml() {
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Markcut Preview</title>
 <style>body{font:14px system-ui;margin:0;background:#fff;color:#17202a}main{padding:12px;max-width:960px;margin:auto}h1{font-size:17px}.path{font-size:12px;overflow-wrap:anywhere}.transport{display:flex;align-items:center;gap:10px;padding:12px 0}.transport input{flex:1;min-width:50px}button{cursor:pointer;padding:8px;border-radius:6px;border:1px solid #a8a8a8}#approve{background:#198038;color:white}#changes{background:#c72b29;color:white}textarea{width:100%;box-sizing:border-box;min-height:66px}.review-actions{display:flex;justify-content:space-between;align-items:center;width:100%;gap:16px}.review-actions button{min-width:150px}#remotion-canvas{background:#090b12}#status{padding:8px 0}</style></head>
-<body><main><h1>Markcut · Video Review</h1><div id="player-version" style="font-weight:600;font-size:13px">Player v18 · Video <span id="video-md-version">Waiting for video...</span></div><div class="path" id="path-label" hidden></div><div id="remotion-root"></div>
+<body><main><h1>Markcut · Video Review</h1><div id="player-version" style="font-weight:600;font-size:13px">Player v20 · Video <span id="video-md-version">Waiting for video...</span></div><div class="path" id="path-label" hidden></div><div id="remotion-root"></div>
 <label for="feedback">Review feedback</label><textarea id="feedback"></textarea><div id="status" role="status">Starting preview…</div>
 <div class="review-actions"><button id="changes">Request changes</button><button id="approve">Approve</button></div></main>
 <script src="${playerScriptUrl}"></script>

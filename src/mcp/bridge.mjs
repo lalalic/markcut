@@ -15,7 +15,7 @@ async function loadRemoteScenes(path){
    try{
     const response=await fetch(url+'?try='+attempt,{cache:'no-store'});
     if(response.ok){const data=await response.json();
-      if(data.requestedPath===path && data.compiled && generation===fallbackGeneration){
+      if(data.requestedPath===path && (data.compiledUrl||data.compiled) && generation===fallbackGeneration){
        if(window.__markcutRevision?.requestedPath===path)return;
        resultsByPath.set(path,data);renderRevision(data);return;
       }
@@ -53,16 +53,52 @@ function applyToolResult(params){
  if(expectedPath&&data.path!==expectedPath&&data.requestedPath!==expectedPath)return;
  renderRevision(data);
 }
-function renderRevision(data){
+let renderGeneration=0;
+async function currentRevisionMatches(path,hash){
+ if(!path||!hash)return false;
+ const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(path));
+ const key=Array.from(new Uint8Array(digest),x=>x.toString(16).padStart(2,'0')).join('');
+ const response=await fetch(__MARKCUT_ORIGIN__+'/files/_neoy/markcut/revisions/'+key+'.json?t='+Date.now(),{cache:'no-store'});
+ if(!response.ok)throw new Error('Latest preview status unavailable');
+ const latest=await response.json();
+ return latest.contentHash===hash;
+}
+function reviewReadonly(readonly,message){
+ document.getElementById('approve').disabled=readonly;
+ document.getElementById('changes').disabled=readonly;
+ if(readonly&&message)status.textContent=message;
+}
+async function renderRevision(data){
+ const generation=++renderGeneration;
  if(data.path){pathLabel.textContent=data.path;showVideoName(data.path,data.title||data.videoTitle);}
- if(!data.compiled){status.textContent='Compiled Remotion scenes unavailable';return;}
+ if(!data.compiled&&!data.compiledUrl){status.textContent='Compiled scenes unavailable';return;}
  identity={previewId:data.id,revisionId:data.revisionId,contentHash:data.contentHash};
- activePath=data.path||expectedPath||null;
+ activePath=data.requestedPath||data.path||expectedPath||null;
  activeRelay=data.relay||null;
  if(submittedRevision!==data.revisionId){busy=false;submittedRevision=null;}
- window.__markcutRevision=data;
- window.dispatchEvent(new CustomEvent('markcut:revision',{detail:data}));
- status.textContent='Remotion scenes loaded for review.';
+ reviewReadonly(true,'Loading static compiled scenes…');
+ try{
+  let compiled=data.compiled;
+  if(data.compiledUrl){
+   const url=new URL(data.compiledUrl);
+   if(url.origin!==__MARKCUT_ORIGIN__||!url.pathname.startsWith('/files/_neoy/markcut/cache/')||!(/^[a-f0-9]{64}[.]json$/.test(url.pathname.split('/').pop())))
+    throw new Error('Invalid immutable preview URL');
+   const response=await fetch(url.href,{cache:'force-cache'});
+   if(!response.ok)throw new Error('Static compiled scenes unavailable: HTTP '+response.status);
+   compiled=await response.json();
+  }
+  if(generation!==renderGeneration)return;
+  window.__markcutRevision={...data,compiled};
+  window.dispatchEvent(new CustomEvent('markcut:revision',{detail:window.__markcutRevision}));
+  status.textContent=data.compiledUrl?'Static scenes loaded.':'Remotion scenes loaded for review.';
+  if(!data.compiledUrl){reviewReadonly(false);return;}
+  const same=await currentRevisionMatches(activePath,identity.contentHash);
+  if(generation!==renderGeneration)return;
+  reviewReadonly(!same,same?'':'Historical Preview · Read-only');
+ }catch(e){
+  if(generation!==renderGeneration)return;
+  reviewReadonly(true,'Preview unavailable or review state unverified: '+String(e));
+ }
 }
 window.addEventListener('message',event=>{
  if(event.source!==window.parent)return;
@@ -84,6 +120,10 @@ async function submit(decision){
  const value=feedback.value.trim();
  if(decision==='changes_requested'&&!value){status.textContent='Feedback is required.';return;}
  if(!identity){status.textContent='Preview identity unavailable.';return;}
+ if(window.__markcutRevision?.compiledUrl){
+  try{if(!await currentRevisionMatches(activePath,identity.contentHash)){reviewReadonly(true,'Historical Preview · Read-only');return;}}
+  catch(e){reviewReadonly(true,'Cannot verify latest preview: '+String(e));return;}
+ }
  const result={...identity,decision};
  if(activePath)result.path=activePath;
  if(activeRelay)result.relay=activeRelay;

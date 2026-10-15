@@ -52,11 +52,9 @@ registerAppTool(
   async ({ path, relay }) => {
     try {
       const preview = await ensureVideoPreview(path);
-      // Deliver bytes with the initiating tool result; MCP App tool re-requests
-      // are not consistently routable through the ChatGPT federation host.
-      const media = getPreviewMedia(preview.contentHash);
-      const payload = { ...preview, ...media, requestedPath: path, ...(relay ? {relay} : {}) };
-      publishPreviewRevision(path,{id:payload.id,revisionId:payload.revisionId,contentHash:payload.contentHash,requestedPath:path,path,compiled:payload.compiled});
+      // The static MCP App fetches immutable compiled JSON over NeoY HTTPS.
+      const payload = { ...preview, requestedPath: path, ...(relay ? {relay} : {}) };
+      publishPreviewRevision(path,{id:payload.id,revisionId:payload.revisionId,contentHash:payload.contentHash,requestedPath:path,path,compiledUrl:payload.compiledUrl});
       return {
         content: [{ type: "text", text: `Video ready for review: ${preview.path}` }],
         structuredContent: payload,

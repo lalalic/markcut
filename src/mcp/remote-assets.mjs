@@ -1,11 +1,11 @@
-import {readFileSync,mkdirSync,writeFileSync,existsSync,realpathSync,renameSync} from "node:fs";
+import {readFileSync,mkdirSync,writeFileSync,existsSync,realpathSync,renameSync,copyFileSync,statSync} from "node:fs";
 import {homedir} from "node:os";
-import {join,resolve,sep,isAbsolute} from "node:path";
+import {join,resolve,sep,isAbsolute,extname} from "node:path";
 import {fileURLToPath} from "node:url";
 import {createHash} from "node:crypto";
 
 const supportDir = join(homedir(),"Library","Application Support","NeoY");
-export const EXPORT_ROOT = join(supportDir,"exports","_neoy","markcut");
+export const EXPORT_ROOT = process.env.MARKCUT_EXPORT_ROOT || join(supportDir,"exports","_neoy","markcut");
 const DATA_URI = /data:(image|audio|video)\/[a-z0-9.+-]+(?:;base64)?,[a-z0-9%+\/=._~!$&()*,:;@?-]+/gi;
 const MAX_BYTES = 16 * 1024 * 1024;
 
@@ -85,16 +85,44 @@ export function resolvePreviewSource(src,sourceDir,origin=publicOrigin(),mounts=
 }
 
 export function externalizePreviewMedia(compiled,revisionId,origin=publicOrigin(),sourceDir=null) {
-  if(!/^[a-f0-9-]{36}$/i.test(revisionId))throw new Error("Invalid revision identity");
+  if(!/^(?:[a-f0-9-]{36}|[a-f0-9]{64})$/i.test(revisionId))throw new Error("Invalid revision identity");
   const directory=join(EXPORT_ROOT,"generated",revisionId);
   const assets=[];
   let bytes=0;
+  const frozenPaths=new Map();
+  function snapshotSource(src){
+    if(!sourceDir||src.startsWith("https://")||src.startsWith("data:"))return src;
+    if(src.startsWith("http://")||src.startsWith("blob:"))
+      throw new Error("Preview media must use HTTPS or local source files");
+    const full=src.startsWith("file://")?fileURLToPath(src):isAbsolute(src)?src:resolve(sourceDir,src);
+    const root=realpathSync(sourceDir);
+    let real;
+    try {real=realpathSync(full);} catch {return resolvePreviewSource(src,sourceDir,origin);}
+    if(!real.startsWith(root+sep))return resolvePreviewSource(src,sourceDir,origin);
+    if(frozenPaths.has(real))return frozenPaths.get(real);
+    const stats=statSync(real);
+    if(!stats.isFile()||stats.size>512*1024*1024)throw new Error("Preview local media must be a file of at most 512 MB");
+    const ext=extname(real).toLowerCase();
+    if(!/^[.](png|jpg|jpeg|webp|svg|gif|mp4|mov|webm|wav|mp3|m4a|ogg|vtt|srt)$/.test(ext))
+      throw new Error("Unsupported local preview media extension: "+ext);
+    mkdirSync(directory,{recursive:true});
+    const filename="file-"+frozenPaths.size+ext;
+    const target=join(directory,filename);
+    if(existsSync(target)){
+      const existing=statSync(target);
+      if(existing.size!==stats.size)throw new Error("Immutable preview media collision");
+    }else copyFileSync(real,target);
+    const url=origin+"/files/_neoy/markcut/generated/"+revisionId+"/"+filename;
+    frozenPaths.set(real,url);
+    assets.push(filename);
+    return url;
+  }
   function replace(value){
     if(typeof value==="string"){
       if(/https?:\/\/(?:localhost|127\.0\.0\.1)(?=[:/]|$)/i.test(value))
         throw new Error("Preview contains local media URL");
       const converted = sourceDir ? value.replace(/(\bsrc\s*=\s*)(['"])([^'"\n]+)\2/g,
-        (all,prefix,quote,path)=>prefix+quote+resolvePreviewSource(path,sourceDir,origin)+quote) : value;
+        (all,prefix,quote,path)=>prefix+quote+snapshotSource(path)+quote) : value;
       return converted.replace(DATA_URI,uri=>{
         const comma=uri.indexOf(",");
         const mime=uri.slice(5,comma).split(";")[0].toLowerCase();
@@ -118,7 +146,7 @@ export function externalizePreviewMedia(compiled,revisionId,origin=publicOrigin(
     if(Array.isArray(value))return value.map(replace);
     if(value&&typeof value==="object")return Object.fromEntries(Object.entries(value).map(([key,v])=>
       [key,key==="src" && typeof v==="string" && !v.startsWith("data:")
-        ? resolvePreviewSource(v,sourceDir,origin) : replace(v)]));
+        ? snapshotSource(v) : replace(v)]));
     return value;
   }
   return {compiled:replace(compiled),assets};
@@ -134,4 +162,24 @@ export function publishPreviewRevision(requestedPath,payload) {
   writeFileSync(temp,JSON.stringify(payload),{mode:0o644});
   renameSync(temp,target);
   return publicOrigin()+"/files/_neoy/markcut/revisions/"+key+".json";
+}
+
+
+export function publishCompiledCache(hash, compiled, origin=publicOrigin()) {
+  if(!/^[a-f0-9]{64}$/.test(hash))throw new Error("Invalid compiled hash");
+  const dir=join(EXPORT_ROOT,"cache");
+  mkdirSync(dir,{recursive:true});
+  const file=join(dir,hash+".json");
+  const bytes=JSON.stringify(compiled);
+  if(existsSync(file)){
+    if(readFileSync(file,"utf8")!==bytes)throw new Error("Immutable compiled cache collision");
+  }else writeFileSync(file,bytes,{flag:"wx",mode:0o644});
+  return origin+"/files/_neoy/markcut/cache/"+hash+".json";
+}
+
+export async function prunePublishedCache(hash) {
+  if(!/^[a-f0-9]{64}$/.test(hash))throw new Error("Invalid compiled hash");
+  const {rm}=await import("node:fs/promises");
+  await rm(join(EXPORT_ROOT,"cache",hash+".json"),{force:true});
+  await rm(join(EXPORT_ROOT,"generated",hash),{recursive:true,force:true});
 }

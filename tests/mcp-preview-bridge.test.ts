@@ -3,7 +3,7 @@ import vm from 'node:vm';
 import {webcrypto} from 'node:crypto';
 import {buildPreviewBridgeScript} from '../src/mcp/bridge.mjs';
 
-function harness(remoteData?:any) {
+function harness(remoteData?:any, fetchOverride?:(url:string)=>Promise<any>) {
  const messages:any[]=[];
  const listeners:Record<string,Array<(evt:any)=>void>>={};
  const element=()=>({value:'',textContent:'',onclick:null as null|(()=>void)});
@@ -17,8 +17,8 @@ function harness(remoteData?:any) {
   addEventListener:(type:string,listener:(evt:any)=>void)=>(listeners[type]??=[]).push(listener),
   dispatchEvent:(evt:any)=>{events.push(evt);return true},
  };
- const fetch=async()=>({ok:true,json:async()=>remoteData});
- const context=vm.createContext({crypto:webcrypto,TextEncoder,fetch,setTimeout,window,document:{getElementById:(id:string)=>nodes[id]},CustomEvent:class {type:string;detail:any;constructor(t:string,opts:any){this.type=t;this.detail=opts.detail}}});
+ const fetch=fetchOverride|| (async()=>({ok:true,json:async()=>remoteData}));
+ const context=vm.createContext({crypto:webcrypto,TextEncoder,URL,fetch,setTimeout,window,document:{getElementById:(id:string)=>nodes[id]},CustomEvent:class {type:string;detail:any;constructor(t:string,opts:any){this.type=t;this.detail=opts.detail}}});
  const dispatch=(message:any,source=parent)=>(listeners.message??[]).forEach(listener=>listener({source,data:{jsonrpc:'2.0',...message}}));
  const result=(data:any)=>dispatch({method:'ui/notifications/tool-result',params:{result:{structuredContent:data}}});
  const respond=(id:number,result:any={})=>dispatch({id,result});
@@ -126,4 +126,39 @@ describe('MCP Remotion bridge',()=>{
   expect(decisions[1]).toMatchObject({path:'/video.md',revisionId:'r2',contentHash:'sha2',decision:'approved'});
  });
 
+});
+
+
+describe('static compiled-JSON bridge',()=>{
+ const base='https://neoy.qili2.com/files/_neoy/markcut/cache/';
+ const staticData={width:640,height:480,fps:30,children:[{name:'Static-Scene'}]};
+ const makeFetch=(latestHash:string)=>async (url:string)=>{
+  if(url.includes('/cache/'))return {ok:true,json:async()=>staticData};
+  if(url.includes('/revisions/'))return {ok:true,json:async()=>({contentHash:latestHash})};
+  return {ok:false,status:404,json:async()=>({})};
+ };
+ it('loads immutable JSON over HTTPS and enables review only for current hash',async()=>{
+  const hash='a'.repeat(64),h=harness(undefined,makeFetch(hash));
+  h.result({id:hash,revisionId:hash,contentHash:hash,path:'/tmp/video.md',
+   compiledUrl:base+hash+'.json'});
+  for(let i=0;i<5 && !h.events.length;i++)await nextTick();
+  expect(h.events.at(-1)?.detail?.compiled.children[0].name).toBe('Static-Scene');
+  await nextTick();
+  expect(h.nodes.approve.disabled).toBe(false);
+  h.nodes.approve.onclick?.();
+  await nextTick();
+  expect(h.messages.filter(m=>m.method==='ui/message')).toHaveLength(1);
+ });
+ it('shows historical previews but blocks review submission',async()=>{
+  const hash='b'.repeat(64),h=harness(undefined,makeFetch('c'.repeat(64)));
+  h.result({id:hash,revisionId:hash,contentHash:hash,path:'/tmp/video.md',
+   compiledUrl:base+hash+'.json'});
+  for(let i=0;i<5;i++)await nextTick();
+  expect(h.events.at(-1)?.detail?.compiled.children[0].name).toBe('Static-Scene');
+  expect(h.nodes.approve.disabled).toBe(true);
+  expect(h.nodes.status.textContent).toContain('Historical Preview');
+  h.nodes.approve.onclick?.();
+  await nextTick();
+  expect(h.messages.filter(m=>m.method==='ui/message')).toHaveLength(0);
+ });
 });
