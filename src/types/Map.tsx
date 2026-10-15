@@ -302,6 +302,34 @@ function hideGoogleMapsUi(): void {
   document.head.appendChild(style);
 }
 
+// Cache identical routing requests within one preview session. Scrubbing the
+// Remotion timeline remounts scenes; do not issue a billable Routes request
+// for every seek. Failed requests are evicted so a later retry can recover.
+const routeCache = new Map<string, ReturnType<typeof google.maps.routes.Route.computeRoutes>>();
+
+function cachedRoute(
+  library: google.maps.RoutesLibrary,
+  waypoints: { lat: number; lng: number }[],
+  mode: string,
+): ReturnType<typeof google.maps.routes.Route.computeRoutes> {
+  const key = JSON.stringify({ waypoints, mode });
+  const hit = routeCache.get(key);
+  if (hit) return hit;
+  const pending = library.Route.computeRoutes({
+    origin: waypoints[0]!,
+    destination: waypoints[waypoints.length - 1]!,
+    intermediates: waypoints.slice(1, -1).map((point) => ({ location: point })),
+    travelMode: mode as google.maps.TravelMode,
+    fields: ["legs", "path", "durationMillis"],
+  });
+  routeCache.set(key, pending);
+  pending.catch(() => {
+    if (routeCache.get(key) === pending) routeCache.delete(key);
+  });
+  if (routeCache.size > 64) routeCache.delete(routeCache.keys().next().value!);
+  return pending;
+}
+
 // ============================================================
 // MapLeaf — entry point, dispatches to the view renderer
 // ============================================================
@@ -1043,8 +1071,20 @@ function useRouteLegs(
     let active = true;
     const renderHandle = delayRender("Loading map directions...");
     handle.current = renderHandle;
-
-    const service = new routesLibrary.DirectionsService();
+    let completed = false;
+    const finish = () => {
+      if (completed) return;
+      completed = true;
+      clearTimeout(timeout);
+      if (handle.current === renderHandle) {
+        continueRender(renderHandle);
+        handle.current = null;
+      }
+    };
+    const timeout = window.setTimeout(() => {
+      console.error("Markcut Routes API timeout; inferred route cannot be verified");
+      finish();
+    }, 6000);
 
     Promise.all(
       waypoints.slice(0, -1).map((wp, i) => {
@@ -1053,38 +1093,29 @@ function useRouteLegs(
         if (isSyntheticMode(mode)) {
           return Promise.resolve<RouteLeg | null>(makeSyntheticLeg(wp, to, mode));
         }
-        return service
-          .route({
-            origin: wp,
-            destination: to,
-            travelMode: google.maps.TravelMode[mode as keyof typeof google.maps.TravelMode] ?? google.maps.TravelMode.DRIVING,
-            provideRouteAlternatives: false,
-          })
-          .then((response) => {
-            const leg = response.routes[0]?.legs[0];
-            if (!leg) return null;
-            const steps = (leg.steps ?? []).map((s) => ({
-              path: (s.path ?? []).map((p) => ({ lat: p.lat(), lng: p.lng() })),
-              durationSec: s.duration?.value ?? 1,
-            }));
-            return {
-              mode,
-              from: wp,
-              to,
-              durationSec: leg.duration?.value ?? (steps.reduce((sum, st) => sum + st.durationSec, 0) || 1),
-              steps,
-            } satisfies RouteLeg;
-          })
-          .catch(() => null);
+        return cachedRoute(routesLibrary, [wp, to], mode).then(({ routes }) => {
+          const route = routes?.[0];
+          if (!route) return null;
+          const durationSec = Math.max(1, (route.durationMillis ?? 1000) / 1000);
+          const path = (route.path ?? []).map((point) => ({ lat: point.lat, lng: point.lng }));
+          return {
+            mode, from: wp, to, durationSec,
+            steps: [{ path: path.length ? path : [wp, to], durationSec }],
+          } satisfies RouteLeg;
+        }).catch((error) => {
+          console.error("Markcut Routes API request failed", error);
+          return null;
+        });
       }),
     ).then((resolved) => {
       if (!active) return;
       setLegs(resolved.filter((l): l is RouteLeg => l !== null));
-      if (handle.current !== null) continueRender(handle.current);
+      finish();
     });
 
     return () => {
       active = false;
+      finish();
     };
   }, [routesLibrary, map, waypoints, travelMode]);
 
@@ -1129,29 +1160,47 @@ function useRouteLeg(
     if (!routesLibrary || !map || waypoints.length < 2) return;
     const renderHandle = delayRender("Loading map directions...");
     handle.current = renderHandle;
+    let completed = false;
+    const finish = () => {
+      if (completed) return;
+      completed = true;
+      clearTimeout(timeout);
+      if (handle.current === renderHandle) {
+        continueRender(renderHandle);
+        handle.current = null;
+      }
+    };
+    const timeout = window.setTimeout(() => {
+      console.error("Markcut Routes API timeout; cinematic route unavailable");
+      finish();
+    }, 6000);
 
-    const renderer = new routesLibrary.DirectionsRenderer({ map, suppressMarkers: true });
-    const service = new routesLibrary.DirectionsService();
-
-    service
-      .route({
-        origin: waypoints[0]!,
-        destination: waypoints[waypoints.length - 1]!,
-        waypoints: waypoints.slice(1, -1).map((wp) => ({ location: wp, stopover: true })),
-        travelMode: google.maps.TravelMode[travelMode as keyof typeof google.maps.TravelMode],
-        provideRouteAlternatives: false,
-      })
-      .then((response) => {
-        renderer.setDirections(response);
-        setLeg(response.routes[0]?.legs[0] ?? null);
-        if (handle.current !== null) continueRender(handle.current);
-      })
-      .catch(() => {
-        if (handle.current !== null) continueRender(handle.current);
-      });
-
+    let active = true;
+    let polylines: google.maps.Polyline[] = [];
+    cachedRoute(routesLibrary, waypoints, travelMode).then(({ routes }) => {
+      if (!active) return;
+      const route = routes?.[0];
+      if (route) {
+        polylines = route.createPolylines();
+        polylines.forEach((line) => line.setMap(map));
+        const path = route.path ?? [];
+        const durationSec = Math.max(1, (route.durationMillis ?? 1000) / 1000);
+        // Adapt the modern route to the existing frame-position math.
+        const coordinates = path.map((point) => ({
+          lat: () => point.lat, lng: () => point.lng,
+        }));
+        setLeg({
+          duration: { value: durationSec },
+          steps: [{ duration: { value: durationSec }, path: coordinates }],
+        } as unknown as google.maps.DirectionsLeg);
+      }
+    }).catch((error) => {
+      console.error("Markcut Routes API request failed", error);
+    }).finally(finish);
     return () => {
-      renderer.setMap(null);
+      active = false;
+      finish();
+      polylines.forEach((line) => line.setMap(null));
     };
   }, [routesLibrary, map, waypoints, travelMode]);
 
