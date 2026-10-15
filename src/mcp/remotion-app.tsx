@@ -16,7 +16,7 @@ function App(){
  return <div id="remotion-preview" data-revision={revision.revisionId}>
   <div id="preview-version" style={{fontSize:12,padding:'4px 0',overflowWrap:'anywhere'}}>Player {PLAYER_VERSION} · Video {videoName} · Revision {String(revision.revisionId||'').slice(0,8)}</div>
   <div id="remotion-canvas" style={{width:'100%',aspectRatio:`${data.width||1080}/${data.height||1920}`,maxHeight:'65vh',margin:'auto'}}>
-   <SharedPlayer key={revision.revisionId} root={playbackRoot} playerRef={ref} style={{width:'100%',height:'100%'}} />
+   <SharedPlayer key={revision.revisionId} root={playbackRoot} playerRef={ref} numberOfSharedAudioTags={0} style={{width:'100%',height:'100%'}} />
   </div>
   {status && !/initializing|ready|paused/i.test(status) && <div id="preview-audio-status" role="status" style={{fontSize:12,padding:'4px 0'}}>{status.replace(/^Web Audio /,'Audio ')}</div>}
  </div>;
