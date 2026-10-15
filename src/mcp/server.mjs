@@ -4,6 +4,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 import { registerAppResource, registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import { z } from "zod";
 import {publishPreviewRevision} from "./remote-assets.mjs";
+import {startCompileOperation} from "./compile-operation.mjs";
 import {
   TOOL_NAME, RESOURCE_URI, LEGACY_RESOURCE_URIS, buildPreviewResourceResult, previewCsp, getPreviewMedia, ensureVideoPreview, stopManagedVideoPreview,
 } from "./preview.mjs";
@@ -51,16 +52,14 @@ registerAppTool(
   },
   async ({ path, relay }) => {
     try {
-      const preview = await ensureVideoPreview(path);
-      // The static MCP App fetches immutable compiled JSON over NeoY HTTPS.
-      const payload = { ...preview, requestedPath: path, ...(relay ? {relay} : {}) };
-      publishPreviewRevision(path,{id:payload.id,revisionId:payload.revisionId,contentHash:payload.contentHash,requestedPath:path,path,compiledUrl:payload.compiledUrl});
+      const operation=startCompileOperation(path,relay);
+      const payload={...operation,...(relay ? {relay} : {})};
       return {
-        content: [{ type: "text", text: `Video ready for review: ${preview.path}` }],
+        content: [{ type: "text", text: `Compilation started: ${operation.path}` }],
         structuredContent: payload,
         _meta: {
-          ui: { resourceUri: preview.resourceUri, props: payload },
-          "ui/resourceUri": preview.resourceUri,
+          ui: { resourceUri: RESOURCE_URI, props: payload },
+          "ui/resourceUri": RESOURCE_URI,
         },
       };
     } catch (error) {

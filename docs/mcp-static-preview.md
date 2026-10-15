@@ -21,3 +21,28 @@
 
 ## Verification
 Run focused Vitest tests and node scripts/verify-mcp-preview.mjs, then independently inspect the real ChatGPT hosted iframe with Browser Workspace. A passing compiler, a compiled tool result, and a working hosted MCP player are distinct gates. Do not approve automatically.
+
+
+## Asynchronous compilation and in-app progress (v21)
+
+markcut.preview validates the Markdown source, writes a transient operation record,
+spawns a detached compiler worker, and returns immediately with operationId,
+operationUrl, state=compiling, path and resourceUri.
+
+The worker publishes its status through NeoY File Server under
+/files/_neoy/markcut/operations/<uuid>.json. It reports actual stages:
+checking-cache, parsing-markdown, resolving-assets-and-generating-media,
+compiling-scenes, freezing-preview-assets and publishing-static-preview.
+The iframe shows the current stage and elapsed seconds, without a fabricated percent.
+
+Ready status includes a compiledUrl. Failed status includes an error. The iframe
+polls once per second and hides playback and review controls until the immutable
+compiled JSON is available. The compiler then exits, with no long-lived manager.
+
+Status files older than 24 hours are opportunistically pruned during new operations.
+The existing immutable compiled cache keeps up to ten results per Video.
+Source hashes are checked at worker start and again before publishing.
+
+The real hosted ChatGPT iframe was observed while an isolated 30-second MCP probe
+still reported compiling. That validation establishes early mounting, not a
+production video or Google Maps pixel-level verification.

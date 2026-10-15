@@ -11,7 +11,7 @@ describe('Markcut Remotion MCP App',()=>{
   const html=buildPreviewHtml();
   expect(html).toContain('id="remotion-root"');
   expect(html).toContain('id="player-version"');
-  expect(html).toContain('Player v20');
+  expect(html).toContain('Player v21');
   expect(html).toContain('id="video-md-version"');
   expect(html).toContain('https://neoy.example.test/files/_neoy/markcut/player/');
   expect(html).not.toContain('id="remotion-bundle"');

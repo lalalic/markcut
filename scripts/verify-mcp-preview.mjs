@@ -27,12 +27,26 @@ async function connect(){
  await client.connect(transport);
 }
 async function preview(file){
- const result=await client.callTool({name:"markcut.preview",arguments:{path:file}});
- if(result.isError)throw new Error(result.content?.[0]?.text||"preview failed");
- const data=result.structuredContent;
- assert.match(data.compiledUrl,/^https:\/\/neoy\.example\.test\/files\/_neoy\/markcut\/cache\/[a-f0-9]{64}\.json$/);
- assert.ok(!data.previewUrl,"no live local player URL");
- return data;
+ const started=Date.now();
+ const response=await client.callTool({name:"markcut.preview",arguments:{path:file}});
+ if(response.isError)throw new Error(response.content?.[0]?.text||"preview failed");
+ const operation=response.structuredContent;
+ assert.ok(operation.operationId,"tool should return operation identity immediately");
+ assert.match(operation.operationUrl,/^https:\/\/neoy\.example\.test\/files\/_neoy\/markcut\/operations\/[a-f0-9-]{36}\.json$/);
+ assert.ok(Date.now()-started<3000,"the tool should not await compilation");
+ const statusFile=join(exportRoot,"operations",operation.operationId+".json");
+ for(let attempt=0;attempt<300;attempt++){
+  const status=JSON.parse(await readFile(statusFile,"utf8"));
+  if(status.state==="failed")throw new Error("Compiler failed: "+status.error);
+  if(status.state==="ready"){
+   const data=status.result;
+   assert.match(data.compiledUrl,/^https:\/\/neoy\.example\.test\/files\/_neoy\/markcut\/cache\/[a-f0-9]{64}\.json$/);
+   assert.ok(!data.previewUrl,"no local player process");
+   return data;
+  }
+  await new Promise(r=>setTimeout(r,100));
+ }
+ throw new Error("Compile worker did not finish within 30 seconds");
 }
 async function compiled(p){
  return JSON.parse(await readFile(join(exportRoot,"cache",p.contentHash+".json"),"utf8"));

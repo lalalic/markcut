@@ -36,7 +36,7 @@ function applyToolInput(params){
  loadRemoteScenes(expectedPath);
  showVideoName(expectedPath);
  const cached=resultsByPath.get(expectedPath);
- if(cached){renderRevision(cached);return;}
+ if(cached){if(cached.operationUrl)trackOperation(cached);else renderRevision(cached);return;}
  if(window.__markcutRevision?.path!==expectedPath && window.__markcutRevision?.requestedPath!==expectedPath){
   identity=null;
   window.__markcutRevision=null;
@@ -45,12 +45,39 @@ function applyToolInput(params){
   status.textContent='Waiting for matching video scenes…';
  }
 }
+let operationGeneration=0;
+async function trackOperation(data){
+ const generation=++operationGeneration;
+ ++fallbackGeneration; // Prevent an old published revision from replacing in-progress UI.
+ let url;
+ try{url=new URL(data.operationUrl);}catch{status.textContent='Invalid operation URL';return;}
+ if(url.origin!==__MARKCUT_ORIGIN__||!url.pathname.startsWith('/files/_neoy/markcut/operations/')||!(/^[a-f0-9-]{36}[.]json$/.test(url.pathname.split('/').pop()))){
+  status.textContent='Invalid operation URL';return;
+ }
+ document.getElementById('interactive-ui').hidden=true;
+ reviewReadonly(true,'Compiling…');
+ for(let attempt=0;attempt<1800&&generation===operationGeneration;attempt++){
+  try{
+   const response=await fetch(url.href+'?t='+Date.now(),{cache:'no-store'});
+   if(!response.ok)throw new Error('HTTP '+response.status);
+   const progress=await response.json();
+   if(generation!==operationGeneration)return;
+   if(progress.state==='ready'&&progress.result){renderRevision({...progress.result,requestedPath:data.requestedPath||data.path,relay:data.relay});return;}
+   if(progress.state==='failed'){reviewReadonly(true,'Compilation failed: '+progress.error);return;}
+   const elapsed=Math.round((Date.now()-(progress.startedAt||Date.now()))/1000);
+   status.textContent='Compiling · '+(progress.stage||'working')+' · '+elapsed+'s';
+  }catch(e){status.textContent='Waiting for compile status… '+String(e);}
+  await new Promise(resolve=>setTimeout(resolve,1000));
+ }
+ if(generation===operationGeneration)status.textContent='Compilation status timed out';
+}
 function applyToolResult(params){
  const result=params?.result||params||{};
  const data=result.structuredContent||result.structured_content||result._meta?.ui?.props||{};
  if(typeof data.path==='string')resultsByPath.set(data.path,data);
  if(typeof data.requestedPath==='string')resultsByPath.set(data.requestedPath,data);
  if(expectedPath&&data.path!==expectedPath&&data.requestedPath!==expectedPath)return;
+ if(data.operationUrl){trackOperation(data);return;}
  renderRevision(data);
 }
 let renderGeneration=0;
@@ -88,6 +115,7 @@ async function renderRevision(data){
    compiled=await response.json();
   }
   if(generation!==renderGeneration)return;
+  document.getElementById('interactive-ui').hidden=false;
   window.__markcutRevision={...data,compiled};
   window.dispatchEvent(new CustomEvent('markcut:revision',{detail:window.__markcutRevision}));
   status.textContent=data.compiledUrl?'Static scenes loaded.':'Remotion scenes loaded for review.';

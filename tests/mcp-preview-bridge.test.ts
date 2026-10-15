@@ -8,7 +8,7 @@ function harness(remoteData?:any, fetchOverride?:(url:string)=>Promise<any>) {
  const listeners:Record<string,Array<(evt:any)=>void>>={};
  const element=()=>({value:'',textContent:'',onclick:null as null|(()=>void)});
  const nodes:Record<string,ReturnType<typeof element>>={
-  feedback:element(),status:element(),'path-label':element(),'video-md-version':element(),approve:element(),changes:element()
+  feedback:element(),status:element(),'path-label':element(),'video-md-version':element(),'interactive-ui':element(),approve:element(),changes:element()
  };
  const parent={postMessage:(m:any)=>messages.push(m)};
  const events:any[]=[];
@@ -160,5 +160,43 @@ describe('static compiled-JSON bridge',()=>{
   h.nodes.approve.onclick?.();
   await nextTick();
   expect(h.messages.filter(m=>m.method==='ui/message')).toHaveLength(0);
+ });
+});
+
+describe('async compilation UI transition',()=>{
+ const origin='https://neoy.qili2.com/files/_neoy/markcut/';
+ const hash='d'.repeat(64);
+ const opId='12345678-1234-1234-1234-123456789abc';
+ const operation={operationId:opId,operationUrl:origin+'operations/'+opId+'.json',path:'/tmp/video.md',requestedPath:'/tmp/video.md'};
+ const compiled={width:640,height:480,fps:30,children:[{name:'Ready Scene'}]};
+ it('keeps interactive controls hidden while compiling and reveals the player on ready',async()=>{
+  let n=0;
+  const fetch=async (url:string)=>{
+   if(url.includes('/operations/')){
+    n++;
+    return {ok:true,json:async()=>n===1?{state:'compiling',stage:'generating-media',startedAt:Date.now()}:
+      {state:'ready',result:{id:hash,revisionId:hash,contentHash:hash,path:'/tmp/video.md',compiledUrl:origin+'cache/'+hash+'.json'}}};
+   }
+   if(url.includes('/cache/'))return {ok:true,json:async()=>compiled};
+   return {ok:true,json:async()=>({contentHash:hash})};
+  };
+  const h=harness(undefined,fetch);
+  h.result(operation);
+  expect(h.nodes['interactive-ui'].hidden).toBe(true);
+  expect(h.nodes.approve.disabled).toBe(true);
+  await nextTick();
+  expect(h.nodes.status.textContent).toContain('generating-media');
+  await new Promise(resolve=>setTimeout(resolve,1150));
+  expect(h.events.at(-1)?.detail?.compiled.children[0].name).toBe('Ready Scene');
+  expect(h.nodes['interactive-ui'].hidden).toBe(false);
+  expect(h.nodes.approve.disabled).toBe(false);
+ });
+ it('keeps player hidden on a failed compile',async()=>{
+  const h=harness(undefined,async()=>({ok:true,json:async()=>({state:'failed',error:'TTS unavailable'})}));
+  h.result(operation);
+  await nextTick();
+  expect(h.nodes['interactive-ui'].hidden).toBe(true);
+  expect(h.nodes.approve.disabled).toBe(true);
+  expect(h.nodes.status.textContent).toContain('TTS unavailable');
  });
 });

@@ -17,7 +17,12 @@ describe('stateless Markcut MCP cache',()=>{
    const versions=[];
    for(let i=0;i<11;i++){
     await writeFile(input,'# video\\nwidth:640 height:480 fps:30 layout:series\\n## Intro\\n- image src:photo.png duration:1 name:"Version '+i+'"\\n');
-    const result=await ensureVideoPreview(input);
+    const stages:string[]=[];
+    const result=await ensureVideoPreview(input,{onProgress:(stage:string)=>stages.push(stage)});
+    if(i===0)expect(stages).toEqual([
+     'checking-cache','parsing-markdown','resolving-assets-and-generating-media',
+     'compiling-scenes','freezing-preview-assets','publishing-static-preview'
+    ]);
     versions.push(result);
     expect(result.compiledUrl).toContain('/files/_neoy/markcut/cache/'+result.contentHash+'.json');
     expect(JSON.parse(await readFile(join(run,'.markcut/video/default/compiled.json'),'utf8'))).toBeTruthy();
