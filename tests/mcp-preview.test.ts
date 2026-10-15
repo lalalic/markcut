@@ -11,7 +11,7 @@ describe('Markcut Remotion MCP App',()=>{
   const html=buildPreviewHtml();
   expect(html).toContain('id="remotion-root"');
   expect(html).toContain('id="player-version"');
-  expect(html).toContain('Player v17');
+  expect(html).toContain('Player v18');
   expect(html).toContain('id="video-md-version"');
   expect(html).toContain('https://neoy.example.test/files/_neoy/markcut/player/');
   expect(html).not.toContain('id="remotion-bundle"');
@@ -26,7 +26,12 @@ describe('Markcut Remotion MCP App',()=>{
    const result=buildPreviewResourceResult(uri);
    expect(result.contents[0].uri).toBe(uri);
    expect(result.contents[0].text).toContain('remotion-canvas');
-   expect(result.contents[0]._meta.ui.csp.connectDomains).toEqual(['https://neoy.example.test']);
+   expect(result.contents[0]._meta.ui.csp.connectDomains).toEqual([
+    'https://neoy.example.test',
+    'https://maps.googleapis.com', 'https://maps.gstatic.com',
+    'https://maps-api-v3.googleapis.com', 'https://routes.googleapis.com',
+   ]);
+   expect(result.contents[0]._meta.ui.csp.resourceDomains).toContain('https://maps.googleapis.com');
   }
  });
  it('does not perform secondary tool calls for compiled scenes',()=>{

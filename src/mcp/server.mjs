@@ -5,7 +5,7 @@ import { registerAppResource, registerAppTool } from "@modelcontextprotocol/ext-
 import { z } from "zod";
 import {publishPreviewRevision} from "./remote-assets.mjs";
 import {
-  TOOL_NAME, RESOURCE_URI, LEGACY_RESOURCE_URIS, buildPreviewResourceResult, getPreviewMedia, ensureVideoPreview, stopManagedVideoPreview,
+  TOOL_NAME, RESOURCE_URI, LEGACY_RESOURCE_URIS, buildPreviewResourceResult, previewCsp, getPreviewMedia, ensureVideoPreview, stopManagedVideoPreview,
 } from "./preview.mjs";
 
 const server = new McpServer({ name: "markcut", version: "3.2.0" });
@@ -85,7 +85,7 @@ for (const uri of [RESOURCE_URI, ...LEGACY_RESOURCE_URIS]) {
       _meta: {
         ui: {
           prefersBorder: true,
-          csp: { connectDomains: [], resourceDomains: [], frameDomains: [] },
+          csp: previewCsp(),
         },
       },
     },

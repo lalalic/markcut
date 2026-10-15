@@ -7,7 +7,7 @@ import { buildPreviewBridgeScript } from "./bridge.mjs";
 import { externalizePreviewMedia, publicOrigin, resolveMountedFile, resolvePreviewPath, publishPlayerBundle } from "./remote-assets.mjs";
 
 export const TOOL_NAME = "markcut.preview";
-export const RESOURCE_URI = "ui://markcut/video-preview-v17.html";
+export const RESOURCE_URI = "ui://markcut/video-preview-v18.html";
 // Legacy entrypoints remain registered, but serve the current implementation.
 export const LEGACY_RESOURCE_URIS = [
   "ui://markcut/video-preview-v3.html",
@@ -24,8 +24,24 @@ export const LEGACY_RESOURCE_URIS = [
   "ui://markcut/video-preview-v14.html",
   "ui://markcut/video-preview-v15.html",
   "ui://markcut/video-preview-v16.html",
+  "ui://markcut/video-preview-v17.html",
 ];
 export const RESOURCE_MIME_TYPE = "text/html;profile=mcp-app";
+// Google Maps JS loads libraries, tiles and Routes RPCs from these HTTPS origins.
+// The MCP app sandbox enforces the declared domains; native localhost does not.
+export const MAPS_CSP_DOMAINS = Object.freeze([
+  "https://maps.googleapis.com",
+  "https://maps.gstatic.com",
+  "https://maps-api-v3.googleapis.com",
+  "https://routes.googleapis.com",
+]);
+export function previewCsp() {
+  return {
+    connectDomains: [publicOrigin(), ...MAPS_CSP_DOMAINS],
+    resourceDomains: [publicOrigin(), ...MAPS_CSP_DOMAINS],
+    frameDomains: [],
+  };
+}
 export const PLAYER_PORT = 4571;
 export const PLAYER_ORIGIN = `http://127.0.0.1:${PLAYER_PORT}`;
 
@@ -69,11 +85,7 @@ export function buildPreviewResourceResult(resourceUri = RESOURCE_URI) {
       _meta: {
         ui: {
           prefersBorder: true,
-          csp: {
-            connectDomains: [publicOrigin()],
-            resourceDomains: [publicOrigin()],
-            frameDomains: [],
-          },
+          csp: previewCsp(),
         },
       },
     }],
@@ -194,7 +206,7 @@ export function buildPreviewHtml() {
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Markcut Preview</title>
 <style>body{font:14px system-ui;margin:0;background:#fff;color:#17202a}main{padding:12px;max-width:960px;margin:auto}h1{font-size:17px}.path{font-size:12px;overflow-wrap:anywhere}.transport{display:flex;align-items:center;gap:10px;padding:12px 0}.transport input{flex:1;min-width:50px}button{cursor:pointer;padding:8px;border-radius:6px;border:1px solid #a8a8a8}#approve{background:#198038;color:white}#changes{background:#c72b29;color:white}textarea{width:100%;box-sizing:border-box;min-height:66px}.review-actions{display:flex;justify-content:space-between;align-items:center;width:100%;gap:16px}.review-actions button{min-width:150px}#remotion-canvas{background:#090b12}#status{padding:8px 0}</style></head>
-<body><main><h1>Markcut · Video Review</h1><div id="player-version" style="font-weight:600;font-size:13px">Player v17 · Video <span id="video-md-version">Waiting for video...</span></div><div class="path" id="path-label" hidden></div><div id="remotion-root"></div>
+<body><main><h1>Markcut · Video Review</h1><div id="player-version" style="font-weight:600;font-size:13px">Player v18 · Video <span id="video-md-version">Waiting for video...</span></div><div class="path" id="path-label" hidden></div><div id="remotion-root"></div>
 <label for="feedback">Review feedback</label><textarea id="feedback"></textarea><div id="status" role="status">Starting preview…</div>
 <div class="review-actions"><button id="changes">Request changes</button><button id="approve">Approve</button></div></main>
 <script src="${playerScriptUrl}"></script>
