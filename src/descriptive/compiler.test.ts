@@ -943,7 +943,7 @@ describe("compileDescriptiveRoot", () => {
     expect(compiled.durationInSeconds).toBe(0);
   });
 
-  it("generates unique ids for nodes without id", () => {
+  it("does not synthesize event ids for nodes without explicit id", () => {
     const compiled = compileDescriptiveRoot({
       children: [
         { type: "image", src: "a.jpg", duration: 1 },
@@ -952,9 +952,8 @@ describe("compileDescriptiveRoot", () => {
     });
 
     const [a, b] = compiled.children as any[];
-    expect(a.id).toBeTruthy();
-    expect(b.id).toBeTruthy();
-    expect(a.id).not.toBe(b.id);
+    expect(a.id).toBeUndefined();
+    expect(b.id).toBeUndefined();
   });
 });
 

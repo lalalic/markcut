@@ -34,7 +34,7 @@ jobs:
         timeout-minutes: 10
         uses: lalalic/agents-relay/.github/actions/run-bounded-tests@main
         with:
-          command: npm test
+          command: npm run test:publish
 
       - name: Choose next version
         id: publication

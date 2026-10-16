@@ -598,6 +598,14 @@ function processMDASTListItem(item: any, parent: ParentNode, lines: string[]): v
     }
   }
 
+  // Script aliases may supply text through an indented ~~~script block.
+  // Reject an empty alias only after processing those property blocks.
+  if (/^script(?:\s|$)/.test(text) && !(node as any).script?.trim() && !(node as any).on) {
+    throw new DslError("script requires text content", {
+      line: firstPara.position?.start?.line,
+      lineText: text,
+    });
+  }
 }
 
 /** Apply key/value attrs to a scene node (subset of root attrs). */
