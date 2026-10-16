@@ -27,6 +27,15 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
           package-manager-cache: false
 
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run bounded tests
+        timeout-minutes: 10
+        uses: lalalic/agents-relay/.github/actions/run-bounded-tests@main
+        with:
+          command: npm test
+
       - name: Choose next version
         id: publication
         shell: bash
@@ -72,42 +81,17 @@ jobs:
           stage: npm publish
           sha: ${{ github.sha }}
           repository: ${{ github.repository }}
-      # Verification and Relay reporting are post-publish diagnostics. Neither can
-      # change the result of a successful npm publication.
-      - name: Verify published npm artifact
-        id: verify
-        if: ${{ steps.publication.outcome == 'success' && steps.publish.outcome == 'success' }}
-        continue-on-error: true
-        env:
-          PACKAGE_NAME: ${{ steps.publication.outputs.name }}
-          PACKAGE_VERSION: ${{ steps.publication.outputs.version }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          # npm provenance upload can complete before the package becomes queryable.
-          # Allow registry processing time without ever retrying npm publish.
-          for attempt in $(seq 1 60); do
-            ACTUAL=$(npm view "$PACKAGE_NAME@$PACKAGE_VERSION" version --json 2>/dev/null || true)
-            if [[ "$ACTUAL" == "\"$PACKAGE_VERSION\"" || "$ACTUAL" == "$PACKAGE_VERSION" ]]; then
-              echo "artifact=$PACKAGE_NAME" >> "$GITHUB_OUTPUT"
-              echo "version=$PACKAGE_VERSION" >> "$GITHUB_OUTPUT"
-              echo "Verified npm package $PACKAGE_NAME@$PACKAGE_VERSION"
-              exit 0
-            fi
-            if [[ "$attempt" -lt 60 ]]; then sleep 10; fi
-          done
-          echo "::warning::Could not verify $PACKAGE_NAME@$PACKAGE_VERSION on npm; Relay reporting skipped"
-          exit 1
-
-      - name: Report verified publication to Agents Relay
+      # Report the exact package/version prepared for a successful npm publish.
+      # Reporting is best-effort and must never change the npm publish result.
+      - name: Report successful publication to Agents Relay
         id: relay_report
-        if: ${{ steps.verify.outcome == 'success' }}
+        if: ${{ steps.publish.outcome == 'success' }}
         continue-on-error: true
         uses: lalalic/agents-relay/.github/actions/report-publication@publication-v1
         with:
           token: ${{ github.token }}
-          artifact: ${{ steps.verify.outputs.artifact }}
-          version: ${{ steps.verify.outputs.version }}
+          artifact: ${{ steps.publication.outputs.name }}
+          version: ${{ steps.publication.outputs.version }}
           channel: npm
           sha: ${{ github.sha }}
           repository: ${{ github.repository }}
@@ -117,15 +101,14 @@ jobs:
         env:
           PACKAGE_NAME: ${{ steps.publication.outputs.name }}
           PACKAGE_VERSION: ${{ steps.publication.outputs.version }}
-          VERIFY_OUTCOME: ${{ steps.verify.outcome }}
           REPORT_OUTCOME: ${{ steps.relay_report.outcome }}
         run: |
           echo "Published $PACKAGE_NAME@$PACKAGE_VERSION to npm" >> "$GITHUB_STEP_SUMMARY"
-          echo "npm verification: $VERIFY_OUTCOME; Relay reporting: $REPORT_OUTCOME" >> "$GITHUB_STEP_SUMMARY"
+          echo "Relay reporting: $REPORT_OUTCOME" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Warn when publication reporting fails
-        if: ${{ steps.publish.outcome == 'success' && (steps.verify.outcome == 'failure' || steps.relay_report.outcome == 'failure') }}
-        run: echo "::warning::npm publication succeeded but registry verification or Relay reporting failed; inspect this run and retry only reporting, never npm publication."
+        if: ${{ steps.publish.outcome == 'success' && steps.relay_report.outcome == 'failure' }}
+        run: echo "::warning::npm publication succeeded but Relay reporting failed; inspect this run. Do not retry npm publication."
 
       - name: Summarize failure
         if: ${{ failure() }}
