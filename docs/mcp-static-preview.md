@@ -46,3 +46,12 @@ Source hashes are checked at worker start and again before publishing.
 The real hosted ChatGPT iframe was observed while an isolated 30-second MCP probe
 still reported compiling. That validation establishes early mounting, not a
 production video or Google Maps pixel-level verification.
+
+
+## Current hosted Player (v24)
+
+The immutable MCP player shares the native Remotion player and scene navigator. The header contains Markcut/title, optional browser-TTS toggle, and version. The human may Send feedback with scene/time context or Approve a specific revision. These review decisions use MCP Apps `ui/message`; the agent performs all Markdown changes and repeats `markcut.preview` to show a new revision. Host end-to-end continuation is not yet production-verified.
+
+During compilation, Google Maps route/cinematic scenes are optionally rendered by Remotion to MP4 and published as immutable generated media. On successful render the compiled stream references video nodes, and the public JSON omits the Google Maps API key. If no key is available or rendering fails, the original live Map component is retained. The compiler's launch environment must supply `GOOGLE_MAPS_API_KEY`; the NeoY MCP entrypoint is `scripts/launch-mcp.sh` which loads the login environment. This is separate from the local CLI preview.
+
+Player Browser TTS is a **playback-only** mode: it uses existing VTT text for speech and captions, defaulting on when VTT exists. Turning it off restores generated audio. STT is not used in this mode; compilation-time TTS is currently unchanged.

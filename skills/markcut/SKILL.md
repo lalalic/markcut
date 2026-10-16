@@ -1,6 +1,6 @@
 ---
 name: markcut
-description: use markdown to describe stream trees, provide CLI to render stream trees to video via `npx @lalalic/markcut`. use it to structure video scenes, and generate TTS, TTI, TTV, STT media automatically.
+description: Author, compile, preview, review and render videos from Markcut Markdown stream trees. Use for scene planning, TTS/TTI/TTV/STT media generation, Google Maps GPS routes, native CLI previews, and interactive ChatGPT MCP video reviews with contextual feedback and approval.
 ---
 
 ## Stream Tree Specs
@@ -78,15 +78,21 @@ npx @lalalic/markcut spots --waypoints "lat,lng;lat,lng" # discover POIs along a
 
 ---
 
-## MCP Markdown Review
+## MCP Video Preview and Human Review (Player v24)
 
-Use the model-visible MCP tool `markcut.preview({ path })` when a human needs to review a Markdown artifact. This is a generic Markdown review surface and is separate from the video-specific `npx @lalalic/markcut preview <file>` CLI.
+Use the model-visible `markcut.preview({path})` tool when a human needs to **watch and review a Markcut video** in ChatGPT. It is a video player, **not** a generic Markdown renderer and not the same as the local `npx @lalalic/markcut preview <file>` command.
 
-- `path` must be an absolute path to a Markdown file.
-- The user sees the rendered Markdown and can either **Approve** or submit feedback with **Request changes**.
-- Markcut does not edit the file. The calling agent owns all source changes.
-- On `approved`, continue the workflow.
-- On `changes_requested`, apply the feedback to the source Markdown, then call `markcut.preview({ path })` again for another review round.
+- Supply an absolute `.md` path (or a supported NeoY mounted HTTPS Markdown URL). An optional `relay` object correlates an Agents Relay task but is not needed for standalone review.
+- The MCP call returns promptly with an asynchronous compilation operation. The hosted iframe shows actual compilation stages, then loads a published immutable compiled JSON and media snapshot. There is no persistent player-manager process.
+- Player controls include Play/Pause, Seek, volume/audio, fullscreen and a **horizontal clickable scene list** sourced from compiled scene metadata. The title bar displays **Markcut · video title**, a **Browser TTS** switch, and the player version at right.
+- **Browser TTS** is an optional preview playback mode (default on when subtitle VTT exists). It speaks existing caption/script text in the browser; it does **not** use STT. Toggle off for generated audio and the original subtitle renderer. This switch does not currently skip compilation-time TTS or affect final renders. Playback timing and seeking are approximate for browser speech.
+- Google Maps `map` streams (route/cinematic) can be prerendered by Remotion into MP4 during MCP compilation. The published compiled JSON then references video streams, not live map tiles or a browser-exposed API key. If the render key is unavailable or prerendering fails, the original live Google Maps stream is preserved as a fallback. Native Map support remains available.
+- **Send feedback** (formerly Request changes) requires text and sends `ui/message` with `decision: "changes_requested"`, the source path, revision/content hash, and `playbackContext` (current `sceneId`, `sceneName`, `timeSeconds`) when available. The calling agent must interpret the feedback, edit the supplied video Markdown, and invoke `markcut.preview` again for the next turn. The player does not edit files.
+- **Approve** sends `decision: "approved"` via `ui/message` for the specific revision. Do not approve a different/newer revision on the basis of an old review.
+- Earlier previews are read-only once superseded; the submitted revision is checked against the latest published hash.
+- **Verification boundary:** compilation, static MP4 publication, and focused tests have passed, but complete real-hosted ChatGPT feedback → agent edit → re-preview → approval E2E still requires acceptance testing. Do not claim it is verified based on tool metadata alone.
+
+See [docs/mcp-static-preview.md](../../docs/mcp-static-preview.md) for the lifecycle and [./review.md](./review.md) for content-quality review guidance.
 
 ## review
 use the review contract defined in [./review.md](./review.md) to guide the review process.
