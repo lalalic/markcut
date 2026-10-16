@@ -16,6 +16,7 @@ concurrency:
 
 jobs:
   publish:
+    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -83,7 +84,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for attempt in 1 2 3 4 5 6 7 8; do
+          # npm provenance upload can complete before the package becomes queryable.
+          # Allow registry processing time without ever retrying npm publish.
+          for attempt in $(seq 1 60); do
             ACTUAL=$(npm view "$PACKAGE_NAME@$PACKAGE_VERSION" version --json 2>/dev/null || true)
             if [[ "$ACTUAL" == "\"$PACKAGE_VERSION\"" || "$ACTUAL" == "$PACKAGE_VERSION" ]]; then
               echo "artifact=$PACKAGE_NAME" >> "$GITHUB_OUTPUT"
@@ -91,7 +94,7 @@ jobs:
               echo "Verified npm package $PACKAGE_NAME@$PACKAGE_VERSION"
               exit 0
             fi
-            if [[ "$attempt" -lt 8 ]]; then sleep 5; fi
+            if [[ "$attempt" -lt 60 ]]; then sleep 10; fi
           done
           echo "::warning::Could not verify $PACKAGE_NAME@$PACKAGE_VERSION on npm; Relay reporting skipped"
           exit 1

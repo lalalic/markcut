@@ -1,0 +1,77 @@
+name: Verify and report existing npm publication
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Exact version already published to npm
+        required: true
+        type: string
+      source_sha:
+        description: Merged source commit SHA of the original publish run
+        required: true
+        type: string
+      publish_run_id:
+        description: GitHub Actions run that actually published the package
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+  issues: write
+  pull-requests: read
+
+jobs:
+  verify-and-report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+          package-manager-cache: false
+      - name: Verify original publish run
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ inputs.source_sha }}
+          RELEASE_RUN: ${{ inputs.publish_run_id }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo 'Invalid source SHA'; exit 1; }
+          [[ "$RELEASE_RUN" =~ ^[0-9]+$ ]] || { echo 'Invalid run ID'; exit 1; }
+          RUN=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RELEASE_RUN")
+          echo "$RUN" | jq -e --arg sha "$RELEASE_SHA" \
+            '.head_sha == $sha and .head_branch == "main" and .status == "completed" and .conclusion == "success" and (.path | endswith(".github/workflows/publish.yml"))' >/dev/null
+          gh api --paginate "repos/$GITHUB_REPOSITORY/actions/runs/$RELEASE_RUN/jobs?per_page=100" \
+            --jq '.jobs[] | select(.steps[]? | .name == "Publish" and .conclusion == "success") | .id' \
+            | grep -E '^[0-9]+$' >/dev/null
+      - name: Verify exact npm artifact without publishing
+        shell: bash
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.-]+)?$ ]] || exit 1
+          NAME=$(node -p "require('./package.json').name")
+          for attempt in $(seq 1 60); do
+            ACTUAL=$(npm view "$NAME@$VERSION" version --prefer-online --json 2>/dev/null || true)
+            if [[ "$ACTUAL" == "\"$VERSION\"" || "$ACTUAL" == "$VERSION" ]]; then
+              echo "Verified existing $NAME@$VERSION from npm"
+              exit 0
+            fi
+            if [[ "$attempt" -lt 60 ]]; then sleep 10; fi
+          done
+          echo "Cannot verify existing $NAME@$VERSION; no report was sent" >&2
+          exit 1
+      - name: Report only verified publication to Relay
+        uses: lalalic/agents-relay/.github/actions/report-publication@publication-v1
+        with:
+          token: ${{ github.token }}
+          artifact: '@lalalic/markcut'
+          version: ${{ inputs.version }}
+          channel: npm
+          sha: ${{ inputs.source_sha }}
+          repository: ${{ github.repository }}
