@@ -35,7 +35,7 @@ describe('MCP Remotion bridge',()=>{
   h.dispatch({method:'ui/notifications/tool-input',params:{arguments:{path}}});
   for(let i=0;i<12&&!h.events.some(e=>e.detail?.revisionId==='remote-r1');i++)await nextTick();
   expect(h.events.at(-1)?.detail?.revisionId).toBe('remote-r1');
-  expect(h.nodes.status.textContent).toBe('Remotion scenes loaded for review.');
+  expect(h.nodes.status.textContent).toBe('');
  });
  it('initializes, delivers compiled scenes and submits review without secondary MCP calls',async()=>{
   const h=harness();

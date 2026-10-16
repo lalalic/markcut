@@ -118,7 +118,7 @@ async function renderRevision(data){
   document.getElementById('interactive-ui').hidden=false;
   window.__markcutRevision={...data,compiled};
   window.dispatchEvent(new CustomEvent('markcut:revision',{detail:window.__markcutRevision}));
-  status.textContent=data.compiledUrl?'Static scenes loaded.':'Remotion scenes loaded for review.';
+  status.textContent='';
   if(!data.compiledUrl){reviewReadonly(false);return;}
   const same=await currentRevisionMatches(activePath,identity.contentHash);
   if(generation!==renderGeneration)return;
@@ -155,10 +155,10 @@ async function submit(decision){
  const result={...identity,decision};
  if(activePath)result.path=activePath;
  if(activeRelay)result.relay=activeRelay;
- if(decision==='changes_requested')result.feedback=value;
+ if(decision==='changes_requested'){result.feedback=value;if(window.__markcutPlaybackContext)result.playbackContext=window.__markcutPlaybackContext;}
  busy=true;status.textContent='Submitting…';
  const submittedId=result.revisionId;
- try{await request('ui/message',{role:'user',content:[{type:'text',text:JSON.stringify(result)}]});if(identity?.revisionId===submittedId){submittedRevision=submittedId;status.textContent=decision==='approved'?'Approved.':'Changes requested. Waiting for the updated preview.';}}
+ try{await request('ui/message',{role:'user',content:[{type:'text',text:JSON.stringify(result)}]});if(identity?.revisionId===submittedId){submittedRevision=submittedId;status.textContent=decision==='approved'?'Approved.':'Feedback sent. Waiting for the updated preview.';}}
  catch(e){busy=false;status.textContent=e.message||'Unable to submit review';}
 }
 document.getElementById('approve').onclick=()=>submit('approved');

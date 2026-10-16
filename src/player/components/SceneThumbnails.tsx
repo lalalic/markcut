@@ -17,12 +17,14 @@ interface SceneThumbnailsProps {
   currentTime: number;
   /** Called when a thumbnail is clicked; receives scene start time in seconds */
   onSeek?: (timeSeconds: number) => void;
+  sceneData?: Scene[];
 }
 
-export function SceneThumbnails({ currentTime, onSeek }: SceneThumbnailsProps) {
+export function SceneThumbnails({ currentTime, onSeek, sceneData }: SceneThumbnailsProps) {
   const [scenes, setScenes] = React.useState<Scene[]>([]);
 
   React.useEffect(() => {
+    if(sceneData)return;
     const variant = (window as any).VARIANT || "default";
     const url = variant !== "default" ? `/api/video-info?variant=${variant}` : "/api/video-info";
     fetch(url)
@@ -31,16 +33,17 @@ export function SceneThumbnails({ currentTime, onSeek }: SceneThumbnailsProps) {
         if (info.scenes) setScenes(info.scenes);
       })
       .catch(() => {});
-  }, []);
+  }, [sceneData]);
 
-  if (scenes.length === 0) return null;
+  const displayScenes=sceneData||scenes;
+  if (displayScenes.length === 0) return null;
 
   // With transition overlaps, scenes can overlap in time (scene[i].end > scene[i+1].start).
   // Iterate backward so the latest scene whose start <= currentTime wins — i.e., as
   // soon as the next scene starts (during a transition), it becomes the active one.
   let activeIdx = -1;
-  for (let i = scenes.length - 1; i >= 0; i--) {
-    if (currentTime >= scenes[i].start) {
+  for (let i = displayScenes.length - 1; i >= 0; i--) {
+    if (currentTime >= displayScenes[i].start) {
       activeIdx = i;
       break;
     }
@@ -48,7 +51,7 @@ export function SceneThumbnails({ currentTime, onSeek }: SceneThumbnailsProps) {
 
   return (
     <div id="scene-thumbnails">
-      {scenes.map((scene, i) => {
+      {displayScenes.map((scene, i) => {
         const isActive = i === activeIdx;
         return (
           <span

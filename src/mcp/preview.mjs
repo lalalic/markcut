@@ -8,7 +8,7 @@ import { buildPreviewBridgeScript } from "./bridge.mjs";
 import { externalizePreviewMedia, publicOrigin, resolveMountedFile, resolvePreviewPath, publishPlayerBundle, publishCompiledCache, prunePublishedCache, EXPORT_ROOT } from "./remote-assets.mjs";
 
 export const TOOL_NAME = "markcut.preview";
-export const RESOURCE_URI = "ui://markcut/video-preview-v21.html";
+export const RESOURCE_URI = "ui://markcut/video-preview-v22.html";
 // Legacy entrypoints remain registered, but serve the current implementation.
 export const LEGACY_RESOURCE_URIS = [
   "ui://markcut/video-preview-v3.html",
@@ -29,6 +29,7 @@ export const LEGACY_RESOURCE_URIS = [
   "ui://markcut/video-preview-v18.html",
   "ui://markcut/video-preview-v19.html",
   "ui://markcut/video-preview-v20.html",
+  "ui://markcut/video-preview-v21.html",
 ];
 export const RESOURCE_MIME_TYPE = "text/html;profile=mcp-app";
 // Google Maps JS loads libraries, tiles and Routes RPCs from these HTTPS origins.
@@ -266,11 +267,11 @@ export function buildPreviewHtml() {
   // Base64 keeps HTML parser-sensitive sequences inside the large JS bundle
   // from terminating the embedding script tag or leaking source into the DOM.
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Markcut Preview</title>
-<style>body{font:14px system-ui;margin:0;background:#fff;color:#17202a}main{padding:12px;max-width:960px;margin:auto}h1{font-size:17px}.path{font-size:12px;overflow-wrap:anywhere}.transport{display:flex;align-items:center;gap:10px;padding:12px 0}.transport input{flex:1;min-width:50px}button{cursor:pointer;padding:8px;border-radius:6px;border:1px solid #a8a8a8}#approve{background:#198038;color:white}#changes{background:#c72b29;color:white}textarea{width:100%;box-sizing:border-box;min-height:66px}.review-actions{display:flex;justify-content:space-between;align-items:center;width:100%;gap:16px}.review-actions button{min-width:150px}#remotion-canvas{background:#090b12}#status{padding:8px 0}</style></head>
-<body><main><h1>Markcut · Video Review</h1><div id="player-version" style="font-weight:600;font-size:13px">Player v21 · Video <span id="video-md-version">Waiting for video...</span></div><div class="path" id="path-label" hidden></div><div id="interactive-ui" hidden><div id="remotion-root"></div>
-<label for="feedback">Review feedback</label><textarea id="feedback"></textarea><div id="status" role="status">Starting preview…</div>
-<div class="review-actions"><button id="changes">Request changes</button><button id="approve">Approve</button></div></div></main>
+<title>Markcut</title>
+<style>body{font:14px system-ui;margin:0;background:#fff;color:#17202a}main{padding:12px;max-width:960px;margin:auto}h1{font-size:17px}.path{font-size:12px;overflow-wrap:anywhere}.transport{display:flex;align-items:center;gap:10px;padding:12px 0}.transport input{flex:1;min-width:50px}button{cursor:pointer;padding:8px;border-radius:6px;border:1px solid #a8a8a8}#approve{background:#198038;color:white}#changes{background:#c72b29;color:white}textarea{width:100%;box-sizing:border-box;min-height:66px}.review-actions{display:flex;justify-content:space-between;align-items:center;width:100%;gap:16px}.review-actions button{min-width:150px}#remotion-canvas{background:#090b12}#status{padding:8px 0}#status:empty{display:none}#scene-thumbnails{display:flex;gap:7px;overflow-x:auto;padding:12px 2px;scrollbar-width:thin} .scene-pill{flex-shrink:0;padding:7px 11px;border:1px solid #d4dbe4;border-radius:9px;cursor:pointer;background:#f5f7fa;color:#475569;font-size:12px;white-space:nowrap} .scene-pill.active{background:#e7f0ff;color:#125ea2;border-color:#408bd7}</style></head>
+<body><main><header style="display:flex;justify-content:space-between;align-items:center"><h1>Markcut · <span id="video-md-version">video</span></h1><span id="player-version" style="font-size:12px;color:#667">v22</span></header><div class="path" id="path-label" hidden></div><div id="interactive-ui" hidden><div id="remotion-root"></div>
+<textarea id="feedback" aria-label="Feedback" placeholder="Feedback on this scene…"></textarea><div id="status" role="status">Starting preview…</div>
+<div class="review-actions"><button id="changes">Send feedback</button><button id="approve">Approve</button></div></div></main>
 <script src="${playerScriptUrl}"></script>
 <script>${buildPreviewBridgeScript().replaceAll("__MARKCUT_ORIGIN__",JSON.stringify(publicOrigin()))}</script></body></html>`;
 }
