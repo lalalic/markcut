@@ -1,11 +1,12 @@
 import * as React from 'react';
 import {createRoot} from 'react-dom/client';
+import {createPortal} from 'react-dom';
 import type {PlayerRef} from '@remotion/player';
 import {SharedPlayer} from '../player/SharedPlayer';
 import {SceneThumbnails} from '../player/components/SceneThumbnails';
 import {useWebAudioPreview} from './web-audio-preview';
 import {useBrowserSpeechPreview} from './browser-speech-preview';
-const PLAYER_VERSION='v23';
+const PLAYER_VERSION='v24';
 function App(){
  const [revision,setRevision]=React.useState<any>(()=>(window as any).__markcutRevision||null);
  const ref=React.useRef<PlayerRef|null>(null);
@@ -54,10 +55,11 @@ function App(){
  if(!data)return <div>Missing compiled scene tree</div>;
  const videoName=String(revision.title||revision.videoTitle||revision.path?.split('/').pop()?.replace(/\.md$/i,'').replace(/[-_]+/g,' ')||'Video');
  return <div id="remotion-preview" data-revision={revision.revisionId}>
-  <label style={{display:"flex",gap:8,alignItems:"center",fontSize:12,padding:"5px 0"}}>
-   <input type="checkbox" checked={useBrowserTts} disabled={!data?.subtitle?.src} onChange={e=>setBrowserTts(e.target.checked)}/>
-   Browser TTS + script captions
-  </label>
+  {document.getElementById("header-tts")&&createPortal(
+   <label style={{display:"flex",gap:5,alignItems:"center",fontSize:12,whiteSpace:"nowrap",cursor:"pointer"}} title="Use browser narration with captions from the script">
+    <input type="checkbox" checked={useBrowserTts} disabled={!data?.subtitle?.src} onChange={e=>setBrowserTts(e.target.checked)}/>
+    Browser TTS
+   </label>,document.getElementById("header-tts")!)}
   <div id="remotion-canvas" style={{width:'100%',aspectRatio:`${data.width||1080}/${data.height||1920}`,maxHeight:'65vh',margin:'auto'}}>
    <SharedPlayer key={revision.revisionId} root={playbackRoot} playerRef={ref} numberOfSharedAudioTags={0} style={{width:'100%',height:'100%'}} />
   </div>
