@@ -58,17 +58,72 @@ jobs:
           npm version "$NEXT" --no-git-tag-version --allow-same-version
 
       - name: Publish
-        run: npm publish --access public
-      # The former lalalic/agents-relay composite actions live in a private
-      # repository and cannot be resolved by this public repository's runner.
-      # Publication must not depend on those inaccessible reporting actions.
-      - name: Summarize publication
-        if: ${{ success() }}
+        id: publish
+        run: npm publish --access public --provenance
+
+      - name: Report publication failure to Agents Relay
+        id: relay_failure_report
+        if: ${{ failure() && steps.publish.outcome == 'failure' }}
+        continue-on-error: true
+        uses: lalalic/agents-relay/.github/actions/report-publication-failure@publication-v1
+        with:
+          token: ${{ github.token }}
+          stage: npm publish
+          sha: ${{ github.sha }}
+          repository: ${{ github.repository }}
+      # Verification and Relay reporting are post-publish diagnostics. Neither can
+      # change the result of a successful npm publication.
+      - name: Verify published npm artifact
+        id: verify
+        if: ${{ steps.publication.outcome == 'success' && steps.publish.outcome == 'success' }}
+        continue-on-error: true
         env:
           PACKAGE_NAME: ${{ steps.publication.outputs.name }}
           PACKAGE_VERSION: ${{ steps.publication.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4 5 6 7 8; do
+            ACTUAL=$(npm view "$PACKAGE_NAME@$PACKAGE_VERSION" version --json 2>/dev/null || true)
+            if [[ "$ACTUAL" == "\"$PACKAGE_VERSION\"" || "$ACTUAL" == "$PACKAGE_VERSION" ]]; then
+              echo "artifact=$PACKAGE_NAME" >> "$GITHUB_OUTPUT"
+              echo "version=$PACKAGE_VERSION" >> "$GITHUB_OUTPUT"
+              echo "Verified npm package $PACKAGE_NAME@$PACKAGE_VERSION"
+              exit 0
+            fi
+            if [[ "$attempt" -lt 8 ]]; then sleep 5; fi
+          done
+          echo "::warning::Could not verify $PACKAGE_NAME@$PACKAGE_VERSION on npm; Relay reporting skipped"
+          exit 1
+
+      - name: Report verified publication to Agents Relay
+        id: relay_report
+        if: ${{ steps.verify.outcome == 'success' }}
+        continue-on-error: true
+        uses: lalalic/agents-relay/.github/actions/report-publication@publication-v1
+        with:
+          token: ${{ github.token }}
+          artifact: ${{ steps.verify.outputs.artifact }}
+          version: ${{ steps.verify.outputs.version }}
+          channel: npm
+          sha: ${{ github.sha }}
+          repository: ${{ github.repository }}
+
+      - name: Summarize publication
+        if: ${{ steps.publish.outcome == 'success' }}
+        env:
+          PACKAGE_NAME: ${{ steps.publication.outputs.name }}
+          PACKAGE_VERSION: ${{ steps.publication.outputs.version }}
+          VERIFY_OUTCOME: ${{ steps.verify.outcome }}
+          REPORT_OUTCOME: ${{ steps.relay_report.outcome }}
         run: |
           echo "Published $PACKAGE_NAME@$PACKAGE_VERSION to npm" >> "$GITHUB_STEP_SUMMARY"
+          echo "npm verification: $VERIFY_OUTCOME; Relay reporting: $REPORT_OUTCOME" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Warn when publication reporting fails
+        if: ${{ steps.publish.outcome == 'success' && (steps.verify.outcome == 'failure' || steps.relay_report.outcome == 'failure') }}
+        run: echo "::warning::npm publication succeeded but registry verification or Relay reporting failed; inspect this run and retry only reporting, never npm publication."
+
       - name: Summarize failure
         if: ${{ failure() }}
         run: |
