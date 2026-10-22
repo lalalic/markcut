@@ -373,10 +373,11 @@ export MARKCUT_VTT_CLI='my-video-backend --prompt "{prompt}" {input}'
 
 ### Global queue CLI template (opt-in)
 
-Set `MARKCUT_QUEUE_CLI_TEMPLATE` in Markcut's environment to route generation and vision CLI subprocesses through the PM2-managed queue worker. `{command}` is the shell-quoted original command; the queue wrapper sets `MARKCUT_QUEUE_ACTIVE=1` for descendants to prevent re-entrance.
+By default, Markcut routes generation and vision CLI subprocesses through its built-in SQLite execution queue. The single worker is started automatically on first use; no Neo or PM2 setup is required. Set `MARKCUT_QUEUE_ENABLED=0` to opt out. An explicit `MARKCUT_QUEUE_CLI_TEMPLATE` may override the default. `{command}` is the shell-quoted original command; the queue wrapper sets `MARKCUT_QUEUE_ACTIVE=1` for descendants to prevent re-entrance.
 
 ```bash
-export MARKCUT_QUEUE_CLI_TEMPLATE='node "$HOME/.agents/skills/queue/queue.mjs" run --queue media-ai -- /bin/sh -c {command}'
+markcut queue status
+markcut queue list
 ```
 
 The template must use an executable reachable from the process environment. To avoid ambiguity with shell quoting of `$HOME`, use a literal absolute path in production. If unset, execution is unchanged. Rendering cache continues to be managed by Markcut, not the queue. No service restart or Markcut-specific queue daemon is required.
