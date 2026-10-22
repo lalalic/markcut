@@ -78,6 +78,10 @@ npx @lalalic/markcut spots --waypoints "lat,lng;lat,lng" # discover POIs along a
 
 ---
 
+## Preview troubleshooting
+
+For native previews, Maps, playback, audio/subtitles or hosted ChatGPT MCP iframe issues, load [Preview Troubleshooting](references/preview-troubleshooting.md). Treat native playback, MCP compilation and hosted iframe rendering as separate verification gates.
+
 ## MCP Video Preview and Human Review (Player v24)
 
 Use the model-visible `markcut.preview({path})` tool when a human needs to **watch and review a Markcut video** in ChatGPT. It is a video player, **not** a generic Markdown renderer and not the same as the local `npx @lalalic/markcut preview <file>` command.
