@@ -48,6 +48,11 @@ Implies `--edit` so you can chat to reshape the story and see live reloads.
 - Discover interesting stops along a route with `markcut spots --waypoints "lat,lng;lat,lng" --photos --markdown`, then compose a `map` storyboard from the returned `waypoints:[...]` line.
 - See [docs/map-dynamic-camera.md](docs/map-dynamic-camera.md) — the agent guide with effects, spots workflow, and copy-paste markdown examples.
 
+### Project-agnostic motion discovery and vertical authoring
+- Discover reusable shots and motion treatments in [the capability catalog](docs/motion-capabilities.json); check props, aspect ratios, provenance, and verification state before use.
+- See [the Markcut/Video Director handoff guide](docs/motion-capabilities.md) and [complete 9:16 example](../../examples/motion-capabilities-9x16.md). Use Markcut's existing JSX imports, stream nodes, preview, and render paths. The Video Director selects the treatment; Markcut owns timeline assembly and QA.
+- The canonical Video Director docs live in `/Users/chengli/Workspace/neo/skills/video-director`; this repo includes a ready-to-apply contribution with its owning paths at `docs/contributions/video-director-capability-discovery.md`.
+
 ### Viral Story requires
 - **Hooks** : why should the viewer watch this?
 - **Conflict** : what challenges or obstacles do the characters face?

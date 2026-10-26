@@ -87,3 +87,7 @@ export function SuperMarkdown({ source }) {
 - `react-webcam-pro` — render webcam video
 - `react-chartjs-2` — render charts with Chart.js at `https://react-chartjs-2.js.org/components`
 - `@xyflow/react` - render diagrams with `https://reactflow.dev/api-reference`
+
+## Reusable motion capability catalog
+
+For project-agnostic motion discovery, see [`docs/motion-capabilities.json`](../../../docs/motion-capabilities.json) and its [authoring guide](../../../docs/motion-capabilities.md). The 9:16 example uses the existing `~~~js imports` mechanism and stays in the normal preview/render flow. The Video Director chooses treatment; Markcut controls timeline and QA. No plugin system is required.

@@ -94,6 +94,10 @@ Any React component from npm, GitHub, or any URL can be imported and used direct
 
 Inline components can be defined entirely in the imports block using `export function`, making the video self-contained with no external files.
 
+## Reusable motion capabilities
+
+Use the project-agnostic [motion capability catalog](docs/motion-capabilities.json) to discover native JSX treatments and their props, aspect ratios, provenance, and verification state. The [9:16 example](examples/motion-capabilities-9x16.md) demonstrates three cinematic shots and three motion-graphic treatments through the existing imports block. See [authoring and handoff guidance](docs/motion-capabilities.md).
+
 ## Docs
 
 | Document | What it covers |

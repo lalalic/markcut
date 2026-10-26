@@ -8,7 +8,7 @@
  */
 import { execSync, spawn } from "node:child_process";
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
-import { resolve, dirname, join } from "node:path";
+import { resolve, dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   DEFAULT_TTS_CLI, DEFAULT_STT_CLI, DEFAULT_TTI_CLI, DEFAULT_TTV_CLI,
@@ -389,11 +389,15 @@ edit=${DEFAULT_EDIT_CLI}`);
         const { bundleFromEntries } = await import("../player/bundler.mjs");
         const entries = parseImportsBlock(rawSource);
         const extraSpecs = extractDependencySpecs(rawSource);
-        const bundleDir = join(ROOT, ".tmp", "component-bundle");
+        // Component bundles must live beneath Remotion's public directory so
+        // staticFile() can load them during render. Keep the import URL
+        // relative; an absolute filesystem path is interpreted as a URL path.
+        const bundlePublicDir = renderPublicDir ?? ROOT;
+        const bundleDir = join(bundlePublicDir, ".tmp", "component-bundle");
         mkdirSync(bundleDir, { recursive: true });
         const bundle = await bundleFromEntries(entries, extraSpecs, rawSource, bundleDir);
         if (bundle.url) {
-          streamTree.imports = join(bundleDir, bundle.url.split("/").pop());
+          streamTree.imports = relative(bundlePublicDir, bundle.url).split(sep).join("/");
           console.log(`  \u2705 components \u2192 ${bundle.exports.join(", ")}`);
         }
       }

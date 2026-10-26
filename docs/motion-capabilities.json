@@ -1,0 +1,100 @@
+{
+  "version": 1,
+  "purpose": "Project-agnostic inventory of motion treatments that can be authored through Markcut's existing Markdown, JSX imports, stream nodes, preview, and render paths.",
+  "capabilities": [
+    {
+      "name": "CinematicPush",
+      "category": "cinematic-shot",
+      "source": "https://github.com/Vincentwei1021/video-shotcraft/tree/43bd349a136651865ecfa6ea1cf012f6e957d304/references/shots/camera/space-camera-moves.md",
+      "version": "43bd349a136651865ecfa6ea1cf012f6e957d304",
+      "license": "Apache-2.0",
+      "aspectRatios": ["9:16"],
+      "propsSchema": { "type": "object", "required": ["title"], "properties": { "title": { "type": "string" }, "eyebrow": { "type": "string" }, "tone": { "type": "string", "description": "CSS color" } } },
+      "renderMode": "native-component",
+      "preview": "../examples/motion-capabilities-9x16.md#cinematic-push",
+      "verified": true,
+      "provenance": "Original Markcut implementation informed by the drone-dive-landing camera-move recipe; no upstream code or media copied."
+    },
+    {
+      "name": "TiltedPanelGlide",
+      "category": "cinematic-shot",
+      "source": "https://github.com/Vincentwei1021/video-shotcraft/tree/43bd349a136651865ecfa6ea1cf012f6e957d304/references/shots/camera/steep-tilt-glide.md",
+      "version": "43bd349a136651865ecfa6ea1cf012f6e957d304",
+      "license": "Apache-2.0",
+      "aspectRatios": ["9:16"],
+      "propsSchema": { "type": "object", "required": ["title"], "properties": { "title": { "type": "string" }, "detail": { "type": "string" }, "tone": { "type": "string", "description": "CSS color" } } },
+      "renderMode": "native-component",
+      "preview": "../examples/motion-capabilities-9x16.md#tilted-panel-glide",
+      "verified": true,
+      "provenance": "Original Markcut component adapts the fixed-camera, moving-panel idea; it does not reuse the upstream implementation."
+    },
+    {
+      "name": "LayeredCardReveal",
+      "category": "cinematic-shot",
+      "source": "https://github.com/Vincentwei1021/video-shotcraft/tree/43bd349a136651865ecfa6ea1cf012f6e957d304/references/shots/camera/space-camera-moves.md",
+      "version": "43bd349a136651865ecfa6ea1cf012f6e957d304",
+      "license": "Apache-2.0",
+      "aspectRatios": ["9:16"],
+      "propsSchema": { "type": "object", "required": ["title", "items"], "properties": { "title": { "type": "string" }, "items": { "type": "array", "minItems": 3, "maxItems": 3, "items": { "type": "string" } } } },
+      "renderMode": "native-component",
+      "preview": "../examples/motion-capabilities-9x16.md#layered-card-reveal",
+      "verified": true,
+      "provenance": "Original Markcut card choreography derived from the abstract exploded-view timing concept; no source code or imagery copied."
+    },
+    {
+      "name": "KineticCaption",
+      "category": "caption-motion",
+      "source": "https://github.com/heygen-com/hyperframes/tree/be4e2e78065b6f3a117ada200de11c35701447ff/registry/examples/kinetic-type",
+      "version": "v0.8.205 (be4e2e78065b6f3a117ada200de11c35701447ff)",
+      "license": "Apache-2.0",
+      "aspectRatios": ["9:16"],
+      "propsSchema": { "type": "object", "required": ["words"], "properties": { "words": { "type": "array", "items": { "type": "string" } }, "accent": { "type": "string", "description": "CSS color" } } },
+      "renderMode": "native-component",
+      "preview": "../examples/motion-capabilities-9x16.md#kinetic-caption",
+      "verified": true,
+      "provenance": "Independent, small-screen caption implementation; HyperFrames registry was design reference only. No code or assets copied."
+    },
+    {
+      "name": "BarChartReveal",
+      "category": "data-motion",
+      "source": "https://github.com/heygen-com/hyperframes/tree/be4e2e78065b6f3a117ada200de11c35701447ff/registry/examples/nyt-graph",
+      "version": "v0.8.205 (be4e2e78065b6f3a117ada200de11c35701447ff)",
+      "license": "Apache-2.0",
+      "aspectRatios": ["9:16"],
+      "propsSchema": { "type": "object", "required": ["title", "values", "labels"], "properties": { "title": { "type": "string" }, "values": { "type": "array", "minItems": 3, "maxItems": 3, "items": { "type": "number" } }, "labels": { "type": "array", "minItems": 3, "maxItems": 3, "items": { "type": "string" } } } },
+      "renderMode": "native-component",
+      "preview": "../examples/motion-capabilities-9x16.md#bar-chart-reveal",
+      "verified": true,
+      "provenance": "Original SVG chart using Markcut tween bindings; HyperFrames chart listing was used as a discovery reference only."
+    },
+    {
+      "name": "MetricCountUp",
+      "category": "data-motion",
+      "source": "https://github.com/heygen-com/hyperframes/tree/be4e2e78065b6f3a117ada200de11c35701447ff/registry",
+      "version": "v0.8.205 (be4e2e78065b6f3a117ada200de11c35701447ff)",
+      "license": "Apache-2.0",
+      "aspectRatios": ["9:16"],
+      "propsSchema": { "type": "object", "required": ["value", "label"], "properties": { "value": { "type": "number" }, "label": { "type": "string" }, "suffix": { "type": "string" } } },
+      "renderMode": "native-component",
+      "preview": "../examples/motion-capabilities-9x16.md#metric-count-up",
+      "verified": true,
+      "provenance": "Independent numeric callout implementation; it uses Markcut's existing tween function and does not copy HyperFrames code."
+    }
+  ],
+  "notIntegrated": [
+    {
+      "name": "srt-whiteboard-animation",
+      "source": "https://github.com/geeklee/srt-whiteboard-animation/tree/696a7243c0e6ffb6827676e539c2ca5ebae2bf6b",
+      "version": "v1.0.0 (696a7243c0e6ffb6827676e539c2ca5ebae2bf6b)",
+      "license": "MIT",
+      "reason": "License permits reuse, but its useful output depends on a separate Python/OpenCV environment, hand-authored source artwork and annotations. No sample art or generated media is redistributed here."
+    },
+    {
+      "name": "hyperframes-3d-motion-catalog-pieces",
+      "source": "https://github.com/heygen-com/hyperframes/blob/be4e2e78065b6f3a117ada200de11c35701447ff/CREDITS.md",
+      "version": "v0.8.205 (be4e2e78065b6f3a117ada200de11c35701447ff)",
+      "license": "Mixed: Apache-2.0 project code; catalog pieces bundle or load GSAP under the GSAP Standard License",
+      "reason": "Not reused because their bundled third-party animation dependency is under a separate standard license. No 3D catalog code, GSAP, or assets are included."
+    }
+  ]
+}
