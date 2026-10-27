@@ -315,7 +315,7 @@ width:640 height:480 layout:series
 layout:parallel
 - image prompt:"a beautiful sunset over mountains" duration:3`;
     const parsed = parseMarkdownDescriptive(doc);
-    const img = parsed.children[0]!.children[0];
+    const img = (parsed.children[0] as any).children[0];
     expect(img.type).toBe("image");
     expect(img.prompt).toBe("a beautiful sunset over mountains");
     expect(img.src).toBeUndefined();
@@ -329,7 +329,7 @@ width:640 height:480 layout:series
 layout:parallel
 - video prompt:"waves crashing on beach" duration:5`;
     const parsed = parseMarkdownDescriptive(doc);
-    const vid = parsed.children[0]!.children[0];
+    const vid = (parsed.children[0] as any).children[0];
     expect(vid.type).toBe("video");
     expect(vid.prompt).toBe("waves crashing on beach");
     expect(vid.src).toBeUndefined();

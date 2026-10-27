@@ -23,14 +23,14 @@ describe("parseImportsBlock", () => {
   it("parses inline function definitions: export function Name(...) { ... }", () => {
     const entries = parseImportsBlock(`export function Hello({ name }) {\n  return <div>Hello {name}</div>;\n}`);
     expect(entries).toHaveLength(1);
-    expect(entries[0].name).toBe("Hello");
-    expect(entries[0].from).toBeUndefined();
+    expect(entries[0]!.name).toBe("Hello");
+    expect(entries[0]!.from).toBeUndefined();
   });
 
   it("parses default export function: export default function Name(...) { ... }", () => {
     const entries = parseImportsBlock(`export default function Greeting({ text }) {\n  return <h1>{text}</h1>;\n}`);
     expect(entries).toHaveLength(1);
-    expect(entries[0].name).toBe("Greeting");
+    expect(entries[0]!.name).toBe("Greeting");
   });
 
   it("handles mixed block with re-exports and inline functions", () => {
@@ -42,7 +42,7 @@ export function Hello() {
     expect(entries).toHaveLength(3);
     expect(entries[0]).toEqual({ name: "PieChart", from: "npm:recharts", exports: "PieChart" });
     expect(entries[1]).toEqual({ name: "StatCounter", from: "npm:stat-counter", exports: "StatCounter" });
-    expect(entries[2].name).toBe("Hello");
+    expect(entries[2]!.name).toBe("Hello");
   });
 
   it("returns empty array for empty input", () => {
@@ -95,7 +95,7 @@ export function Hello({ name }) {
     expect(entries[1]).toEqual({ name: "BarChart", from: "npm:recharts", exports: "BarChart" });
     expect(entries[2]).toEqual({ name: "LineChart", from: "npm:recharts", exports: "LineChart" });
     expect(entries[3]).toEqual({ name: "Counter", from: "npm:stat-counter", exports: "StatCounter" });
-    expect(entries[4].name).toBe("Hello");
+    expect(entries[4]!.name).toBe("Hello");
   });
 
   it("resolves components from importsBlock", () => {
@@ -1030,8 +1030,8 @@ export { PieChart } from "npm:recharts"
 /* block comment */
 export function Hello() { return null; }`);
     expect(entries).toHaveLength(2);
-    expect(entries[0].name).toBe("PieChart");
-    expect(entries[1].name).toBe("Hello");
+    expect(entries[0]!.name).toBe("PieChart");
+    expect(entries[1]!.name).toBe("Hello");
   });
 
   it("handles multiline inline function with nested braces", () => {
@@ -1042,8 +1042,8 @@ export function Hello() { return null; }`);
   </div>;
 }`);
     expect(entries).toHaveLength(1);
-    expect(entries[0].name).toBe("Card");
-    expect(entries[0].from).toBeUndefined();
+    expect(entries[0]!.name).toBe("Card");
+    expect(entries[0]!.from).toBeUndefined();
   });
 
   it("handles default import with as alias followed by bare re-export", () => {

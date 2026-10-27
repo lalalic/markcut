@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { mkdtempSync, writeFileSync, existsSync, rmSync, realpathSync, mkdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
 import { resolveMediaDurations, resolveScripts, resolveSubtitles, resolveGeneratedMedia, resolveIncludes } from "./resolve";
 import type { DescriptiveRoot } from "./compiler";
@@ -129,10 +129,10 @@ describe("resolveSubtitles", () => {
     const result = await resolveSubtitles(root, { outputDir: tmpDir });
     expect(result.subtitle).toBeDefined();
     expect(result.subtitle!.src).toBe(join(tmpDir, "subtitles.vtt"));
-    expect(existsSync(result.subtitle!.src)).toBe(true);
+    expect(existsSync(result.subtitle!.src!)).toBe(true);
 
     // Timestamps should be shifted by the audio offset (5s)
-    const vtt = (await import("node:fs")).readFileSync(result.subtitle!.src, "utf-8");
+    const vtt = (await import("node:fs")).readFileSync(result.subtitle!.src!, "utf-8");
     expect(vtt).toContain("00:00:06.000 --> 00:00:08.000");
   });
 
@@ -147,7 +147,7 @@ describe("resolveSubtitles", () => {
 
 describe("resolveGeneratedMedia", () => {
   it("generates image from prompt via TTI CLI", async () => {
-    (generateTTI as any).mockImplementation((_p, out) => out);
+    (generateTTI as any).mockImplementation((_p: string, out: string) => out);
 
     const root: DescriptiveRoot = {
       children: [{
@@ -169,7 +169,7 @@ describe("resolveGeneratedMedia", () => {
   });
 
   it("generates video from prompt via TTV CLI", async () => {
-    (generateTTV as any).mockImplementation((_p, out) => out);
+    (generateTTV as any).mockImplementation((_p: string, out: string) => out);
 
     const root: DescriptiveRoot = {
       children: [{
@@ -222,7 +222,7 @@ describe("resolveGeneratedMedia", () => {
   });
 
   it("root.tti overrides options.ttiCli", async () => {
-    (generateTTI as any).mockImplementation((_p, out) => out);
+    (generateTTI as any).mockImplementation((_p: string, out: string) => out);
 
     const root: DescriptiveRoot = {
       tti: "root-tti {input} --out {output}",
@@ -242,7 +242,7 @@ describe("resolveGeneratedMedia", () => {
   });
 
   it("options.ttiCli overrides default when no root.tti", async () => {
-    (generateTTI as any).mockImplementation((_p, out) => out);
+    (generateTTI as any).mockImplementation((_p: string, out: string) => out);
 
     const root: DescriptiveRoot = {
       children: [{
@@ -322,7 +322,7 @@ describe("resolveGeneratedMedia", () => {
   });
 
   it("processes multiple image nodes with prompts", async () => {
-    (generateTTI as any).mockImplementation((_p, out) => out);
+    (generateTTI as any).mockImplementation((_p: string, out: string) => out);
 
     const root: DescriptiveRoot = {
       children: [{
@@ -395,7 +395,7 @@ describe("resolveScripts — additional", () => {
 
   it("caches TTS output and skips second generateTTS call", async () => {
     let callCount = 0;
-    (generateTTS as any).mockImplementation((_script, audioPath) => {
+    (generateTTS as any).mockImplementation((_script: string, audioPath: string) => {
       callCount++;
       writeFileSync(audioPath, "");
       return audioPath;
@@ -577,7 +577,7 @@ describe("resolveSubtitles — additional", () => {
 
     const result = await resolveSubtitles(root, { outputDir: tmpDir });
     expect(result.subtitle).toBeDefined();
-    const vtt = (await import("node:fs")).readFileSync(result.subtitle!.src, "utf-8");
+    const vtt = (await import("node:fs")).readFileSync(result.subtitle!.src!, "utf-8");
     // clip1: 1+0=1 → 2+0=2
     expect(vtt).toContain("00:00:01.000 --> 00:00:02.000");
     expect(vtt).toContain("first");
@@ -630,7 +630,7 @@ describe("resolveGeneratedMedia — TTV additional", () => {
   });
 
   it("root.ttv overrides options.ttvCli", async () => {
-    (generateTTV as any).mockImplementation((_p, out) => out);
+    (generateTTV as any).mockImplementation((_p: string, out: string) => out);
 
     const root: DescriptiveRoot = {
       ttv: "root-ttv {input} --out {output}",
@@ -651,7 +651,7 @@ describe("resolveGeneratedMedia — TTV additional", () => {
   });
 
   it("options.ttvCli overrides default when no root.ttv", async () => {
-    (generateTTV as any).mockImplementation((_p, out) => out);
+    (generateTTV as any).mockImplementation((_p: string, out: string) => out);
 
     const root: DescriptiveRoot = {
       children: [{
@@ -723,7 +723,7 @@ describe("resolveGeneratedMedia — TTV additional", () => {
   });
 
   it("processes multiple video nodes with prompts", async () => {
-    (generateTTV as any).mockImplementation((_p, out) => out);
+    (generateTTV as any).mockImplementation((_p: string, out: string) => out);
 
     const root: DescriptiveRoot = {
       children: [{

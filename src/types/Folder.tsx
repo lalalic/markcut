@@ -78,7 +78,7 @@ export function FolderLeaf({ stream }: { stream: FolderStream }) {
 
   const transEl = React.useMemo(() => {
     if (!isSeries || !effectiveTransition) return null;
-    const presentation = TransitionPresets[transition]?.(
+    const presentation = TransitionPresets[transition!]?.(
       transition === "clockWipe" ? { width, height } : undefined,
     );
     return (

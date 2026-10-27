@@ -41,6 +41,7 @@ export interface DescriptiveBaseNode {
   isBackground?: boolean;
   duration?: number;
   start?: number;
+  tts?: string;
   /** Effects applied to this node (e.g. `["fadeIn", {animation: "bounceIn", animationTimingFunction: "ease-out"}]`).
    *  Compiles into Effect wrapper streams at compile time, so the descriptive layer
    *  doesn't need explicit `effect` parent nodes. */
@@ -138,7 +139,7 @@ export interface DescriptiveMapWaypoint {
   label?: string;
   media?: string;
   /** Travel mode for the leg leaving this waypoint (DRIVING|WALKING|BICYCLING|TRANSIT|FLIGHT|BOAT). */
-  mode?: string;
+  mode?: "DRIVING" | "WALKING" | "BICYCLING" | "TRANSIT" | "FLIGHT" | "BOAT";
 }
 
 /** A tween expression `tween(from, to, easing?)` parsed into a tagged spec. */
@@ -236,7 +237,7 @@ export interface DescriptiveRoot {
   /** Global subtitle overlay. src = VTT file with absolute timestamps. Set by resolveScripts pipeline. */
   subtitle?: SubtitleOverlay;
   /** @deprecated Unused — use importsBlock instead. DescriptiveRoot-level imports are no longer supported. */
-  imports?: never;
+  imports?: ImportEntry[];
   /** Raw imports block source (from \`\`\`imports code fence). Parsed by parseImportsBlock. */
   importsBlock?: string;
   /** Per-speaker voice mapping for multi-turn dialogue.
@@ -424,7 +425,7 @@ function normalizeEffectSpec(spec: EffectSpec): {
 }
 
 /** Extract `on` event from a descriptive node if present. */
-function pickOn(node: { on?: EventSpec }): { on?: EventSpec } {
+function pickOn(node: DescriptiveBaseNode): { on?: EventSpec } {
   if (node.on) return { on: node.on };
   return {};
 }
@@ -451,10 +452,12 @@ export function parseTransition(val: string | undefined): { name?: string; time?
  * Supports inline "name(time)" format on `transition`, with `transitionTime`
  * as fallback.
  */
+type CompiledTransition = "fade" | "slide" | "wipe" | "flip" | "clockWipe";
+
 export function resolveTransition(
   transition: string | undefined,
   transitionTime: number | undefined,
-): { name: string; time: number } {
+): { name: CompiledTransition; time: number } {
   const parsed = parseTransition(transition);
   const name = parsed.name ?? "fade";
   // Separate transitionTime overrides inline time from "fade(0.5)" syntax
@@ -465,7 +468,7 @@ export function resolveTransition(
     console.warn(`invalid transition "${name}", falling back to "fade"`);
     return { name: "fade", time };
   }
-  return { name, time };
+  return { name: name as CompiledTransition, time };
 }
 
 /**
@@ -551,7 +554,8 @@ function compileLeaf(node: Exclude<DescriptiveNode, DescriptiveContainer | Descr
   const hasExplicitId = node.id != null;
 
   // Background nodes without explicit duration/endAt: let parent fill timing later
-  const hasOwnDuration = typeof node.duration === "number" || typeof node.endAt === "number";
+  const hasOwnDuration = typeof node.duration === "number" ||
+    ((node.type === "video" || node.type === "audio") && typeof node.endAt === "number");
   const isBgNoOwnTiming = node.isBackground && !hasOwnDuration;
 
   // For background without own timing, skip deriving duration — will be filled by parent
@@ -577,7 +581,7 @@ function compileLeaf(node: Exclude<DescriptiveNode, DescriptiveContainer | Descr
 
   switch (node.type) {
     case "video": {
-      const stream: Video = {
+      const stream = {
         ...base,
         type: "video",
         src: node.src,
@@ -585,27 +589,27 @@ function compileLeaf(node: Exclude<DescriptiveNode, DescriptiveContainer | Descr
         playbackRate: node.playbackRate,
         width: node.width ?? 1080,
         height: node.height ?? 1920,
-      };
+      } as Video;
       return { stream, duration: end ?? 0 };
     }
     case "audio": {
-      const stream: Audio = {
+      const stream = {
         ...base,
         type: "audio",
         src: node.src,
         volume: node.volume ?? 1,
         foreground: node.foreground,
         speaker: node.speaker,
-      };
+      } as Audio;
       return { stream, duration: end ?? 0 };
     }
     case "image": {
-      const stream: Image = {
+      const stream = {
         ...base,
         type: "image",
         src: node.src,
         fit: node.fit ?? "contain",
-      };
+      } as Image;
       return { stream, duration: end ?? 0 };
     }
     case "component": {
@@ -621,24 +625,24 @@ function compileLeaf(node: Exclude<DescriptiveNode, DescriptiveContainer | Descr
         }
       }
 
-      const stream: Component = {
+      const stream = {
         ...base,
         type: "component",
         jsx: node.jsx,
         data: Object.keys(bindings).length ? bindings : undefined,
-      };
+      } as Component;
       return { stream, duration: end ?? 0 };
     }
     case "rhythm": {
       // rhythm without children compiles as a plain audio leaf
-      const stream: Rhythm = {
+      const stream = {
         ...base,
         type: "rhythm",
         src: node.src,
         volume: node.volume ?? 1,
         spots: node.spots,
         children: [],
-      };
+      } as Rhythm;
       return { stream, duration: end ?? 0 };
     }
     case "map": {
@@ -660,7 +664,7 @@ function compileLeaf(node: Exclude<DescriptiveNode, DescriptiveContainer | Descr
         cinematic: node.cinematic,
         streetView: node.streetView,
         googleMapsApiKey: ctx.googleMapsApiKey,
-      };
+      } as MapStream;
       return { stream, duration: end ?? 0 };
     }
   }
@@ -956,7 +960,7 @@ function compileContainer(node: DescriptiveContainer, ctx: CompileContext, paren
   const id = node.id ?? uid();
   ensureUniqueIds(node.children, id);
 
-  const resolved = node.type === "transitionSeries"
+  const resolved: { name: CompiledTransition; time: number } = node.type === "transitionSeries"
     ? resolveTransition(node.transition, node.transitionTime)
     : { name: "fade", time: 0.5 };
   const children = compileChildren(node.children, ctx, node.type);
@@ -1141,14 +1145,14 @@ export function extractDependencySpecs(source: string): string[] {
   const fromRe = /from\s+["'`](.+?)["'`]\s*;?\s*$/gm;
   let m;
   while ((m = fromRe.exec(source)) !== null) {
-    specs.push(m[1]);
+    specs.push(m[1]!);
   }
   // Match bare side-effect imports: `import "spec"`
   for (const line of source.split("\n")) {
     const trimmed = line.trim();
     const sideEffectMatch = /^import\s+["'`](.+?)["'`]\s*;?\s*$/.exec(trimmed);
     if (sideEffectMatch) {
-      specs.push(sideEffectMatch[1]);
+      specs.push(sideEffectMatch[1]!);
     }
   }
   return specs;
@@ -1292,7 +1296,7 @@ export function resolveVariantOverrides(
   const clone: DescriptiveRoot = JSON.parse(JSON.stringify(root));
 
   // Scan entire tree for variant-prefixed keys to strip later
-  const knownVariants = collectVariantNames(clone as Record<string, unknown>, variantChain);
+  const knownVariants = collectVariantNames(clone as unknown as Record<string, unknown>, variantChain);
 
   function applyOverrides(node: Record<string, unknown>): void {
     // Phase 1: variant-prefixed overrides (zh-src → src)
@@ -1341,7 +1345,7 @@ export function resolveVariantOverrides(
     }
   }
 
-  applyOverrides(clone as Record<string, unknown>);
+  applyOverrides(clone as unknown as Record<string, unknown>);
   return clone;
 }
 
@@ -1394,6 +1398,7 @@ export function compileDescriptiveRoot(input: DescriptiveRoot, options: CompileO
     id: "root",
     type: "root",
     visible: true,
+    start: 0,
     width: input.width ?? 1080,
     height: input.height ?? 1920,
     fps: input.fps ?? 30,

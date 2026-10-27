@@ -108,7 +108,7 @@ export function LabelControls({ playerRef, currentTime, onSceneChange }: LabelCo
   React.useEffect(() => {
     if (selectedOverride >= 0) return;
     for (let i = 0; i < scenes.length; i++) {
-      if (currentTime >= scenes[i].start && currentTime < scenes[i].end) {
+      if (currentTime >= scenes[i]!.start && currentTime < scenes[i]!.end) {
         setCurrentSceneIdx(i);
         break;
       }
@@ -305,7 +305,7 @@ export function LabelControls({ playerRef, currentTime, onSceneChange }: LabelCo
           return (
             <div key={k} className="timed-label" data-key={k}>
               <span className="tl-time">{formatTime(sec)}</span>
-              <span className="tl-text" dangerouslySetInnerHTML={{ __html: escHtml(timed[k]) }} />
+              <span className="tl-text" dangerouslySetInnerHTML={{ __html: escHtml(timed[k]!) }} />
               <button className="tl-del" title="Remove" onClick={() => deleteTimed(k)}>
                 ×
               </button>

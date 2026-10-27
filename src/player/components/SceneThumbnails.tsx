@@ -43,7 +43,7 @@ export function SceneThumbnails({ currentTime, onSeek, sceneData }: SceneThumbna
   // soon as the next scene starts (during a transition), it becomes the active one.
   let activeIdx = -1;
   for (let i = displayScenes.length - 1; i >= 0; i--) {
-    if (currentTime >= displayScenes[i].start) {
+    if (currentTime >= displayScenes[i]!.start) {
       activeIdx = i;
       break;
     }

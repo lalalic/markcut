@@ -129,4 +129,6 @@ export async function resolveAndCompileMarkdown(
 }
 
 export { compileDescriptiveRoot, resolveVariantOverrides, resolveAll, resolveIncludes, parseMarkdownDescriptive, parseMarkdownVariants, parseImportsBlock, extractDependencySpecs };
-export type { DescriptiveRoot, Root, VariantParseResult } from "../descriptive/markdown";
+export type { DescriptiveRoot } from "../descriptive/compiler";
+export type { VariantParseResult } from "../descriptive/markdown";
+export type { Root } from "../schema/index";

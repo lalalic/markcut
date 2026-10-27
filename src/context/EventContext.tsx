@@ -33,8 +33,8 @@ function createComponentProxy(
 ): Record<string, any> {
   return new Proxy(target, {
     set(obj, prop, value) {
-      obj[prop] = value;
-      setState({ [prop]: value });
+      Reflect.set(obj, prop, value);
+      if (typeof prop === "string") setState({ [prop]: value });
       return true;
     },
     get(obj, prop) {

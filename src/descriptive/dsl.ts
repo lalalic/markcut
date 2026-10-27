@@ -183,12 +183,12 @@ export function parseWaypoints(raw: string): DescriptiveMapWaypoint[] {
     const bits = splitTokens(part.replace(/,/g, " "));
     const lat = Number(bits[0] ?? 0);
     const lng = Number(bits[1] ?? 0);
-    let mode: string | undefined;
+    let mode: "DRIVING" | "WALKING" | "BICYCLING" | "TRANSIT" | "FLIGHT" | "BOAT" | undefined;
     const values: string[] = [];
     for (const tok of bits.slice(2)) {
       const value = unquote(tok);
       if (!isQuoted(tok) && value && KNOWN_TRAVEL_MODES.has(value.toUpperCase())) {
-        mode = value.toUpperCase();
+        mode = value.toUpperCase() as NonNullable<DescriptiveMapWaypoint["mode"]>;
         continue;
       }
       values.push(value); // keep position — a quoted-empty "" means "no value here"

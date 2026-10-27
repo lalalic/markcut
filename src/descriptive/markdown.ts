@@ -93,7 +93,7 @@ function pushChild(parent: ParentNode, child: DescriptiveNode): void {
  * Copy any attrs that aren't standard leaf-node keys onto the node.
  * These are variant overrides like `zh`, `portrait-src`, etc.
  */
-function preserveVariantAttrs(node: Record<string, unknown>, attrs: Record<string, unknown>): void {
+function preserveVariantAttrs(node: object, attrs: Record<string, unknown>): void {
   // Standard keys consumed by leaf node types — anything else is a variant override
   const STANDARD = new Set([
     "type", "id", "src", "script", "jsx", "volume", "playbackRate",
@@ -107,7 +107,7 @@ function preserveVariantAttrs(node: Record<string, unknown>, attrs: Record<strin
   ]);
   for (const [k, v] of Object.entries(attrs)) {
     if (!STANDARD.has(k)) {
-      (node as any)[k] = v;
+      (node as Record<string, unknown>)[k] = v;
     }
   }
 }
@@ -240,7 +240,7 @@ function parseNodeLine(content: string, lineNum?: number): DescriptiveNode {
       const node: DescriptiveComponent = {
         type: "component",
         id: attrs.id as any,
-        jsx,
+        jsx: jsx as string,
         duration: attrs.duration as any,
         start: attrs.start as any,
         instruction: attrs.instruction as any,
@@ -586,7 +586,6 @@ function processMDASTListItem(item: any, parent: ParentNode, lines: string[]): v
         node.type === "series" ||
         node.type === "parallel" ||
         node.type === "transitionSeries" ||
-        node.type === "effect" ||
         node.type === "include" ||
         node.type === "rhythm" ||
         node.type === "map"
@@ -698,13 +697,14 @@ function applyRootAttrs(root: DescriptiveRoot, attrs: Record<string, unknown>): 
           root.subtitle = { src: v };
         } else if (v && typeof v === "object") {
           const obj = v as Record<string, unknown>;
-          root.subtitle = {} as any;
-          if (typeof obj.src === "string") root.subtitle.src = obj.src;
-          if (typeof obj.type === "string") root.subtitle.type = obj.type;
-          if (typeof obj.style === "string") root.subtitle.style = obj.style;
-          if (obj.fontSize != null) root.subtitle.fontSize = obj.fontSize;
-          if (typeof obj.fontFamily === "string") root.subtitle.fontFamily = obj.fontFamily;
-          if (typeof obj.fontStyle === "string") root.subtitle.fontStyle = obj.fontStyle;
+          const subtitle = {} as NonNullable<DescriptiveRoot["subtitle"]>;
+          if (typeof obj.src === "string") subtitle.src = obj.src;
+          if (typeof obj.type === "string") subtitle.type = obj.type;
+          if (typeof obj.style === "string") subtitle.style = obj.style;
+          if (typeof obj.fontSize === "string" || typeof obj.fontSize === "number") subtitle.fontSize = obj.fontSize;
+          if (typeof obj.fontFamily === "string") subtitle.fontFamily = obj.fontFamily;
+          if (typeof obj.fontStyle === "string") subtitle.fontStyle = obj.fontStyle;
+          root.subtitle = subtitle;
         }
         break;
       }
