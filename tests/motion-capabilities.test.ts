@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { z } from "zod";
 import { parseMarkdownDescriptive } from "../src/descriptive/markdown";
@@ -52,6 +52,17 @@ describe("motion capability catalog and vertical examples", () => {
       license: "MIT",
     });
     expect(catalog.notIntegrated.find((item: any) => item.name === "hyperframes-3d-motion-catalog-pieces")?.reason).toContain("GSAP");
+  });
+
+  it("resolves motion catalog and guide links from the installed Markcut skill", () => {
+    const skillPath = resolve(__dirname, "../skills/markcut/SKILL.md");
+    const source = readFileSync(skillPath, "utf8");
+    const motionLinks = [...source.matchAll(/\]\(([^)]+motion-capabilities[^)]*)\)/g)];
+    expect(motionLinks).toHaveLength(3);
+    for (const [, relativePath] of motionLinks) {
+      expect(relativePath).toBeDefined();
+      expect(existsSync(resolve(skillPath, "..", relativePath!))).toBe(true);
+    }
   });
 
   it("parses and compiles six independent 9:16 native component examples", () => {

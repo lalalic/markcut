@@ -31,6 +31,6 @@ The Shotcraft entries are adapted from recipe ideas at the pinned source revisio
 
 The optional whiteboard entry is not marked as a supported capability. If a project later chooses it, generate its MP4 separately and add that result as a normal Markcut `video` node or `include`; do not make Markcut own the Python workflow.
 
-## Video Director documentation contribution
+## Video Director integration
 
-The canonical Video Director source is outside this Markcut checkout at `/Users/chengli/Workspace/neo/skills/video-director`. This checkout therefore includes a ready-to-apply section at [`contributions/video-director-capability-discovery.md`](./contributions/video-director-capability-discovery.md), with the owning file paths identified there.
+The canonical Video Director source lives in the separate Neo repository at `skills/video-director/SKILL.md`, with `examples/motion-capability-9x16.md`. The canonical files were updated alongside this Markcut change. The [`contribution record`](./contributions/video-director-capability-discovery.md) documents the cross-repository handoff; Neo's change still requires its own repository integration.
