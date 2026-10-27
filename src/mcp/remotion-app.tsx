@@ -7,6 +7,8 @@ import {SceneThumbnails} from '../player/components/SceneThumbnails';
 import {useWebAudioPreview} from './web-audio-preview';
 import {useBrowserSpeechPreview} from './browser-speech-preview';
 const PLAYER_VERSION='v25';
+const contextTime=(scene:{start:number;end:number}|undefined,time:number)=>
+ Math.round(Math.max(scene?.start??0,Math.min(scene?.end??time,time))*10)/10;
 function App(){
  const [revision,setRevision]=React.useState<any>(()=>(window as any).__markcutRevision||null);
  const ref=React.useRef<PlayerRef|null>(null);
@@ -35,7 +37,7 @@ function App(){
  const fps=data?.fps||30;
  const scenes=React.useMemo(()=>{
   const children=(data?.children||[]).filter((x:any)=>x.type==='scene'&&x.visible!==false);
-  const overlap=Math.max(0,Number(data?.transitionTime)||0);
+  const overlap=data?.transition?Math.max(0,Number(data?.transitionTime)||0):0;
   let start=0;
   return children.map((scene:any,index:number)=>{
    const duration=Math.max(0,Number(scene.durationInSeconds)||0);
@@ -54,12 +56,12 @@ function App(){
   const active=[...scenes].reverse().find(scene=>currentTime>=scene.start);
   (window as any).__markcutPlaybackContext={
    sceneId:active?.id||null,sceneName:active?.name||null,
-   timeSeconds:Math.round(currentTime*10)/10
+   timeSeconds:contextTime(active,currentTime)
   };
  },[scenes,currentTime]);
  const activeScene=[...scenes].reverse().find(scene=>currentTime>=scene.start);
  React.useEffect(()=>{
-  window.dispatchEvent(new CustomEvent('markcut:scene-change',{detail:{sceneId:activeScene?.id||null,sceneName:activeScene?.name||null,timeSeconds:Math.round(currentTime*10)/10}}));
+  window.dispatchEvent(new CustomEvent('markcut:scene-change',{detail:{sceneId:activeScene?.id||null,sceneName:activeScene?.name||null,timeSeconds:contextTime(activeScene,currentTime)}}));
  },[revision?.revisionId,activeScene?.id,activeScene?.name]);
  React.useEffect(()=>{
   const listener=(event:Event)=>{const context=(event as CustomEvent).detail;const scene=scenes.find(x=>x.id===context?.sceneId||x.name===context?.sceneName);
