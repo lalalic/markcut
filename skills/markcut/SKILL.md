@@ -82,7 +82,7 @@ npx @lalalic/markcut spots --waypoints "lat,lng;lat,lng" # discover POIs along a
 
 For native previews, Maps, playback, audio/subtitles or hosted ChatGPT MCP iframe issues, load [Preview Troubleshooting](references/preview-troubleshooting.md). Treat native playback, MCP compilation and hosted iframe rendering as separate verification gates.
 
-## MCP Video Preview and Human Review (Player v24)
+## MCP Video Preview and Human Review (Player v25)
 
 Use the model-visible `markcut.preview({path})` tool when a human needs to **watch and review a Markcut video** in ChatGPT. It is a video player, **not** a generic Markdown renderer and not the same as the local `npx @lalalic/markcut preview <file>` command.
 
@@ -91,6 +91,7 @@ Use the model-visible `markcut.preview({path})` tool when a human needs to **wat
 - Player controls include Play/Pause, Seek, volume/audio, fullscreen and a **horizontal clickable scene list** sourced from compiled scene metadata. The title bar displays **Markcut · video title**, a **Browser TTS** switch, and the player version at right.
 - **Browser TTS** is an optional preview playback mode (default on when subtitle VTT exists). It speaks existing caption/script text in the browser; it does **not** use STT. Toggle off for generated audio and the original subtitle renderer. This switch does not currently skip compilation-time TTS or affect final renders. Playback timing and seeking are approximate for browser speech.
 - Google Maps `map` streams (route/cinematic) can be prerendered by Remotion into MP4 during MCP compilation. The published compiled JSON then references video streams, not live map tiles or a browser-exposed API key. If the render key is unavailable or prerendering fails, the original live Google Maps stream is preserved as a fallback. Native Map support remains available.
+- **Batch review:** choose scenes in the horizontal list and draft comments for each; scenes with drafts are highlighted. Returning to a scene restores its draft. **Add timed comment** stores a separate note at the current playback position. **Submit all feedback** sends one `changes_requested` message with a structured `comments[]` list of text and scene/time context, plus a backwards-compatible `feedback` summary. Drafts stay inside the current preview revision; approval requires resolving any unsent comments.
 - **Send feedback** (formerly Request changes) requires text and sends `ui/message` with `decision: "changes_requested"`, the source path, revision/content hash, and `playbackContext` (current `sceneId`, `sceneName`, `timeSeconds`) when available. The calling agent must interpret the feedback, edit the supplied video Markdown, and invoke `markcut.preview` again for the next turn. The player does not edit files.
 - **Approve** sends `decision: "approved"` via `ui/message` for the specific revision. Do not approve a different/newer revision on the basis of an old review.
 - Earlier previews are read-only once superseded; the submitted revision is checked against the latest published hash.

@@ -6,9 +6,13 @@ import {buildPreviewBridgeScript} from '../src/mcp/bridge.mjs';
 function harness(remoteData?:any, fetchOverride?:(url:string)=>Promise<any>) {
  const messages:any[]=[];
  const listeners:Record<string,Array<(evt:any)=>void>>={};
- const element=()=>({value:'',textContent:'',onclick:null as null|(()=>void)});
+ const element=()=>({value:'',textContent:'',onclick:null as null|(()=>void),oninput:null as null|(()=>void),
+  disabled:false,hidden:false,type:'',children:[] as any[],listeners:{} as Record<string,Function>,
+  addEventListener(type:string,listener:Function){this.listeners[type]=listener},
+  replaceChildren(){this.children=[]},append(...items:any[]){this.children.push(...items)}
+ });
  const nodes:Record<string,ReturnType<typeof element>>={
-  feedback:element(),status:element(),'path-label':element(),'video-md-version':element(),'interactive-ui':element(),approve:element(),changes:element()
+  feedback:element(),status:element(),'path-label':element(),'video-md-version':element(),'interactive-ui':element(),approve:element(),changes:element(),'save-spot':element(),'comment-target':element(),'comment-count':element(),'comment-list':element()
  };
  const parent={postMessage:(m:any)=>messages.push(m)};
  const events:any[]=[];
@@ -18,12 +22,12 @@ function harness(remoteData?:any, fetchOverride?:(url:string)=>Promise<any>) {
   dispatchEvent:(evt:any)=>{events.push(evt);return true},
  };
  const fetch=fetchOverride|| (async()=>({ok:true,json:async()=>remoteData}));
- const context=vm.createContext({crypto:webcrypto,TextEncoder,URL,fetch,setTimeout,window,document:{getElementById:(id:string)=>nodes[id]},CustomEvent:class {type:string;detail:any;constructor(t:string,opts:any){this.type=t;this.detail=opts.detail}}});
+ const context=vm.createContext({crypto:webcrypto,TextEncoder,URL,fetch,setTimeout,window,document:{getElementById:(id:string)=>nodes[id],createElement:()=>element()},CustomEvent:class {type:string;detail:any;constructor(t:string,opts:any){this.type=t;this.detail=opts.detail}}});
  const dispatch=(message:any,source=parent)=>(listeners.message??[]).forEach(listener=>listener({source,data:{jsonrpc:'2.0',...message}}));
  const result=(data:any)=>dispatch({method:'ui/notifications/tool-result',params:{result:{structuredContent:data}}});
  const respond=(id:number,result:any={})=>dispatch({id,result});
  vm.runInContext(buildPreviewBridgeScript().replaceAll("__MARKCUT_ORIGIN__",JSON.stringify("https://neoy.qili2.com")),context);
- return {messages,nodes,events,dispatch,result,respond};
+ return {messages,nodes,events,dispatch,result,respond,scene:(detail:any)=>(listeners['markcut:scene-change']||[]).forEach(listener=>listener({detail}))};
 }
 const nextTick=()=>new Promise(resolve=>setTimeout(resolve,0));
 
@@ -129,6 +133,55 @@ describe('MCP Remotion bridge',()=>{
 });
 
 
+ it('restores scene drafts, marks commented scenes, and submits all comments once',()=>{
+  const h=harness();
+  h.result({id:'multi',revisionId:'r1',contentHash:'hash',compiled:{children:[]}});
+  h.scene({sceneId:'s1',sceneName:'Scene-A',timeSeconds:0});
+  h.nodes.feedback.value='Improve intro';
+  h.nodes.feedback.listeners.input();
+  h.scene({sceneId:'s2',sceneName:'Scene-B',timeSeconds:4});
+  h.nodes.feedback.value='Use ambient sound';
+  h.nodes.feedback.listeners.input();
+  const marked=h.events.filter(e=>e.type==='markcut:comments-change').at(-1).detail.sceneNames;
+  expect([...marked].sort()).toEqual(['Scene-A','Scene-B']);
+  h.scene({sceneId:'s1',sceneName:'Scene-A',timeSeconds:1});
+  expect(h.nodes.feedback.value).toBe('Improve intro');
+  expect(h.nodes['comment-count'].textContent).toBe('2 comments');
+  h.nodes.approve.onclick?.();
+  expect(h.nodes.status.textContent).toContain('Submit or remove');
+  h.nodes.changes.onclick?.();
+  const sent=h.messages.filter(m=>m.method==='ui/message');
+  expect(sent).toHaveLength(1);
+  const payload=JSON.parse(sent[0].params.content[0].text);
+  expect(payload.comments).toMatchObject([
+   {text:'Improve intro',playbackContext:{sceneName:'Scene-A'}},
+   {text:'Use ambient sound',playbackContext:{sceneName:'Scene-B'}}
+  ]);
+ });
+ it('supports multiple timed notes on one scene and restores a saved note',()=>{
+  const h=harness();
+  h.result({id:'spots',revisionId:'r1',contentHash:'hash',compiled:{children:[]}});
+  h.scene({sceneId:'s1',sceneName:'Scene-A',timeSeconds:1});
+  h.nodes.feedback.value='Trim opening';
+  h.nodes['save-spot'].onclick?.();
+  expect(h.nodes.feedback.value).toBe('');
+  h.scene({sceneId:'s2',sceneName:'Scene-B',timeSeconds:5});
+  h.scene({sceneId:'s1',sceneName:'Scene-A',timeSeconds:7});
+  h.nodes.feedback.value='Keep reaction';
+  h.nodes['save-spot'].onclick?.();
+  expect(h.nodes['comment-list'].children).toHaveLength(2);
+  const firstEdit=h.nodes['comment-list'].children[0].children[0];
+  firstEdit.onclick();
+  expect(h.nodes.feedback.value).toBe('Trim opening');
+  h.nodes.feedback.value='Trim first second';
+  h.nodes.feedback.listeners.input();
+  h.nodes.changes.onclick?.();
+  const payload=JSON.parse(h.messages.at(-1).params.content[0].text);
+  expect(payload.comments).toHaveLength(2);
+  expect(h.nodes['comment-count'].textContent).toBe('2 comments');
+  expect(payload.comments.map((x:any)=>x.text)).toContain('Trim first second');
+  expect(payload.comments.map((x:any)=>x.text)).toContain('Keep reaction');
+ });
 describe('static compiled-JSON bridge',()=>{
  const base='https://neoy.qili2.com/files/_neoy/markcut/cache/';
  const staticData={width:640,height:480,fps:30,children:[{name:'Static-Scene'}]};

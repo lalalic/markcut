@@ -2,6 +2,61 @@ export function buildPreviewBridgeScript() {
 return `
 const feedback=document.getElementById('feedback'),status=document.getElementById('status'),pathLabel=document.getElementById('path-label');
 let nextId=0,identity=null,busy=false,expectedPath=null,activePath=null,activeRelay=null,submittedRevision=null;
+// Draft comments stay inside this preview revision until one final submission.
+const drafts=new Map(),spots=[];
+let currentScene={sceneId:null,sceneName:null,timeSeconds:0},editingSpot=null,nextSpotId=0;
+const sceneKey=c=>String(c?.sceneName||c?.sceneId||'General');
+function storeInput(){
+ if(editingSpot!==null){const found=spots.find(x=>x.id===editingSpot);if(found)found.text=feedback.value;}
+ else drafts.set(sceneKey(currentScene),{text:feedback.value,context:{...currentScene}});
+}
+function allComments(){
+ storeInput();
+ return [
+  ...Array.from(drafts.values()).filter(x=>x.text.trim()).map(x=>({text:x.text.trim(),playbackContext:x.context})),
+  ...spots.filter(x=>x.text.trim()).map(x=>({text:x.text.trim(),playbackContext:x.context}))
+ ];
+}
+function redrawComments(){
+ const comments=allComments();
+ const names=[...new Set(comments.map(x=>sceneKey(x.playbackContext)))];
+ window.dispatchEvent(new CustomEvent('markcut:comments-change',{detail:{sceneNames:names}}));
+ const count=document.getElementById('comment-count');
+ if(count)count.textContent=comments.length+' comment'+(comments.length===1?'':'s');
+ const target=document.getElementById('comment-target');
+ if(target)target.textContent=sceneKey(currentScene)+(editingSpot===null?' · scene comment':' · timed comment');
+ const list=document.getElementById('comment-list');
+ if(!list)return;
+ list.replaceChildren();
+ for(const note of spots){
+  if(!note.text.trim())continue;
+  const row=document.createElement('div'),edit=document.createElement('button'),remove=document.createElement('button');
+  edit.type='button';edit.textContent=sceneKey(note.context)+' · '+(note.context.timeSeconds??0)+'s · '+note.text.slice(0,80);
+  edit.onclick=()=>{storeInput();currentScene={...note.context};editingSpot=note.id;feedback.value=note.text;window.dispatchEvent(new CustomEvent('markcut:comment-select',{detail:note.context}));redrawComments();};
+  remove.type='button';remove.textContent='Remove';
+  remove.onclick=()=>{const at=spots.findIndex(x=>x.id===note.id);if(at>=0)spots.splice(at,1);if(editingSpot===note.id){editingSpot=null;feedback.value=drafts.get(sceneKey(currentScene))?.text||'';}redrawComments();};
+  row.append(edit,remove);list.append(row);
+ }
+}
+function clearComments(){
+ drafts.clear();spots.length=0;editingSpot=null;currentScene={sceneId:null,sceneName:null,timeSeconds:0};feedback.value='';redrawComments();
+}
+feedback.addEventListener('input',redrawComments);
+window.addEventListener('markcut:scene-change',event=>{
+ const next=event.detail||{};
+ if(sceneKey(next)===sceneKey(currentScene))return;
+ storeInput();editingSpot=null;currentScene={...next};feedback.value=drafts.get(sceneKey(next))?.text||'';redrawComments();
+});
+document.getElementById('save-spot').onclick=()=>{
+ storeInput();const value=feedback.value.trim();
+ if(!value){status.textContent='Write a comment before adding a timed note.';return;}
+ if(editingSpot!==null){
+  editingSpot=null;feedback.value=drafts.get(sceneKey(currentScene))?.text||'';redrawComments();return;
+ }
+ drafts.delete(sceneKey(currentScene));
+ spots.push({id:++nextSpotId,text:value,context:{...(window.__markcutPlaybackContext||currentScene)}});
+ feedback.value='';redrawComments();
+};
 const pending=new Map();
 const resultsByPath=new Map();
 let fallbackGeneration=0;
@@ -97,6 +152,7 @@ function reviewReadonly(readonly,message){
 }
 async function renderRevision(data){
  const generation=++renderGeneration;
+ if(identity?.revisionId&&identity.revisionId!==data.revisionId)clearComments();
  if(data.path){pathLabel.textContent=data.path;showVideoName(data.path,data.title||data.videoTitle);}
  if(!data.compiled&&!data.compiledUrl){status.textContent='Compiled scenes unavailable';return;}
  identity={previewId:data.id,revisionId:data.revisionId,contentHash:data.contentHash};
@@ -145,8 +201,9 @@ async function initialize(){
 }
 async function submit(decision){
  if(busy)return;
- const value=feedback.value.trim();
- if(decision==='changes_requested'&&!value){status.textContent='Feedback is required.';return;}
+ const comments=allComments();
+ if(decision==='changes_requested'&&!comments.length){status.textContent='Feedback is required.';return;}
+ if(decision==='approved'&&comments.length){status.textContent='Submit or remove draft comments before approval.';return;}
  if(!identity){status.textContent='Preview identity unavailable.';return;}
  if(window.__markcutRevision?.compiledUrl){
   try{if(!await currentRevisionMatches(activePath,identity.contentHash)){reviewReadonly(true,'Historical Preview · Read-only');return;}}
@@ -155,7 +212,11 @@ async function submit(decision){
  const result={...identity,decision};
  if(activePath)result.path=activePath;
  if(activeRelay)result.relay=activeRelay;
- if(decision==='changes_requested'){result.feedback=value;if(window.__markcutPlaybackContext)result.playbackContext=window.__markcutPlaybackContext;}
+ if(decision==='changes_requested'){
+  result.comments=comments;
+  result.feedback=comments.length===1?comments[0].text:comments.map((item,index)=>String(index+1)+'. ['+sceneKey(item.playbackContext)+' @ '+(item.playbackContext.timeSeconds??0)+'s] '+item.text).join('\\n');
+  if(window.__markcutPlaybackContext)result.playbackContext=window.__markcutPlaybackContext;
+ }
  busy=true;status.textContent='Submitting…';
  const submittedId=result.revisionId;
  try{await request('ui/message',{role:'user',content:[{type:'text',text:JSON.stringify(result)}]});if(identity?.revisionId===submittedId){submittedRevision=submittedId;status.textContent=decision==='approved'?'Approved.':'Feedback sent. Waiting for the updated preview.';}}

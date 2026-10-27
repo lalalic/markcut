@@ -6,12 +6,18 @@ import {SharedPlayer} from '../player/SharedPlayer';
 import {SceneThumbnails} from '../player/components/SceneThumbnails';
 import {useWebAudioPreview} from './web-audio-preview';
 import {useBrowserSpeechPreview} from './browser-speech-preview';
-const PLAYER_VERSION='v24';
+const PLAYER_VERSION='v25';
 function App(){
  const [revision,setRevision]=React.useState<any>(()=>(window as any).__markcutRevision||null);
  const ref=React.useRef<PlayerRef|null>(null);
  const [currentTime,setCurrentTime]=React.useState(0);
  const [browserTts,setBrowserTts]=React.useState(true);
+ const [commentedScenes,setCommentedScenes]=React.useState<string[]>([]);
+ React.useEffect(()=>{
+  const listener=(event:Event)=>setCommentedScenes((event as CustomEvent).detail?.sceneNames||[]);
+  window.addEventListener('markcut:comments-change',listener);
+  return ()=>window.removeEventListener('markcut:comments-change',listener);
+ },[]);
  React.useEffect(()=>{const receive=(e:Event)=>setRevision((e as CustomEvent).detail);window.addEventListener('markcut:revision',receive);return ()=>window.removeEventListener('markcut:revision',receive)},[]);
  const data=revision?.compiled?.root||revision?.compiled;
  const useBrowserTts=browserTts&&Boolean(data?.subtitle?.src);
@@ -51,6 +57,17 @@ function App(){
    timeSeconds:Math.round(currentTime*10)/10
   };
  },[scenes,currentTime]);
+ const activeScene=[...scenes].reverse().find(scene=>currentTime>=scene.start);
+ React.useEffect(()=>{
+  window.dispatchEvent(new CustomEvent('markcut:scene-change',{detail:{sceneId:activeScene?.id||null,sceneName:activeScene?.name||null,timeSeconds:Math.round(currentTime*10)/10}}));
+ },[revision?.revisionId,activeScene?.id,activeScene?.name]);
+ React.useEffect(()=>{
+  const listener=(event:Event)=>{const context=(event as CustomEvent).detail;const scene=scenes.find(x=>x.id===context?.sceneId||x.name===context?.sceneName);
+   if(scene){const second=Number(context.timeSeconds);const time=Number.isFinite(second)?Math.max(scene.start,Math.min(scene.end,second)):scene.start;ref.current?.seekTo(Math.round(time*fps));setCurrentTime(time);}
+  };
+  window.addEventListener('markcut:comment-select',listener);
+  return ()=>window.removeEventListener('markcut:comment-select',listener);
+ },[scenes,fps]);
  if(!revision)return <div id="remotion-waiting">Player {PLAYER_VERSION} · Waiting for compiled scenes…</div>;
  if(!data)return <div>Missing compiled scene tree</div>;
  const videoName=String(revision.title||revision.videoTitle||revision.path?.split('/').pop()?.replace(/\.md$/i,'').replace(/[-_]+/g,' ')||'Video');
@@ -64,7 +81,7 @@ function App(){
    <SharedPlayer key={revision.revisionId} root={playbackRoot} playerRef={ref} numberOfSharedAudioTags={0} style={{width:'100%',height:'100%'}} />
   </div>
   {useBrowserTts&&caption&&<div role="status" style={{textAlign:"center",padding:"6px 12px",fontSize:13}}>{caption}</div>}
-  <SceneThumbnails sceneData={scenes} currentTime={currentTime} onSeek={t=>{ref.current?.seekTo(Math.round(t*fps));setCurrentTime(t);}} />
+  <SceneThumbnails sceneData={scenes} commentedScenes={commentedScenes} currentTime={currentTime} onSeek={t=>{ref.current?.seekTo(Math.round(t*fps));setCurrentTime(t);}} />
   {status && !/initializing|ready|paused/i.test(status) && <div id="preview-audio-status" role="status" style={{fontSize:12,padding:'4px 0'}}>{status.replace(/^Web Audio /,'Audio ')}</div>}
  </div>;
 }

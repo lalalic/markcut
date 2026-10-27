@@ -10,6 +10,7 @@ interface Scene {
   name: string;
   start: number;
   end: number;
+  id?: string;
 }
 
 interface SceneThumbnailsProps {
@@ -18,9 +19,10 @@ interface SceneThumbnailsProps {
   /** Called when a thumbnail is clicked; receives scene start time in seconds */
   onSeek?: (timeSeconds: number) => void;
   sceneData?: Scene[];
+  commentedScenes?: string[];
 }
 
-export function SceneThumbnails({ currentTime, onSeek, sceneData }: SceneThumbnailsProps) {
+export function SceneThumbnails({ currentTime, onSeek, sceneData, commentedScenes=[] }: SceneThumbnailsProps) {
   const [scenes, setScenes] = React.useState<Scene[]>([]);
 
   React.useEffect(() => {
@@ -56,7 +58,8 @@ export function SceneThumbnails({ currentTime, onSeek, sceneData }: SceneThumbna
         return (
           <span
             key={i}
-            className={"scene-pill" + (isActive ? " active" : "")}
+            className={"scene-pill" + (isActive ? " active" : "") + (commentedScenes.includes(scene.name) ? " commented" : "")}
+            title={commentedScenes.includes(scene.name) ? "Has review comments" : undefined}
             onClick={() => onSeek?.(scene.start)}
           >
             {scene.name || "Scene " + (i + 1)}
