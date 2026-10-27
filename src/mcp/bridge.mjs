@@ -25,18 +25,9 @@ function redrawComments(){
  if(count)count.textContent=comments.length+' comment'+(comments.length===1?'':'s');
  const target=document.getElementById('comment-target');
  if(target)target.textContent=sceneKey(currentScene)+(editingSpot===null?' · scene comment':' · timed comment');
- const list=document.getElementById('comment-list');
- if(!list)return;
- list.replaceChildren();
- for(const note of spots){
-  if(!note.text.trim())continue;
-  const row=document.createElement('div'),edit=document.createElement('button'),remove=document.createElement('button');
-  edit.type='button';edit.textContent=sceneKey(note.context)+' · '+(note.context.timeSeconds??0)+'s · '+note.text.slice(0,80);
-  edit.onclick=()=>{storeInput();currentScene={...note.context};editingSpot=note.id;feedback.value=note.text;window.dispatchEvent(new CustomEvent('markcut:comment-select',{detail:note.context}));redrawComments();};
-  remove.type='button';remove.textContent='Remove';
-  remove.onclick=()=>{const at=spots.findIndex(x=>x.id===note.id);if(at>=0)spots.splice(at,1);if(editingSpot===note.id){editingSpot=null;feedback.value=drafts.get(sceneKey(currentScene))?.text||'';}redrawComments();};
-  row.append(edit,remove);list.append(row);
- }
+ const remove=document.getElementById('remove-spot');
+ if(remove)remove.hidden=editingSpot===null;
+ window.dispatchEvent(new CustomEvent('markcut:spots-change',{detail:{spots:spots.filter(x=>x.text.trim()).map(x=>({...x,selected:x.id===editingSpot}))}}));
 }
 function clearComments(){
  drafts.clear();spots.length=0;editingSpot=null;currentScene={sceneId:null,sceneName:null,timeSeconds:0};feedback.value='';redrawComments();
@@ -47,6 +38,20 @@ window.addEventListener('markcut:scene-change',event=>{
  if(sceneKey(next)===sceneKey(currentScene))return;
  storeInput();editingSpot=null;currentScene={...next};feedback.value=drafts.get(sceneKey(next))?.text||'';redrawComments();
 });
+window.addEventListener('markcut:spot-select',event=>{
+ const note=spots.find(x=>x.id===event.detail?.id);
+ if(!note)return;
+ storeInput();currentScene={...note.context};editingSpot=note.id;feedback.value=note.text;
+ window.dispatchEvent(new CustomEvent('markcut:comment-select',{detail:note.context}));
+ redrawComments();
+});
+document.getElementById('remove-spot').onclick=()=>{
+ if(editingSpot===null)return;
+ const at=spots.findIndex(x=>x.id===editingSpot);
+ if(at>=0)spots.splice(at,1);
+ editingSpot=null;feedback.value=drafts.get(sceneKey(currentScene))?.text||'';
+ redrawComments();
+};
 document.getElementById('save-spot').onclick=()=>{
  storeInput();const value=feedback.value.trim();
  if(!value){status.textContent='Write a comment before adding a timed note.';return;}

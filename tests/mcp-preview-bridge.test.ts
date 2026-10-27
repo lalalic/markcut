@@ -12,7 +12,7 @@ function harness(remoteData?:any, fetchOverride?:(url:string)=>Promise<any>) {
   replaceChildren(){this.children=[]},append(...items:any[]){this.children.push(...items)}
  });
  const nodes:Record<string,ReturnType<typeof element>>={
-  feedback:element(),status:element(),'path-label':element(),'video-md-version':element(),'interactive-ui':element(),approve:element(),changes:element(),'save-spot':element(),'comment-target':element(),'comment-count':element(),'comment-list':element()
+  feedback:element(),status:element(),'path-label':element(),'video-md-version':element(),'interactive-ui':element(),approve:element(),changes:element(),'save-spot':element(),'remove-spot':element(),'comment-target':element(),'comment-count':element()
  };
  const parent={postMessage:(m:any)=>messages.push(m)};
  const events:any[]=[];
@@ -27,7 +27,7 @@ function harness(remoteData?:any, fetchOverride?:(url:string)=>Promise<any>) {
  const result=(data:any)=>dispatch({method:'ui/notifications/tool-result',params:{result:{structuredContent:data}}});
  const respond=(id:number,result:any={})=>dispatch({id,result});
  vm.runInContext(buildPreviewBridgeScript().replaceAll("__MARKCUT_ORIGIN__",JSON.stringify("https://neoy.qili2.com")),context);
- return {messages,nodes,events,dispatch,result,respond,scene:(detail:any)=>(listeners['markcut:scene-change']||[]).forEach(listener=>listener({detail}))};
+ return {messages,nodes,events,dispatch,result,respond,scene:(detail:any)=>(listeners['markcut:scene-change']||[]).forEach(listener=>listener({detail})),selectSpot:(id:number)=>(listeners['markcut:spot-select']||[]).forEach(listener=>listener({detail:{id}}))};
 }
 const nextTick=()=>new Promise(resolve=>setTimeout(resolve,0));
 
@@ -169,9 +169,10 @@ describe('MCP Remotion bridge',()=>{
   h.scene({sceneId:'s1',sceneName:'Scene-A',timeSeconds:7});
   h.nodes.feedback.value='Keep reaction';
   h.nodes['save-spot'].onclick?.();
-  expect(h.nodes['comment-list'].children).toHaveLength(2);
-  const firstEdit=h.nodes['comment-list'].children[0].children[0];
-  firstEdit.onclick();
+  const markers=h.events.filter(e=>e.type==='markcut:spots-change').at(-1).detail.spots;
+  expect(markers).toHaveLength(2);
+  expect(markers.map((x:any)=>x.context.timeSeconds)).toEqual([1,7]);
+  h.selectSpot(markers[0].id);
   expect(h.nodes.feedback.value).toBe('Trim opening');
   h.nodes.feedback.value='Trim first second';
   h.nodes.feedback.listeners.input();
@@ -181,6 +182,21 @@ describe('MCP Remotion bridge',()=>{
   expect(h.nodes['comment-count'].textContent).toBe('2 comments');
   expect(payload.comments.map((x:any)=>x.text)).toContain('Trim first second');
   expect(payload.comments.map((x:any)=>x.text)).toContain('Keep reaction');
+ });
+ it('deletes only the selected timeline marker',()=>{
+  const h=harness();h.result({id:'dots',revisionId:'r1',contentHash:'hash',compiled:{children:[]}});
+  h.scene({sceneId:'s1',sceneName:'Scene-A',timeSeconds:1});
+  h.nodes.feedback.value='First';h.nodes['save-spot'].onclick?.();
+  h.scene({sceneId:'s2',sceneName:'Scene-B',timeSeconds:3});
+  h.nodes.feedback.value='Second';h.nodes['save-spot'].onclick?.();
+  const markers=h.events.filter(e=>e.type==='markcut:spots-change').at(-1).detail.spots;
+  h.selectSpot(markers[0].id);
+  expect(h.nodes['remove-spot'].hidden).toBe(false);
+  h.nodes['remove-spot'].onclick?.();
+  expect(h.nodes['remove-spot'].hidden).toBe(true);
+  expect(h.events.filter(e=>e.type==='markcut:spots-change').at(-1).detail.spots).toHaveLength(1);
+  h.nodes.changes.onclick?.();
+  expect(JSON.parse(h.messages.at(-1).params.content[0].text).comments.map((x:any)=>x.text)).toEqual(['Second']);
  });
 describe('static compiled-JSON bridge',()=>{
  const base='https://neoy.qili2.com/files/_neoy/markcut/cache/';

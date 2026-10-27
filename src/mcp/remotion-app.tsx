@@ -6,7 +6,7 @@ import {SharedPlayer} from '../player/SharedPlayer';
 import {SceneThumbnails} from '../player/components/SceneThumbnails';
 import {useWebAudioPreview} from './web-audio-preview';
 import {useBrowserSpeechPreview} from './browser-speech-preview';
-const PLAYER_VERSION='v25';
+const PLAYER_VERSION='v26';
 const contextTime=(scene:{start:number;end:number}|undefined,time:number)=>
  Math.round(Math.max(scene?.start??0,Math.min(scene?.end??time,time))*10)/10;
 function App(){
@@ -15,10 +15,16 @@ function App(){
  const [currentTime,setCurrentTime]=React.useState(0);
  const [browserTts,setBrowserTts]=React.useState(true);
  const [commentedScenes,setCommentedScenes]=React.useState<string[]>([]);
+ const [spotMarkers,setSpotMarkers]=React.useState<Array<{id:number;text:string;context:{timeSeconds:number;sceneName?:string};selected:boolean}>>([]);
  React.useEffect(()=>{
   const listener=(event:Event)=>setCommentedScenes((event as CustomEvent).detail?.sceneNames||[]);
   window.addEventListener('markcut:comments-change',listener);
   return ()=>window.removeEventListener('markcut:comments-change',listener);
+ },[]);
+ React.useEffect(()=>{
+  const listener=(event:Event)=>setSpotMarkers((event as CustomEvent).detail?.spots||[]);
+  window.addEventListener('markcut:spots-change',listener);
+  return ()=>window.removeEventListener('markcut:spots-change',listener);
  },[]);
  React.useEffect(()=>{const receive=(e:Event)=>setRevision((e as CustomEvent).detail);window.addEventListener('markcut:revision',receive);return ()=>window.removeEventListener('markcut:revision',receive)},[]);
  const data=revision?.compiled?.root||revision?.compiled;
@@ -84,6 +90,26 @@ function App(){
   </div>
   {useBrowserTts&&caption&&<div role="status" style={{textAlign:"center",padding:"6px 12px",fontSize:13}}>{caption}</div>}
   <SceneThumbnails sceneData={scenes} commentedScenes={commentedScenes} currentTime={currentTime} onSeek={t=>{ref.current?.seekTo(Math.round(t*fps));setCurrentTime(t);}} />
+  <div className="comment-timeline" aria-label="Timed comment markers">
+   <div className="comment-timeline-track" onClick={event=>{
+    if(event.target!==event.currentTarget)return;
+    const box=event.currentTarget.getBoundingClientRect();
+    const duration=Math.max(0,Number(data.durationInSeconds)||scenes.at(-1)?.end||0);
+    if(!box.width||!duration)return;
+    const time=Math.max(0,Math.min(duration,(event.clientX-box.left)/box.width*duration));
+    ref.current?.seekTo(Math.round(time*fps));setCurrentTime(time);
+   }}>
+    {spotMarkers.map(note=>{
+     const duration=Math.max(0.001,Number(data.durationInSeconds)||scenes.at(-1)?.end||1);
+     const time=Number(note.context.timeSeconds)||0;
+     return <button key={note.id} type="button" className={'comment-marker'+(note.selected?' selected':'')}
+      style={{left:(Math.max(0,Math.min(1,time/duration))*100)+'%'}}
+      title={(note.context.sceneName||'Scene')+' · '+time+'s · '+note.text}
+      aria-label={'Edit timed comment at '+time+' seconds'}
+      onClick={()=>window.dispatchEvent(new CustomEvent('markcut:spot-select',{detail:{id:note.id}}))}/>;
+    })}
+   </div>
+  </div>
   {status && !/initializing|ready|paused/i.test(status) && <div id="preview-audio-status" role="status" style={{fontSize:12,padding:'4px 0'}}>{status.replace(/^Web Audio /,'Audio ')}</div>}
  </div>;
 }
