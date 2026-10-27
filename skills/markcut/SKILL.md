@@ -86,6 +86,10 @@ For native previews, Maps, playback, audio/subtitles or hosted ChatGPT MCP ifram
 
 Use the model-visible `markcut.preview({path})` tool when a human needs to **watch and review a Markcut video** in ChatGPT. It is a video player, **not** a generic Markdown renderer and not the same as the local `npx @lalalic/markcut preview <file>` command.
 
+- **Early review:** Visioner, Director or another upstream agent may create a **temporary**
+  Markcut `video.md` from permitted source clips to preview candidate material or a rough
+  sequence before the canonical edit exists. Keep it separate from final production files;
+  feedback guides the current agent and does not approve the eventual final video.
 - Supply an absolute `.md` path (or a supported NeoY mounted HTTPS Markdown URL). An optional `relay` object correlates an Agents Relay task but is not needed for standalone review.
 - The MCP call returns promptly with an asynchronous compilation operation. The hosted iframe shows actual compilation stages, then loads a published immutable compiled JSON and media snapshot. There is no persistent player-manager process.
 - Player controls include Play/Pause, Seek, volume/audio, fullscreen and a **horizontal clickable scene list** sourced from compiled scene metadata. The title bar displays **Markcut · video title**, a **Browser TTS** switch, and the player version at right.
