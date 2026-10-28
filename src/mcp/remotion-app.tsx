@@ -6,7 +6,7 @@ import {SharedPlayer} from '../player/SharedPlayer';
 import {SceneThumbnails} from '../player/components/SceneThumbnails';
 import {useWebAudioPreview} from './web-audio-preview';
 import {useBrowserSpeechPreview} from './browser-speech-preview';
-const PLAYER_VERSION='v29';
+const PLAYER_VERSION='v31';
 const contextTime=(scene:{start:number;end:number}|undefined,time:number)=>
  Math.round(Math.max(scene?.start??0,Math.min(scene?.end??time,time))*10)/10;
 function App(){
@@ -70,9 +70,9 @@ function App(){
  React.useEffect(()=>{
   let timer:number;
   const find=()=>{
-   const play=document.querySelector<HTMLElement>('#remotion-canvas button[aria-label="Play video"],#remotion-canvas button[aria-label="Pause video"]');
-   const bar=play?.parentElement?.parentElement?.parentElement?.lastElementChild;
-   if(bar instanceof HTMLElement&&bar.style.cursor==='pointer'){
+   const bar=Array.from(document.querySelectorAll<HTMLElement>('#remotion-canvas div')).find(el=>
+    el.style.cursor==='pointer'&&el.style.touchAction==='none'&&el.style.position==='relative');
+   if(bar){
     bar.style.marginLeft='22px';setSeekBar(bar);window.clearInterval(timer);
    }
   };
