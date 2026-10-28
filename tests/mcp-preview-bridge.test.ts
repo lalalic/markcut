@@ -12,7 +12,7 @@ function harness(remoteData?:any, fetchOverride?:(url:string)=>Promise<any>) {
   replaceChildren(){this.children=[]},append(...items:any[]){this.children.push(...items)}
  });
  const nodes:Record<string,ReturnType<typeof element>>={
-  feedback:element(),status:element(),'path-label':element(),'video-md-version':element(),'interactive-ui':element(),approve:element(),changes:element(),'save-spot':element(),'remove-spot':element(),'comment-target':element(),'comment-count':element(),'comment-mode':element()
+  feedback:element(),status:element(),'path-label':element(),'video-md-version':element(),'interactive-ui':element(),approve:element(),changes:element(),'save-spot':element(),'remove-spot':element(),'comment-target':element(),'comment-count':element(),'comment-mode':element(),'overall-mode':element()
  };
  nodes['comment-mode'].value='spot';
  const parent={postMessage:(m:any)=>messages.push(m)};
@@ -72,8 +72,8 @@ describe('MCP Remotion bridge',()=>{
   a.nodes.changes.onclick?.();
   expect(a.nodes.status.textContent).toBe('Feedback is required.');
   expect(a.messages.filter(m=>m.method==='ui/message')).toHaveLength(0);
+  a.selectSpot(0);
   a.nodes.feedback.value='Shorten the opening';
-  a.nodes['comment-mode'].value='overall';
   a.nodes['save-spot'].onclick?.();
   a.nodes.changes.onclick?.();
   expect(JSON.parse(a.messages[2].params.content[0].text)).toMatchObject({previewId:'a',decision:'changes_requested',feedback:'Shorten the opening'});
@@ -112,7 +112,7 @@ describe('MCP Remotion bridge',()=>{
   const h=harness();
   const relay={jobId:'job-7',taskId:19,executionId:'exec-1'};
   h.result({id:'r',revisionId:'r',contentHash:'hash',path:'/video.md',relay,compiled:{children:[]}});
-  h.nodes['comment-mode'].value='overall';h.nodes.feedback.value='shorter title';h.nodes['save-spot'].onclick?.();h.nodes.changes.onclick?.();
+  h.selectSpot(0);h.nodes.feedback.value='shorter title';h.nodes['save-spot'].onclick?.();h.nodes.changes.onclick?.();
   expect(JSON.parse(h.messages.at(-1).params.content[0].text).relay).toEqual(relay);
  });
  it('handles request changes followed by a new revision and approval in the same app',async()=>{
@@ -120,7 +120,7 @@ describe('MCP Remotion bridge',()=>{
   const first={id:'first',revisionId:'r1',contentHash:'sha1',path:'/video.md',compiled:{children:[{name:'First'}]}};
   const next={id:'second',revisionId:'r2',contentHash:'sha2',path:'/video.md',compiled:{children:[{name:'Next'}]}};
   h.result(first);
-  h.nodes['comment-mode'].value='overall';h.nodes.feedback.value='lowercase title';h.nodes['save-spot'].onclick?.();h.nodes.changes.onclick?.();
+  h.selectSpot(0);h.nodes.feedback.value='lowercase title';h.nodes['save-spot'].onclick?.();h.nodes.changes.onclick?.();
   expect(JSON.parse(h.messages[2].params.content[0].text)).toMatchObject({path:'/video.md',revisionId:'r1',decision:'changes_requested',feedback:'lowercase title'});
   h.respond(2);await nextTick();
   expect(h.nodes.status.textContent).toContain('Waiting for the updated preview');
@@ -136,9 +136,24 @@ describe('MCP Remotion bridge',()=>{
 });
 
 
+ it('keeps an empty overall marker and defaults to Spot, with Overall edited through its dot',()=>{
+  const h=harness();
+  expect(h.nodes['comment-mode'].value).toBe('spot');
+  h.selectSpot(0);
+  expect(h.nodes['comment-mode'].hidden).toBe(true);
+  expect(h.nodes['overall-mode'].hidden).toBe(false);
+  expect(h.nodes['remove-spot'].disabled).toBe(true);
+  h.nodes.feedback.value='Overall note';h.nodes['save-spot'].onclick?.();
+  let dots=h.events.filter(e=>e.type==='markcut:spots-change').at(-1).detail.spots;
+  expect(dots.filter((x:any)=>x.scope==='overall')).toHaveLength(1);
+  expect(dots[0].placeholder).toBeUndefined();
+  h.selectSpot(dots[0].id);h.nodes['remove-spot'].onclick?.();
+  dots=h.events.filter(e=>e.type==='markcut:spots-change').at(-1).detail.spots;
+  expect(dots[0]).toMatchObject({id:0,scope:'overall',placeholder:true});
+ });
  it('saves overall, scene and spot scopes at their canonical timeline positions',()=>{
   const h=harness();h.result({id:'multi',revisionId:'r1',contentHash:'hash',compiled:{children:[]}});
-  h.nodes['comment-mode'].value='overall';
+  h.selectSpot(0);
   h.nodes.feedback.value='Improve pacing';h.nodes['save-spot'].onclick?.();
   h.scene({sceneId:'s1',sceneName:'Scene-A',sceneStart:3,timeSeconds:4});
   h.nodes['comment-mode'].value='scene';
@@ -165,9 +180,9 @@ describe('MCP Remotion bridge',()=>{
   h.nodes.feedback.value='Keep reaction';
   h.nodes['save-spot'].onclick?.();
   const markers=h.events.filter(e=>e.type==='markcut:spots-change').at(-1).detail.spots;
-  expect(markers).toHaveLength(2);
-  expect(markers.map((x:any)=>x.context.timeSeconds)).toEqual([1,7]);
-  h.selectSpot(markers[0].id);
+  expect(markers).toHaveLength(3);
+  expect(markers.filter((x:any)=>!x.placeholder).map((x:any)=>x.context.timeSeconds)).toEqual([1,7]);
+  h.selectSpot(markers.find((x:any)=>!x.placeholder).id);
   expect(h.nodes.feedback.value).toBe('Trim opening');
   h.nodes.feedback.value='Trim first second';
   h.nodes['save-spot'].onclick?.();
@@ -187,7 +202,7 @@ describe('MCP Remotion bridge',()=>{
   h.nodes.changes.onclick?.();
   expect(h.nodes.status.textContent).toContain('Add or remove');
   h.nodes['save-spot'].onclick?.();
-  const note=h.events.filter(e=>e.type==='markcut:spots-change').at(-1).detail.spots[0];
+  const note=h.events.filter(e=>e.type==='markcut:spots-change').at(-1).detail.spots.find((x:any)=>!x.placeholder);
   h.selectSpot(note.id);
   h.nodes.changes.onclick?.();
   expect(h.messages.filter(m=>m.method==='ui/message')).toHaveLength(1);
@@ -199,11 +214,11 @@ describe('MCP Remotion bridge',()=>{
   h.scene({sceneId:'s2',sceneName:'Scene-B',timeSeconds:3});
   h.nodes.feedback.value='Second';h.nodes['save-spot'].onclick?.();
   const markers=h.events.filter(e=>e.type==='markcut:spots-change').at(-1).detail.spots;
-  h.selectSpot(markers[0].id);
+  h.selectSpot(markers.find((x:any)=>!x.placeholder).id);
   expect(h.nodes['remove-spot'].disabled).toBe(false);
   h.nodes['remove-spot'].onclick?.();
   expect(h.nodes['remove-spot'].disabled).toBe(true);
-  expect(h.events.filter(e=>e.type==='markcut:spots-change').at(-1).detail.spots).toHaveLength(1);
+  expect(h.events.filter(e=>e.type==='markcut:spots-change').at(-1).detail.spots).toHaveLength(2);
   h.nodes.changes.onclick?.();
   expect(JSON.parse(h.messages.at(-1).params.content[0].text).comments.map((x:any)=>x.text)).toEqual(['Second']);
  });

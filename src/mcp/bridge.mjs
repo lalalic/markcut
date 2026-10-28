@@ -15,18 +15,23 @@ function redrawComments(){
  const count=document.getElementById('comment-count');
  if(count)count.textContent=comments.length+' comment'+(comments.length===1?'':'s');
  const remove=document.getElementById('remove-spot');
- if(remove)remove.disabled=selectedId===null;
- window.dispatchEvent(new CustomEvent('markcut:spots-change',{detail:{spots:comments.map(x=>({...x,selected:x.id===selectedId}))}}));
+ if(remove)remove.disabled=selectedId===null||selectedId===0;
+ const overall=selectedId===0||comments.some(x=>x.id===selectedId&&x.scope==='overall');
+ mode.hidden=overall;document.getElementById('overall-mode').hidden=!overall;
+ const spots=comments.map(x=>({...x,selected:x.id===selectedId}));
+ if(!spots.some(x=>x.scope==='overall'))spots.unshift({id:0,scope:'overall',text:'',context:{timeSeconds:0},selected:selectedId===0,placeholder:true});
+ window.dispatchEvent(new CustomEvent('markcut:spots-change',{detail:{spots}}));
 }
 function clearComments(){
  comments.length=0;selectedId=null;currentScene={sceneId:null,sceneName:null,sceneStart:0,timeSeconds:0};feedback.value='';mode.value='spot';redrawComments();
 }
 window.addEventListener('markcut:scene-change',event=>{currentScene={...(event.detail||{})};});
 window.addEventListener('markcut:spot-select',event=>{
- const note=comments.find(x=>x.id===event.detail?.id);
- if(!note)return;
- selectedId=note.id;feedback.value=note.text;mode.value=note.scope;
- if(note.scope!=='overall')window.dispatchEvent(new CustomEvent('markcut:comment-select',{detail:note.context}));
+ const id=event.detail?.id;
+ const note=comments.find(x=>x.id===id);
+ if(!note&&id!==0)return;
+ selectedId=id;feedback.value=note?.text||'';if(note&&note.scope!=='overall')mode.value=note.scope;
+ if(note&&note.scope!=='overall')window.dispatchEvent(new CustomEvent('markcut:comment-select',{detail:note.context}));
  redrawComments();
 });
 mode.onchange=()=>redrawComments();
@@ -38,13 +43,13 @@ document.getElementById('remove-spot').onclick=()=>{
  redrawComments();
 };
 document.getElementById('save-spot').onclick=()=>{
- const value=feedback.value.trim(),scope=mode.value;
+ const value=feedback.value.trim(),scope=(selectedId===0||comments.some(x=>x.id===selectedId&&x.scope==='overall'))?'overall':mode.value;
  if(!value){status.textContent='Write a comment first.';return;}
  const live=window.__markcutPlaybackContext||currentScene;
  if(scope!=='overall'&&!live.sceneId&&!live.sceneName){status.textContent='Choose a scene first.';return;}
  const context=scope==='overall'?{sceneId:null,sceneName:null,timeSeconds:0}:
   {...live,timeSeconds:scope==='scene'?(Number(live.sceneStart)||0):(Number(live.timeSeconds)||0)};
- if(selectedId!==null){
+ if(selectedId!==null&&selectedId!==0){
   const note=comments.find(x=>x.id===selectedId);
   if(note){note.text=value;note.scope=scope;note.context=context;}
  }else comments.push({id:++nextCommentId,scope,text:value,context});

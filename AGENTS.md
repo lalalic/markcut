@@ -293,3 +293,7 @@ The speaker name is matched against `voices` map and the extra flags are appende
 - **immer** — state management (player app)
 - **vitest** — test runner
 - **TypeScript 5.6** — strict mode with `noUncheckedIndexedAccess`
+
+## MCP Review UI Verification
+
+For comment-editor or timeline-dot changes, verify the built MCP player in a real browser: multiline input and overlay controls, then add/select/edit/remove Overall, Scene and Spot markers on the Remotion seek bar. Unit tests alone do not prove the hosted iframe is updated.

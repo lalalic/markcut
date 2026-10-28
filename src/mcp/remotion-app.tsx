@@ -6,7 +6,7 @@ import {SharedPlayer} from '../player/SharedPlayer';
 import {SceneThumbnails} from '../player/components/SceneThumbnails';
 import {useWebAudioPreview} from './web-audio-preview';
 import {useBrowserSpeechPreview} from './browser-speech-preview';
-const PLAYER_VERSION='v31';
+const PLAYER_VERSION='v32';
 const contextTime=(scene:{start:number;end:number}|undefined,time:number)=>
  Math.round(Math.max(scene?.start??0,Math.min(scene?.end??time,time))*10)/10;
 function App(){
@@ -15,7 +15,7 @@ function App(){
  const [currentTime,setCurrentTime]=React.useState(0);
  const [browserTts,setBrowserTts]=React.useState(true);
  const [commentedScenes,setCommentedScenes]=React.useState<string[]>([]);
- const [spotMarkers,setSpotMarkers]=React.useState<Array<{id:number;scope:'overall'|'scene'|'spot';text:string;context:{timeSeconds:number;sceneName?:string};selected:boolean}>>([]);
+ const [spotMarkers,setSpotMarkers]=React.useState<Array<{id:number;scope:'overall'|'scene'|'spot';text:string;context:{timeSeconds:number;sceneName?:string};selected:boolean;placeholder?:boolean}>>([{id:0,scope:'overall',text:'',context:{timeSeconds:0},selected:false,placeholder:true}]);
  const [seekBar,setSeekBar]=React.useState<HTMLElement|null>(null);
  React.useEffect(()=>{
   const listener=(event:Event)=>setCommentedScenes((event as CustomEvent).detail?.sceneNames||[]);
@@ -108,9 +108,9 @@ function App(){
     const duration=Math.max(0.001,Number(data.durationInSeconds)||scenes.at(-1)?.end||1);
     const time=Number(note.context.timeSeconds)||0;
     const left=note.scope==='overall'?'0px':(Math.max(0,Math.min(1,time/duration))*100)+'%';
-    return <button key={note.id} type="button" className={'comment-marker scope-'+note.scope+(note.selected?' selected':'')}
-     style={{left}} title={note.scope+' · '+time+'s · '+note.text}
-     aria-label={'Edit '+note.scope+' comment at '+time+' seconds'}
+    return <button key={note.id} type="button" className={'comment-marker scope-'+note.scope+(note.selected?' selected':'')+(note.placeholder?' placeholder':'')}
+     style={{left}} title={note.placeholder?'Add overall comment':note.scope+' · '+time+'s · '+note.text}
+     aria-label={note.placeholder?'Add overall comment':'Edit '+note.scope+' comment at '+time+' seconds'}
      onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();window.dispatchEvent(new CustomEvent('markcut:spot-select',{detail:{id:note.id}}));}}/>;
    })}
   </>,seekBar)}
