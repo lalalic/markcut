@@ -164,6 +164,28 @@ describe('MCP Remotion bridge',()=>{
   expect(h.nodes['overall-mode'].hidden).toBe(true);
   expect(h.nodes.feedback.value).toBe('');
  });
+ it('auto-saves edits and new overall drafts when switching marker selection',()=>{
+  const h=harness();
+  h.scene({sceneId:'s1',sceneName:'Scene-A',sceneStart:0,timeSeconds:0});
+  h.nodes.feedback.value='First spot';h.nodes['save-spot'].onclick?.();
+  h.scene({sceneId:'s1',sceneName:'Scene-A',sceneStart:0,timeSeconds:5});
+  h.nodes.feedback.value='Second spot';h.nodes['save-spot'].onclick?.();
+  let dots=h.events.filter(e=>e.type==='markcut:spots-change').at(-1).detail.spots;
+  const first=dots.find((x:any)=>x.text==='First spot');
+  const second=dots.find((x:any)=>x.text==='Second spot');
+  h.selectSpot(first.id);
+  h.nodes.feedback.value='Edited first spot';
+  h.selectSpot(second.id);
+  dots=h.events.filter(e=>e.type==='markcut:spots-change').at(-1).detail.spots;
+  expect(dots.find((x:any)=>x.id===first.id)).toMatchObject({text:'Edited first spot',context:{timeSeconds:0}});
+  expect(dots.find((x:any)=>x.id===second.id).selected).toBe(true);
+  h.nodes.feedback.value='';h.selectSpot(first.id);
+  dots=h.events.filter(e=>e.type==='markcut:spots-change').at(-1).detail.spots;
+  expect(dots.find((x:any)=>x.id===second.id).text).toBe('Second spot');
+  h.selectSpot(0);h.nodes.feedback.value='Overall draft';h.selectSpot(second.id);
+  dots=h.events.filter(e=>e.type==='markcut:spots-change').at(-1).detail.spots;
+  expect(dots.filter((x:any)=>x.scope==='overall')).toEqual([expect.objectContaining({text:'Overall draft'})]);
+ });
  it('saves overall, scene and spot scopes at their canonical timeline positions',()=>{
   const h=harness();h.result({id:'multi',revisionId:'r1',contentHash:'hash',compiled:{children:[]}});
   h.selectSpot(0);

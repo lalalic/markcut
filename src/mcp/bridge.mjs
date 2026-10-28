@@ -26,14 +26,35 @@ function clearComments(){
  comments.length=0;selectedId=null;currentScene={sceneId:null,sceneName:null,sceneStart:0,timeSeconds:0};feedback.value='';mode.value='spot';redrawComments();
 }
 window.addEventListener('markcut:scene-change',event=>{currentScene={...(event.detail||{})};});
+function autoSaveBeforeSwitch(){
+ const value=feedback.value.trim();
+ if(!value)return true; // Empty text never implicitly deletes a saved comment; use −.
+ const existing=comments.find(x=>x.id===selectedId);
+ if(existing){
+  existing.text=value;
+  if(existing.scope!=='overall'){
+   existing.scope=mode.value;
+   if(existing.scope==='scene')existing.context.timeSeconds=Number(existing.context.sceneStart)||0;
+  }
+  return true;
+ }
+ const scope=selectedId===0?'overall':mode.value;
+ const live=window.__markcutPlaybackContext||currentScene;
+ if(scope!=='overall'&&!live.sceneId&&!live.sceneName){status.textContent='Choose a scene first.';return false;}
+ comments.push({id:++nextCommentId,scope,text:value,context:scope==='overall'?{sceneId:null,sceneName:null,timeSeconds:0}:
+  {...live,timeSeconds:scope==='scene'?(Number(live.sceneStart)||0):(Number(live.timeSeconds)||0)}});
+ return true;
+}
 window.addEventListener('markcut:spot-select',event=>{
  const id=event.detail?.id;
- const note=comments.find(x=>x.id===id);
- if(!note&&id!==0)return;
- if(selectedId===id){
+ if(!comments.some(x=>x.id===id)&&id!==0)return;
+ if(!autoSaveBeforeSwitch())return;
+ const targetId=id===0?(comments.find(x=>x.scope==='overall')?.id??0):id;
+ const note=comments.find(x=>x.id===targetId);
+ if(selectedId===targetId){
   selectedId=null;feedback.value='';redrawComments();return;
  }
- selectedId=id;feedback.value=note?.text||'';if(note&&note.scope!=='overall')mode.value=note.scope;
+ selectedId=targetId;feedback.value=note?.text||'';if(note&&note.scope!=='overall')mode.value=note.scope;
  if(note&&note.scope!=='overall')window.dispatchEvent(new CustomEvent('markcut:comment-select',{detail:note.context}));
  redrawComments();
 });

@@ -11,7 +11,7 @@ describe('Markcut Remotion MCP App',()=>{
   const html=buildPreviewHtml();
   expect(html).toContain('id="remotion-root"');
   expect(html).toContain('id="player-version"');
-  expect(html).toContain('>v33</span>');
+  expect(html).toContain('>v34</span>');
   expect(html).toContain('id="video-md-version"');
   expect(html).toContain('<textarea id="feedback" rows="3"');
   expect(html).toContain('id="comment-tools"');

@@ -6,7 +6,7 @@ import {SharedPlayer} from '../player/SharedPlayer';
 import {SceneThumbnails} from '../player/components/SceneThumbnails';
 import {useWebAudioPreview} from './web-audio-preview';
 import {useBrowserSpeechPreview} from './browser-speech-preview';
-const PLAYER_VERSION='v33';
+const PLAYER_VERSION='v34';
 const contextTime=(scene:{start:number;end:number}|undefined,time:number)=>
  Math.round(Math.max(scene?.start??0,Math.min(scene?.end??time,time))*10)/10;
 function App(){
@@ -73,7 +73,7 @@ function App(){
    const bar=Array.from(document.querySelectorAll<HTMLElement>('#remotion-canvas div')).find(el=>
     el.style.cursor==='pointer'&&el.style.touchAction==='none'&&el.style.position==='relative');
    if(bar){
-    bar.style.marginLeft='22px';setSeekBar(bar);window.clearInterval(timer);
+    bar.style.marginLeft='44px';setSeekBar(bar);window.clearInterval(timer);
    }
   };
   find();timer=window.setInterval(find,150);
