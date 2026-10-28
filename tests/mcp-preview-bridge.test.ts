@@ -12,8 +12,9 @@ function harness(remoteData?:any, fetchOverride?:(url:string)=>Promise<any>) {
   replaceChildren(){this.children=[]},append(...items:any[]){this.children.push(...items)}
  });
  const nodes:Record<string,ReturnType<typeof element>>={
-  feedback:element(),status:element(),'path-label':element(),'video-md-version':element(),'interactive-ui':element(),approve:element(),changes:element(),'save-spot':element(),'remove-spot':element(),'comment-target':element(),'comment-count':element()
+  feedback:element(),status:element(),'path-label':element(),'video-md-version':element(),'interactive-ui':element(),approve:element(),changes:element(),'save-spot':element(),'remove-spot':element(),'comment-target':element(),'comment-count':element(),'comment-mode':element()
  };
+ nodes['comment-mode'].value='spot';
  const parent={postMessage:(m:any)=>messages.push(m)};
  const events:any[]=[];
  const window={
@@ -72,6 +73,8 @@ describe('MCP Remotion bridge',()=>{
   expect(a.nodes.status.textContent).toBe('Feedback is required.');
   expect(a.messages.filter(m=>m.method==='ui/message')).toHaveLength(0);
   a.nodes.feedback.value='Shorten the opening';
+  a.nodes['comment-mode'].value='overall';
+  a.nodes['save-spot'].onclick?.();
   a.nodes.changes.onclick?.();
   expect(JSON.parse(a.messages[2].params.content[0].text)).toMatchObject({previewId:'a',decision:'changes_requested',feedback:'Shorten the opening'});
   expect(b.messages.filter(m=>m.method==='ui/message')).toHaveLength(0);
@@ -109,7 +112,7 @@ describe('MCP Remotion bridge',()=>{
   const h=harness();
   const relay={jobId:'job-7',taskId:19,executionId:'exec-1'};
   h.result({id:'r',revisionId:'r',contentHash:'hash',path:'/video.md',relay,compiled:{children:[]}});
-  h.nodes.feedback.value='shorter title';h.nodes.changes.onclick?.();
+  h.nodes['comment-mode'].value='overall';h.nodes.feedback.value='shorter title';h.nodes['save-spot'].onclick?.();h.nodes.changes.onclick?.();
   expect(JSON.parse(h.messages.at(-1).params.content[0].text).relay).toEqual(relay);
  });
  it('handles request changes followed by a new revision and approval in the same app',async()=>{
@@ -117,7 +120,7 @@ describe('MCP Remotion bridge',()=>{
   const first={id:'first',revisionId:'r1',contentHash:'sha1',path:'/video.md',compiled:{children:[{name:'First'}]}};
   const next={id:'second',revisionId:'r2',contentHash:'sha2',path:'/video.md',compiled:{children:[{name:'Next'}]}};
   h.result(first);
-  h.nodes.feedback.value='lowercase title';h.nodes.changes.onclick?.();
+  h.nodes['comment-mode'].value='overall';h.nodes.feedback.value='lowercase title';h.nodes['save-spot'].onclick?.();h.nodes.changes.onclick?.();
   expect(JSON.parse(h.messages[2].params.content[0].text)).toMatchObject({path:'/video.md',revisionId:'r1',decision:'changes_requested',feedback:'lowercase title'});
   h.respond(2);await nextTick();
   expect(h.nodes.status.textContent).toContain('Waiting for the updated preview');
@@ -133,30 +136,22 @@ describe('MCP Remotion bridge',()=>{
 });
 
 
- it('restores scene drafts, marks commented scenes, and submits all comments once',()=>{
-  const h=harness();
-  h.result({id:'multi',revisionId:'r1',contentHash:'hash',compiled:{children:[]}});
-  h.scene({sceneId:'s1',sceneName:'Scene-A',timeSeconds:0});
-  h.nodes.feedback.value='Improve intro';
-  h.nodes.feedback.listeners.input();
-  h.scene({sceneId:'s2',sceneName:'Scene-B',timeSeconds:4});
-  h.nodes.feedback.value='Use ambient sound';
-  h.nodes.feedback.listeners.input();
-  const marked=h.events.filter(e=>e.type==='markcut:comments-change').at(-1).detail.sceneNames;
-  expect([...marked].sort()).toEqual(['Scene-A','Scene-B']);
-  h.scene({sceneId:'s1',sceneName:'Scene-A',timeSeconds:1});
-  expect(h.nodes.feedback.value).toBe('Improve intro');
-  expect(h.nodes['comment-count'].textContent).toBe('2 comments');
-  h.nodes.approve.onclick?.();
-  expect(h.nodes.status.textContent).toContain('Submit or remove');
+ it('saves overall, scene and spot scopes at their canonical timeline positions',()=>{
+  const h=harness();h.result({id:'multi',revisionId:'r1',contentHash:'hash',compiled:{children:[]}});
+  h.nodes['comment-mode'].value='overall';
+  h.nodes.feedback.value='Improve pacing';h.nodes['save-spot'].onclick?.();
+  h.scene({sceneId:'s1',sceneName:'Scene-A',sceneStart:3,timeSeconds:4});
+  h.nodes['comment-mode'].value='scene';
+  h.nodes.feedback.value='Improve intro';h.nodes['save-spot'].onclick?.();
+  h.nodes['comment-mode'].value='spot';
+  h.nodes.feedback.value='Delay subtitle';h.nodes['save-spot'].onclick?.();
+  const markers=h.events.filter(e=>e.type==='markcut:spots-change').at(-1).detail.spots;
+  expect(markers.map((x:any)=>[x.scope,x.context.timeSeconds])).toEqual([['overall',0],['scene',3],['spot',4]]);
+  expect(h.events.filter(e=>e.type==='markcut:comments-change').at(-1).detail.sceneNames).toEqual(['Scene-A']);
+  h.nodes.approve.onclick?.();expect(h.nodes.status.textContent).toContain('Submit or remove');
   h.nodes.changes.onclick?.();
-  const sent=h.messages.filter(m=>m.method==='ui/message');
-  expect(sent).toHaveLength(1);
-  const payload=JSON.parse(sent[0].params.content[0].text);
-  expect(payload.comments).toMatchObject([
-   {text:'Improve intro',playbackContext:{sceneName:'Scene-A'}},
-   {text:'Use ambient sound',playbackContext:{sceneName:'Scene-B'}}
-  ]);
+  const payload=JSON.parse(h.messages.filter(m=>m.method==='ui/message').at(-1).params.content[0].text);
+  expect(payload.comments.map((x:any)=>x.scope)).toEqual(['overall','scene','spot']);
  });
  it('supports multiple timed notes on one scene and restores a saved note',()=>{
   const h=harness();
@@ -175,13 +170,27 @@ describe('MCP Remotion bridge',()=>{
   h.selectSpot(markers[0].id);
   expect(h.nodes.feedback.value).toBe('Trim opening');
   h.nodes.feedback.value='Trim first second';
-  h.nodes.feedback.listeners.input();
+  h.nodes['save-spot'].onclick?.();
   h.nodes.changes.onclick?.();
   const payload=JSON.parse(h.messages.at(-1).params.content[0].text);
   expect(payload.comments).toHaveLength(2);
   expect(h.nodes['comment-count'].textContent).toBe('2 comments');
   expect(payload.comments.map((x:any)=>x.text)).toContain('Trim first second');
   expect(payload.comments.map((x:any)=>x.text)).toContain('Keep reaction');
+ });
+ it('keeps typed text across scope switches and blocks unsaved submission',()=>{
+  const h=harness();h.result({id:'draft',revisionId:'r',contentHash:'hash',compiled:{children:[]}});
+  h.scene({sceneId:'s1',sceneName:'Scene-A',sceneStart:2,timeSeconds:3});
+  h.nodes.feedback.value='Keep this text';
+  h.nodes['comment-mode'].value='scene';h.nodes['comment-mode'].onchange?.();
+  expect(h.nodes.feedback.value).toBe('Keep this text');
+  h.nodes.changes.onclick?.();
+  expect(h.nodes.status.textContent).toContain('Add or remove');
+  h.nodes['save-spot'].onclick?.();
+  const note=h.events.filter(e=>e.type==='markcut:spots-change').at(-1).detail.spots[0];
+  h.selectSpot(note.id);
+  h.nodes.changes.onclick?.();
+  expect(h.messages.filter(m=>m.method==='ui/message')).toHaveLength(1);
  });
  it('deletes only the selected timeline marker',()=>{
   const h=harness();h.result({id:'dots',revisionId:'r1',contentHash:'hash',compiled:{children:[]}});
@@ -191,9 +200,9 @@ describe('MCP Remotion bridge',()=>{
   h.nodes.feedback.value='Second';h.nodes['save-spot'].onclick?.();
   const markers=h.events.filter(e=>e.type==='markcut:spots-change').at(-1).detail.spots;
   h.selectSpot(markers[0].id);
-  expect(h.nodes['remove-spot'].hidden).toBe(false);
+  expect(h.nodes['remove-spot'].disabled).toBe(false);
   h.nodes['remove-spot'].onclick?.();
-  expect(h.nodes['remove-spot'].hidden).toBe(true);
+  expect(h.nodes['remove-spot'].disabled).toBe(true);
   expect(h.events.filter(e=>e.type==='markcut:spots-change').at(-1).detail.spots).toHaveLength(1);
   h.nodes.changes.onclick?.();
   expect(JSON.parse(h.messages.at(-1).params.content[0].text).comments.map((x:any)=>x.text)).toEqual(['Second']);

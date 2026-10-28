@@ -6,7 +6,7 @@ import {SharedPlayer} from '../player/SharedPlayer';
 import {SceneThumbnails} from '../player/components/SceneThumbnails';
 import {useWebAudioPreview} from './web-audio-preview';
 import {useBrowserSpeechPreview} from './browser-speech-preview';
-const PLAYER_VERSION='v26';
+const PLAYER_VERSION='v29';
 const contextTime=(scene:{start:number;end:number}|undefined,time:number)=>
  Math.round(Math.max(scene?.start??0,Math.min(scene?.end??time,time))*10)/10;
 function App(){
@@ -15,7 +15,8 @@ function App(){
  const [currentTime,setCurrentTime]=React.useState(0);
  const [browserTts,setBrowserTts]=React.useState(true);
  const [commentedScenes,setCommentedScenes]=React.useState<string[]>([]);
- const [spotMarkers,setSpotMarkers]=React.useState<Array<{id:number;text:string;context:{timeSeconds:number;sceneName?:string};selected:boolean}>>([]);
+ const [spotMarkers,setSpotMarkers]=React.useState<Array<{id:number;scope:'overall'|'scene'|'spot';text:string;context:{timeSeconds:number;sceneName?:string};selected:boolean}>>([]);
+ const [seekBar,setSeekBar]=React.useState<HTMLElement|null>(null);
  React.useEffect(()=>{
   const listener=(event:Event)=>setCommentedScenes((event as CustomEvent).detail?.sceneNames||[]);
   window.addEventListener('markcut:comments-change',listener);
@@ -61,16 +62,28 @@ function App(){
  React.useEffect(()=>{
   const active=[...scenes].reverse().find(scene=>currentTime>=scene.start);
   (window as any).__markcutPlaybackContext={
-   sceneId:active?.id||null,sceneName:active?.name||null,
+   sceneId:active?.id||null,sceneName:active?.name||null,sceneStart:active?.start||0,
    timeSeconds:contextTime(active,currentTime)
   };
  },[scenes,currentTime]);
  const activeScene=[...scenes].reverse().find(scene=>currentTime>=scene.start);
  React.useEffect(()=>{
-  window.dispatchEvent(new CustomEvent('markcut:scene-change',{detail:{sceneId:activeScene?.id||null,sceneName:activeScene?.name||null,timeSeconds:contextTime(activeScene,currentTime)}}));
+  let timer:number;
+  const find=()=>{
+   const play=document.querySelector<HTMLElement>('#remotion-canvas button[aria-label="Play video"],#remotion-canvas button[aria-label="Pause video"]');
+   const bar=play?.parentElement?.parentElement?.parentElement?.lastElementChild;
+   if(bar instanceof HTMLElement&&bar.style.cursor==='pointer'){
+    bar.style.marginLeft='22px';setSeekBar(bar);window.clearInterval(timer);
+   }
+  };
+  find();timer=window.setInterval(find,150);
+  return ()=>window.clearInterval(timer);
+ },[revision?.revisionId]);
+ React.useEffect(()=>{
+  window.dispatchEvent(new CustomEvent('markcut:scene-change',{detail:{sceneId:activeScene?.id||null,sceneName:activeScene?.name||null,sceneStart:activeScene?.start||0,timeSeconds:contextTime(activeScene,currentTime)}}));
  },[revision?.revisionId,activeScene?.id,activeScene?.name]);
  React.useEffect(()=>{
-  const listener=(event:Event)=>{const context=(event as CustomEvent).detail;const scene=scenes.find(x=>x.id===context?.sceneId||x.name===context?.sceneName);
+  const listener=(event:Event)=>{const context=(event as CustomEvent).detail;const scene=scenes.find((x:{id?:string;name:string;start:number;end:number})=>x.id===context?.sceneId||x.name===context?.sceneName);
    if(scene){const second=Number(context.timeSeconds);const time=Number.isFinite(second)?Math.max(scene.start,Math.min(scene.end,second)):scene.start;ref.current?.seekTo(Math.round(time*fps));setCurrentTime(time);}
   };
   window.addEventListener('markcut:comment-select',listener);
@@ -90,26 +103,17 @@ function App(){
   </div>
   {useBrowserTts&&caption&&<div role="status" style={{textAlign:"center",padding:"6px 12px",fontSize:13}}>{caption}</div>}
   <SceneThumbnails sceneData={scenes} commentedScenes={commentedScenes} currentTime={currentTime} onSeek={t=>{ref.current?.seekTo(Math.round(t*fps));setCurrentTime(t);}} />
-  <div className="comment-timeline" aria-label="Timed comment markers">
-   <div className="comment-timeline-track" onClick={event=>{
-    if(event.target!==event.currentTarget)return;
-    const box=event.currentTarget.getBoundingClientRect();
-    const duration=Math.max(0,Number(data.durationInSeconds)||scenes.at(-1)?.end||0);
-    if(!box.width||!duration)return;
-    const time=Math.max(0,Math.min(duration,(event.clientX-box.left)/box.width*duration));
-    ref.current?.seekTo(Math.round(time*fps));setCurrentTime(time);
-   }}>
-    {spotMarkers.map(note=>{
-     const duration=Math.max(0.001,Number(data.durationInSeconds)||scenes.at(-1)?.end||1);
-     const time=Number(note.context.timeSeconds)||0;
-     return <button key={note.id} type="button" className={'comment-marker'+(note.selected?' selected':'')}
-      style={{left:(Math.max(0,Math.min(1,time/duration))*100)+'%'}}
-      title={(note.context.sceneName||'Scene')+' · '+time+'s · '+note.text}
-      aria-label={'Edit timed comment at '+time+' seconds'}
-      onClick={()=>window.dispatchEvent(new CustomEvent('markcut:spot-select',{detail:{id:note.id}}))}/>;
-    })}
-   </div>
-  </div>
+  {seekBar&&createPortal(<>
+   {spotMarkers.map(note=>{
+    const duration=Math.max(0.001,Number(data.durationInSeconds)||scenes.at(-1)?.end||1);
+    const time=Number(note.context.timeSeconds)||0;
+    const left=note.scope==='overall'?'0px':(Math.max(0,Math.min(1,time/duration))*100)+'%';
+    return <button key={note.id} type="button" className={'comment-marker scope-'+note.scope+(note.selected?' selected':'')}
+     style={{left}} title={note.scope+' · '+time+'s · '+note.text}
+     aria-label={'Edit '+note.scope+' comment at '+time+' seconds'}
+     onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();window.dispatchEvent(new CustomEvent('markcut:spot-select',{detail:{id:note.id}}));}}/>;
+   })}
+  </>,seekBar)}
   {status && !/initializing|ready|paused/i.test(status) && <div id="preview-audio-status" role="status" style={{fontSize:12,padding:'4px 0'}}>{status.replace(/^Web Audio /,'Audio ')}</div>}
  </div>;
 }
