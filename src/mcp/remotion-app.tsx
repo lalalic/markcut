@@ -6,7 +6,7 @@ import {SharedPlayer} from '../player/SharedPlayer';
 import {SceneThumbnails} from '../player/components/SceneThumbnails';
 import {useWebAudioPreview} from './web-audio-preview';
 import {useBrowserSpeechPreview} from './browser-speech-preview';
-const PLAYER_VERSION='v34';
+const PLAYER_VERSION='v35';
 const contextTime=(scene:{start:number;end:number}|undefined,time:number)=>
  Math.round(Math.max(scene?.start??0,Math.min(scene?.end??time,time))*10)/10;
 function App(){
@@ -98,10 +98,12 @@ function App(){
     <input type="checkbox" checked={useBrowserTts} disabled={!data?.subtitle?.src} onChange={e=>setBrowserTts(e.target.checked)}/>
     Browser TTS
    </label>,document.getElementById("header-tts")!)}
-  <div id="remotion-canvas" style={{width:'100%',aspectRatio:`${data.width||1080}/${data.height||1920}`,maxHeight:'65vh',margin:'auto'}}>
+  <div id="remotion-canvas" style={{position:'relative',width:'100%',aspectRatio:`${data.width||1080}/${data.height||1920}`,maxHeight:'65vh',margin:'auto'}}>
    <SharedPlayer key={revision.revisionId} root={playbackRoot} playerRef={ref} numberOfSharedAudioTags={0} style={{width:'100%',height:'100%'}} />
+   {useBrowserTts&&caption&&<div id="browser-tts-caption" aria-live="off" style={{position:'absolute',bottom:50,left:12,right:12,zIndex:5,pointerEvents:'none',textAlign:'center'}}>
+    <span style={{display:'inline-block',maxWidth:'90%',padding:'5px 10px',borderRadius:5,background:'rgba(0,0,0,.72)',color:'#fff',fontSize:'clamp(12px,1.6vw,18px)',lineHeight:1.4,textShadow:'0 1px 2px #000',overflowWrap:'anywhere'}}>{caption}</span>
+   </div>}
   </div>
-  {useBrowserTts&&caption&&<div role="status" style={{textAlign:"center",padding:"6px 12px",fontSize:13}}>{caption}</div>}
   <SceneThumbnails sceneData={scenes} commentedScenes={commentedScenes} currentTime={currentTime} onSeek={t=>{ref.current?.seekTo(Math.round(t*fps));setCurrentTime(t);}} />
   {seekBar&&createPortal(<>
    {spotMarkers.map(note=>{
