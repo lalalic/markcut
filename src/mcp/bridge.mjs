@@ -30,6 +30,9 @@ window.addEventListener('markcut:spot-select',event=>{
  const id=event.detail?.id;
  const note=comments.find(x=>x.id===id);
  if(!note&&id!==0)return;
+ if(selectedId===id){
+  selectedId=null;feedback.value='';redrawComments();return;
+ }
  selectedId=id;feedback.value=note?.text||'';if(note&&note.scope!=='overall')mode.value=note.scope;
  if(note&&note.scope!=='overall')window.dispatchEvent(new CustomEvent('markcut:comment-select',{detail:note.context}));
  redrawComments();

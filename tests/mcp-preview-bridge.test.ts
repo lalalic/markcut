@@ -151,6 +151,19 @@ describe('MCP Remotion bridge',()=>{
   dots=h.events.filter(e=>e.type==='markcut:spots-change').at(-1).detail.spots;
   expect(dots[0]).toMatchObject({id:0,scope:'overall',placeholder:true});
  });
+ it('toggles overall marker selection off when clicked again',()=>{
+  const h=harness();
+  h.selectSpot(0);
+  let dots=h.events.filter(e=>e.type==='markcut:spots-change').at(-1).detail.spots;
+  expect(dots[0].selected).toBe(true);
+  expect(h.nodes['overall-mode'].hidden).toBe(false);
+  h.selectSpot(0);
+  dots=h.events.filter(e=>e.type==='markcut:spots-change').at(-1).detail.spots;
+  expect(dots[0].selected).toBe(false);
+  expect(h.nodes['comment-mode'].hidden).toBe(false);
+  expect(h.nodes['overall-mode'].hidden).toBe(true);
+  expect(h.nodes.feedback.value).toBe('');
+ });
  it('saves overall, scene and spot scopes at their canonical timeline positions',()=>{
   const h=harness();h.result({id:'multi',revisionId:'r1',contentHash:'hash',compiled:{children:[]}});
   h.selectSpot(0);
