@@ -297,3 +297,7 @@ The speaker name is matched against `voices` map and the extra flags are appende
 ## MCP Review UI Verification
 
 For comment-editor or timeline-dot changes, verify the built MCP player in a real browser: multiline input and overlay controls, then add/select/edit/remove Overall, Scene and Spot markers on the Remotion seek bar. Unit tests alone do not prove the hosted iframe is updated.
+
+## MCP Provider Reload After Changes
+
+Whenever Markcut MCP server, preview UI, bridge, or bundled player code changes, rebuild the MCP bundle and reload **only the Markcut MCP provider** through Neo's provider control interface before testing or declaring the change live. Verify the running provider serves the new resource URI, then open a fresh ChatGPT iframe and check its displayed version and affected behavior. A Git push or ChatGPT tool-list refresh alone is not a provider reload. Never restart the whole Neo MCP app as a workaround; if scoped reload fails, report the live version and blocker explicitly.
