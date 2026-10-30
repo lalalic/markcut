@@ -7,7 +7,7 @@ import {SceneThumbnails} from '../player/components/SceneThumbnails';
 import {useWebAudioPreview} from './web-audio-preview';
 import {withoutRecordedNarration} from './audio-preview-tree';
 import {useBrowserSpeechPreview} from './browser-speech-preview';
-const PLAYER_VERSION='v37';
+const PLAYER_VERSION='v38';
 const contextTime=(scene:{start:number;end:number}|undefined,time:number)=>
  Math.round(Math.max(scene?.start??0,Math.min(scene?.end??time,time))*10)/10;
 function App(){
