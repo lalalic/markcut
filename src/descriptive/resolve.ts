@@ -448,6 +448,10 @@ export async function resolveScripts(
     // Set resolved src (absolute for reliable probing; the final
     // relativizeAssetsUnder pass in resolveAll makes it md-folder-relative)
     node.src = resolvePath(generated);
+    // Preserve speech provenance after script text is removed and the asset
+    // is published under an opaque HTTPS filename. The MCP Browser TTS mixer
+    // uses this marker to suppress duplicate recorded narration.
+    node.isNarration = true;
     delete node.script;
   }
 

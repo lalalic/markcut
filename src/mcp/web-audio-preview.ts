@@ -1,6 +1,6 @@
 import * as React from 'react';
 import type {PlayerRef} from '@remotion/player';
-import {extractRemotePreviewAudio} from './audio-preview-tree';
+import {extractRemotePreviewAudio,previewBgmGain} from './audio-preview-tree';
 
 export function useWebAudioPreview(root:any, playerRef:React.RefObject<PlayerRef|null>) {
  const [status,setStatus]=React.useState('');
@@ -12,7 +12,7 @@ export function useWebAudioPreview(root:any, playerRef:React.RefObject<PlayerRef
   // context creation until playback is authorized.
   let ctx:AudioContext|null=null;
   let buffer:AudioBuffer|null=null,source:AudioBufferSourceNode|null=null,gain:GainNode|null=null,disposed=false;
-  let generation=0;
+  let generation=0, narrationSpeaking=false;
   const stop=()=>{generation++;if(source){source.onended=null;try{source.stop()}catch{}source.disconnect();source=null;}gain?.disconnect();gain=null;};
   const play=async()=>{
    const ticket=++generation;
@@ -26,7 +26,7 @@ export function useWebAudioPreview(root:any, playerRef:React.RefObject<PlayerRef
     if(offset>=buffer.duration)return;
     if(source){source.onended=null;try{source.stop()}catch{}source.disconnect();}
     const s=ctx.createBufferSource();const g=ctx.createGain();s.buffer=buffer;
-    g.gain.value=(player.isMuted()?0:player.getVolume())*(audio.volume??1);
+    g.gain.value=previewBgmGain(player.getVolume(),audio.volume??1,player.isMuted(),narrationSpeaking);
     s.connect(g);g.connect(ctx.destination);s.start(0,Math.max(0,offset));
     source=s;gain=g;setStatus(ctx.state==='running'?`BGM playing · ${offset.toFixed(2)}s · volume ${g.gain.value}`:`BGM suspended: ${ctx.state}`);
    }catch(e){setStatus('Playback failed: '+String(e));}
@@ -43,14 +43,25 @@ export function useWebAudioPreview(root:any, playerRef:React.RefObject<PlayerRef
    .finally(()=>clearTimeout(timeout));
   const pause=()=>{stop();setStatus('Web Audio paused');};
   const seek=()=>{stop();if(playerRef.current?.isPlaying())void play();};
-  const volume=()=>{if(gain&&playerRef.current)gain.gain.value=(playerRef.current.isMuted()?0:playerRef.current.getVolume())*(audio.volume??1);};
+  const volume=()=>{
+   const p=playerRef.current;
+   if(!gain||!p||!ctx)return;
+   const value=previewBgmGain(p.getVolume(),audio.volume??1,p.isMuted(),narrationSpeaking);
+   gain.gain.cancelScheduledValues(ctx.currentTime);
+   gain.gain.setTargetAtTime(value,ctx.currentTime,0.08);
+  };
+  const onNarration=(e:Event)=>{
+   narrationSpeaking=Boolean((e as CustomEvent<{active:boolean}>).detail?.active);
+   volume();
+  };
+  window.addEventListener('markcut:tts-speaking',onNarration);
   let player:PlayerRef|null=null;
   const attach=()=>{if(player)return;const p=playerRef.current;if(!p)return;player=p;
    p.addEventListener('play',play);p.addEventListener('pause',pause);p.addEventListener('ended',pause);
    p.addEventListener('seeked',seek);p.addEventListener('volumechange',volume);p.addEventListener('mutechange',volume);
   };
   attach();const poll=setInterval(attach,100);
-  return()=>{disposed=true;controller.abort();clearTimeout(timeout);clearInterval(poll);if(player){player.removeEventListener('play',play);player.removeEventListener('pause',pause);player.removeEventListener('ended',pause);player.removeEventListener('seeked',seek);player.removeEventListener('volumechange',volume);player.removeEventListener('mutechange',volume);}stop();if(ctx)void ctx.close();};
+  return()=>{disposed=true;controller.abort();clearTimeout(timeout);clearInterval(poll);if(player){player.removeEventListener('play',play);player.removeEventListener('pause',pause);player.removeEventListener('ended',pause);player.removeEventListener('seeked',seek);player.removeEventListener('volumechange',volume);player.removeEventListener('mutechange',volume);}stop();window.removeEventListener('markcut:tts-speaking',onNarration);if(ctx)void ctx.close();};
  },[audio,playerRef,root]);
  return {playbackRoot,status};
 }

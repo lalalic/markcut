@@ -114,6 +114,7 @@ export const audio = base.extend({
   volume: z.number().min(0).max(1).default(1),
   foreground: z.boolean().optional().describe("ducks parent video audio while playing"),
   speaker: z.string().optional().describe("speaker name for multi-turn dialogue; set by resolveDialogue"),
+  isNarration: z.boolean().optional().describe("generated or explicitly marked recorded narration"),
 });
 export type Audio = z.infer<typeof audio>;
 

@@ -30,30 +30,43 @@ export function useBrowserSpeechPreview(root:any,playerRef:React.RefObject<Playe
  React.useEffect(()=>{
   if(!enabled||typeof window==="undefined"||!("speechSynthesis" in window))return;
   const synth=window.speechSynthesis;
-  let player:PlayerRef|null=null,disposed=false,lastIndex=-1;
-  const stop=()=>{synth.cancel();lastIndex=-1;};
+  let player:PlayerRef|null=null,disposed=false,lastIndex=-1,turn=0,active=false;
+  const notify=(next:boolean)=>{
+   if(active===next)return;
+   active=next;
+   window.dispatchEvent(new CustomEvent('markcut:tts-speaking',{detail:{active:next}}));
+  };
+  const stop=()=>{turn++;synth.cancel();lastIndex=-1;notify(false);};
   const update=()=>{
    if(!player||disposed)return;
    const t=player.getCurrentFrame()/(root?.fps||30);
    setTime(t);
-   if(!player.isPlaying()){stop();return;}
+   if(!player.isPlaying()||player.isMuted()){stop();return;}
    const index=cues.findIndex(c=>t>=c.start&&t<c.end);
    if(index===lastIndex)return;
-   synth.cancel();lastIndex=index;
-   if(index>=0&&!player.isMuted()){
+   synth.cancel();notify(false);lastIndex=index;
+   const token=++turn;
+   if(index>=0){
     const utterance=new SpeechSynthesisUtterance(cues[index].text);
     utterance.rate=1;utterance.volume=player.getVolume();
+    utterance.onstart=()=>{if(!disposed&&token===turn)notify(true);};
+    const done=()=>{if(!disposed&&token===turn)notify(false);};
+    utterance.onend=done;utterance.onerror=done;
     synth.speak(utterance);
    }
   };
   const attach=()=>{
    if(player||!playerRef.current)return;
    player=playerRef.current;
-   for(const event of ["frameupdate","play","pause","seeked","ended","mutechange"])player.addEventListener(event,update);
+   for(const event of ['frameupdate','play','pause','seeked','ended','mutechange','volumechange'])player.addEventListener(event,update);
   };
   attach();
   const poll=setInterval(attach,150);
-  return()=>{disposed=true;clearInterval(poll);if(player)for(const event of ["frameupdate","play","pause","seeked","ended","mutechange"])player.removeEventListener(event,update);stop();};
+  return()=>{
+   disposed=true;clearInterval(poll);
+   if(player)for(const event of ['frameupdate','play','pause','seeked','ended','mutechange','volumechange'])player.removeEventListener(event,update);
+   stop();
+  };
  },[enabled,cues,root?.fps,playerRef]);
  const active=cues.find(c=>time>=c.start&&time<c.end);
  return {caption:enabled?active?.text||"":""};

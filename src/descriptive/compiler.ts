@@ -72,6 +72,7 @@ export interface DescriptiveAudio extends DescriptiveBaseNode {
    *  `SpeakerName: text` format scripts. Used for per-speaker voice selection and
    *  subtitle prefix. */
   speaker?: string;
+  isNarration?: boolean;
   volume?: number;
   foreground?: boolean;
   startFrom?: number;
@@ -596,6 +597,7 @@ function compileLeaf(node: Exclude<DescriptiveNode, DescriptiveContainer | Descr
         volume: node.volume ?? 1,
         foreground: node.foreground,
         speaker: node.speaker,
+        isNarration: node.isNarration,
       };
       return { stream, duration: end ?? 0 };
     }

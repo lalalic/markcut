@@ -103,7 +103,7 @@ function preserveVariantAttrs(node: Record<string, unknown>, attrs: Record<strin
     "travelMode", "zoom", "center", "mapType", "data", "prompt",
     "view", "camera", "cinematic", "streetView",
     "name", "title", "transition", "transitionTime", "layout",
-    "componentName", "props", "speaker",
+    "componentName", "props", "speaker", "isNarration",
   ]);
   for (const [k, v] of Object.entries(attrs)) {
     if (!STANDARD.has(k)) {
@@ -217,6 +217,7 @@ function parseNodeLine(content: string, lineNum?: number): DescriptiveNode {
         id: attrs.id as any,
         src,
         speaker: attrs.speaker as string | undefined,
+        isNarration: attrs.isNarration as boolean | undefined,
         duration: attrs.duration as any,
         start: attrs.start as any,
         startFrom: attrs.startFrom as any,

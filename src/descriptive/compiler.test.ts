@@ -771,6 +771,7 @@ describe("compileDescriptiveRoot", () => {
       children: [
         { id: "bgm", type: "audio", src: "bg.mp3", duration: 5, volume: 0.3, foreground: false },
         { id: "sfx", type: "audio", src: "sfx.wav", duration: 1, volume: 1, start: 2 },
+        { id: "tts", type: "audio", src: "tts.mp3", duration: 1, isNarration: true },
       ],
     });
 
@@ -783,6 +784,8 @@ describe("compileDescriptiveRoot", () => {
     const sfx = compiled.children.find((c: any) => c.id === "sfx") as any;
     expect(sfx.start).toBe(2);
     expect(sfx.end).toBe(3);
+    const tts=compiled.children.find((c:any)=>c.id==='tts') as any;
+    expect(tts.isNarration).toBe(true);
   });
 
   it("compiles component node with props", () => {
