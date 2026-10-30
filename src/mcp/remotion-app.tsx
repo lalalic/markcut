@@ -5,8 +5,9 @@ import type {PlayerRef} from '@remotion/player';
 import {SharedPlayer} from '../player/SharedPlayer';
 import {SceneThumbnails} from '../player/components/SceneThumbnails';
 import {useWebAudioPreview} from './web-audio-preview';
+import {withoutRecordedNarration} from './audio-preview-tree';
 import {useBrowserSpeechPreview} from './browser-speech-preview';
-const PLAYER_VERSION='v35';
+const PLAYER_VERSION='v36';
 const contextTime=(scene:{start:number;end:number}|undefined,time:number)=>
  Math.round(Math.max(scene?.start??0,Math.min(scene?.end??time,time))*10)/10;
 function App(){
@@ -30,15 +31,10 @@ function App(){
  React.useEffect(()=>{const receive=(e:Event)=>setRevision((e as CustomEvent).detail);window.addEventListener('markcut:revision',receive);return ()=>window.removeEventListener('markcut:revision',receive)},[]);
  const data=revision?.compiled?.root||revision?.compiled;
  const useBrowserTts=browserTts&&Boolean(data?.subtitle?.src);
- const {playbackRoot:generatedRoot,status}=useWebAudioPreview(useBrowserTts?null:data,ref);
+ const {playbackRoot:generatedRoot,status}=useWebAudioPreview(data,ref);
  const playbackRoot=React.useMemo(()=>{
   if(!useBrowserTts)return generatedRoot;
-  const strip=(n:any):any=>{
-   if(!n||typeof n!=="object")return n;
-   if(n.type==="audio")return null;
-   return {...n,...(Array.isArray(n.children)?{children:n.children.map(strip).filter(Boolean)}:{})};
-  };
-  return {...strip(data),subtitle:undefined};
+  return withoutRecordedNarration(generatedRoot);
  },[data,generatedRoot,useBrowserTts]);
  const {caption}=useBrowserSpeechPreview(data,ref,useBrowserTts);
  const fps=data?.fps||30;

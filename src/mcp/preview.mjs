@@ -8,7 +8,7 @@ import { buildPreviewBridgeScript } from "./bridge.mjs";
 import { externalizePreviewMedia, publicOrigin, resolveMountedFile, resolvePreviewPath, publishPlayerBundle, publishCompiledCache, prunePublishedCache, EXPORT_ROOT } from "./remote-assets.mjs";
 
 export const TOOL_NAME = "markcut.preview";
-export const RESOURCE_URI = "ui://markcut/video-preview-v35.html";
+export const RESOURCE_URI = "ui://markcut/video-preview-v36.html";
 // Legacy entrypoints remain registered, but serve the current implementation.
 export const LEGACY_RESOURCE_URIS = [
   "ui://markcut/video-preview-v3.html",
@@ -43,6 +43,7 @@ export const LEGACY_RESOURCE_URIS = [
   "ui://markcut/video-preview-v32.html",
   "ui://markcut/video-preview-v33.html",
   "ui://markcut/video-preview-v34.html",
+  "ui://markcut/video-preview-v35.html",
 ];
 export const RESOURCE_MIME_TYPE = "text/html;profile=mcp-app";
 // Google Maps JS loads libraries, tiles and Routes RPCs from these HTTPS origins.

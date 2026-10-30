@@ -301,3 +301,7 @@ For comment-editor or timeline-dot changes, verify the built MCP player in a rea
 ## MCP Provider Reload After Changes
 
 Whenever Markcut MCP server, preview UI, bridge, or bundled player code changes, rebuild the MCP bundle and reload **only the Markcut MCP provider** through Neo's provider control interface before testing or declaring the change live. Verify the running provider serves the new resource URI, then open a fresh ChatGPT iframe and check its displayed version and affected behavior. A Git push or ChatGPT tool-list refresh alone is not a provider reload. Never restart the whole Neo MCP app as a workaround; if scoped reload fails, report the live version and blocker explicitly.
+
+## MCP background-audio regression guard
+
+When extracting HTTPS BGM from a preview tree, traverse the tree **before** returning the captured audio variable. JavaScript evaluates object properties left-to-right: returning `{audio, playbackRoot: strip(root)}` silently loses the BGM handle while removing the native audio node. Keep the pure extraction in `src/mcp/audio-preview-tree.ts` and run `tests/mcp-web-audio-preview.test.ts`. For user-style playback verification, check network HTTP 200, decoded duration, a running AudioContext, advancing Remotion frames, and nonzero Web Audio analyser RMS; a decoded source alone does not establish audible playback.
