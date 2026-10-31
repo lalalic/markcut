@@ -43,6 +43,7 @@ import {
   isSyntheticMode,
   routePositionAtLegs,
   modeEmoji,
+  routeMarkerGlyph,
   type RouteLeg,
   type RouteStopWindow,
 } from "../utils/route-legs";
@@ -1007,7 +1008,7 @@ function RouteWithMarkerLegs({
   const legs = useRouteLegs(waypoints, travelMode);
   const stops = useRouteStops(children, waypoints, legs);
   const position = useAnimatedPositionLegs({ legs, actionDuration, stops });
-  const glyph = position ? modeEmoji(position.mode) : markerEmoji;
+  const glyph = routeMarkerGlyph(markerEmoji, position?.mode);
 
   return (
     <>

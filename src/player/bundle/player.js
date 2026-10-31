@@ -223797,6 +223797,9 @@ function makeSyntheticLeg(from2, to, mode) {
     steps: [{ path: greatCirclePath(from2, to), durationSec }]
   };
 }
+function routeMarkerGlyph(markerEmoji, activeMode) {
+  return markerEmoji && markerEmoji !== "\u{1F697}" ? markerEmoji : activeMode ? modeEmoji(activeMode) : markerEmoji || "\u{1F4CD}";
+}
 function modeEmoji(mode) {
   switch ((mode ?? "").toUpperCase()) {
     case "FLIGHT":
@@ -225048,7 +225051,7 @@ function RouteWithMarkerLegs({
   const legs = useRouteLegs(waypoints, travelMode);
   const stops = useRouteStops(children2, waypoints, legs);
   const position7 = useAnimatedPositionLegs({ legs, actionDuration, stops });
-  const glyph = position7 ? modeEmoji(position7.mode) : markerEmoji;
+  const glyph = routeMarkerGlyph(markerEmoji, position7?.mode);
   return /* @__PURE__ */ (0, import_jsx_runtime90.jsxs)(import_jsx_runtime90.Fragment, { children: [
     /* @__PURE__ */ (0, import_jsx_runtime90.jsx)(RoutePolylines, { legs, routeColor, routeWeight }),
     /* @__PURE__ */ (0, import_jsx_runtime90.jsx)(WaypointMarkers, { waypoints }),

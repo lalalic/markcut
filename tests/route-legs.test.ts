@@ -4,6 +4,7 @@ import {
   greatCirclePath,
   makeSyntheticLeg,
   modeEmoji,
+  routeMarkerGlyph,
   routePositionAtLegs,
   isSyntheticMode,
   type RouteLeg,
@@ -175,4 +176,15 @@ describe("routePositionAtLegs", () => {
     const noStop = routePositionAtLegs(legs, 40, 12)!;
     expect(noStop.mode).toBe("DRIVING");
   });
+});
+
+describe('routeMarkerGlyph',()=>{
+ it('honors a custom neutral observation marker instead of inventing a vehicle',()=>{
+  expect(routeMarkerGlyph('📍','DRIVING')).toBe('📍');
+  expect(routeMarkerGlyph('📍','WALKING')).toBe('📍');
+ });
+ it('keeps the default transport-mode glyph when no custom marker is specified',()=>{
+  expect(routeMarkerGlyph('🚗','WALKING')).toBe('🚶');
+  expect(routeMarkerGlyph('🚗','DRIVING')).toBe('🚗');
+ });
 });

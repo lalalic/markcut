@@ -102,6 +102,11 @@ export function makeSyntheticLeg(
 }
 
 /** Emoji glyph for a leg's travel mode (used for the traveling marker). */
+/** An explicitly authored marker must not be replaced by a guessed travel-mode glyph. */
+export function routeMarkerGlyph(markerEmoji: string, activeMode?: string): string {
+  return markerEmoji && markerEmoji !== "🚗" ? markerEmoji : activeMode ? modeEmoji(activeMode) : markerEmoji || "📍";
+}
+
 export function modeEmoji(mode?: string): string {
   switch ((mode ?? "").toUpperCase()) {
     case "FLIGHT": return "✈️";
