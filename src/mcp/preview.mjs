@@ -205,7 +205,7 @@ export async function ensureVideoPreview(path, options = {}) {
     const hash=createHash("sha256").update(validatedPath).update("\0")
       .update(source).update("\0").update(JSON.stringify(referencedAssets)).update("\0").update(audio.audioSrc||"")
       .update("\0").update(process.env.GOOGLE_MAPS_API_KEY||"")
-      .update("\0").update("map-footage-v2").digest("hex");
+      .update("\0").update("map-footage-v3-auto-viewport").digest("hex");
     const id=hash;
     let index={entries:[]};
     try {index=JSON.parse(await readFile(indexFile,"utf8"));} catch{}
