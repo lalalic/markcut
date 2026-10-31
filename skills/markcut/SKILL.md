@@ -13,6 +13,8 @@ Everything video is a **stream tree** described with markdown. see [docs/markdow
 ### Vision — understand video and images
 - `npx @lalalic/markcut vision <folder>` provides tool to understand video and images in a folder, and generate a `metadata.json` file with with text description, duration, and other metadata for each media file.
 - `npx @lalalic/markcut vision <folder> --label`, interactive mode, provides tool to label video and images with text, and above metadata.
+- DeepSeek Vision backend (opt-in) runs via a signed-in WebHelm browser. `npx @lalalic/markcut vision <folder> --backend deepseek --batch-size 8 --jsonl` batches image/chronological video-frame tiles into contact sheets. `--jsonl` streams each media result on stdout immediately **after** its atomic metadata save. Do not treat unconfirmed uploads as processed. Use `--skip-stt` only when speech transcription is unnecessary; use `--backend legacy` for the previous CLI-based model pipeline.
+- `perception.observations` contains media IDs and timed visual descriptions; video `perception.segments` retains the existing `startMs to endMs` fields. DeepSeek observes sampled frames, not motion or audio between them. Browser delivery errors require inspection/resume in the same session; never blindly resend.
 
 ### Storyboard — plan video structure with scene nodes
 

@@ -381,3 +381,32 @@ markcut queue list
 ```
 
 The template must use an executable reachable from the process environment. To avoid ambiguity with shell quoting of `$HOME`, use a literal absolute path in production. If unset, execution is unchanged. Rendering cache continues to be managed by Markcut, not the queue. No service restart or Markcut-specific queue daemon is required.
+
+
+## Vision: WebHelm DeepSeek (ITT / VTT)
+
+When `--backend deepseek` is set, `markcut vision` uses a signed-in DeepSeek browser through WebHelm for
+image-to-text (ITT) and timestamped video-to-text (VTT). The legacy CLI pipeline
+remains the default for existing workflows (`--backend legacy`). No DeepSeek API key is required, but
+WebHelm must be installed with a signed-in DeepSeek session. Original images and
+video frames are disclosed to DeepSeek only when this command is invoked.
+
+```bash
+markcut vision ./assets --backend deepseek --batch-size 8 --skip-stt --jsonl > vision-events.jsonl
+```
+
+- A batch contains up to eight labeled still images or sampled video frames,
+  packed into one contact sheet for one browser submission. `--batch-size` accepts 2–12.
+- DeepSeek must return JSON descriptions indexed by tile ID; missing, duplicated,
+  or extra IDs reject that batch instead of silently mismatching media.
+- Each media entry in `metadata.json` includes `mediaId` (source filename),
+  `mediaType`, `perception.desc`, and `perception.observations`. Each video
+  observation has `seconds`, `startSeconds`, and `endSeconds`; video segments
+  remain available in the existing `perception.segments` format.
+- `--jsonl` streams an event for each completed or cached media, **after**
+  its metadata has been atomically saved. Logs go to stderr. A failed batch
+  is not written; previously saved batches remain resumable via cache.
+- `--skip-stt` disables Whisper transcription, but not VTT vision analysis.
+  If STT is enabled, the subtitle field contains its separate `.vtt` file.
+- Browser submissions with uncertain delivery are never automatically retried.
+  Inspect/resume their WebHelm session before repeating the request.

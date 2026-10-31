@@ -23,6 +23,9 @@
  *   --label            Open label preview → then continue with full AI pipeline
  *   --prompts-file <path> Path to prompts markdown file (default: vision_prompts.md)
  *   --vtt-sample-interval <n> Sample one video frame every N seconds (default: 5)
+  --backend deepseek|legacy  DeepSeek via WebHelm (opt-in) or legacy CLI (default)
+  --batch-size <2..12>      Max labeled images/video frames per DeepSeek contact sheet (default: 8)
+  --jsonl                   Stream structured media results to stdout after each atomic save
  *   --context "text"   Background context about people/places (injected into prompts)
  *   --pick <files>     Comma-separated filenames to process
  *   --skip-stt         Skip speech-to-text for videos
@@ -50,6 +53,7 @@ import {
   DEFAULT_ITT_CLI, DEFAULT_VTT_SAMPLE_INTERVAL, DEFAULT_VTT_CLI, DEFAULT_STT_CLI, DEFAULT_AGENT_CLI,
 } from "../config.mjs";
 import { runCandidateVision } from "./candidate.mjs";
+import { runWebhelmDeepseekVision } from "./webhelm-deepseek.mjs";
 
 // ── Paths ─────────────────────────────────────────────────────────────────
 
@@ -929,7 +933,7 @@ function analyzeVideo(videoPath, normInfo, normDir, prompts, context = "", userH
 
 // ── Full pipeline runner (step 2: label → normalize → percept → segments) ──
 
-async function runFullPipeline(folder, prompts, context, pickSet, vttSampleInterval, skipSTT, dryRun) {
+async function runFullPipeline(folder, prompts, context, pickSet, vttSampleInterval, skipSTT, dryRun, backend, batchSize, jsonl) {
   const metadataPath = join(folder, "metadata.json");
 
   // ── Ensure metadata exists ──────────────────────────────────────────
@@ -974,7 +978,7 @@ async function runFullPipeline(folder, prompts, context, pickSet, vttSampleInter
   let serverReady = false;
   if (child.stdout) {
     child.stdout.on("data", (chunk) => {
-      process.stdout.write(chunk);
+      (jsonl ? process.stderr : process.stdout).write(chunk);
       if (!serverReady && chunk.toString().includes("Player ready")) {
         serverReady = true;
         try { execSync(`open http://localhost:${port}`, { stdio: "ignore" }); } catch {}
@@ -999,7 +1003,25 @@ async function runFullPipeline(folder, prompts, context, pickSet, vttSampleInter
     return;
   }
 
-  await runNormalizeAndPercept(folder, metadataPath, prompts, context, pickSet, vttSampleInterval, skipSTT);
+  await runVisionBackend(folder, metadataPath, prompts, context, pickSet, vttSampleInterval, skipSTT, backend, batchSize, jsonl);
+}
+
+// Choose one backend for a full run; do not silently mix incompatible outputs.
+async function runVisionBackend(folder, metadataPath, prompts, context, pickSet, sampleInterval, skipSTT, backend, batchSize, jsonl) {
+  if (backend === "legacy") {
+    return runNormalizeAndPercept(folder, metadataPath, prompts, context, pickSet, sampleInterval, skipSTT);
+  }
+  if (backend !== "deepseek" && backend !== "webhelm-deepseek") {
+    throw new Error(`Unknown vision backend: ${backend}. Use deepseek or legacy.`);
+  }
+  const normDir = join(folder, ".normalized");
+  mkdirSync(normDir, { recursive: true });
+  return runWebhelmDeepseekVision({
+    folder, metadataPath, prompts, context, pickSet, batchSize, sampleInterval, skipSTT,
+    stt: async path => runSTT(path, normDir, DEFAULT_STT_CLI),
+    logger: emitInfo,
+    onMedia: jsonl ? event => process.stdout.write(JSON.stringify(event) + "\n") : null,
+  });
 }
 
 // ── Normalize + Percept (internal step) ───────────────────────────────────
@@ -1118,6 +1140,9 @@ Options:
   --instruct "text"    Background context about people/places (injected into prompts)
   --prompts-file <path> Path to prompts markdown file (default: vision_prompts.md)
   --vtt-sample-interval <n> Sample one video frame every N seconds (default: 5)
+  --backend deepseek|legacy  DeepSeek via WebHelm (opt-in) or legacy CLI (default)
+  --batch-size <2..12>      Max labeled images/video frames per DeepSeek contact sheet (default: 8)
+  --jsonl                   Stream structured media results to stdout after each atomic save
   --pick <files>       Comma-separated filenames to process
   --skip-stt           Skip speech-to-text for videos
   --dry-run            Show what would be processed without running AI
@@ -1138,6 +1163,9 @@ export async function main(args) {
   let dryRun = false;
   let doLabel = false;
   let candidateMode = false;
+  let backend = process.env.MARKCUT_VISION_BACKEND || "legacy";
+  let batchSize = 8;
+  let jsonl = false;
   let output = "";
   let modelCommand = "";
   let transcriptFile = "";
@@ -1156,6 +1184,9 @@ export async function main(args) {
     const flag = args[i++];
     if (flag === "--help") { printUsage(); return; }
     else if (flag === "--label") { doLabel = true; }
+    else if (flag === "--backend" && args[i]) { backend = args[i++]; }
+    else if (flag === "--batch-size" && args[i]) { batchSize = Number(args[i++]); }
+    else if (flag === "--jsonl") { jsonl = true; }
     else if (flag === "--candidate") { candidateMode = true; }
     else if (flag === "--output" && args[i]) { output = resolve(args[i++]); }
     else if (flag === "--model-command" && args[i]) { modelCommand = args[i++]; }
@@ -1175,7 +1206,9 @@ export async function main(args) {
     else if (flag.startsWith("--") && args[i]) { promptOverrides.set(flag.slice(2), args[i++]); }
   }
 
-  if (!folder) { emitError("No folder specified."); printUsage(); process.exit(1); }
+  if (!folder) { throw new Error("No folder specified. Run markcut vision --help for usage."); }
+  if (!["deepseek", "webhelm-deepseek", "legacy"].includes(backend)) throw new Error(`Unknown vision backend: ${backend}`);
+  if (!Number.isInteger(batchSize) || batchSize < 2 || batchSize > 12) throw new Error("--batch-size must be an integer from 2 to 12");
   folder = resolve(folder);
   if (!existsSync(folder)) { emitError(`Folder not found: ${folder}`); process.exit(1); }
 
@@ -1203,7 +1236,7 @@ export async function main(args) {
 
   if (doLabel) {
     // Full pipeline with interactive labeling
-    await runFullPipeline(folder, prompts, context, pickSet, vttSampleInterval, skipSTT, dryRun);
+    await runFullPipeline(folder, prompts, context, pickSet, vttSampleInterval, skipSTT, dryRun, backend, batchSize, jsonl);
   } else {
     // Default: full pipeline without labeling (extract → normalize → percept → segments)
     const metadataPath = join(folder, "metadata.json");
@@ -1216,7 +1249,11 @@ export async function main(args) {
       return;
     }
     emitInfo(`\n🔧 Running full pipeline (normalize → perceive)...`);
-    await runNormalizeAndPercept(folder, metadataPath, prompts, context, pickSet, vttSampleInterval, skipSTT);
+    if (dryRun) {
+      emitInfo(`Dry run: backend=${backend}, batch-size=${batchSize}, pick=${[...pickSet].join(",") || "all"}. No AI request was submitted.`);
+      return;
+    }
+    await runVisionBackend(folder, metadataPath, prompts, context, pickSet, vttSampleInterval, skipSTT, backend, batchSize, jsonl);
   }
 }
 

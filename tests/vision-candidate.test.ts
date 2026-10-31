@@ -255,7 +255,7 @@ describe("candidate-only vision", () => {
   it("honors --skip-stt in normal vision mode", async () => {
     mkdirSync(SKIP_STT_ROOT, { recursive: true });
     const video = createVideo(SKIP_STT_ROOT, "long.mp4");
-    await main(["node", "cli.mjs", "vision", SKIP_STT_ROOT, "--skip-stt"]);
+    await main(["node", "cli.mjs", "vision", SKIP_STT_ROOT, "--backend", "legacy", "--skip-stt"]);
 
     const metadataPath = join(SKIP_STT_ROOT, "metadata.json");
     expect(existsSync(metadataPath)).toBe(true);

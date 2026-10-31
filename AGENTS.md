@@ -309,3 +309,7 @@ When extracting HTTPS BGM from a preview tree, traverse the tree **before** retu
 ## Route map framing
 
 For `map view:route`, omit `zoom` to auto-fit geotagged stops to the Remotion composition dimensions, including 9:16 vertical output; auto-fit reserves 14% padding. The route schema and both descriptive compiler paths must leave omitted zoom undefined, or their old `zoom:10` defaults silently override the runtime fit. Explicit `zoom` and camera tweens still override fit. Verify the real browser map's zoom/center and rendered tiles, not just a successful Markdown compile or Google API HTTP response. A calculated Directions line is not proof of a recorded GPS track.
+
+## Vision batch verification (2026-10-30)
+
+DeepSeek in WebHelm accepts an image per browser action, so Markcut uses numbered contact sheets and checks returned IDs before writing `metadata.json`. Video-to-text is based on sampled frames with timestamps, not continuous-video or audio understanding. Keep per-media completion events after atomic writes. Do not retry a submission with an uncertain receipt; an old conversation or pending response is not evidence of a successful new understanding. Run the real historical Vlog photos and clips through both media preprocessing and the live browser before claiming the integration is production stable.
