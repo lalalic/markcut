@@ -30,7 +30,7 @@ it('generic --vtt/--itt plus --agent uses the existing STT→semantic segment wo
     'const prompt=args[args.indexOf("--prompt")+1];',
     'if(!prompt.includes("嘿 Neo"))process.exit(12);',
     'console.log(JSON.stringify({"0to2000":{description:"intro"},',
-    '"2000to4000":{description:"important source moment"}}));',
+    '"2000to4000":{description:"important source moment",instructions:[{utterance:"嘿 Neo，这里是一个重要镜头",intent:"emphasize later",time_seconds:2.2,confidence:"high"}]}}));',
   ].join('\n'));
   const escaped=(path:string)=>JSON.stringify(path);
   const itm='node '+escaped(visual)+' --input {input} --prompt {prompt_quoted}';
@@ -47,6 +47,9 @@ it('generic --vtt/--itt plus --agent uses the existing STT→semantic segment wo
   expect(meta.clip.perception.desc).toContain('Recognized landscape');
   expect(Object.keys(meta.clip.perception.segments)).toEqual(['0to2000','2000to4000']);
   expect(meta.clip.perception.segments['0to2000'].vision).toContain('Recognized landscape');
+  expect(meta.clip.perception.segments['2000to4000'].instructions).toEqual([
+    {utterance:'嘿 Neo，这里是一个重要镜头',intent:'emphasize later',time_seconds:2.2,confidence:'high'},
+  ]);
 });
 
 it('invalid semantic Agent response does not silently fall back to code-selected boundaries',()=>{

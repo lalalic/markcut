@@ -887,6 +887,21 @@ function analyzeVideo(videoPath, normInfo, normDir, prompts, context = "", userH
         }
         return { start: Number(match[1]), end: Number(match[2]) };
       }).sort((x,y) => x.start-y.start);
+      // Validate the optional project-supplied spoken instruction annotations.
+      // These remain metadata only: no action or edit is applied by Markcut.
+      for (const [key, segment] of Object.entries(segParsed)) {
+        if (segment.instructions == null) continue;
+        if (!Array.isArray(segment.instructions)) throw new Error("Invalid Agent instructions on " + key);
+        const [start,end] = key.split("to").map(Number);
+        for (const instruction of segment.instructions) {
+          if (!instruction || typeof instruction.utterance !== "string" || !instruction.utterance.trim() ||
+              typeof instruction.intent !== "string" || !instruction.intent.trim() ||
+              typeof instruction.time_seconds !== "number" || !Number.isFinite(instruction.time_seconds) ||
+              instruction.time_seconds * 1000 < start || instruction.time_seconds * 1000 > end) {
+            throw new Error("Unverifiable Agent instruction on " + key);
+          }
+        }
+      }
       let cursor = 0;
       for (const range of ranges) {
         if (range.start !== cursor || range.end <= range.start || range.end > totalDurMs) {

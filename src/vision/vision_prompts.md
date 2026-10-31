@@ -39,12 +39,14 @@ You are an expert video editor. You are given candidate segment boundaries for a
 Your task: merge these candidate boundaries into meaningful, coherent segments.
 
 Rules:
-- Each final segment should be a coherent narrative or visual unit (5-60 seconds)
+- Each final segment should be a coherent narrative or visual unit (typically 5-60 seconds; shorter when the original source or evidence requires it)
 - Respect user hint boundaries — they are the most reliable. If the user marked a boundary at 5s, keep it
 - Use subtitle cues to refine: if a subtitle sentence crosses a user hint boundary, prefer the cue boundary
 - Use ffprobe changes as tiebreakers only — they mark raw visual cuts, not narrative breaks
-- Output ONLY a JSON object where keys are time ranges (milliseconds) and values are objects with a "description" field
+- Output ONLY a JSON object whose keys are time ranges (milliseconds). Each value must have a "description" and may have "instructions".
 - Descriptions: 5-20 words, summarize what happens in that segment (use user hint text or subtitle text)
+- When **provided project context** defines an editing-instruction grammar or wake phrase, interpret matching transcript commands semantically, including continuation across nearby cues. Preserve them in optional "instructions":[{"utterance":"exact spoken words","intent":"plain language meaning","time_seconds":0.0,"confidence":"high|medium|low"}]. The time must be in the original source and fall inside the segment. Do NOT invent commands, confuse ordinary narration with instructions, or execute any edit.
+- The "instructions" field is evidence for a later editor only; never remove or skip source intervals because of it. When no command is supported, omit "instructions" or return an empty array.
 
 Input format:
 ```
@@ -61,7 +63,7 @@ Duration: 30000ms
 ```
 
 Output format:
-{"0to5000": {"description": "Introduction and welcome"}, "5000to15250": {"description": "Starting to swim"}, "15250to30000": {"description": "Building sandcastle"}}
+{"0to5000": {"description": "Introduction and welcome"}, "5000to15250": {"description": "Starting to swim", "instructions": [{"utterance": "Keep this part", "intent": "Retain this source portion", "time_seconds": 8.2, "confidence": "high"}]}, "15250to30000": {"description": "Building sandcastle"}}
 
 If inputs are too sparse for segmentation, return an empty object {}.
 ~~~
