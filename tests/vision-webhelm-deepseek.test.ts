@@ -129,6 +129,20 @@ describe('WebHelm DeepSeek batched vision', () => {
     expect(requests[0].image).toBe(image1);
     expect(requests[1]).toEqual({ resume: true, thread_id: 'known-thread-id', timeout_seconds: 10 });
   });
+  it('caps read-only resume time below the browser tab reclamation threshold', () => {
+    const requests: any[] = [];
+    const session = new DeepSeekSession({ sessionId: 'existing-session', runner: (_command, args: string[]) => {
+      requests.push(JSON.parse(readFileSync(args[args.indexOf('--config') + 1], 'utf8')));
+      const reply = requests.length === 1
+        ? { status: 'pending', thread_id: 'known-thread-id' }
+        : { status: 'completed', thread_id: 'known-thread-id', answer: 'verified' };
+      return JSON.stringify({ result: { ok: true, stdout: JSON.stringify(reply) } });
+    } });
+    expect(session.analyze(image1, 'describe', dir, 180)).toEqual('verified');
+    expect(requests[0].timeout_seconds).toBe(180);
+    expect(requests[1].timeout_seconds).toBe(45);
+    expect(requests[1].image).toBeUndefined();
+  });
   it('keeps an uncertain upload from triggering another browser submission' , () => {
     let sends = 0;
     const session = new DeepSeekSession({ sessionId: 'existing-session', runner: (_cmd, args: string[]) => {
@@ -137,5 +151,27 @@ describe('WebHelm DeepSeek batched vision', () => {
     } });
     expect(() => session.analyze(image1, 'describe', dir, 10)).toThrow('uncertain');
     expect(sends).toBe(1);
+  });
+});
+
+describe('Browser Workspace lease rotation', () => {
+  it('rotates a stale lease between batches but preserves a recent lease', () => {
+    const actions: string[] = [];
+    let counter = 0;
+    const session = new DeepSeekSession({ runner: (_command, args: string[]) => {
+      actions.push(args.slice(0, 2).join(' '));
+      if (args[0] === 'session' && args[1] === 'start') {
+        return JSON.stringify({ session_id: `owned-${++counter}` });
+      }
+      return '{}';
+    } });
+    session.start();
+    session.refreshLease();
+    expect(actions).toEqual(['session start']);
+    session.sessionStartedAt -= 61_000;
+    session.refreshLease();
+    expect(actions).toEqual(['session start', 'session stop', 'session start']);
+    expect(session.sessionId).toBe('owned-2');
+    session.close();
   });
 });

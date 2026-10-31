@@ -173,6 +173,7 @@ export class DeepSeekSession {
     this.runner = runner;
     this.sessionId = sessionId;
     this.owned = false;
+    this.sessionStartedAt = 0;
   }
   start() {
     if (this.sessionId) return;
@@ -180,6 +181,17 @@ export class DeepSeekSession {
     if (!receipt.session_id) throw new Error('WebHelm session start did not return a session ID');
     this.sessionId = receipt.session_id;
     this.owned = true;
+    this.sessionStartedAt = Date.now();
+  }
+  refreshLease() {
+    // Chrome's Browser Workspace extension may reclaim a background tab after
+    // five minutes without tab activation, even while its WebHelm session is
+    // still active. Rotate leases between batches, never during an upload or
+    // an unconfirmed submission. Keep enough room for one 180-second answer.
+    if (this.owned && this.sessionId && Date.now() - this.sessionStartedAt >= 60_000) {
+      this.close();
+      this.start();
+    }
   }
   analyze(image, prompt, workDir, timeoutSeconds = 180) {
     const config = join(workDir, 'deepseek-request.json');
@@ -204,7 +216,9 @@ export class DeepSeekSession {
     // A pending response has an acknowledged thread ID. Resume the same
     // conversation once without re-uploading or submitting the image again.
     if (receipt.status === 'pending' && receipt.thread_id) {
-      response = invoke({ resume: true, thread_id: receipt.thread_id, timeout_seconds: timeoutSeconds });
+      // Bound the read-only follow-up so one browser lease cannot be silently
+      // evicted by the extension's five-minute stale-tab reclaim window.
+      response = invoke({ resume: true, thread_id: receipt.thread_id, timeout_seconds: Math.min(timeoutSeconds, 45) });
       receipt = decodeReceipt(response);
     }
     if (receipt.status !== 'completed' || !receipt.answer?.trim()) {
@@ -216,7 +230,7 @@ export class DeepSeekSession {
   close() {
     if (this.owned && this.sessionId) {
       try { this.runner(WEBHELM, ['session', 'stop', this.sessionId], 30_000); }
-      finally { this.owned = false; this.sessionId = ''; }
+      finally { this.owned = false; this.sessionId = ''; this.sessionStartedAt = 0; }
     }
   }
 }
@@ -286,6 +300,7 @@ export async function runWebhelmDeepseekVision({ folder, metadataPath, context =
       const batch = batches[i];
       const tiles = batch.flatMap(unit => unit.tiles);
       const contact = createContactSheet(tiles, join(workDir, `batch-${i + 1}.jpg`));
+      if (typeof browser.refreshLease === 'function') browser.refreshLease();
       logger(`  Batch ${i + 1}/${batches.length}: ${batch.map(x => x.filename).join(', ')} (${tiles.length} tiles)`);
       const answer = browser.analyze(contact, makePrompt(batch, { context, prompts }), workDir);
       const descriptions = parseTileAnswer(answer, tiles);
