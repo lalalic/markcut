@@ -37,6 +37,7 @@ import {
 } from "@vis.gl/react-google-maps";
 import type { Map3DRef } from "@vis.gl/react-google-maps";
 import { resolveTween } from "../utils/tween";
+import { fitRouteViewport } from "../utils/map-viewport";
 import {
   makeSyntheticLeg,
   isSyntheticMode,
@@ -460,17 +461,20 @@ function OverviewMap({
 function RouteMap({
   stream, onTilesLoaded,
 }: { stream: MapStream; onTilesLoaded: () => void }) {
-  const { fps } = useVideoConfig();
+  const { fps, width, height } = useVideoConfig();
   const frame = useCurrentFrame();
   const waypoints = stream.waypoints ?? [];
   const start = stream.start ?? 0;
   const end = stream.end ?? start + (stream.duration ?? 1);
-  const fallbackCenter = stream.center ?? { lat: waypoints[0]!.lat, lng: waypoints[0]!.lng };
+  // Fit all observed stops to the video composition by default. Explicit
+  // stream/camera center and zoom take precedence over automatic framing.
+  const fitted = React.useMemo(() => fitRouteViewport(waypoints, width, height), [waypoints, width, height]);
+  const fallbackCenter = stream.center ?? fitted?.center ?? waypoints[0] ?? {lat: 0, lng: 0};
   const center = {
     lat: resolveTween(frame, fps, stream.camera?.center?.lat, start, end, fallbackCenter.lat),
     lng: resolveTween(frame, fps, stream.camera?.center?.lng, start, end, fallbackCenter.lng),
   };
-  const zoom = resolveTween(frame, fps, stream.camera?.zoom, start, end, stream.zoom ?? 10);
+  const zoom = resolveTween(frame, fps, stream.camera?.zoom, start, end, stream.zoom ?? fitted?.zoom ?? 10);
   return (
     <GoogleMap
       mapId={String(stream.id ?? "map-route")}

@@ -282,7 +282,7 @@ export const mapStream = base.extend({
   waypoints: z.array(mapWaypoint).default(() => []),
   routeColor: z.string().default("#4285F4"),
   routeWeight: z.number().default(4),
-  zoom: z.number().default(10),
+  zoom: z.number().optional().describe("Optional fixed zoom; route view auto-fits when omitted"),
   center: z.object({ lat: z.number(), lng: z.number() }).optional().describe("map view center (defaults to first waypoint)"),
   mapType: z.enum(["roadmap", "satellite", "hybrid", "terrain"]).default("roadmap").describe("Google Maps style"),
   language: z.string().optional().describe("Google Maps UI/label language, e.g. zh-CN"),

@@ -290,7 +290,8 @@ function compileLeaf(node2, ctx, parentKind) {
         src: node2.src,
         volume: node2.volume ?? 1,
         foreground: node2.foreground,
-        speaker: node2.speaker
+        speaker: node2.speaker,
+        isNarration: node2.isNarration
       };
       return { stream, duration: end ?? 0 };
     }
@@ -349,7 +350,7 @@ function compileLeaf(node2, ctx, parentKind) {
         waypoints: node2.waypoints,
         routeColor: node2.routeColor ?? "#4285F4",
         routeWeight: node2.routeWeight ?? 4,
-        zoom: node2.zoom ?? 10,
+        zoom: node2.zoom,
         center: node2.center,
         mapType: node2.mapType ?? "roadmap",
         language: node2.language,
@@ -550,7 +551,7 @@ function compileMap(node2, ctx, parentKind) {
     waypoints: node2.waypoints,
     routeColor: node2.routeColor ?? "#4285F4",
     routeWeight: node2.routeWeight ?? 4,
-    zoom: node2.zoom ?? 10,
+    zoom: node2.zoom,
     center: node2.center,
     mapType: node2.mapType ?? "roadmap",
     language: node2.language,
@@ -1193,14 +1194,34 @@ init_compiler();
 import { execSync as execSync2 } from "node:child_process";
 import { existsSync as existsSync2, mkdirSync as mkdirSync2, readFileSync, writeFileSync, renameSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { join, dirname as dirname2, resolve as resolvePath, relative } from "node:path";
+import { join, dirname as dirname3, resolve as resolvePath, relative } from "node:path";
 
 // src/render/cli-tools.ts
 import { execSync } from "node:child_process";
+
+// src/queue-cli.mjs
+import { fileURLToPath } from "node:url";
+import { resolve, dirname } from "node:path";
+function shellQuote(value2) {
+  return "'" + String(value2).replace(/'/g, "'\\''") + "'";
+}
+var queueWorker = resolve(dirname(fileURLToPath(import.meta.url)), "queue-worker.mjs");
+function queueCommand(command, env = process.env) {
+  const template = env.MARKCUT_QUEUE_CLI_TEMPLATE;
+  if (env.MARKCUT_QUEUE_ACTIVE === "1" || env.MARKCUT_QUEUE_ENABLED === "0") return command;
+  if (!template) {
+    return `${shellQuote(process.execPath)} ${shellQuote(queueWorker)} run --queue media-ai -- /bin/sh -c ${shellQuote(`MARKCUT_QUEUE_ACTIVE=1 ${command}`)}`;
+  }
+  if (!template.includes("{command}")) throw Error("MARKCUT_QUEUE_CLI_TEMPLATE must contain {command}");
+  return template.replaceAll("{command}", shellQuote(`MARKCUT_QUEUE_ACTIVE=1 ${command}`));
+}
+
+// src/render/cli-tools.ts
 import { existsSync, mkdirSync } from "node:fs";
-import { dirname } from "node:path";
+import { dirname as dirname2 } from "node:path";
 
 // src/config.mjs
+import { fileURLToPath as fileURLToPath2 } from "node:url";
 var args = (function parseArgs(argv) {
   const CLI_OVERRIDE_FLAGS = {
     "--itt": "itt",
@@ -1253,8 +1274,9 @@ var DEFAULT_AGENT_CLI = args.cliOverrides.agent || process.env.MARKCUT_AGENT_CLI
 var DEFAULT_EDIT_CLI = args.cliOverrides.editCli || process.env.MARKCUT_EDIT_CLI || "npx pi --session-id {sessionid} --system-prompt {systemprompt} -p {prompt}";
 var DEFAULT_TTI_CLI = args.cliOverrides.tti || process.env.MARKCUT_TTI_CLI || 'uvx --from mflux mflux-generate-flux2 --model flux2-klein-4b --steps 2 --prompt "{input}" --output "{output}" --seed {seed}';
 var DEFAULT_TTV_CLI = args.cliOverrides.ttv || process.env.MARKCUT_TTV_CLI || "";
-var DEFAULT_ITT_CLI = args.cliOverrides.itt || process.env.MARKCUT_ITT_CLI || 'uvx --from mlx-vlm mlx_vlm.generate --model mlx-community/MiniCPM-V-4.6-bf16 --max-tokens 2048 --prompt "{prompt}" --image {input} --temperature 0.0 --thinking-mode disabled';
-var DEFAULT_VTT_CLI = args.cliOverrides.vtt || process.env.MARKCUT_VTT_CLI || `uvx --from mlx-vlm mlx_vlm.generate --model mlx-community/MiniCPM-V-4.6-bf16 --max-tokens 2048 --prompt "{prompt}" --video {input} --temperature 0.0 --processor-kwargs '{"max_num_frames": 32, "stack_frames": 1, "max_slice_nums": 1, "use_image_id": false}'`;
+var DEFAULT_VISION_INFER = fileURLToPath2(new URL("./vision/default-infer.mjs", import.meta.url));
+var DEFAULT_ITT_CLI = args.cliOverrides.itt || process.env.MARKCUT_ITT_CLI || `node ${JSON.stringify(DEFAULT_VISION_INFER)} --prompt "{prompt}" {input}`;
+var DEFAULT_VTT_CLI = args.cliOverrides.vtt || process.env.MARKCUT_VTT_CLI || "";
 
 // src/render/cli-tools.ts
 function substituteCli(template, input, output, seed) {
@@ -1275,10 +1297,10 @@ function substituteCli(template, input, output, seed) {
   return template.replace(/\{input\}/g, safeInput).replace(/\{output\}/g, safeOutput).replace(/\{seed\}/g, safeSeed);
 }
 function generateTTS(text3, outputPath, cli) {
-  mkdirSync(dirname(outputPath), { recursive: true });
+  mkdirSync(dirname2(outputPath), { recursive: true });
   const cmd = substituteCli(cli ?? DEFAULT_TTS_CLI, text3, outputPath);
   try {
-    execSync(cmd, { stdio: "pipe" });
+    execSync(queueCommand(cmd), { stdio: "pipe" });
   } catch (e) {
     console.warn(`  \u26A0 TTS failed: ${e.message}`);
     return "";
@@ -1288,16 +1310,16 @@ function generateTTS(text3, outputPath, cli) {
 async function generateSTT(audioPath, outputDir, cli) {
   const cmd = substituteCli(cli ?? DEFAULT_STT_CLI, audioPath, outputDir);
   try {
-    execSync(cmd, { stdio: "pipe" });
+    execSync(queueCommand(cmd), { stdio: "pipe" });
   } catch (e) {
     console.warn(`  \u26A0 STT failed: ${e.message}`);
   }
 }
 function generateTTI(prompt, outputPath, cli, seed) {
-  mkdirSync(dirname(outputPath), { recursive: true });
+  mkdirSync(dirname2(outputPath), { recursive: true });
   const cmd = substituteCli(cli ?? DEFAULT_TTI_CLI, prompt, outputPath, seed);
   try {
-    execSync(cmd, {
+    execSync(queueCommand(cmd), {
       encoding: "utf-8",
       stdio: ["pipe", "pipe", "pipe"],
       timeout: 3e5,
@@ -1310,7 +1332,7 @@ function generateTTI(prompt, outputPath, cli, seed) {
   return existsSync(outputPath) ? outputPath : "";
 }
 function generateTTV(prompt, outputPath, cli, ttiCmd, seed) {
-  mkdirSync(dirname(outputPath), { recursive: true });
+  mkdirSync(dirname2(outputPath), { recursive: true });
   if (!cli) {
     const pngPath = outputPath.replace(/\.mp4$/, ".png");
     const imageResult = generateTTI(prompt, pngPath, ttiCmd, seed);
@@ -1320,7 +1342,7 @@ function generateTTV(prompt, outputPath, cli, ttiCmd, seed) {
     }
     try {
       execSync(
-        `ffmpeg -y -loop 1 -i "${pngPath}" -c:v libx264 -t 3 -pix_fmt yuv420p "${outputPath}"`,
+        queueCommand(`ffmpeg -y -loop 1 -i "${pngPath}" -c:v libx264 -t 3 -pix_fmt yuv420p "${outputPath}"`),
         { stdio: ["pipe", "pipe", "pipe"], timeout: 6e4 }
       );
     } catch (e) {
@@ -1335,7 +1357,7 @@ function generateTTV(prompt, outputPath, cli, ttiCmd, seed) {
   }
   const cmd = substituteCli(cli, prompt, outputPath, seed);
   try {
-    execSync(cmd, {
+    execSync(queueCommand(cmd), {
       encoding: "utf-8",
       stdio: ["pipe", "pipe", "pipe"],
       timeout: 3e5,
@@ -1628,7 +1650,7 @@ import { default as default2 } from "node:path";
 import { default as default3 } from "node:process";
 
 // node_modules/vfile/lib/minurl.js
-import { fileURLToPath } from "node:url";
+import { fileURLToPath as fileURLToPath3 } from "node:url";
 
 // node_modules/vfile/lib/minurl.shared.js
 function isUrl(fileUrlOrPath) {
@@ -1751,9 +1773,9 @@ var VFile = class {
    * @returns {undefined}
    *   Nothing.
    */
-  set dirname(dirname3) {
+  set dirname(dirname4) {
     assertPath(this.basename, "dirname");
-    this.path = default2.join(dirname3 || "", this.basename);
+    this.path = default2.join(dirname4 || "", this.basename);
   }
   /**
    * Get the extname (including dot) (example: `'.js'`).
@@ -1812,7 +1834,7 @@ var VFile = class {
    */
   set path(path) {
     if (isUrl(path)) {
-      path = fileURLToPath(path);
+      path = fileURLToPath3(path);
     }
     assertNonEmpty(path, "path");
     if (this.path !== path) {
@@ -2352,7 +2374,7 @@ var Processor = class _Processor extends CallableInstance {
     assertParser("process", this.parser || this.Parser);
     assertCompiler("process", this.compiler || this.Compiler);
     return done ? executor(void 0, done) : new Promise(executor);
-    function executor(resolve, reject) {
+    function executor(resolve2, reject) {
       const realFile = vfile(file);
       const parseTree = (
         /** @type {HeadTree extends undefined ? Node : HeadTree} */
@@ -2383,8 +2405,8 @@ var Processor = class _Processor extends CallableInstance {
       function realDone(error, file2) {
         if (error || !file2) {
           reject(error);
-        } else if (resolve) {
-          resolve(file2);
+        } else if (resolve2) {
+          resolve2(file2);
         } else {
           ok(done, "`done` is defined if `resolve` is not");
           done(void 0, file2);
@@ -2486,7 +2508,7 @@ var Processor = class _Processor extends CallableInstance {
       file = void 0;
     }
     return done ? executor(void 0, done) : new Promise(executor);
-    function executor(resolve, reject) {
+    function executor(resolve2, reject) {
       ok(
         typeof file !== "function",
         "`file` can\u2019t be a `done` anymore, we checked"
@@ -2500,8 +2522,8 @@ var Processor = class _Processor extends CallableInstance {
         );
         if (error) {
           reject(error);
-        } else if (resolve) {
-          resolve(resultingTree);
+        } else if (resolve2) {
+          resolve2(resultingTree);
         } else {
           ok(done, "`done` is defined if `resolve` is not");
           done(void 0, resultingTree, file2);
@@ -5329,10 +5351,10 @@ function resolveAll(constructs2, events, context) {
   const called = [];
   let index2 = -1;
   while (++index2 < constructs2.length) {
-    const resolve = constructs2[index2].resolveAll;
-    if (resolve && !called.includes(resolve)) {
-      events = resolve(events, context);
-      called.push(resolve);
+    const resolve2 = constructs2[index2].resolveAll;
+    if (resolve2 && !called.includes(resolve2)) {
+      events = resolve2(events, context);
+      called.push(resolve2);
     }
   }
   return events;
@@ -10427,7 +10449,8 @@ function preserveVariantAttrs(node2, attrs) {
     "layout",
     "componentName",
     "props",
-    "speaker"
+    "speaker",
+    "isNarration"
   ]);
   for (const [k, v] of Object.entries(attrs)) {
     if (!STANDARD.has(k)) {
@@ -10525,6 +10548,7 @@ function parseNodeLine(content3, lineNum) {
         id: attrs.id,
         src,
         speaker: attrs.speaker,
+        isNarration: attrs.isNarration,
         duration: attrs.duration,
         start: attrs.start,
         startFrom: attrs.startFrom,
@@ -10827,6 +10851,12 @@ function processMDASTListItem(item, parent, lines) {
         }
       }
     }
+  }
+  if (/^script(?:\s|$)/.test(text3) && !node2.script?.trim() && !node2.on) {
+    throw new DslError("script requires text content", {
+      line: firstPara.position?.start?.line,
+      lineText: text3
+    });
   }
 }
 function applySceneMetadata(scene, attrs) {
@@ -11161,6 +11191,7 @@ async function resolveScripts(root, options) {
     }
     if (!generated) continue;
     node2.src = resolvePath(generated);
+    node2.isNarration = true;
     delete node2.script;
   }
   if (totalScripts > 0) {
@@ -11490,7 +11521,7 @@ async function resolveIncludes(root, options) {
     const resolved = await resolveAll2(subRoot, {
       ...options,
       includeOutputDir: outputDir,
-      baseDir: dirname2(absPath),
+      baseDir: dirname3(absPath),
       variants: variantChain
     });
     const compiled = compileDescriptiveRoot(resolved);
