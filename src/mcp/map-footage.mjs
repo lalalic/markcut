@@ -10,6 +10,17 @@ export function findMapScenes(root){
  return (root?.children||[]).filter(x=>x?.type==="scene"&&x.visible!==false&&
   Array.isArray(x.children)&&x.children.some(child=>child.type==="map"));
 }
+/** Render only the map visual. Keep independent narration, ambience and BGM in the live preview. */
+export function mapVisualOnlyScene(scene){
+ return {...structuredClone(scene),children:structuredClone((scene.children||[]).filter(child=>child.type==="map"))};
+}
+export function replaceMapWithFootage(scene,src,duration,index){
+ const visual={id:"map-footage-"+index,type:"video",visible:true,start:0,end:duration,
+  durationInSeconds:duration,src,volume:0};
+ // Do not drop independent speech/audio siblings when replacing a map leaf.
+ scene.children=(scene.children||[]).flatMap(child=>child.type==="map"?[visual]:[child]);
+ return scene;
+}
 export async function renderMapFootage(compiled,{generatedDir,key,onProgress=()=>{}}){
  const root=compiled.root||compiled;
  const scenes=findMapScenes(root);
@@ -28,7 +39,7 @@ export async function renderMapFootage(compiled,{generatedDir,key,onProgress=()=
   const destination=join(generatedDir,name);
   const temporary=await mkdtemp(join(tmpdir(),"markcut-map-render-"));
   try{
-   const source=structuredClone(scene);
+   const source=mapVisualOnlyScene(scene);
    const isolated={...structuredClone(outputRoot),isSeries:true,children:[source],durationInSeconds:duration};
    delete isolated.subtitle; // Global captions belong to the final video, not map footage.
    const file=join(temporary,"props.json");
@@ -40,8 +51,7 @@ export async function renderMapFootage(compiled,{generatedDir,key,onProgress=()=
    ],{cwd:projectRoot,timeout:180000,maxBuffer:1024*1024*4,env:process.env});
    if((await stat(join(temporary,name))).size<1024)throw Error("Empty map footage");
    await rename(join(temporary,name),destination);
-   scene.children=[{id:"map-footage-"+index,type:"video",visible:true,start:0,end:duration,
-    durationInSeconds:duration,src:destination,volume:0}];
+   replaceMapWithFootage(scene,destination,duration,index);
    rendered++;
   }catch(error){
    skipped++;
