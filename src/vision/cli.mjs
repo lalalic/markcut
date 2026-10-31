@@ -23,6 +23,9 @@
  *   --label            Open label preview → then continue with full AI pipeline
  *   --prompts-file <path> Path to prompts markdown file (default: vision_prompts.md)
  *   --vtt-sample-interval <n> Sample one video frame every N seconds (default: 5)
+  --vtt <template>   Video-to-text CLI, accepts {input}, {prompt_quoted}, {sample_interval}
+  --itt <template>   Image-to-text CLI, accepts {input} and {prompt_quoted}
+  --agent <template> Semantic segmentation Agent CLI
   --backend deepseek|legacy  DeepSeek via WebHelm (opt-in) or legacy CLI (default)
   --batch-size <2..12>      Max labeled images/video frames per DeepSeek contact sheet (default: 8)
   --jsonl                   Stream structured media results to stdout after each atomic save
@@ -377,9 +380,16 @@ function runITT(inputPaths, promptText, ittCli) {
   const paths = Array.isArray(inputPaths) ? inputPaths : [inputPaths];
   const tmpl = ittCli || DEFAULT_ITT_CLI;
   const inputStr = paths.map(p => `${shQuote(p)}`).join(" ");
-  const cmd = substituteTemplate(tmpl, { input: inputStr, prompt: promptText });
-  try { return run(cmd).trim(); }
-  catch (e) { emitWarn(`ITT failed for ${basename(paths[0])}: ${e.message}`); return ""; }
+  const cmd = substituteTemplate(tmpl, {
+    input: inputStr, prompt: promptText, prompt_quoted: shQuote(promptText),
+  });
+  try {
+    const text = run(cmd).trim();
+    if (!text) throw new Error("Empty visual inference response");
+    return text;
+  } catch (e) {
+    throw new Error("ITT failed for " + basename(paths[0]) + ": " + e.message);
+  }
 }
 
 function extractVideoFrames(videoPath, intervalSeconds = DEFAULT_VTT_SAMPLE_INTERVAL) {
@@ -406,7 +416,10 @@ function extractVideoFrames(videoPath, intervalSeconds = DEFAULT_VTT_SAMPLE_INTE
 
 function runVTT(videoPath, promptText, vttCli, ittCli, sampleInterval = DEFAULT_VTT_SAMPLE_INTERVAL) {
   if (vttCli) {
-    const tryRun = () => { const cmd = substituteTemplate(vttCli, { input: shQuote(videoPath), prompt: promptText }); return run(cmd, { timeout: 600_000 }).trim(); };
+    const tryRun = () => { const cmd = substituteTemplate(vttCli, {
+      input: shQuote(videoPath), prompt: promptText, prompt_quoted: shQuote(promptText),
+      sample_interval: String(sampleInterval),
+    }); return run(cmd, { timeout: 600_000 }).trim(); };
     for (let attempt = 0; attempt < 2; attempt++) {
       try { return tryRun(); } catch (e) {
         const msg = e.message || "";
@@ -414,7 +427,7 @@ function runVTT(videoPath, promptText, vttCli, ittCli, sampleInterval = DEFAULT_
           emitWarn(`  Corrupted video file, removing and retrying...`);
           try { rmSync(videoPath, { force: true }); } catch {} continue;
         }
-        emitWarn(`VTT failed for ${basename(videoPath)}: ${msg}`); return "";
+        throw new Error(`VTT failed for ${basename(videoPath)}: ${msg}`);
       }
     }
     return "";
@@ -441,7 +454,7 @@ function runAgent(clipPath, promptText, agentCli) {
   // Always quote the prompt text to avoid shell injection from multi-line content
   const cmd = substituteTemplate(tmpl, { input: shQuote(clipPath), prompt: shQuote(promptText) });
   try { return run(cmd, { timeout: 300_000 }).trim(); }
-  catch (e) { emitWarn(`Agent failed for ${basename(clipPath)}: ${e.message}`); return ""; }
+  catch (e) { throw new Error("Semantic segmentation Agent failed for " + basename(clipPath) + ": " + e.message); }
 }
 
 function runSTT(videoPath, normDir, sttCli) {
@@ -812,6 +825,7 @@ function analyzeVideo(videoPath, normInfo, normDir, prompts, context = "", userH
   emitInfo(`  Running video understanding...`);
   const descPrompt = ctx + getPrompt(prompts, "video-perception");
   const descRaw = runVTT(normInfo.path, descPrompt, DEFAULT_VTT_CLI, DEFAULT_ITT_CLI, sampleInterval);
+  if (!descRaw.trim()) throw new Error("Video-to-text returned no verified visual response");
   const descText = stripThinkBlocks(extractRawText(descRaw));
   perception.desc = descText.slice(0, 500) || looseJSONParse(descRaw)?.desc || descRaw.slice(0, 500);
 
@@ -862,22 +876,29 @@ function analyzeVideo(videoPath, normInfo, normDir, prompts, context = "", userH
     const segRaw = runAgent(dummyInput, `${segPrompt}\n\nInput:\n${segInput}`, DEFAULT_AGENT_CLI || DEFAULT_ITT_CLI);
     const segParsed = looseJSONParse(segRaw);
 
-    if (segParsed && typeof segParsed === "object" && Object.keys(segParsed).length > 0) {
+    if (!segRaw.trim() || !segParsed || typeof segParsed !== "object" || Array.isArray(segParsed)) {
+      throw new Error("Semantic segmentation Agent returned no valid structured response");
+    }
+    if (Object.keys(segParsed).length > 0) {
+      const ranges = Object.keys(segParsed).map(key => {
+        const match = /^(\d+)to(\d+)$/.exec(key);
+        if (!match || !segParsed[key] || typeof segParsed[key] !== "object" || Array.isArray(segParsed[key])) {
+          throw new Error("Invalid Agent segment entry " + key);
+        }
+        return { start: Number(match[1]), end: Number(match[2]) };
+      }).sort((x,y) => x.start-y.start);
+      let cursor = 0;
+      for (const range of ranges) {
+        if (range.start !== cursor || range.end <= range.start || range.end > totalDurMs) {
+          throw new Error("Agent segmentation must cover original source without gaps/overlaps");
+        }
+        cursor = range.end;
+      }
+      if (cursor !== totalDurMs) throw new Error("Agent segment timeline is incomplete");
       segments = segParsed;
-      emitInfo(`  LLM merged into ${Object.keys(segments).length} segments`);
+      emitInfo("  Agent merged into " + Object.keys(segments).length + " source segments");
     } else {
-      // Fallback: use merged cues as raw cut points
-      emitInfo(`  LLM merge returned empty — using raw boundaries`);
-      let prev = 0;
-      for (const c of mergedCues) {
-        const key = `${prev}to${c.timeMs}`;
-        segments[key] = { subtitle: c.label };
-        prev = c.timeMs;
-      }
-      if (prev < totalDurMs) {
-        const key = `${prev}to${totalDurMs}`;
-        segments[key] = { subtitle: "" };
-      }
+      emitInfo("  Agent found no justified semantic boundaries; preserving one full-source segment");
     }
   }
 
@@ -1057,7 +1078,9 @@ async function runNormalizeAndPercept(folder, metadataPath, prompts, context, pi
     const ctx = context ? `Context: ${context}\n\n` : "";
     const imgPrompt = (userHint ? `User hint: ${userHint}\n\n` : "") + ctx + getPrompt(prompts, "image-perception");
     const imgInput = `@${shQuote(normPath)}`;
-    const imgCmd = substituteTemplate(DEFAULT_ITT_CLI, { input: imgInput, prompt: imgPrompt });
+    const imgCmd = substituteTemplate(DEFAULT_ITT_CLI, {
+      input: imgInput, prompt: imgPrompt, prompt_quoted: shQuote(imgPrompt),
+    });
     cacheKey = perceptionCacheKey(imgPath, imgCmd, "image");
     if (cache[cacheKey]) {
       perception = cache[cacheKey];
@@ -1097,12 +1120,15 @@ async function runNormalizeAndPercept(folder, metadataPath, prompts, context, pi
     const vidPrompt = (userHint ? `User hint: ${userHint}\n\n` : "") + ctxV + getPrompt(prompts, "video-perception");
     let vttActualCmd;
     if (DEFAULT_VTT_CLI) {
-      vttActualCmd = substituteTemplate(DEFAULT_VTT_CLI, { input: shQuote(normInfo.path), prompt: vidPrompt });
+      vttActualCmd = substituteTemplate(DEFAULT_VTT_CLI, {
+        input: shQuote(normInfo.path), prompt: vidPrompt, prompt_quoted: shQuote(vidPrompt),
+        sample_interval: String(vttSampleInterval),
+      });
     } else {
       const dur = meta.duration || 0;
       const n = Math.max(5, Math.min(10, Math.ceil(dur / vttSampleInterval)));
       const framePaths = Array.from({ length: n }, (_, i) => `${basename(normInfo.path, extname(normInfo.path))}_${String(i + 1).padStart(3, "0")}.jpg`);
-      vttActualCmd = substituteTemplate(DEFAULT_ITT_CLI, { input: framePaths.map(p => `@${p}`).join(" "), prompt: vidPrompt });
+      vttActualCmd = substituteTemplate(DEFAULT_ITT_CLI, { input: framePaths.map(p => `@${p}`).join(" "), prompt: vidPrompt, prompt_quoted: shQuote(vidPrompt) });
     }
     cacheKey = perceptionCacheKey(vidPath, vttActualCmd, "video");
     if (cache[cacheKey]) {
@@ -1140,6 +1166,9 @@ Options:
   --instruct "text"    Background context about people/places (injected into prompts)
   --prompts-file <path> Path to prompts markdown file (default: vision_prompts.md)
   --vtt-sample-interval <n> Sample one video frame every N seconds (default: 5)
+  --vtt <template>   Video-to-text CLI, accepts {input}, {prompt_quoted}, {sample_interval}
+  --itt <template>   Image-to-text CLI, accepts {input} and {prompt_quoted}
+  --agent <template> Semantic segmentation Agent CLI
   --backend deepseek|legacy  DeepSeek via WebHelm (opt-in) or legacy CLI (default)
   --batch-size <2..12>      Max labeled images/video frames per DeepSeek contact sheet (default: 8)
   --jsonl                   Stream structured media results to stdout after each atomic save

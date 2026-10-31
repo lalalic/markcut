@@ -3,7 +3,9 @@ import { fileURLToPath } from "node:url";
 /**
  * Default CLI templates and constants for the markcut pipeline.
  *
- * All CLIs support {input} / {prompt} / {output} placeholders as documented.
+ * CLIs support {input}, {prompt}, {output}. Image/video hooks also support
+ * {prompt_quoted}, a shell-quoted prompt. Use it without surrounding quotes
+ * for untrusted project context.
  * These can be overridden at runtime via --itt, --vtt, --stt, --tts, --agent flags,
  * or via MARKCUT_*_CLI environment variables.
  *
