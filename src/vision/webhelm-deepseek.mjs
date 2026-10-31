@@ -20,12 +20,20 @@ function call(command, args, timeout = 180_000) {
   return execFileSync(command, args, { encoding: 'utf8', timeout, maxBuffer: 16 * 1024 * 1024 });
 }
 
-function parseReceipt(stdout) {
+function decodeReceipt(stdout) {
   const envelope = JSON.parse(stdout);
   if (envelope?.result?.ok !== true) {
     throw new Error(`WebHelm DeepSeek action failed: ${envelope?.result?.error || envelope?.result?.stderr || stdout.slice(0, 400)}`);
   }
   const reply = JSON.parse(envelope.result.stdout);
+  if (!['completed', 'pending'].includes(reply.status)) {
+    throw new Error(`Unexpected DeepSeek action status: ${reply.status || 'missing'}`);
+  }
+  return reply;
+}
+
+function parseReceipt(stdout) {
+  const reply = decodeReceipt(stdout);
   if (reply.status !== 'completed' || typeof reply.answer !== 'string' || !reply.answer.trim()) {
     throw new Error(`DeepSeek result not completed (${reply.status || 'missing status'}); no metadata saved`);
   }
@@ -175,16 +183,36 @@ export class DeepSeekSession {
   }
   analyze(image, prompt, workDir, timeoutSeconds = 180) {
     const config = join(workDir, 'deepseek-request.json');
-    writeFileSync(config, JSON.stringify({ image, prompt, timeout_seconds: timeoutSeconds }));
+    const invoke = (request) => {
+      writeFileSync(config, JSON.stringify(request));
+      try {
+        return this.runner(WEBHELM, ['platform', 'run', 'deepseek', 'understand-image', '--session-id', this.sessionId, '--config', config], (timeoutSeconds + 30) * 1000);
+      } catch (error) {
+        // WebHelm returns JSON diagnostics on stdout even when it exits nonzero.
+        let detail = '';
+        try {
+          const envelope = JSON.parse(error.stdout || '');
+          detail = envelope?.result?.error || envelope?.result?.stderr || '';
+        } catch { /* No structured provider receipt. */ }
+        throw new Error(`DeepSeek action failed (session ${this.sessionId}): ${(detail || error.message).slice(0, 900)}. Do not resend an uncertain submission.`, { cause: error });
+      }
+    };
+    let response = invoke({ image, prompt, timeout_seconds: timeoutSeconds });
     let receipt;
-    try {
-      receipt = parseReceipt(this.runner(WEBHELM, ['platform', 'run', 'deepseek', 'understand-image', '--session-id', this.sessionId, '--config', config], (timeoutSeconds + 30) * 1000));
-    } catch (error) {
-      // A failed receipt may follow a successful upload/submit; never blindly retry.
-      throw new Error(`DeepSeek submission/result uncertain: ${error.message}. Inspect the existing WebHelm session before retrying.`);
+    try { receipt = decodeReceipt(response); }
+    catch (error) { throw new Error(`DeepSeek submission/result uncertain (session ${this.sessionId}): ${error.message}`); }
+    // A pending response has an acknowledged thread ID. Resume the same
+    // conversation once without re-uploading or submitting the image again.
+    if (receipt.status === 'pending' && receipt.thread_id) {
+      response = invoke({ resume: true, thread_id: receipt.thread_id, timeout_seconds: timeoutSeconds });
+      receipt = decodeReceipt(response);
+    }
+    if (receipt.status !== 'completed' || !receipt.answer?.trim()) {
+      throw new Error(`DeepSeek result pending or empty (session ${this.sessionId}, thread ${receipt.thread_id || 'unknown'}); no metadata saved.`);
     }
     return receipt.answer;
   }
+
   close() {
     if (this.owned && this.sessionId) {
       try { this.runner(WEBHELM, ['session', 'stop', this.sessionId], 30_000); }

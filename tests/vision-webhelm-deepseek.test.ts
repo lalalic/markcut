@@ -114,6 +114,21 @@ describe('WebHelm DeepSeek batched vision', () => {
     expect(Object.keys(actual.clip.perception.segments)).toHaveLength(6);
     expect(events.filter(e => e.mediaId === 'clip.mp4')).toHaveLength(1);
   });
+  it('resumes a pending browser answer without uploading the image twice', () => {
+    const requests: any[] = [];
+    const session = new DeepSeekSession({ sessionId: 'existing-session', runner: (_command, args: string[]) => {
+      const cfg = JSON.parse(readFileSync(args[args.indexOf('--config') + 1], 'utf8'));
+      requests.push(cfg);
+      const reply = requests.length === 1
+        ? { status: 'pending', thread_id: 'known-thread-id' }
+        : { status: 'completed', thread_id: 'known-thread-id', answer: '{"tiles":[{"id":"T001","description":"visible trees"}]}' };
+      return JSON.stringify({ result: { ok: true, stdout: JSON.stringify(reply) } });
+    } });
+    expect(session.analyze(image1, 'describe this image', dir, 10)).toContain('visible trees');
+    expect(requests).toHaveLength(2);
+    expect(requests[0].image).toBe(image1);
+    expect(requests[1]).toEqual({ resume: true, thread_id: 'known-thread-id', timeout_seconds: 10 });
+  });
   it('keeps an uncertain upload from triggering another browser submission' , () => {
     let sends = 0;
     const session = new DeepSeekSession({ sessionId: 'existing-session', runner: (_cmd, args: string[]) => {
