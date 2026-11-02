@@ -68,7 +68,12 @@ function latestSession(path) {
 function publicSession(item) {
   if (!item) return null;
   const {compiled, path, requestedPath, ...safe} = item;
-  safe.label = basename(path || requestedPath || "video.md", ".md");
+  const source = path || requestedPath || "video.md";
+  safe.label = basename(source, ".md");
+  // Stable opaque video identity for mobile grouping of revisions without Relay
+  // metadata. Never expose the absolute local Markdown path to remote clients.
+  safe.videoGroupKey = createHash("sha256").update(source).digest("hex");
+  safe.videoGroupTitle = safe.label.toLowerCase() === "video" ? basename(dirname(source)) : safe.label;
   return structuredClone(safe);
 }
 

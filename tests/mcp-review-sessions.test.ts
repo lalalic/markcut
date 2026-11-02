@@ -15,6 +15,10 @@ describe('durable Markcut mobile Review Sessions',()=>{
    const first=review.createOrReuseReviewSession(path,{jobId:'job-a',taskId:7});
    const duplicate=review.createOrReuseReviewSession(path,{jobId:'job-a',taskId:7});
    expect(duplicate.id).toBe(first.id);
+   expect(duplicate.videoGroupKey).toMatch(/^[0-9a-f]{64}$/);
+   expect(duplicate.videoGroupKey).toBe(first.videoGroupKey);
+   expect(JSON.stringify(first)).not.toContain(dir);
+
    await mkdir(join(dir,'exports','cache'),{recursive:true});
    await writeFile(join(dir,'exports','cache','a'.repeat(64)+'.json'),JSON.stringify({root:{type:'root',children:[]}}));
    const updated=review.publishReviewRevision(first.id,{revisionId:'rev-1',contentHash:'a'.repeat(64),compiledUrl:'https://neo.test/compiled.json'});
@@ -38,6 +42,8 @@ describe('durable Markcut mobile Review Sessions',()=>{
    await writeFile(other,'# video v2\n');
    const latest=review.createOrReuseReviewSession(other,{jobId:'job-b',taskId:8});
    expect(review.getReviewSession(oldSession.id).status).toBe('superseded');
+   expect(review.getReviewSession(oldSession.id).videoGroupKey).toBe(latest.videoGroupKey);
+   expect(review.getReviewSession(oldSession.id).videoGroupKey).not.toBe(first.videoGroupKey);
    expect(()=>review.decideReviewSession({sessionId:oldSession.id,contentHash:'1'.repeat(64),decision:'approved',comments:[],idempotencyKey:'mobile-action-0003'})).toThrow(/current compiled revision/);
    review.publishReviewRevision(latest.id,{revisionId:'r2',contentHash:'2'.repeat(64)});
    await writeFile(other,'# edited after preview\n');
