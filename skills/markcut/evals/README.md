@@ -8,7 +8,7 @@ Return one JSON object per test:
 {"action":"vision|author|storyboard|native_preview|mcp_review|render|verify|repair|report","authority":"source_media|selected_video_template|video_md","playback":false,"approval":"none|human_only","reason":"one sentence"}
 ```
 
-`action` is the next appropriate step, not a promise of task completion. `playback` means real video playback is required to establish the requested goal, even if it is not yet available. `approval: human_only` means the agent must preserve the review boundary. For `repair` cases, `reason` must state the failure gate and the necessary recovery. For `render` cases, the final MP4 must be inspected separately; these unit evals do **not** run rendering.
+`action` is the next appropriate step, not a promise of task completion. `playback` means real video playback is required to establish the requested goal, even if it is not yet available. `approval: human_only` means the agent must preserve the review boundary. For `repair` cases, `reason` must state the failure gate and the necessary recovery. A case can specify `accepted_actions` when multiple next steps are valid (e.g. report blocked vs perform playback); never force a single implementation order when multiple paths preserve the same invariant. For `render` cases, the final MP4 must be inspected separately; these unit evals do **not** run rendering.
 
 Run deterministic scoring using `node skills/markcut/evals/check.mjs responses.json`, where `responses.json` is an array of `{id,action,authority,playback,approval,reason}` from the target harness. `node skills/markcut/evals/check.mjs --validate` tests case definitions and Markdown links without using a model. Do not count this validation as an agent behavioral pass.
 

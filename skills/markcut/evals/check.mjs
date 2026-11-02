@@ -22,6 +22,9 @@ for (const item of cases) {
   check(allowed.kind.has(item.kind), `${item.id} kind`);
   for (const key of ['action', 'authority', 'approval']) check(allowed[key].has(item[key]), `${item.id} ${key}`);
   check(typeof item.playback === 'boolean', `${item.id} playback`);
+  if (item.accepted_actions) {
+    check(Array.isArray(item.accepted_actions) && item.accepted_actions.length > 0 && item.accepted_actions.includes(item.action) && item.accepted_actions.every(a => allowed.action.has(a)), `${item.id} allowed alternatives`);
+  }
 }
 const skill = readFileSync(resolve(root, 'SKILL.md'), 'utf8');
 check(skill.startsWith('---\nname: markcut\n'), 'skill metadata');
@@ -51,8 +54,10 @@ if (process.argv[2] === '--validate') {
     const output = byId.get(item.id);
     check(Boolean(output), `${item.id} has response`);
     if (!output) continue;
-    for (const key of ['action', 'authority', 'playback', 'approval'])
-      check(output[key] === item[key], `${item.id}.${key}: expected ${item[key]}, got ${output[key]}`);
+    for (const key of ['action', 'authority', 'playback', 'approval']) {
+      const options = key === 'action' && item.accepted_actions ? item.accepted_actions : [item[key]];
+      check(options.includes(output[key]), `${item.id}.${key}: expected one of ${options.join(', ')}, got ${output[key]}`);
+    }
     check(typeof output.reason === 'string' && output.reason.trim().length > 12, `${item.id} has explanation`);
   }
   check(responses.length === cases.length, 'response count');
