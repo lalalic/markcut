@@ -1,7 +1,7 @@
 export function buildPreviewBridgeScript() {
 return `
 const feedback=document.getElementById('feedback'),status=document.getElementById('status'),pathLabel=document.getElementById('path-label');
-let nextId=0,identity=null,busy=false,expectedPath=null,activePath=null,activeRelay=null,submittedRevision=null;
+let nextId=0,identity=null,busy=false,expectedPath=null,activePath=null,activeRelay=null,reviewSessionId=null,submittedRevision=null,decisionKey=null,pollGeneration=0,deliveryKey=null,failedDeliveryKey=null;
 const comments=[];
 let currentScene={sceneId:null,sceneName:null,sceneStart:0,timeSeconds:0},selectedId=null,nextCommentId=0;
 const mode=document.getElementById('comment-mode');
@@ -104,7 +104,7 @@ async function loadRemoteScenes(path){
  }catch(e){status.textContent='Scene lookup failed: '+String(e);}
 }
 function send(msg){window.parent.postMessage(msg,'*');}
-function request(method,params){const id=++nextId;send({jsonrpc:'2.0',id,method,params});return new Promise((resolve,reject)=>pending.set(id,{resolve,reject}));}
+function request(method,params){const id=++nextId;return new Promise((resolve,reject)=>{const timer=setTimeout(()=>{pending.delete(id);reject(new Error('MCP request timed out'));},15000);pending.set(id,{resolve,reject,timer});send({jsonrpc:'2.0',id,method,params});});}
 function showVideoName(path,title){const el=document.getElementById('video-md-version');if(!el)return;const file=typeof path==='string'?decodeURIComponent(path.split('/').pop()||'video.md'):'video.md';el.textContent=typeof title==='string'&&title.trim()?title.trim():file.replace(/\.md$/i,'').replace(/[-_]+/g,' ');}
 function applyToolInput(params){
  const input=params?.arguments||params?.input||params?.toolInput||params||{};
@@ -123,6 +123,24 @@ function applyToolInput(params){
  }
 }
 let operationGeneration=0;
+async function sendDecisionMessage(result,key,retry=false){
+ if(deliveryKey===key)return true;
+ if(failedDeliveryKey===key&&!retry)return false;
+ for(let attempt=0;attempt<3;attempt++){
+  try{await request('ui/message',{role:'user',content:[{type:'text',text:JSON.stringify(result)}]});deliveryKey=key;failedDeliveryKey=null;return true;}catch(e){if(attempt===2){failedDeliveryKey=key;status.textContent='Decision saved, but ChatGPT message delivery failed: '+String(e.message||e);return false;}await new Promise(resolve=>setTimeout(resolve,250*(attempt+1)));}
+ }return false;
+}
+function decisionPayload(session){
+ const saved=session?.decision;if(!saved||saved.contentHash!==identity?.contentHash||session.id!==reviewSessionId)return null;
+ const result={...identity,decision:saved.decision};if(activePath)result.path=activePath;if(saved.comments?.length){result.comments=saved.comments;result.feedback=saved.comments.length===1?saved.comments[0].text:saved.comments.map((item,index)=>String(index+1)+'. ['+sceneKey(item.playbackContext)+' @ '+(item.playbackContext?.timeSeconds??0)+'s] '+item.text).join('\\n');}
+ if(activeRelay)result.relay=activeRelay;return {result,key:session.id+':'+saved.contentHash+':'+saved.idempotencyKey};
+}
+async function pollDecision(sessionId,generation){
+ for(let attempt=0;attempt<7200&&generation===pollGeneration;attempt++){
+  try{const response=await request('tools/call',{name:'markcut.review.get',arguments:{sessionId}});const session=response?.structuredContent?.session||response?.structured_content?.session;const pending=decisionPayload(session);if(pending){const delivered=await sendDecisionMessage(pending.result,pending.key,failedDeliveryKey===pending.key);if(delivered)return;} }catch(e){if(generation===pollGeneration)status.textContent='Waiting for mobile review decision… '+String(e.message||e);}
+  await new Promise(resolve=>setTimeout(resolve,5000));
+ }
+}
 async function trackOperation(data){
  const generation=++operationGeneration;
  ++fallbackGeneration; // Prevent an old published revision from replacing in-progress UI.
@@ -178,9 +196,11 @@ async function renderRevision(data){
  if(data.path){pathLabel.textContent=data.path;showVideoName(data.path,data.title||data.videoTitle);}
  if(!data.compiled&&!data.compiledUrl){status.textContent='Compiled scenes unavailable';return;}
  identity={previewId:data.id,revisionId:data.revisionId,contentHash:data.contentHash};
+ reviewSessionId=data.reviewSessionId||null;
+ if(reviewSessionId){const poll=++pollGeneration;pollDecision(reviewSessionId,poll);}
  activePath=data.requestedPath||data.path||expectedPath||null;
  activeRelay=data.relay||null;
- if(submittedRevision!==data.revisionId){busy=false;submittedRevision=null;}
+ if(submittedRevision!==data.revisionId){busy=false;submittedRevision=null;decisionKey=null;}
  reviewReadonly(true,'Loading static compiled scenes…');
  try{
   let compiled=data.compiled;
@@ -211,7 +231,7 @@ window.addEventListener('message',event=>{
  const message=event.data;
  if(!message||message.jsonrpc!=='2.0')return;
  if(Object.prototype.hasOwnProperty.call(message,'id')&&pending.has(message.id)){
-  const item=pending.get(message.id);pending.delete(message.id);
+  const item=pending.get(message.id);pending.delete(message.id);clearTimeout(item.timer);
   if(message.error)item.reject(new Error(message.error.message||'MCP request failed'));
   else item.resolve(message.result);
  }else if(message.method==='ui/notifications/tool-input')applyToolInput(message.params);
@@ -235,14 +255,31 @@ async function submit(decision){
  const result={...identity,decision};
  if(activePath)result.path=activePath;
  if(activeRelay)result.relay=activeRelay;
+ if(!reviewSessionId){status.textContent='Review session unavailable; decision was not submitted.';return;}
  if(decision==='changes_requested'){
   result.comments=preparedComments;
   result.feedback=preparedComments.length===1?preparedComments[0].text:preparedComments.map((item,index)=>String(index+1)+'. ['+sceneKey(item.playbackContext)+' @ '+(item.playbackContext.timeSeconds??0)+'s] '+item.text).join('\\n');
   if(window.__markcutPlaybackContext)result.playbackContext=window.__markcutPlaybackContext;
  }
- busy=true;status.textContent='Submitting…';
+ busy=true;status.textContent='Saving decision…';
  const submittedId=result.revisionId;
- try{await request('ui/message',{role:'user',content:[{type:'text',text:JSON.stringify(result)}]});if(identity?.revisionId===submittedId){submittedRevision=submittedId;status.textContent=decision==='approved'?'Approved.':'Feedback sent. Waiting for the updated preview.';}}
+ try{
+  if(decisionKey){
+   const prior=await request('tools/call',{name:'markcut.review.get',arguments:{sessionId:reviewSessionId}});
+   const savedSession=prior?.structuredContent?.session||prior?.structured_content?.session;
+   if(savedSession?.decision?.idempotencyKey===decisionKey&&savedSession.decision.contentHash===identity.contentHash&&savedSession.decision.decision===decision){
+    const delivered=await sendDecisionMessage(result,reviewSessionId+':'+identity.contentHash+':'+decisionKey,true);
+    if(!delivered)busy=false;
+    else if(identity?.revisionId===submittedId)status.textContent=decision==='approved'?'Approved.':'Feedback sent. Waiting for the updated preview.';
+    return;
+   }
+  }
+  const saved=await request('tools/call',{name:'markcut.review.decide',arguments:{sessionId:reviewSessionId,contentHash:identity.contentHash,decision,comments:result.comments||[],idempotencyKey:decisionKey||(decisionKey=crypto.randomUUID())}});
+  if(saved?.isError)throw new Error(saved.content?.map(x=>x.text||'').join(' ')||'Review decision rejected');
+  const delivered=await sendDecisionMessage(result,reviewSessionId+':'+identity.contentHash+':'+decisionKey,true);
+  if(!delivered)busy=false;
+  else if(identity?.revisionId===submittedId){submittedRevision=submittedId;status.textContent=decision==='approved'?'Approved.':'Feedback sent. Waiting for the updated preview.';}
+ }
  catch(e){busy=false;status.textContent=e.message||'Unable to submit review';}
 }
 document.getElementById('approve').onclick=()=>submit('approved');

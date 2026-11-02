@@ -6,9 +6,10 @@ import { isAbsolute, extname, dirname, resolve, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildPreviewBridgeScript } from "./bridge.mjs";
 import { externalizePreviewMedia, publicOrigin, resolveMountedFile, resolvePreviewPath, publishPlayerBundle, publishCompiledCache, prunePublishedCache, EXPORT_ROOT } from "./remote-assets.mjs";
+import {fingerprintInputs} from "./source-fingerprint.mjs";
 
 export const TOOL_NAME = "markcut.preview";
-export const RESOURCE_URI = "ui://markcut/video-preview-v38.html";
+export const RESOURCE_URI = "ui://markcut/video-preview-v39.html";
 const PREVIEW_VERSION = RESOURCE_URI.match(/video-preview-(v\d+)/)?.[1] ?? "unknown";
 // Legacy entrypoints remain registered, but serve the current implementation.
 export const LEGACY_RESOURCE_URIS = [
@@ -47,6 +48,7 @@ export const LEGACY_RESOURCE_URIS = [
   "ui://markcut/video-preview-v35.html",
   "ui://markcut/video-preview-v36.html",
   "ui://markcut/video-preview-v37.html",
+  "ui://markcut/video-preview-v38.html",
 ];
 export const RESOURCE_MIME_TYPE = "text/html;profile=mcp-app";
 // Google Maps JS loads libraries, tiles and Routes RPCs from these HTTPS origins.
@@ -170,8 +172,9 @@ async function pruneCache(dir, indexFile, entries, currentHash) {
 export async function ensureVideoPreview(path, options = {}) {
   const validatedPath = validateMarkdownPath(resolvePreviewPath(path));
   await access(validatedPath, fsConstants.R_OK);
-  const source=await readFile(validatedPath,"utf8");
-  const sourceHash=createHash("sha256").update(source).digest("hex");
+  const input=fingerprintInputs(validatedPath);
+  const source=input.source.toString("utf8");
+  const sourceHash=createHash("sha256").update(input.source).update("\0").update(JSON.stringify(input.assets)).digest("hex");
   const key=validatedPath+"\0"+sourceHash;
   if(pendingCompiles.has(key))return pendingCompiles.get(key);
   const prior=activeCompilesByPath.get(validatedPath)||Promise.resolve();
@@ -186,21 +189,13 @@ export async function ensureVideoPreview(path, options = {}) {
     const cacheDir=resolve(outputRoot,"cache");
     const indexFile=resolve(dir,"cache-index.json");
     const audio=await readPreviewAudio(validatedPath);
-    const referencedAssets=[];
-    for(const match of source.matchAll(/\b(?:src|audio)\s*:\s*["']?([^"'\s;]+\.(?:png|jpe?g|webp|svg|gif|mp4|mov|webm|wav|mp3|m4a|ogg|vtt|srt))/gi)){
-      const candidate=match[1];
-      if(candidate.includes("://")||candidate.startsWith("/"))continue;
-      try {
-        const info=await stat(resolve(baseDir,candidate));
-        if(info.isFile())referencedAssets.push([candidate,info.size,info.mtimeMs]);
-      }catch{}
-    }
+    const referencedAssets=input.assets;
     referencedAssets.sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
     // Compilation generates random scene ids. Identity must be based on inputs,
     // not on non-semantic runtime ids, so unchanged files reuse identical cache.
     if(audio.audioSrc && audio.audioSrc.startsWith("/")){
       const info=await stat(audio.audioSrc);
-      referencedAssets.push([audio.audioSrc,info.size,info.mtimeMs]);
+      referencedAssets.push([audio.audioSrc,createHash("sha256").update(await readFile(audio.audioSrc)).digest("hex")]);
     }
     const hash=createHash("sha256").update(validatedPath).update("\0")
       .update(source).update("\0").update(JSON.stringify(referencedAssets)).update("\0").update(audio.audioSrc||"")
@@ -241,7 +236,9 @@ export async function ensureVideoPreview(path, options = {}) {
     catch(error){if(error.code!=="EEXIST")throw error;}
     }
     const currentSource=await readFile(validatedPath,"utf8");
-    if(createHash("sha256").update(currentSource).digest("hex")!==sourceHash)
+    const current=fingerprintInputs(validatedPath,Buffer.from(currentSource));
+    const currentHash=createHash("sha256").update(current.source).update("\0").update(JSON.stringify(current.assets)).digest("hex");
+    if(currentHash!==sourceHash)
       throw new Error("Source changed during compilation; retry preview");
     await mkdir(dir,{recursive:true});
     report("publishing-static-preview");

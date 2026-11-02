@@ -20,7 +20,7 @@ describe('Markcut Remotion MCP App',()=>{
   expect(html).toContain('#comment-tools>*{width:30px;height:28px;padding:0;border:0');
   expect(html).toContain('https://neoy.example.test/files/_neoy/markcut/player/');
   expect(html).not.toContain('id="remotion-bundle"');
-  expect(html.length).toBeLessThan(20000);
+  expect(html.length).toBeLessThan(24000);
   expect(html).not.toContain('<video id="video-player"');
   expect(html).not.toContain('data:video/mp4');
   expect(html).not.toContain('127.0.0.1');
@@ -44,7 +44,7 @@ describe('Markcut Remotion MCP App',()=>{
   expect(script).toContain('ui/notifications/tool-result');
   expect(script).toContain("CustomEvent('markcut:revision'");
   expect(script).toContain('data.compiled');
-  expect(script).not.toContain("'tools/call'");
+  expect(script).toContain("name:'markcut.review.decide'");
   expect(script).not.toContain('videoBase64');
   expect(script).toContain('fetch(');
   expect(script).toContain('/files/_neoy/markcut/revisions/');

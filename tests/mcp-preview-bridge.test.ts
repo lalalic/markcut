@@ -3,7 +3,7 @@ import vm from 'node:vm';
 import {webcrypto} from 'node:crypto';
 import {buildPreviewBridgeScript} from '../src/mcp/bridge.mjs';
 
-function harness(remoteData?:any, fetchOverride?:(url:string)=>Promise<any>) {
+function harness(remoteData?:any, fetchOverride?:(url:string)=>Promise<any>, toolCall?:(message:any)=>any) {
  const messages:any[]=[];
  const listeners:Record<string,Array<(evt:any)=>void>>={};
  const element=()=>({value:'',textContent:'',onclick:null as null|(()=>void),oninput:null as null|(()=>void),
@@ -15,7 +15,8 @@ function harness(remoteData?:any, fetchOverride?:(url:string)=>Promise<any>) {
   feedback:element(),status:element(),'path-label':element(),'video-md-version':element(),'interactive-ui':element(),approve:element(),changes:element(),'save-spot':element(),'remove-spot':element(),'comment-target':element(),'comment-count':element(),'comment-mode':element(),'overall-mode':element()
  };
  nodes['comment-mode'].value='spot';
- const parent={postMessage:(m:any)=>messages.push(m)};
+ let dispatch:(message:any,source?:any)=>void;
+ const parent={postMessage:(m:any)=>{messages.push(m);if(m.method==='tools/call'||m.method==='ui/message')setTimeout(()=>{const response=toolCall?.(m);dispatch?.(response?.rpcError?{id:m.id,error:response.rpcError}:{id:m.id,result:response||{content:[]}})},0)}};
  const events:any[]=[];
  const window={
   parent,
@@ -23,9 +24,9 @@ function harness(remoteData?:any, fetchOverride?:(url:string)=>Promise<any>) {
   dispatchEvent:(evt:any)=>{events.push(evt);return true},
  };
  const fetch=fetchOverride|| (async()=>({ok:true,json:async()=>remoteData}));
- const context=vm.createContext({crypto:webcrypto,TextEncoder,URL,fetch,setTimeout,window,document:{getElementById:(id:string)=>nodes[id],createElement:()=>element()},CustomEvent:class {type:string;detail:any;constructor(t:string,opts:any){this.type=t;this.detail=opts.detail}}});
- const dispatch=(message:any,source=parent)=>(listeners.message??[]).forEach(listener=>listener({source,data:{jsonrpc:'2.0',...message}}));
- const result=(data:any)=>dispatch({method:'ui/notifications/tool-result',params:{result:{structuredContent:data}}});
+ const context=vm.createContext({crypto:webcrypto,TextEncoder,URL,fetch,setTimeout,clearTimeout,window,document:{getElementById:(id:string)=>nodes[id],createElement:()=>element()},CustomEvent:class {type:string;detail:any;constructor(t:string,opts:any){this.type=t;this.detail=opts.detail}}});
+ dispatch=(message:any,source=parent)=>(listeners.message??[]).forEach(listener=>listener({source,data:{jsonrpc:'2.0',...message}}));
+ const result=(data:any)=>dispatch({method:'ui/notifications/tool-result',params:{result:{structuredContent:{reviewSessionId:'00000000-0000-4000-8000-000000000001',...data}}}});
  const respond=(id:number,result:any={})=>dispatch({id,result});
  vm.runInContext(buildPreviewBridgeScript().replaceAll("__MARKCUT_ORIGIN__",JSON.stringify("https://neoy.qili2.com")),context);
  return {messages,nodes,events,dispatch,result,respond,scene:(detail:any)=>(listeners['markcut:scene-change']||[]).forEach(listener=>listener({detail})),selectSpot:(id:number)=>(listeners['markcut:spot-select']||[]).forEach(listener=>listener({detail:{id}}))};
@@ -42,25 +43,47 @@ describe('MCP Remotion bridge',()=>{
   expect(h.events.at(-1)?.detail?.revisionId).toBe('remote-r1');
   expect(h.nodes.status.textContent).toBe('');
  });
- it('initializes, delivers compiled scenes and submits review without secondary MCP calls',async()=>{
+ it('initializes, delivers compiled scenes and persists a decision before notifying the caller',async()=>{
   const h=harness();
   expect(h.messages[0]).toMatchObject({id:1,method:'ui/initialize'});
   h.respond(1);
   await nextTick();
   expect(h.messages[1]).toMatchObject({method:'ui/notifications/initialized'});
   const compiled={width:640,height:480,fps:30,children:[{name:'Scene-A',durationInSeconds:2}]};
-  h.result({id:'one',revisionId:'rev1',contentHash:'abcdef',path:'/tmp/a.md',compiled});
+  h.result({id:'one',revisionId:'rev1',contentHash:'a'.repeat(64),path:'/tmp/a.md',compiled});
   expect(h.events.map(e=>e.type)).toEqual(['markcut:revision']);
   expect(h.events[0].detail.compiled).toEqual(compiled);
   expect(h.nodes['path-label'].textContent).toBe('/tmp/a.md');
   expect(h.nodes['video-md-version'].textContent).toBe('a');
-  expect(h.messages.filter(m=>m.method==='tools/call')).toHaveLength(0);
   h.nodes.approve.onclick?.();
-  expect(h.messages[2]).toMatchObject({id:2,method:'ui/message'});
-  expect(JSON.parse(h.messages[2].params.content[0].text)).toEqual({previewId:'one',revisionId:'rev1',contentHash:'abcdef',path:'/tmp/a.md',decision:'approved'});
-  h.respond(2);
+  expect(h.messages.find(m=>m.params?.name==='markcut.review.decide')).toMatchObject({method:'tools/call',params:{name:'markcut.review.decide'}});
+  await nextTick();
+  const notification=h.messages.find(m=>m.method==='ui/message');
+  expect(JSON.parse(notification.params.content[0].text)).toEqual({previewId:'one',revisionId:'rev1',contentHash:'a'.repeat(64),path:'/tmp/a.md',decision:'approved'});
+  h.respond(notification.id);
   await nextTick();
   expect(h.nodes.status.textContent).toBe('Approved.');
+ });
+ it('polls authoritative review state and delivers one mobile decision message',async()=>{
+  let reads=0;const h=harness(undefined,undefined,(m)=>{if(m.params.name==='markcut.review.get'){reads++;return {structuredContent:{session:{id:'00000000-0000-4000-8000-000000000001',decision:{decision:'approved',contentHash:'b'.repeat(64),idempotencyKey:'mobile-key-0001',comments:[]}}}}}return {content:[]}});
+  h.result({id:'m',revisionId:'mobile-r1',contentHash:'b'.repeat(64),path:'/mobile.md',compiled:{children:[]}});
+  for(let i=0;i<20&&!h.messages.some(m=>m.method==='ui/message');i++)await nextTick();
+  expect(reads).toBeGreaterThan(0);expect(h.messages.filter(m=>m.method==='ui/message')).toHaveLength(1);
+  expect(JSON.parse(h.messages.find(m=>m.method==='ui/message').params.content[0].text)).toMatchObject({revisionId:'mobile-r1',decision:'approved',path:'/mobile.md'});
+ });
+ it('retries only ui/message with the saved decision idempotency key',async()=>{
+  let failedMessages=0,decisionCalls=0;const h=harness(undefined,undefined,(m)=>{
+   if(m.params.name==='markcut.review.decide'){decisionCalls++;return {structuredContent:{}};}
+   if(m.method==='ui/message'&&failedMessages++<2)return {rpcError:{message:'temporary delivery failure'}};
+   return {content:[]};
+  });
+  h.result({id:'retry',revisionId:'retry-r1',contentHash:'c'.repeat(64),path:'/retry.md',compiled:{children:[]}});
+  h.nodes.approve.onclick?.();
+  for(let i=0;i<80&&h.messages.filter(m=>m.method==='ui/message').length<3;i++)await new Promise(resolve=>setTimeout(resolve,10));
+  const decides=h.messages.filter(m=>m.params?.name==='markcut.review.decide');
+  expect(decisionCalls).toBe(1);expect(decides).toHaveLength(1);
+  expect(h.messages.filter(m=>m.method==='ui/message')).toHaveLength(3);
+  expect(new Set(h.messages.filter(m=>m.params?.name==='markcut.review.decide').map(m=>m.params.arguments.idempotencyKey)).size).toBe(1);
  });
  it('keeps previews isolated per iframe and enforces feedback',async()=>{
   const a=harness(),b=harness();
@@ -76,7 +99,7 @@ describe('MCP Remotion bridge',()=>{
   a.nodes.feedback.value='Shorten the opening';
   a.nodes['save-spot'].onclick?.();
   a.nodes.changes.onclick?.();
-  expect(JSON.parse(a.messages[2].params.content[0].text)).toMatchObject({previewId:'a',decision:'changes_requested',feedback:'Shorten the opening'});
+  expect(a.messages.find(m=>m.params?.name==='markcut.review.decide').params.arguments).toMatchObject({sessionId:'00000000-0000-4000-8000-000000000001',decision:'changes_requested',comments:[{scope:'overall',text:'Shorten the opening'}]});
   expect(b.messages.filter(m=>m.method==='ui/message')).toHaveLength(0);
  });
  it('does not show the latest B result inside an A-bound iframe',()=>{
@@ -106,14 +129,15 @@ describe('MCP Remotion bridge',()=>{
   second.dispatch({method:'ui/notifications/tool-input',params:{arguments:{path:url}}});
   expect(second.events.at(-1).detail.revisionId).toBe('url-rev');
   second.nodes.approve.onclick?.();
-  expect(JSON.parse(second.messages.at(-1).params.content[0].text).revisionId).toBe('url-rev');
+  expect(second.messages.find(m=>m.method==='tools/call').params.arguments.sessionId).toBe('00000000-0000-4000-8000-000000000001');
  });
- it('preserves optional Relay job/task context across review decisions',()=>{
+ it('preserves optional Relay job/task context across review decisions',async()=>{
   const h=harness();
   const relay={jobId:'job-7',taskId:19,executionId:'exec-1'};
   h.result({id:'r',revisionId:'r',contentHash:'hash',path:'/video.md',relay,compiled:{children:[]}});
   h.selectSpot(0);h.nodes.feedback.value='shorter title';h.nodes['save-spot'].onclick?.();h.nodes.changes.onclick?.();
-  expect(JSON.parse(h.messages.at(-1).params.content[0].text).relay).toEqual(relay);
+  await nextTick();
+  expect(JSON.parse(h.messages.find(m=>m.method==='ui/message').params.content[0].text).relay).toEqual(relay);
  });
  it('handles request changes followed by a new revision and approval in the same app',async()=>{
   const h=harness();h.respond(1);await nextTick();
@@ -121,16 +145,17 @@ describe('MCP Remotion bridge',()=>{
   const next={id:'second',revisionId:'r2',contentHash:'sha2',path:'/video.md',compiled:{children:[{name:'Next'}]}};
   h.result(first);
   h.selectSpot(0);h.nodes.feedback.value='lowercase title';h.nodes['save-spot'].onclick?.();h.nodes.changes.onclick?.();
-  expect(JSON.parse(h.messages[2].params.content[0].text)).toMatchObject({path:'/video.md',revisionId:'r1',decision:'changes_requested',feedback:'lowercase title'});
-  h.respond(2);await nextTick();
+  expect(h.messages.find(m=>m.params?.name==='markcut.review.decide').params.arguments).toMatchObject({sessionId:'00000000-0000-4000-8000-000000000001',decision:'changes_requested'});
+  await nextTick();
+  h.respond(3);await nextTick();
   expect(h.nodes.status.textContent).toContain('Waiting for the updated preview');
   h.nodes.approve.onclick?.();
   expect(h.messages.filter(m=>m.method==='ui/message')).toHaveLength(1);
   h.result(next);
   h.nodes.approve.onclick?.();
-  const decisions=h.messages.filter(m=>m.method==='ui/message').map(m=>JSON.parse(m.params.content[0].text));
+  const decisions=h.messages.filter(m=>m.params?.name==='markcut.review.decide').map(m=>m.params.arguments);
   expect(decisions).toHaveLength(2);
-  expect(decisions[1]).toMatchObject({path:'/video.md',revisionId:'r2',contentHash:'sha2',decision:'approved'});
+  expect(decisions[1]).toMatchObject({sessionId:'00000000-0000-4000-8000-000000000001',contentHash:'sha2',decision:'approved'});
  });
 
 });
@@ -186,7 +211,7 @@ describe('MCP Remotion bridge',()=>{
   dots=h.events.filter(e=>e.type==='markcut:spots-change').at(-1).detail.spots;
   expect(dots.filter((x:any)=>x.scope==='overall')).toEqual([expect.objectContaining({text:'Overall draft'})]);
  });
- it('saves overall, scene and spot scopes at their canonical timeline positions',()=>{
+ it('saves overall, scene and spot scopes at their canonical timeline positions',async()=>{
   const h=harness();h.result({id:'multi',revisionId:'r1',contentHash:'hash',compiled:{children:[]}});
   h.selectSpot(0);
   h.nodes.feedback.value='Improve pacing';h.nodes['save-spot'].onclick?.();
@@ -200,10 +225,11 @@ describe('MCP Remotion bridge',()=>{
   expect(h.events.filter(e=>e.type==='markcut:comments-change').at(-1).detail.sceneNames).toEqual(['Scene-A']);
   h.nodes.approve.onclick?.();expect(h.nodes.status.textContent).toContain('Submit or remove');
   h.nodes.changes.onclick?.();
+  await nextTick();
   const payload=JSON.parse(h.messages.filter(m=>m.method==='ui/message').at(-1).params.content[0].text);
   expect(payload.comments.map((x:any)=>x.scope)).toEqual(['overall','scene','spot']);
  });
- it('supports multiple timed notes on one scene and restores a saved note',()=>{
+ it('supports multiple timed notes on one scene and restores a saved note',async()=>{
   const h=harness();
   h.result({id:'spots',revisionId:'r1',contentHash:'hash',compiled:{children:[]}});
   h.scene({sceneId:'s1',sceneName:'Scene-A',timeSeconds:1});
@@ -222,13 +248,14 @@ describe('MCP Remotion bridge',()=>{
   h.nodes.feedback.value='Trim first second';
   h.nodes['save-spot'].onclick?.();
   h.nodes.changes.onclick?.();
+  await nextTick();
   const payload=JSON.parse(h.messages.at(-1).params.content[0].text);
   expect(payload.comments).toHaveLength(2);
   expect(h.nodes['comment-count'].textContent).toBe('2 comments');
   expect(payload.comments.map((x:any)=>x.text)).toContain('Trim first second');
   expect(payload.comments.map((x:any)=>x.text)).toContain('Keep reaction');
  });
- it('keeps typed text across scope switches and blocks unsaved submission',()=>{
+ it('keeps typed text across scope switches and blocks unsaved submission',async()=>{
   const h=harness();h.result({id:'draft',revisionId:'r',contentHash:'hash',compiled:{children:[]}});
   h.scene({sceneId:'s1',sceneName:'Scene-A',sceneStart:2,timeSeconds:3});
   h.nodes.feedback.value='Keep this text';
@@ -240,9 +267,10 @@ describe('MCP Remotion bridge',()=>{
   const note=h.events.filter(e=>e.type==='markcut:spots-change').at(-1).detail.spots.find((x:any)=>!x.placeholder);
   h.selectSpot(note.id);
   h.nodes.changes.onclick?.();
+  await nextTick();
   expect(h.messages.filter(m=>m.method==='ui/message')).toHaveLength(1);
  });
- it('deletes only the selected timeline marker',()=>{
+ it('deletes only the selected timeline marker',async()=>{
   const h=harness();h.result({id:'dots',revisionId:'r1',contentHash:'hash',compiled:{children:[]}});
   h.scene({sceneId:'s1',sceneName:'Scene-A',timeSeconds:1});
   h.nodes.feedback.value='First';h.nodes['save-spot'].onclick?.();
@@ -255,6 +283,7 @@ describe('MCP Remotion bridge',()=>{
   expect(h.nodes['remove-spot'].disabled).toBe(true);
   expect(h.events.filter(e=>e.type==='markcut:spots-change').at(-1).detail.spots).toHaveLength(2);
   h.nodes.changes.onclick?.();
+  await nextTick();
   expect(JSON.parse(h.messages.at(-1).params.content[0].text).comments.map((x:any)=>x.text)).toEqual(['Second']);
  });
 describe('static compiled-JSON bridge',()=>{
@@ -275,7 +304,7 @@ describe('static compiled-JSON bridge',()=>{
   expect(h.nodes.approve.disabled).toBe(false);
   h.nodes.approve.onclick?.();
   await nextTick();
-  expect(h.messages.filter(m=>m.method==='ui/message')).toHaveLength(1);
+  expect(h.messages.filter(m=>m.params?.name==='markcut.review.decide')).toHaveLength(1);
  });
  it('shows historical previews but blocks review submission',async()=>{
   const hash='b'.repeat(64),h=harness(undefined,makeFetch('c'.repeat(64)));
