@@ -24,6 +24,7 @@ process.stdin.once("close", stopManagedVideoPreview);
 server.registerTool("markcut.review.list", {
   description:"List durable Markcut review sessions for the linked Neo Mobile Review Inbox. Sessions remain pending across disconnects; a decision is final only for the returned content hash.",
   inputSchema:z.object({after:z.string().optional(),limit:z.number().int().min(1).max(100).optional()}),
+  _meta:{ui:{visibility:["app","model"]}},
 }, async ({after,limit}) => ({content:[{type:"text",text:"Markcut review inbox"}],structuredContent:listReviewSessions({after,limit})}));
 
 server.registerTool("markcut.review.get", {
