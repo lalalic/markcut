@@ -29,6 +29,8 @@ describe('durable Markcut mobile Review Sessions',()=>{
    expect(one.videoGroupKey).toBe(two.videoGroupKey);
    expect(one.videoGroupKey).not.toBe(otherRun.videoGroupKey);
    expect(one.videoGroupTitle).toBe('today-run');
+   expect(one.videoItemTitle).toBe('v1');
+   expect(two.videoItemTitle).toBe('v2');
 
    expect(JSON.stringify(first)).not.toContain(dir);
 

@@ -81,6 +81,12 @@ function publicSession(item) {
   safe.videoGroupKey = createHash("sha256").update(groupSource).digest("hex");
   safe.videoGroupTitle = runSource ? basename(runSource)
     : safe.label.toLowerCase() === "video" ? basename(dirname(source)) : safe.label;
+  // Clip identity must remain distinct inside an aggregated job. Only expose
+  // the short creative variant name, never the absolute filesystem path.
+  if(runSource) {
+    const variant = source.slice(creativeAt + runCreativeSeparator.length).split(sep)[0];
+    if(/^[a-z0-9][a-z0-9_-]{0,39}$/i.test(variant))safe.videoItemTitle=variant;
+  }
   return structuredClone(safe);
 }
 
