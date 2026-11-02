@@ -5,7 +5,7 @@ description: Create, edit, preview, review, and render videos from Markdown usin
 
 # Markcut — Markdown-to-video
 
-Markcut turns a Markdown video definition into a compiled stream tree and a playable video. **The project's chosen Markcut video template and the active `video.md` are the source of truth for video structure and creative settings** (opening/ending, scene sequence, BGM, transitions, subtitles, voice, aspect ratio). Do not duplicate those settings in the Skill, an agent prompt, or another configuration file. Use this Skill to operate Markcut, not to invent a separate video production policy.
+Markcut turns a Markdown video definition into a compiled stream tree and a playable video. **Use the project-selected video template for creative defaults** (opening/ending, BGM, transitions, subtitles, voice, aspect ratio); **the instantiated `video.md` is the authoritative source for that video's current scenes, media paths, previews, review revisions, and render**. Original media files are evidence/assets, not a substitute for the active Markdown. Do not duplicate template settings in the Skill or an agent prompt.
 
 ## Choose the capability
 
@@ -42,6 +42,14 @@ layout:parallel
 ```
 
 Asset paths are relative to the Markdown document. A `prompt` without `src` asks the media pipeline to generate content; inspect the result rather than assuming the prompt guarantees a correct visual. Keep visual and spoken meaning aligned. Use variants in Markdown for alternate language/platform/aspect outputs, rather than separate prompt rules.
+
+## Select the next action; preserve completion gates
+
+- Choose the **immediate next action** from the user's request. A later verification gate is not the current action: after `changes_requested`, **edit the active source `video.md` first**, then `verify`, preview the **new** revision, and return it for human review. Do not choose `verify` as if the requested edit already happened.
+- If a source asset is missing, fix its location or reference (or report the actual blocker); do not re-run `verify` as a substitute for repair, and do not manufacture a missing asset.
+- When the user **asks whether** a failed/unverified review is complete, answer **not complete** and identify the missing gate. When asked to **fix** the failure, investigate and recheck the broken layer. A compiled file or MCP resource URL is not evidence of actual playback.
+- For a requested **animated route or moving map camera**, inspect real playback to verify that movement and framing actually work; a valid `map` node or GPS source does not prove the animation.
+- **Completion gates are not immediate steps.** For a finished video, inspect real playback. For an explicit human review/approval, the current revision must be playable and the human must review or approve that same revision. Never claim human approval, borrow approval from an older revision, or make approval mandatory for ordinary render requests.
 
 ## Preview, review, and finish
 

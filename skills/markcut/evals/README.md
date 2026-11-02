@@ -1,15 +1,29 @@
-# Markcut Skill capability evals
+# Markcut Skill behavioral evals
 
-These tests evaluate **agent decision quality**, not whether the Markcut renderer, browser, or media APIs are working. Load the Markcut `SKILL.md` plus the case `request`, then ask the target agent to select the *next appropriate Markcut action* without side effects. Use the same cases across ChatGPT/Codex/other harnesses.
+The 14 capability-driven scenarios test **next-action routing, source authority, and completion gates**. These are agent dry-run tests, **not** video rendering, network, browser, or approval E2E tests. The target model selects the immediate action. It also names **checks needed before claiming the entire requested result is complete**; these are separate decisions. A `report` refusal can be correct when the user asks whether an unverified artifact is already approved.
 
-Return one JSON object per test:
+## Output contract
+
+Each case returns an object in a JSON array:
 
 ```json
-{"action":"vision|author|storyboard|native_preview|mcp_review|render|verify|repair|report","authority":"source_media|selected_video_template|video_md","playback":false,"approval":"none|human_only","reason":"one sentence"}
+{"id":"case-id","action":"author","authority":"video_md","completion_gates":["verify","real_playback","human_review"],"reason":"Brief explanation"}
 ```
 
-`action` is the next appropriate step, not a promise of task completion. `playback` means real video playback is required to establish the requested goal, even if it is not yet available. `approval: human_only` means the agent must preserve the review boundary. For `repair` cases, `reason` must state the failure gate and the necessary recovery. A case can specify `accepted_actions` when multiple next steps are valid (e.g. report blocked vs perform playback); never force a single implementation order when multiple paths preserve the same invariant. For `render` cases, the final MP4 must be inspected separately; these unit evals do **not** run rendering.
+- `action`: `vision | author | storyboard | native_preview | mcp_review | render | verify | repair | report`. This is the **immediate next step**, not a later gate.
+- `authority`: `source_media` (original media evidence or a missing physical asset), `selected_video_template` (project's creative/style defaults), or `video_md` (current video's actual source, referenced assets, preview/review revision and render).
+- `completion_gates`: any applicable checks drawn from `verify`, `real_playback`, `human_review`. `human_review` means the new revision must be reviewed/approved by an actual human before claiming a human review/approval result; it is **not** mandatory for an ordinary render. These are gates to **claim the requested outcome complete**, not actions to execute immediately.
+- `reason`: explain the decision and why a blocker/approval cannot be assumed resolved. Do not claim actions were actually completed.
 
-Run deterministic scoring using `node skills/markcut/evals/check.mjs responses.json`, where `responses.json` is an array of `{id,action,authority,playback,approval,reason}` from the target harness. `node skills/markcut/evals/check.mjs --validate` tests case definitions and Markdown links without using a model. Do not count this validation as an agent behavioral pass.
+`cases.json` defines acceptable equivalent next actions or authorities and **required** and **forbidden** gates. The checker does not insist on irrelevant intermediate gates; the meaningful behavioral invariants matter more than one exact execution order. It still rejects a wrong initial action, wrong source authority, missing essential gate, or inappropriate human-review requirement. This avoids confusing a report of failure with a failed repair attempt.
 
-Important negative cases: missing asset, superseded approval, compiled-but-unplayed video, empty MCP iframe. Do not patch the Skill for a failing eval without first distinguishing ambiguous contract, incorrect expected action, harness behavior and actual implementation mismatch.
+## Run
+
+```sh
+node skills/markcut/evals/check.mjs --validate
+node skills/markcut/evals/run-codex.mjs --provider openrouter --model openrouter/free
+```
+
+The `run-codex.mjs` runner uses the locally authenticated Codex CLI and current `SKILL.md`. **By default it evaluates one independent user request per Codex invocation**, matching actual Skill usage instead of testing the model's ability to manage a large multi-task JSON array. Override with `--batch-size N` only for a batch-stress experiment. The provider and model are runtime parameters; `cases.json` and the checker are provider-independent. The runner saves the actual responses, JSONL events, stderr, and a score in a per-run temporary directory. It never changes video files or asks the model to perform real side effects.
+
+If a result fails, inspect `reason` and classify it as a Skill ambiguity, prompt conflict, incorrect eval expectation, undocumented implementation behavior, or model failure **before modifying either the Skill or the assertions**. In particular, a successful `compiled.json` is never final video playback and an old revision's human approval never applies to new content.
