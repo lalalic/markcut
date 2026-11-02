@@ -2,7 +2,7 @@ import {createHash, randomUUID} from "node:crypto";
 import {chmodSync, mkdirSync, readFileSync, renameSync, writeFileSync, openSync, closeSync, unlinkSync, statSync} from "node:fs";
 import {fingerprintInputs} from "./source-fingerprint.mjs";
 import {homedir} from "node:os";
-import {basename, dirname, resolve} from "node:path";
+import {basename, dirname, resolve, sep} from "node:path";
 import {EXPORT_ROOT, resolvePreviewPath} from "./remote-assets.mjs";
 
 // Review state contains human comments and Relay correlation. Keep it outside
@@ -70,10 +70,17 @@ function publicSession(item) {
   const {compiled, path, requestedPath, ...safe} = item;
   const source = path || requestedPath || "video.md";
   safe.label = basename(source, ".md");
-  // Stable opaque video identity for mobile grouping of revisions without Relay
-  // metadata. Never expose the absolute local Markdown path to remote clients.
-  safe.videoGroupKey = createHash("sha256").update(source).digest("hex");
-  safe.videoGroupTitle = safe.label.toLowerCase() === "video" ? basename(dirname(source)) : safe.label;
+  // Treat creative variants under a single run as one video review job.
+  // No Relay jobId? The run directory is the stable job identity; other
+  // inputs keep their own per-source identities. Hash before federation.
+  const runCreativeSeparator = `${sep}creatives${sep}`;
+  const creativeAt = source.lastIndexOf(runCreativeSeparator);
+  const runSource = creativeAt > 0 && source.slice(0,creativeAt).includes(`${sep}runs${sep}`)
+    ? source.slice(0,creativeAt) : null;
+  const groupSource = runSource || source;
+  safe.videoGroupKey = createHash("sha256").update(groupSource).digest("hex");
+  safe.videoGroupTitle = runSource ? basename(runSource)
+    : safe.label.toLowerCase() === "video" ? basename(dirname(source)) : safe.label;
   return structuredClone(safe);
 }
 

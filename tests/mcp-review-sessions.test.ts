@@ -17,6 +17,19 @@ describe('durable Markcut mobile Review Sessions',()=>{
    expect(duplicate.id).toBe(first.id);
    expect(duplicate.videoGroupKey).toMatch(/^[0-9a-f]{64}$/);
    expect(duplicate.videoGroupKey).toBe(first.videoGroupKey);
+   const creativeOne = join(dir,'runs','today-run','creatives','v1','video.md');
+   const creativeTwo = join(dir,'runs','today-run','creatives','v2','video.md');
+   const unrelated = join(dir,'runs','another-run','creatives','v1','video.md');
+   for(const path of [creativeOne,creativeTwo,unrelated]) {
+     await mkdir(join(path,'..'),{recursive:true});await writeFile(path,'# video\n');
+   }
+   const one=review.createOrReuseReviewSession(creativeOne);
+   const two=review.createOrReuseReviewSession(creativeTwo);
+   const otherRun=review.createOrReuseReviewSession(unrelated);
+   expect(one.videoGroupKey).toBe(two.videoGroupKey);
+   expect(one.videoGroupKey).not.toBe(otherRun.videoGroupKey);
+   expect(one.videoGroupTitle).toBe('today-run');
+
    expect(JSON.stringify(first)).not.toContain(dir);
 
    await mkdir(join(dir,'exports','cache'),{recursive:true});
