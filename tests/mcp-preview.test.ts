@@ -1,6 +1,6 @@
 import {describe,it,expect} from 'vitest';
 process.env.NEOY_PUBLIC_ORIGIN = 'https://neoy.example.test';
-import {buildPreviewHtml,buildPreviewResourceResult,RESOURCE_URI,LEGACY_RESOURCE_URIS,validateMarkdownPath,reviewResult,getPreviewMedia,readPreviewAudio,withPreviewAudio} from '../src/mcp/preview.mjs';
+import {buildPreviewHtml,buildPreviewResourceResult,RESOURCE_URI,LEGACY_RESOURCE_URIS,validateMarkdownPath,getPreviewMedia,readPreviewAudio,withPreviewAudio} from '../src/mcp/preview.mjs';
 import {buildPreviewBridgeScript} from '../src/mcp/bridge.mjs';
 import {mkdtemp,writeFile,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
@@ -44,7 +44,10 @@ describe('Markcut Remotion MCP App',()=>{
   expect(script).toContain('ui/notifications/tool-result');
   expect(script).toContain("CustomEvent('markcut:revision'");
   expect(script).toContain('data.compiled');
-  expect(script).toContain("name:'markcut.review.decide'");
+  expect(script).not.toContain('markcut.review.decide');
+  expect(script).not.toContain('markcut.review.get');
+  expect(script).toContain("request('ui/message'");
+  expect(script).not.toContain('pollDecision');
   expect(script).not.toContain('videoBase64');
   expect(script).toContain('fetch(');
   expect(script).toContain('/files/_neoy/markcut/revisions/');
@@ -73,9 +76,5 @@ describe('Markcut Remotion MCP App',()=>{
   expect(mixed.root.children[1]).toMatchObject({type:'audio',isBackground:true,start:0,end:6,volume:1});
   expect(compiled.root.children).toHaveLength(1);
   expect(mixed.root.durationInSeconds).toBe(6);
- });
- it('requires review feedback',()=>{
-  expect(reviewResult('approved')).toEqual({decision:'approved'});
-  expect(()=>reviewResult('changes_requested','')).toThrow(/feedback/);
  });
 });

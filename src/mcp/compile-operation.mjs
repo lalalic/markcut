@@ -5,7 +5,6 @@ import {join} from "node:path";
 import {fileURLToPath} from "node:url";
 import {EXPORT_ROOT,publicOrigin,resolvePreviewPath} from "./remote-assets.mjs";
 import {validateMarkdownPath} from "./preview.mjs";
-import {attachReviewOperation, createOrReuseReviewSession, failReviewSession} from "./review-sessions.mjs";
 import {fingerprintInputs} from "./source-fingerprint.mjs";
 const folder=join(EXPORT_ROOT,"operations");
 const RETAIN_MS=24*60*60*1000;
@@ -33,27 +32,23 @@ export function startCompileOperation(path,relay){
  if(!statSync(valid).isFile())throw new Error("Preview source must be a Markdown file");
  const input=fingerprintInputs(valid);
  const sourceHash=createHash("sha256").update(input.source).update("\0").update(JSON.stringify(input.assets)).digest("hex");
-  const review=createOrReuseReviewSession(path,relay);
  cleanupOldOperations();
  const id=randomUUID(),startedAt=Date.now();
-  attachReviewOperation(review.id,id);
-  writeOperation(id,{id,state:"compiling",stage:"queued",startedAt,requestedPath:path,reviewSessionId:review.id});
+  writeOperation(id,{id,state:"compiling",stage:"queued",startedAt,requestedPath:path});
  const worker=fileURLToPath(new URL("./compile-worker.mjs",import.meta.url));
-  const child=spawn(process.execPath,[worker,id,valid,path,JSON.stringify(relay||null),sourceHash,review.id],{detached:true,stdio:"ignore"});
+  const child=spawn(process.execPath,[worker,id,valid,path,JSON.stringify(relay||null),sourceHash],{detached:true,stdio:"ignore"});
  child.on("error",e=>{
-  failReviewSession(review.id,e.message);
   writeOperation(id,{id,state:"failed",stage:"failed",startedAt,requestedPath:path,error:e.message});
  });
  child.on("exit",(code,signal)=>{
   try{
    const state=JSON.parse(readFileSync(join(folder,id+".json"),"utf8"));
    if(state.state==="compiling"){
-    failReviewSession(review.id,"Compiler exited unexpectedly: "+(signal||code));
     writeOperation(id,{id,state:"failed",stage:"failed",startedAt,requestedPath:path,
       error:"Compiler exited unexpectedly: "+(signal||code)});
    }
   }catch{}
  });
  child.unref();
- return {operationId:id,operationUrl:publicOrigin()+"/files/_neoy/markcut/operations/"+id+".json",reviewSessionId:review.id,path:valid,requestedPath:path,state:"compiling"};
+ return {operationId:id,operationUrl:publicOrigin()+"/files/_neoy/markcut/operations/"+id+".json",path:valid,requestedPath:path,state:"compiling"};
 }

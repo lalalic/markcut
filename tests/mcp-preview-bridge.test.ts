@@ -26,7 +26,7 @@ function harness(remoteData?:any, fetchOverride?:(url:string)=>Promise<any>, too
  const fetch=fetchOverride|| (async()=>({ok:true,json:async()=>remoteData}));
  const context=vm.createContext({crypto:webcrypto,TextEncoder,URL,fetch,setTimeout,clearTimeout,window,document:{getElementById:(id:string)=>nodes[id],createElement:()=>element()},CustomEvent:class {type:string;detail:any;constructor(t:string,opts:any){this.type=t;this.detail=opts.detail}}});
  dispatch=(message:any,source=parent)=>(listeners.message??[]).forEach(listener=>listener({source,data:{jsonrpc:'2.0',...message}}));
- const result=(data:any)=>dispatch({method:'ui/notifications/tool-result',params:{result:{structuredContent:{reviewSessionId:'00000000-0000-4000-8000-000000000001',...data}}}});
+ const result=(data:any)=>dispatch({method:'ui/notifications/tool-result',params:{result:{structuredContent:{...data}}}});
  const respond=(id:number,result:any={})=>dispatch({id,result});
  vm.runInContext(buildPreviewBridgeScript().replaceAll("__MARKCUT_ORIGIN__",JSON.stringify("https://neoy.qili2.com")),context);
  return {messages,nodes,events,dispatch,result,respond,scene:(detail:any)=>(listeners['markcut:scene-change']||[]).forEach(listener=>listener({detail})),selectSpot:(id:number)=>(listeners['markcut:spot-select']||[]).forEach(listener=>listener({detail:{id}}))};
@@ -43,7 +43,7 @@ describe('MCP Remotion bridge',()=>{
   expect(h.events.at(-1)?.detail?.revisionId).toBe('remote-r1');
   expect(h.nodes.status.textContent).toBe('');
  });
- it('initializes, delivers compiled scenes and persists a decision before notifying the caller',async()=>{
+ it('initializes, delivers compiled scenes and sends review directly to the caller',async()=>{
   const h=harness();
   expect(h.messages[0]).toMatchObject({id:1,method:'ui/initialize'});
   h.respond(1);
@@ -56,34 +56,21 @@ describe('MCP Remotion bridge',()=>{
   expect(h.nodes['path-label'].textContent).toBe('/tmp/a.md');
   expect(h.nodes['video-md-version'].textContent).toBe('a');
   h.nodes.approve.onclick?.();
-  expect(h.messages.find(m=>m.params?.name==='markcut.review.decide')).toMatchObject({method:'tools/call',params:{name:'markcut.review.decide'}});
+  expect(h.messages.filter(m=>m.method==='tools/call')).toHaveLength(0);
   await nextTick();
   const notification=h.messages.find(m=>m.method==='ui/message');
   expect(JSON.parse(notification.params.content[0].text)).toEqual({previewId:'one',revisionId:'rev1',contentHash:'a'.repeat(64),path:'/tmp/a.md',decision:'approved'});
   h.respond(notification.id);
   await nextTick();
-  expect(h.nodes.status.textContent).toBe('Approved.');
+  expect(h.nodes.status.textContent).toBe('Review sent.');
  });
- it('polls authoritative review state and delivers one mobile decision message',async()=>{
-  let reads=0;const h=harness(undefined,undefined,(m)=>{if(m.params.name==='markcut.review.get'){reads++;return {structuredContent:{session:{id:'00000000-0000-4000-8000-000000000001',decision:{decision:'approved',contentHash:'b'.repeat(64),idempotencyKey:'mobile-key-0001',comments:[]}}}}}return {content:[]}});
-  h.result({id:'m',revisionId:'mobile-r1',contentHash:'b'.repeat(64),path:'/mobile.md',compiled:{children:[]}});
-  for(let i=0;i<20&&!h.messages.some(m=>m.method==='ui/message');i++)await nextTick();
-  expect(reads).toBeGreaterThan(0);expect(h.messages.filter(m=>m.method==='ui/message')).toHaveLength(1);
-  expect(JSON.parse(h.messages.find(m=>m.method==='ui/message').params.content[0].text)).toMatchObject({revisionId:'mobile-r1',decision:'approved',path:'/mobile.md'});
- });
- it('retries only ui/message with the saved decision idempotency key',async()=>{
-  let failedMessages=0,decisionCalls=0;const h=harness(undefined,undefined,(m)=>{
-   if(m.params.name==='markcut.review.decide'){decisionCalls++;return {structuredContent:{}};}
-   if(m.method==='ui/message'&&failedMessages++<2)return {rpcError:{message:'temporary delivery failure'}};
-   return {content:[]};
-  });
+ it('retries ui/message delivery errors and never reports success before delivery',async()=>{
+  let failed=0;const h=harness(undefined,undefined,(m)=>{if(m.method==='ui/message'&&failed++<2)return {rpcError:{message:'temporary delivery failure'}};return {content:[]};});
   h.result({id:'retry',revisionId:'retry-r1',contentHash:'c'.repeat(64),path:'/retry.md',compiled:{children:[]}});
   h.nodes.approve.onclick?.();
   for(let i=0;i<80&&h.messages.filter(m=>m.method==='ui/message').length<3;i++)await new Promise(resolve=>setTimeout(resolve,10));
-  const decides=h.messages.filter(m=>m.params?.name==='markcut.review.decide');
-  expect(decisionCalls).toBe(1);expect(decides).toHaveLength(1);
+  expect(h.messages.filter(m=>m.method==='tools/call')).toHaveLength(0);
   expect(h.messages.filter(m=>m.method==='ui/message')).toHaveLength(3);
-  expect(new Set(h.messages.filter(m=>m.params?.name==='markcut.review.decide').map(m=>m.params.arguments.idempotencyKey)).size).toBe(1);
  });
  it('keeps previews isolated per iframe and enforces feedback',async()=>{
   const a=harness(),b=harness();
@@ -99,7 +86,7 @@ describe('MCP Remotion bridge',()=>{
   a.nodes.feedback.value='Shorten the opening';
   a.nodes['save-spot'].onclick?.();
   a.nodes.changes.onclick?.();
-  expect(a.messages.find(m=>m.params?.name==='markcut.review.decide').params.arguments).toMatchObject({sessionId:'00000000-0000-4000-8000-000000000001',decision:'changes_requested',comments:[{scope:'overall',text:'Shorten the opening'}]});
+  expect(JSON.parse(a.messages.find(m=>m.method==='ui/message').params.content[0].text)).toMatchObject({decision:'changes_requested',comments:[{scope:'overall',text:'Shorten the opening'}]});
   expect(b.messages.filter(m=>m.method==='ui/message')).toHaveLength(0);
  });
  it('does not show the latest B result inside an A-bound iframe',()=>{
@@ -129,7 +116,7 @@ describe('MCP Remotion bridge',()=>{
   second.dispatch({method:'ui/notifications/tool-input',params:{arguments:{path:url}}});
   expect(second.events.at(-1).detail.revisionId).toBe('url-rev');
   second.nodes.approve.onclick?.();
-  expect(second.messages.find(m=>m.method==='tools/call').params.arguments.sessionId).toBe('00000000-0000-4000-8000-000000000001');
+  expect(second.messages.filter(m=>m.method==='tools/call')).toHaveLength(0);
  });
  it('preserves optional Relay job/task context across review decisions',async()=>{
   const h=harness();
@@ -145,7 +132,7 @@ describe('MCP Remotion bridge',()=>{
   const next={id:'second',revisionId:'r2',contentHash:'sha2',path:'/video.md',compiled:{children:[{name:'Next'}]}};
   h.result(first);
   h.selectSpot(0);h.nodes.feedback.value='lowercase title';h.nodes['save-spot'].onclick?.();h.nodes.changes.onclick?.();
-  expect(h.messages.find(m=>m.params?.name==='markcut.review.decide').params.arguments).toMatchObject({sessionId:'00000000-0000-4000-8000-000000000001',decision:'changes_requested'});
+  expect(JSON.parse(h.messages.find(m=>m.method==='ui/message').params.content[0].text)).toMatchObject({decision:'changes_requested'});
   await nextTick();
   h.respond(3);await nextTick();
   expect(h.nodes.status.textContent).toContain('Waiting for the updated preview');
@@ -153,9 +140,9 @@ describe('MCP Remotion bridge',()=>{
   expect(h.messages.filter(m=>m.method==='ui/message')).toHaveLength(1);
   h.result(next);
   h.nodes.approve.onclick?.();
-  const decisions=h.messages.filter(m=>m.params?.name==='markcut.review.decide').map(m=>m.params.arguments);
+  const decisions=h.messages.filter(m=>m.method==='ui/message').map(m=>JSON.parse(m.params.content[0].text));
   expect(decisions).toHaveLength(2);
-  expect(decisions[1]).toMatchObject({sessionId:'00000000-0000-4000-8000-000000000001',contentHash:'sha2',decision:'approved'});
+  expect(decisions[1]).toMatchObject({contentHash:'sha2',decision:'approved'});
  });
 
 });
@@ -304,7 +291,7 @@ describe('static compiled-JSON bridge',()=>{
   expect(h.nodes.approve.disabled).toBe(false);
   h.nodes.approve.onclick?.();
   await nextTick();
-  expect(h.messages.filter(m=>m.params?.name==='markcut.review.decide')).toHaveLength(1);
+  expect(h.messages.filter(m=>m.method==='ui/message')).toHaveLength(1);
  });
  it('shows historical previews but blocks review submission',async()=>{
   const hash='b'.repeat(64),h=harness(undefined,makeFetch('c'.repeat(64)));

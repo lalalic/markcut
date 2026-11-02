@@ -9,7 +9,7 @@ import { externalizePreviewMedia, publicOrigin, resolveMountedFile, resolvePrevi
 import {fingerprintInputs} from "./source-fingerprint.mjs";
 
 export const TOOL_NAME = "markcut.preview";
-export const RESOURCE_URI = "ui://markcut/video-preview-v39.html";
+export const RESOURCE_URI = "ui://markcut/video-preview-v40.html";
 const PREVIEW_VERSION = RESOURCE_URI.match(/video-preview-(v\d+)/)?.[1] ?? "unknown";
 // Legacy entrypoints remain registered, but serve the current implementation.
 export const LEGACY_RESOURCE_URIS = [
@@ -48,6 +48,7 @@ export const LEGACY_RESOURCE_URIS = [
   "ui://markcut/video-preview-v35.html",
   "ui://markcut/video-preview-v36.html",
   "ui://markcut/video-preview-v37.html",
+  "ui://markcut/video-preview-v39.html",
   "ui://markcut/video-preview-v38.html",
 ];
 export const RESOURCE_MIME_TYPE = "text/html;profile=mcp-app";
@@ -264,25 +265,6 @@ export async function ensureVideoPreview(path, options = {}) {
 
 // Compatibility export: there is no longer a managed player to stop.
 export function stopManagedVideoPreview() {}
-
-export function reviewResult(decision, feedback = "") {
-  if (decision === "approved") return { decision };
-  if (decision === "changes_requested") {
-    const normalized = typeof feedback === "string" ? feedback.trim() : "";
-    if (!normalized) throw new Error("feedback is required when requesting changes");
-    return { decision, feedback: normalized };
-  }
-  throw new Error(`unsupported review decision: ${String(decision)}`);
-}
-
-export function reviewMessage(result) {
-  const normalized = reviewResult(result?.decision, result?.feedback);
-  return {
-    jsonrpc: "2.0",
-    method: "ui/message",
-    params: { role: "user", content: [{ type: "text", text: JSON.stringify(normalized) }] },
-  };
-}
 
 export function buildPreviewHtml() {
   const playerScriptUrl = publishPlayerBundle(bundlePath);

@@ -302,9 +302,9 @@ For comment-editor or timeline-dot changes, verify the built MCP player in a rea
 
 Whenever Markcut MCP server, preview UI, bridge, or bundled player code changes, rebuild the MCP bundle and reload **only the Markcut MCP provider** through Neo's provider control interface before testing or declaring the change live. Verify the running provider serves the new resource URI, then open a fresh ChatGPT iframe and check its displayed version and affected behavior. A Git push or ChatGPT tool-list refresh alone is not a provider reload. Never restart the whole Neo MCP app as a workaround; if scoped reload fails, report the live version and blocker explicitly.
 
-## Shared mobile review sessions
+## Stateless MCP review
 
-`markcut.preview` acknowledges compilation after creating/reusing a durable Review Session. `review-sessions.mjs` stores the state under NeoY Application Support (outside the public `/files` export tree); only authenticated MCP tools expose it. Sessions deduplicate identical source hashes, retain Relay correlations, and are superseded by a new source hash. `markcut.review.list/get/media/decide` are the shared interface used by the hosted app and Neox Review Inbox. The phone uses its selected Master's saved HTTPS URL and existing Keychain bearer; it does not call an unauthenticated Bonjour endpoint. Offline phone decisions retain the reviewed hash and idempotency key and are replayed after reconnection. The store accepts only one decision for the current compiled hash, permits an exact idempotent retry, and rejects stale hashes or a source edited after compilation. The accepted preview tool response is not the final review result; the originating agent reads `markcut.review.get` using `reviewSessionId`.
+`markcut.preview` compiles and publishes an immutable revision for the calling ChatGPT conversation. The hosted app verifies the current path-keyed revision record before enabling review and sends decisions to that same conversation with `ui/message`. Neo Mobile owns its locally notified requests and delivery. Markcut does not store shared review history or poll for decisions. `markcut.preview.media({contentHash})` reads a compiled revision when a client needs its scene tree; operation status, immutable content fingerprints, media cache and safe pruning remain server-owned.
 
 ## MCP background-audio regression guard
 
