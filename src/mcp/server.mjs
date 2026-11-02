@@ -30,7 +30,11 @@ server.registerTool(
   },
   async ({contentHash}) => {
     try {
-      return {content:[{type:"text",text:"Preview media ready"}], structuredContent:getPreviewMedia(contentHash)};
+      // Mobile clients need the current published player without a server-owned
+      // review session. Both resources are immutable and keyed by contentHash.
+      const media=getPreviewMedia(contentHash);
+      media.playerUrl=publishPlayerBundle(fileURLToPath(new URL("./remotion-app.bundle.js",import.meta.url)),publicOrigin());
+      return {content:[{type:"text",text:"Preview media ready"}], structuredContent:media};
     } catch (error) {
       return {isError:true,content:[{type:"text",text:error.message||String(error)}]};
     }
