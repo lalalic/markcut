@@ -1,8 +1,12 @@
 import { describe, it, expect } from "vitest";
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 import {
   classifyAssetPath,
   collectTreeAssets,
   validateAssetsRelative,
+  validateLocalAssetsExist,
 } from "../src/render/validate-assets.mjs";
 
 const BASE = "/proj/md";
@@ -102,5 +106,27 @@ describe("validateAssetsRelative", () => {
   it("is robust to empty trees", () => {
     expect(validateAssetsRelative({ type: "root" }, BASE)).toEqual([]);
     expect(validateAssetsRelative(null, BASE)).toEqual([]);
+  });
+});
+
+
+describe("verify-time local asset existence", () => {
+  it("rejects missing local files but ignores remote, inline, generated and include paths", () => {
+    const folder = mkdtempSync(join(tmpdir(), "markcut-assets-"));
+    try {
+      mkdirSync(join(folder, "assets"));
+      writeFileSync(join(folder, "assets", "here.jpg"), "mock");
+      const tree = { type: "root", children: [
+        { type: "image", src: "assets/here.jpg" },
+        { type: "image", src: "assets/missing.jpg" },
+        { type: "image", src: "https://example.test/remote.png" },
+        { type: "image", src: "assets/image_${width}.jpg" },
+        { type: "subtitle", src: "caption text" },
+        { type: "include", src: "../shared.md" }
+      ] };
+      const errors = validateLocalAssetsExist(tree, folder, { skipIncludeSrc: true });
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toContain("assets/missing.jpg");
+    } finally { rmSync(folder, { recursive: true, force: true }); }
   });
 });

@@ -403,7 +403,7 @@ edit=${DEFAULT_EDIT_CLI}`);
     // render publicDir). Absolute paths or ".." escapes would 404 in Remotion
     // (staticFile serves --public-dir), so fail fast with actionable errors.
     if (renderPublicDir) {
-      const { validateAssetsRelative } = await import("./validate-assets.mjs");
+      const { validateAssetsRelative, validateLocalAssetsExist } = await import("./validate-assets.mjs");
       const assetErrors = validateAssetsRelative(streamTree, renderPublicDir);
       if (assetErrors.length > 0) {
         for (const e of assetErrors) emitError(e);
@@ -529,12 +529,15 @@ function hasScript(root) {
       // (the render publicDir). Absolute paths, "/..." and ".." escapes would
       // 404 in render / break media in preview.
       {
-        const { validateAssetsRelative } = await import("./validate-assets.mjs");
+        const { validateAssetsRelative, validateLocalAssetsExist } = await import("./validate-assets.mjs");
         const baseDir = dirname(filePath);
         // Descriptive trees: include.src may point outside baseDir legitimately
         // (it is compiled against its own baseDir, then relativized).
         for (const e of validateAssetsRelative(descriptive, baseDir, { skipIncludeSrc: true })) {
           errors.push(e);
+        }
+        if (errors.length === 0) {
+          errors.push(...validateLocalAssetsExist(descriptive, baseDir, { skipIncludeSrc: true }));
         }
       }
 

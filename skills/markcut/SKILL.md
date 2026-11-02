@@ -1,134 +1,73 @@
 ---
 name: markcut
-description: Author, compile, preview, review and render videos from Markcut Markdown stream trees. Use for scene planning, TTS/TTI/TTV/STT media generation, Google Maps GPS routes, native CLI previews, and interactive ChatGPT MCP video reviews with contextual feedback and approval.
+description: Create, edit, preview, review, and render videos from Markdown using Markcut. Use for storyboards and scene structure, media inspection, narration and subtitles, video variants, GPS route visuals, MP4 export, and interactive human review in ChatGPT. Select the right authoring, preview, or review workflow for the requested outcome.
 ---
 
-## Stream Tree Specs
+# Markcut — Markdown-to-video
 
-Everything video is a **stream tree** described with markdown. see [docs/markdown-descriptive.md](docs/markdown-descriptive.md) for full details.
+Markcut turns a Markdown video definition into a compiled stream tree and a playable video. **The project's chosen Markcut video template and the active `video.md` are the source of truth for video structure and creative settings** (opening/ending, scene sequence, BGM, transitions, subtitles, voice, aspect ratio). Do not duplicate those settings in the Skill, an agent prompt, or another configuration file. Use this Skill to operate Markcut, not to invent a separate video production policy.
 
+## Choose the capability
 
-## Video Design Utilities
+| User goal | Agent action |
+|---|---|
+| Understand a folder of photos or clips | Inspect the files; use `markcut vision <folder>` if scene selection needs visual/media understanding. |
+| Make or revise a video | Load the project-selected template, author/edit its Markdown scenes, then `markcut verify <file>`. |
+| Quickly assess story structure | `markcut preview <file> --storyboard` (placeholder media, not a final-video quality check). |
+| Watch a native work-in-progress video | `markcut preview <file>`; test real visuals, sound, and seeking. |
+| Ask a person to review in ChatGPT | Call the available `markcut.preview({path})` tool; handle revision-specific feedback and approval. |
+| Deliver a finished MP4 | `markcut render <file> --output <path>`; inspect the resulting video and sound. |
+| Visualize a route or trip | Use a Markdown `map` stream; load [route/map reference](docs/map-dynamic-camera.md). |
 
-### Vision — understand video and images
-- `npx @lalalic/markcut vision <folder>` provides tool to understand video and images in a folder, and generate a `metadata.json` file with with text description, duration, and other metadata for each media file.
-- `npx @lalalic/markcut vision <folder> --label`, interactive mode, provides tool to label video and images with text, and above metadata.
-- DeepSeek Vision backend (opt-in) runs via a signed-in WebHelm browser. `npx @lalalic/markcut vision <folder> --backend deepseek --batch-size 8 --jsonl` batches image/chronological video-frame tiles into contact sheets. `--jsonl` streams each media result on stdout immediately **after** its atomic metadata save. Do not treat unconfirmed uploads as processed. Use `--skip-stt` only when speech transcription is unnecessary; use `--backend legacy` for the previous CLI-based model pipeline.
-- `perception.observations` contains media IDs and timed visual descriptions; video `perception.segments` retains the existing `startMs to endMs` fields. DeepSeek observes sampled frames, not motion or audio between them. Browser delivery errors require inspection/resume in the same session; never blindly resend.
+`markcut` means the `npx @lalalic/markcut` CLI in the examples below. For supported flags and generation adapters, consult `npx @lalalic/markcut --help`, `npx @lalalic/markcut vision --help`, and `npx @lalalic/markcut --show-clis` rather than guessing. Media generation is handled by the configured Markcut pipeline; this Skill does not select a project's private vision provider.
 
-### Storyboard — plan video structure with scene nodes
+## Author and validate
 
-- Use `scene` nodes to organize your video. Scenes can nest inside other scenes.
-- Use `description`, `scene.instruction`, `script`, `image|video.prompt` to structure your video content.
-- **If a scene has a `script` (or `audio`) plus one primary visual, the visual MUST be `isBackground:true`.** Without it the visual plays only its own duration (3s default for images) while narration continues — the rest of the scene is a black screen. Scene duration follows the audio, not the image.
+1. Identify the requested audience, platform, duration, story, language, available assets, and desired output. Reuse the user's/project's designated video Markdown template; if none exists, start a minimal `# video` document.
+2. Use scene nodes for narrative beats, visual media for what viewers see, and `script` for spoken content. Keep scene structure, soundtracks, caption styling, and transitions in the video Markdown. Do not impose a viral-video arc unless the user requests that style.
+3. For a scene with narration and **one visual intended to span the narration**, make that visual `isBackground:true`; otherwise it may end before the voice and leave a blank tail. Do not impose a fixed script duration when narration timing is resolved by the pipeline.
+4. Put hand-authored/third-party assets beside the video under `assets/`; do not place them in generated `.markcut/` cache. Do not manually remove that cache as a troubleshooting shortcut.
+5. Run `verify` on the actual file and correct missing/escaped asset paths, invalid node properties, and timing assumptions before preview or render. For exact grammar, load [Markdown DSL](docs/markdown-descriptive.md) **only when authoring or validating**.
+
+Minimal structure (adapt to the project's template):
 
 ```md
-## scene-1
-- image prompt:"..." isBackground:true   # fills the whole scene, narration decides duration
-- script "..."
+# video
+width:1080 height:1920 fps:30 layout:series
+
+## Opening
+layout:parallel
+- image src:assets/opening.jpg isBackground:true
+- script "An opening line that matches the shot."
 ```
 
-see [docs/markdown-descriptive.md](docs/markdown-descriptive.md) for full details.
+Asset paths are relative to the Markdown document. A `prompt` without `src` asks the media pipeline to generate content; inspect the result rather than assuming the prompt guarantees a correct visual. Keep visual and spoken meaning aligned. Use variants in Markdown for alternate language/platform/aspect outputs, rather than separate prompt rules.
 
-### `--storyboard` — fast structure preview
-```bash
-npx @lalalic/markcut preview video.md --storyboard
-```
+## Preview, review, and finish
 
-Skips slow TTI/TTV/STT generation and renders a fast preview where:
-- `image`/`video` nodes with `prompt` but no `src` → `<StoryboardSlot>` placeholder showing the prompt text
-- `audio`/`script` nodes → `<StoryboardCaption>` overlays showing narration text
-- A `<StoryboardInfo>` card with root metadata (title, dimensions, fps) appears at the first frame
+1. **Structure gate:** `npx @lalalic/markcut verify video.md`, then `npx @lalalic/markcut preview video.md --storyboard` when rapid scene review is useful. Storyboard placeholders do not verify generated media or final audio.
+2. **Playback gate:** `npx @lalalic/markcut preview video.md`. Play and seek representative scenes; check black tails, media loading, narration, BGM, subtitles, route movement, and timing. For browser failures, load [Preview Troubleshooting](references/preview-troubleshooting.md) on demand.
+3. **Human review gate:** Use Neo's `markcut.preview({path: "/absolute/path/video.md"})` when the user wants the hosted ChatGPT video player. This is **not** the CLI preview. The tool compiles/publishes a revision for playback; it does not rewrite the source. Comments with `decision: changes_requested` require editing that Markdown and calling `markcut.preview` again. `decision: approved` applies **only** to the identified revision/content hash; never apply an old approval to changed content. Follow [Review Contract](review.md) for actual video assessment.
+4. **Delivery gate:** `npx @lalalic/markcut render video.md --output out/video.mp4`. Confirm the MP4 exists and examine playback, including the final audio and subtitles. A valid Markdown file, compile success, or hosted-player resource alone is not proof of a finished video.
 
-Implies `--edit` so you can chat to reshape the story and see live reloads.
+If the user asks only for a script or structure, stop at the requested stage. Do not trigger expensive generation or claim final video delivery without a requested rendered artifact. A project-specific agent owns its own editorial or approval decisions; Markcut supplies authoring, playback and revision capabilities.
 
-### Video Variants
-- define variants for different video configurations, such as different languages, aspects, platforms
+## Failure and lifecycle boundaries
 
-### Route / Vlog videos (map clips)
-- For **route / travel-vlog clips** (drone flyover, route map with photo stops, Street View walks) use the `map` stream type with `view: overview | route | cinematic | streetview` and `tween(from,to,easing)` camera moves.
-- Discover interesting stops along a route with `markcut spots --waypoints "lat,lng;lat,lng" --photos --markdown`, then compose a `map` storyboard from the returned `waypoints:[...]` line.
-- See [docs/map-dynamic-camera.md](docs/map-dynamic-camera.md) — the agent guide with effects, spots workflow, and copy-paste markdown examples.
+- Treat `verify` errors, missing media, failed compilation, inaccessible preview, broken audio, and failed rendering as different failures. Preserve the previous successful artifact; report the failed gate and evidence, not success.
+- Some media jobs run for a long time. Monitor observable progress and use the host's managed-job/timeout/recovery facilities. Do not assume a job succeeded because it launched, and do not leave unresponsive work running indefinitely.
+- Native preview, MCP compilation/publication and the actual hosted ChatGPT player are **separate verification gates**. Never infer one passes because another passes.
+- Keep manual assets, private coordinates, credentials and third-party rights protected. For route media, distinguish measured GPS tracks from inferred roads between stops.
+- Stop only preview servers and browser sessions created for this task; do not disturb unrelated processes.
 
-### Viral Story requires
-- **Hooks** : why should the viewer watch this?
-- **Conflict** : what challenges or obstacles do the characters face?
-- **Resolution** : how are the conflicts resolved?
-- **Emotion** : what feelings are evoked in the viewer?
-- **Call to action** : what should the viewer do next?
-- **Open ending** : does the story leave room for interpretation or continuation?
+## References — load by need
 
-### TTS, TTI, TTV, STT media generation
-markcut implements a **media generation pipeline** to generate TTS, TTI, TTV, STT media automatically. 
-- `npx @lalalic/markcut --show-clis` to see the default CLIs for TTS, TTI, TTV, STT media generation.
-- `orchestrator` agent DONT generate media directly
-
-## 3. CLI
-
-```bash
-npx @lalalic/markcut <command> [options]
-npx @lalalic/markcut --help # get overall information
-npx @lalalic/markcut --show-clis # get command specific information
-npx @lalalic/markcut preview <file> # assemble and preview the video with a local server, and chat to edit the video and auto refresh
-npx @lalalic/markcut preview <file> --storyboard # fast structure preview: replaces TTI/TTV prompts with placeholder components, skips slow generation
-npx @lalalic/markcut render <file> # render the video to mp4
-npx @lalalic/markcut vision <folder> # vision understanding medias in folder
-npx @lalalic/markcut vision <folder> --label # an extra step to provide UI to label the medias with text, time ranges
-npx @lalalic/markcut spots --waypoints "lat,lng;lat,lng" # discover POIs along a route (for route/vlog map clips)
-
-```
-
----
-
-## Preview troubleshooting
-
-For native previews, Maps, playback, audio/subtitles or hosted ChatGPT MCP iframe issues, load [Preview Troubleshooting](references/preview-troubleshooting.md). Treat native playback, MCP compilation and hosted iframe rendering as separate verification gates.
-
-## MCP Video Preview and Human Review (Player v25)
-
-Use the model-visible `markcut.preview({path})` tool when a human needs to **watch and review a Markcut video** in ChatGPT. It is a video player, **not** a generic Markdown renderer and not the same as the local `npx @lalalic/markcut preview <file>` command.
-
-- Supply an absolute `.md` path (or a supported NeoY mounted HTTPS Markdown URL). An optional `relay` object correlates an Agents Relay task but is not needed for standalone review.
-- The MCP call returns promptly with an asynchronous compilation operation. The hosted iframe shows actual compilation stages, then loads a published immutable compiled JSON and media snapshot. There is no persistent player-manager process.
-- Player controls include Play/Pause, Seek, volume/audio, fullscreen and a **horizontal clickable scene list** sourced from compiled scene metadata. The title bar displays **Markcut · video title**, a **Browser TTS** switch, and the player version at right.
-- **Browser TTS** is an optional preview playback mode (default on when subtitle VTT exists). It speaks existing caption/script text in the browser; it does **not** use STT. Toggle off for generated audio and the original subtitle renderer. This switch does not currently skip compilation-time TTS or affect final renders. Playback timing and seeking are approximate for browser speech.
-- Google Maps `map` streams (route/cinematic) can be prerendered by Remotion into MP4 during MCP compilation. The published compiled JSON then references video streams, not live map tiles or a browser-exposed API key. If the render key is unavailable or prerendering fails, the original live Google Maps stream is preserved as a fallback. Native Map support remains available.
-- **Batch review:** choose scenes in the horizontal list and draft comments for each; scenes with drafts are highlighted. Returning to a scene restores its draft. **Add timed comment** stores a separate note at the current playback position. **Submit all feedback** sends one `changes_requested` message with a structured `comments[]` list of text and scene/time context, plus a backwards-compatible `feedback` summary. Drafts stay inside the current preview revision; approval requires resolving any unsent comments.
-- **Send feedback** (formerly Request changes) requires text and sends `ui/message` with `decision: "changes_requested"`, the source path, revision/content hash, and `playbackContext` (current `sceneId`, `sceneName`, `timeSeconds`) when available. The calling agent must interpret the feedback, edit the supplied video Markdown, and invoke `markcut.preview` again for the next turn. The player does not edit files.
-- **Approve** sends `decision: "approved"` via `ui/message` for the specific revision. Do not approve a different/newer revision on the basis of an old review.
-- Earlier previews are read-only once superseded; the submitted revision is checked against the latest published hash.
-- **Verification boundary:** compilation, static MP4 publication, and focused tests have passed, but complete real-hosted ChatGPT feedback → agent edit → re-preview → approval E2E still requires acceptance testing. Do not claim it is verified based on tool metadata alone.
-
-See [docs/mcp-static-preview.md](../../docs/mcp-static-preview.md) for the lifecycle and [./review.md](./review.md) for content-quality review guidance.
-
-## review
-use the review contract defined in [./review.md](./review.md) to guide the review process.
-review as early as possible in the video production process to catch issues before they propagate.
-* review md file with `markcut.preview({ path })` when the MCP tool is available
-* review compiled.json
-* review the rendered video
-
-## Reference
-
-| Topic | File |
-|-------|------|
-| Markdown descriptive format (primary authoring format) | [docs/markdown-descriptive.md](docs/markdown-descriptive.md) |
-| Route / vlog map clips (effects, spots, examples) | [docs/map-dynamic-camera.md](docs/map-dynamic-camera.md) |
-| Built-in components & common npm packages | [docs/components.md](docs/components.md) |
+| Need | Reference |
+|---|---|
+| Markdown grammar, nodes, variants and asset syntax | [docs/markdown-descriptive.md](docs/markdown-descriptive.md) |
+| Map/GPS videos and camera movement | [docs/map-dynamic-camera.md](docs/map-dynamic-camera.md) |
+| JSX components and package examples | [docs/components.md](docs/components.md) |
 | Sound effects | [docs/sound-effects.md](docs/sound-effects.md) |
-| Review contract | [./review.md](./review.md) |
-
-## Built-in Components
-
-Built-in components available via `@lalalic/markcut/components`. See [docs/components.md](docs/components.md) for full reference.
-
-
-## Golden rule
-- put all manual assets in `assets` folder, such as bgm, logo, watermark, etc. don't put them in `.markcut` folder, which is auto generated and will be deleted when `markcut clean` command is run.
-
-### Don'ts
-- **don't** set duration for script or stream's duration depending on audio script
-  - markcut resolver will automatically calculate the duration based on the audio script length
-- **don't** rm `.markcut` directory, which served as cache for all generated content. cache will auto update 
-- **don't** set timeout for `preview`, `vision`, `render` markcut commands, which may take long time to generate medias.
-- **don't** use skill to understand vision media. use `npx @lalalic/markcut vision <folder>`.
+| Review criteria, evidence and feedback contract | [review.md](review.md) |
+| Real player/audio/map/iframe troubleshooting | [references/preview-troubleshooting.md](references/preview-troubleshooting.md) |
+| MCP published-preview lifecycle (Markcut repository) | [references/mcp-preview-lifecycle.md](references/mcp-preview-lifecycle.md) |

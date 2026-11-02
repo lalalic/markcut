@@ -16,6 +16,7 @@
  *   - `markcut render`  — guards the compiled tree right before rendering
  */
 import { isAbsolute, relative, resolve } from "node:path";
+import { existsSync } from "node:fs";
 
 const REMOTE_RE = /^(https?:|data:|blob:|file:)/i;
 /** Subtitle `src` is only a file when it points at a .vtt — otherwise it is inline caption text. */
@@ -135,6 +136,24 @@ export function validateAssetsRelative(tree, baseDir, opts = {}) {
       }
     }
     if (problem) errors.push(formatError(ref, problem, baseDir));
+  }
+  return errors;
+}
+
+/** Optional verify-time existence check for local source assets.
+ * Remote, inline, generated template paths and include nodes are not checked here.
+ * Runtime-generated media is validated after it has been resolved by the pipeline.
+ */
+export function validateLocalAssetsExist(tree, baseDir, opts = {}) {
+  const errors = [];
+  for (const ref of collectTreeAssets(tree, opts)) {
+    const kind = classifyAssetPath(ref.value, { subtitle: ref.subtitle });
+    if (kind !== "relative" || ref.value.includes("${")) continue;
+    const path = resolve(baseDir, ref.value);
+    if (relative(baseDir, path).startsWith("..")) continue;
+    if (!existsSync(path)) {
+      errors.push(`Missing local asset: ${ref.path}.${ref.field} = "${ref.value}" (expected at ${path})`);
+    }
   }
   return errors;
 }

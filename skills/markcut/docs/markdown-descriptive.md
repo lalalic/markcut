@@ -64,7 +64,7 @@ Where:
 
 | Token | Stream Type | When | Required Keys |
 |---|---|---|---|
-| `image` | `image` | Still photos, title cards | `src`, `duration` |
+| `image` | `image` | Still photos, title cards | `src`; `duration` unless `isBackground:true` or parent duration applies |
 | `video` | `video` | Video clips | `src` + (`duration` or `endAt`) |
 | `audio` | `audio` | Voiceover, BGM, SFX | `src` + (`duration` or `endAt`) |
 | `script "..."` | `audio` | Narration/TTS (shorthand for audio with script) | `script` text (the `"..."` is the primary content) |
@@ -262,7 +262,7 @@ width:1080 height:1920 fps:30 layout:series
 ```
 
 ### 13. `src` Path Resolution — Context Root
-all src paths are resolved relative to the markdown file's location. For example, if your markdown file is at `./videos/course.md`, then `src:./assets/bg.jpg` resolves to `./videos/assets/bg.jpg`. Absolute paths (starting with `/`) are resolved relative to the project root.
+Local `src` paths must be relative to the Markdown file and must not escape its directory. For example, if your file is `./videos/course.md`, then `src:./assets/bg.jpg` resolves to `./videos/assets/bg.jpg`. The current `verify` and render asset checks reject absolute paths and `..` escapes. Remote URLs remain supported.
 
 
 ### 14. verify

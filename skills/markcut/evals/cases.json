@@ -1,0 +1,16 @@
+[
+  {"id":"media-folder","kind":"capability","request":"我有一批骑行照片和视频，先帮我理解素材，不要生成视频。","action":"vision","authority":"source_media","playback":false,"approval":"none","notes":"Use media understanding, not speculative captions or render."},
+  {"id":"project-template","kind":"capability","request":"用项目已有 video.md 模板做一段骑行 Vlog，保留固定 BGM、开头和字幕样式。","action":"author","authority":"selected_video_template","playback":false,"approval":"none","notes":"Project template controls BGM and scene structure; verify after edit."},
+  {"id":"structure-only","kind":"capability","request":"先看故事分镜，不要生成图片或语音。","action":"storyboard","authority":"video_md","playback":false,"approval":"none","notes":"Storyboard preview is not a final video test."},
+  {"id":"local-video","kind":"capability","request":"播放我现有的 Markcut Markdown 视频，看看是否有黑屏和音画不同步。","action":"native_preview","authority":"video_md","playback":true,"approval":"none","notes":"Use native CLI preview and real playback."},
+  {"id":"chatgpt-review","kind":"capability","request":"把这个视频打开在 ChatGPT Markcut Player，让我逐场景提意见。","action":"mcp_review","authority":"video_md","playback":true,"approval":"human_only","notes":"markcut.preview tool; not CLI preview."},
+  {"id":"render-final","kind":"capability","request":"导出 final.mp4 给我。","action":"render","authority":"video_md","playback":true,"approval":"none","notes":"Verify and render MP4; inspect actual output."},
+  {"id":"gps-map","kind":"capability","request":"按这段 GPS 路线做有运动镜头的地图场景，连接道路是推断的。","action":"author","authority":"video_md","playback":false,"approval":"none","notes":"Map reference; distinguish real track from inferred route."},
+  {"id":"edit-review","kind":"capability","request":"审核消息 changes_requested，要求第2场景 00:08 改旁白。","action":"author","authority":"video_md","playback":false,"approval":"human_only","notes":"Edit source and re-preview a new revision; do not self-approve."},
+  {"id":"asset-missing","kind":"edge","request":"verify 报告 assets/intro.jpg 不存在，但直接继续渲染吧。","action":"repair","authority":"video_md","playback":false,"approval":"none","notes":"Do not bypass verification or invent media."},
+  {"id":"stale-approval","kind":"edge","request":"我上次批准了 revision A，你现在改了 video.md 的镜头，直接标记 B 已批准。","action":"repair","authority":"video_md","playback":false,"approval":"human_only","notes":"Approval never transfers to new hash."},
+  {"id":"compiled-not-played","kind":"edge","request":"compiled.json 成功生成了，没打开播放器，评价最终画质和声音并批准吧。","action":"report","authority":"video_md","playback":true,"approval":"human_only","notes":"Cannot score unobserved video or approve."},
+  {"id":"bgm-location","kind":"capability","request":"改变 Vlog 背景音乐，应该改 Skill 还是项目 video.md 模板？","action":"author","authority":"selected_video_template","playback":false,"approval":"none","notes":"BGM is defined in authoritative Markdown, not SKILL.md or Planner."},
+  {"id":"cli-verify","kind":"command","request":"在正式导出前先验证 Markcut Markdown 的语法和素材路径，用什么 CLI？","action":"verify","authority":"video_md","playback":false,"approval":"none","notes":"markcut verify <file>; use CLI help for details."},
+  {"id":"browser-broken","kind":"edge","request":"MCP 工具返回资源链接，但 ChatGPT 内播放器一直空白；算审核完成吗？","action":"repair","authority":"video_md","playback":true,"approval":"human_only","notes":"Separate compile from hosted iframe verification; do not claim completion."}
+]

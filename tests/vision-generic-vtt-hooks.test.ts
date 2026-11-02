@@ -68,3 +68,10 @@ it('invalid semantic Agent response does not silently fall back to code-selected
   const meta=JSON.parse(readFileSync(join(other,'metadata.json'),'utf8'));
   expect(meta.clip?.perception?.segments).toBeUndefined();
 });
+
+it('obsolete provider switch is rejected instead of silently becoming a prompt override',()=>{
+  const folder=join(dir,'invalid-option');
+  mkdirSync(folder,{recursive:true});
+  expect(()=>execFileSync(process.execPath,[join(base,'src/render/cli.mjs'),'vision',folder,'--backend','deepseek'],{cwd:base,encoding:'utf8',stdio:'pipe'}))
+    .toThrow(/Unknown vision option: --backend/);
+});
