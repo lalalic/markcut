@@ -3,7 +3,8 @@ import { McpServer } from "@modelcontextprotocol/server";
 import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 import { registerAppResource, registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import { z } from "zod";
-import {publishPreviewRevision} from "./remote-assets.mjs";
+import {publishPreviewRevision,publishPlayerBundle,publicOrigin} from "./remote-assets.mjs";
+import {fileURLToPath} from "node:url";
 import {startCompileOperation} from "./compile-operation.mjs";
 import {
   TOOL_NAME, RESOURCE_URI, LEGACY_RESOURCE_URIS, buildPreviewResourceResult, previewCsp, getPreviewMedia, stopManagedVideoPreview,

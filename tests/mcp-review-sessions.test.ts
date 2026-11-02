@@ -10,6 +10,8 @@ describe('stateless Markcut review',()=>{
   for(const tool of ['markcut.review.list','markcut.review.get','markcut.review.media','markcut.review.decide'])expect(source).not.toContain(tool);
   expect(source).toContain('markcut.preview.media');
   expect(server).toContain('media.playerUrl=publishPlayerBundle');
+  expect(server).toMatch(/import \{[^}]*publishPlayerBundle[^}]*publicOrigin[^}]*\} from/);
+  expect(server).toContain('import {fileURLToPath} from');
   expect(source).not.toContain('review-sessions.json');
   expect(source).not.toContain('createOrReuseReviewSession');
   expect(source).not.toContain('publishReviewRevision');
