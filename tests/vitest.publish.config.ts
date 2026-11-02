@@ -10,6 +10,7 @@ export default defineConfig({
       "tests/render.test.ts",
       "tests/vision.test.ts",
       "tests/vision-candidate.test.ts",
+    "tests/vision-generic-vtt-hooks.test.ts", // requires ffmpeg; exercise in full/integration suite
       "tests/mcp-remote-assets.test.ts",
     ],
     testTimeout: 120_000,
