@@ -12,7 +12,7 @@ Markcut turns a Markdown video definition into a compiled stream tree and a play
 | User goal | Agent action |
 |---|---|
 | Understand a folder of photos or clips | Inspect the files; use `markcut vision <folder>` if scene selection needs visual/media understanding. |
-| Make or revise a video | Load the project-selected template, author/edit its Markdown scenes, then `markcut verify <file>`. |
+| Make or revise a video | Load the project-selected template, author/edit its Markdown scenes, run `markcut verify <file>`, and **inspect real playback before claiming a finished video**. |
 | Quickly assess story structure | `markcut preview <file> --storyboard` (placeholder media, not a final-video quality check). |
 | Watch a native work-in-progress video | `markcut preview <file>`; test real visuals, sound, and seeking. |
 | Ask a person to review in ChatGPT | Call the available `markcut.preview({path})` tool; handle revision-specific feedback and approval. |

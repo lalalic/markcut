@@ -198,14 +198,13 @@
     "request": "在正式导出前先验证 Markcut Markdown 的语法和素材路径，用什么 CLI？",
     "action": "report",
     "authority": "video_md",
-    "notes": "The user asks which command, not to execute it; answer markcut verify <file> without performing a command.",
-    "required_gates": [
-      "verify"
-    ],
+    "notes": "Question asks which CLI to use, not to execute it. A correct explanation must name markcut verify; no action gate needs to have occurred.",
+    "required_gates": [],
     "forbidden_gates": [
       "human_review",
       "real_playback"
-    ]
+    ],
+    "reason_includes": "markcut verify"
   },
   {
     "id": "browser-broken",

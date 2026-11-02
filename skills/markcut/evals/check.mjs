@@ -35,6 +35,7 @@ for (const item of cases) {
   check(Array.isArray(required) && required.every(v => allowed.gate.has(v)) && new Set(required).size === required.length, `${item.id} required_gates`);
   check(Array.isArray(forbidden) && forbidden.every(v => allowed.gate.has(v)) && new Set(forbidden).size === forbidden.length, `${item.id} forbidden_gates`);
   check(required.every(v => !forbidden.includes(v)), `${item.id} gates do not contradict`);
+  if (item.reason_includes !== undefined) check(typeof item.reason_includes === 'string' && item.reason_includes.length > 2, `${item.id} required rationale text`);
 }
 const skill = readFileSync(resolve(root, 'SKILL.md'), 'utf8');
 check(skill.startsWith('---\nname: markcut\n'), 'skill metadata');
@@ -73,6 +74,7 @@ if (process.argv[2] === '--validate') {
       for (const forbidden of item.forbidden_gates) check(!gates.includes(forbidden), `${item.id} incorrect completion gate: ${forbidden}`);
     }
     check(typeof output.reason === 'string' && output.reason.trim().length > 12, `${item.id} explanation`);
+    if (item.reason_includes) check(typeof output.reason === 'string' && output.reason.toLowerCase().includes(item.reason_includes.toLowerCase()), `${item.id} explanation names ${item.reason_includes}`);
     if (failures === before) passedCases++;
   }
   console.log(`Scored ${cases.length} cases: ${passedCases}/${cases.length} passed; ${failures} failed assertions. Manually inspect reason text for misleading claims.`);

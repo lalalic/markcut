@@ -15,7 +15,7 @@ function score(responses) {
   return spawnSync(process.execPath, [join(root, 'check.mjs'), file], {encoding: 'utf8'});
 }
 const good = cases.map(c => ({id: c.id, action: c.action, authority:c.authority,
-  completion_gates: [...c.required_gates], reason: 'Correct next action and required completion checks are recorded.'}));
+  completion_gates: [...c.required_gates], reason: c.id === 'cli-verify' ? 'Use npx @lalalic/markcut verify video.md to check Markdown paths.' : 'Correct next action and required completion checks are recorded.'}));
 test('checker scores valid capability decisions', () => {
   const outcome = score(good);
   assert.equal(outcome.status, 0, outcome.stderr);
@@ -37,6 +37,16 @@ test('checker rejects a fabricated human-review requirement for a render-only re
   const outcome = score(wrong);
   assert.notEqual(outcome.status, 0);
   assert.match(outcome.stderr, /render-final incorrect completion gate: human_review/);
+});
+test('CLI answer needs the correct command but no executed verify gate', () => {
+  const answers = structuredClone(good);
+  const cli = answers.find(c => c.id === 'cli-verify');
+  assert.deepEqual(cli.completion_gates, []);
+  assert.equal(score(answers).status, 0);
+  cli.reason = 'Use a generic video validator command, no specific command was identified.';
+  const outcome = score(answers);
+  assert.notEqual(outcome.status, 0);
+  assert.match(outcome.stderr, /cli-verify explanation names markcut verify/);
 });
 test('checker rejects invalid JSON rather than repairing it silently', () => {
   const file = join(dir, 'invalid.json');
