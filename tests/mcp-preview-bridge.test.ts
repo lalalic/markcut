@@ -49,8 +49,8 @@ describe('MCP Remotion bridge',()=>{
     compiled:{children:[{name:'Shared'}]}};
   const h=harness(remote);
   h.dispatch({method:'ui/notifications/tool-input',params:{arguments:{path,
-    review:{delivery:'event',eventTemplate:{type:'markcut.review.submitted',
-      source:'job/a/task/b/execution/c',data:{correlation:{secret:'other'}}}}}}});
+    review:{delivery:'event',eventTemplate:{type:'task.interactive_decision',
+      source:'job/a/task/b/execution/c',data:{interactive:{jobId:'a',taskId:'b',executionId:'c',invocationId:'other'}}}}}}});
   for(let i=0;i<20&&!h.events.some(e=>e.detail?.revisionId==='rev1');i++)await nextTick();
   expect(h.events.some(e=>e.detail?.revisionId==='rev1')).toBe(true);
   expect(h.nodes.approve.disabled).toBe(true);
@@ -361,8 +361,8 @@ describe('async compilation UI transition',()=>{
 });
 
 describe('Review event delivery',()=>{
- const template={type:'markcut.review.submitted',
-  source:'job/551/task/producer/execution/e1',data:{correlation:{jobId:'551'},purpose:'video'}};
+ const template={type:'task.interactive_decision',
+  source:'job/551/task/producer/execution/e1',data:{interactive:{jobId:'551',taskId:'producer',executionId:'e1',invocationId:'review-551'},purpose:'video'}};
  const media={id:'video1',requestId:'d9b2006a-0618-45aa-a3d8-31363fa629ca',revisionId:'rv1',
    contentHash:'a'.repeat(64),path:'/tmp/video.md',compiled:{children:[]},review:{delivery:'event',eventTemplate:template}};
  it('does not publish until explicit Submit, preserves fixed envelope and scoped comments',async()=>{
@@ -374,27 +374,20 @@ describe('Review event delivery',()=>{
   const calls=h.messages.filter(m=>m.method==='tools/call');
   expect(calls).toHaveLength(1);
   expect(calls[0]).toMatchObject({params:{name:'events',arguments:{command:'publish',
-    args:{type:template.type,source:template.source,data:{correlation:template.data.correlation,purpose:'video',
-      review:{requestId:media.requestId,revisionId:media.revisionId,contentHash:media.contentHash,
-        decision:'changes_requested',comments:[{sceneId:'intro',timeSeconds:2.25,text:'Trim opening'}]}}}}}});
+    args:{type:template.type,source:template.source,data:{purpose:'video',
+      interactive:{jobId:'551',taskId:'producer',executionId:'e1',invocationId:'review-551',
+        requestId:media.requestId,revisionId:media.revisionId,revision:media.contentHash,contentHash:media.contentHash,
+        decision:'changes_requested',feedback:'Trim opening',comments:[{sceneId:'intro',timeSeconds:2.25,text:'Trim opening'}]}}}}}});
   expect(h.messages.filter(m=>m.method==='ui/message')).toHaveLength(0);
   expect(h.nodes.status.textContent).toContain('submitted');
  });
- it('fills the generic Relay decision contract without changing caller identities',async()=>{
-  const common={type:'task.interactive_decision',source:'job/551/task/producer/execution/e1',
-    data:{interactive:{jobId:'551',taskId:'producer',executionId:'e1',invocationId:'request-7'}}};
+ it('rejects legacy Markcut event templates instead of publishing or falling back to messages',async()=>{
+  const legacy={...template,type:'markcut.review.submitted'};
   const h=harness(undefined,undefined,m=>m.method==='tools/call'?{published:true}:undefined);
-  h.result({...media,review:{delivery:'event',eventTemplate:common}});
-  h.scene({sceneId:'opening',timeSeconds:3.5,sceneStart:0});
-  h.nodes.feedback.value='Cut opening';h.nodes['save-spot'].onclick?.();
-  h.nodes.changes.onclick?.();await nextTick();
-  const event=h.messages.find(m=>m.method==='tools/call')?.params?.arguments?.args;
-  expect(event).toMatchObject({type:'task.interactive_decision',source:common.source,
-    data:{interactive:{jobId:'551',taskId:'producer',executionId:'e1',
-      invocationId:'request-7',revision:media.contentHash,contentHash:media.contentHash,
-      revisionId:media.revisionId,decision:'changes_requested',feedback:'Cut opening',
-      comments:[{sceneId:'opening',timeSeconds:3.5,text:'Cut opening'}]}}});
-  expect(h.messages.some(m=>m.method==='ui/message')).toBe(false);
+  h.result({...media,review:{delivery:'event',eventTemplate:legacy}});
+  h.nodes.approve.onclick?.();await nextTick();
+  expect(h.nodes.status.textContent).toContain('Review not submitted');
+  expect(h.messages.filter(m=>m.method==='tools/call'||m.method==='ui/message')).toHaveLength(0);
  });
  it('fails visibly without host Events access and reuses the idempotency key on retry',async()=>{
   const h=harness(undefined,undefined,m=>m.method==='tools/call'?{rpcError:{message:'Host denies cross-server tool'}}:undefined);
@@ -403,8 +396,8 @@ describe('Review event delivery',()=>{
   h.nodes.approve.onclick?.();await nextTick();await nextTick();
   const calls=h.messages.filter(m=>m.method==='tools/call');
   expect(calls).toHaveLength(2);
-  expect(calls[0].params.arguments.args.data.review.idempotencyKey)
-    .toBe(calls[1].params.arguments.args.data.review.idempotencyKey);
+  expect(calls[0].params.arguments.args.data.interactive.idempotencyKey)
+    .toBe(calls[1].params.arguments.args.data.interactive.idempotencyKey);
   expect(h.messages.filter(m=>m.method==='ui/message')).toHaveLength(0);
  });
  it('rejects non-acknowledging host and prevents a second submit after acceptance',async()=>{

@@ -129,25 +129,22 @@ function applyToolInput(params){
 }
 let operationGeneration=0;
 function eventEnvelope(template,review){
- if(!template || !template.source || !template.data)throw new Error('Invalid bound review event template');
- if(template.type==='task.interactive_decision'){
-  const match=template.source.match(/^job\\/([^/]+)\\/task\\/([^/]+)\\/execution\\/([^/]+)$/);
-  const fixed=template.data.interactive;
-  if(!match || !fixed || fixed.jobId!==match[1] || fixed.taskId!==match[2] ||
-     fixed.executionId!==match[3] || !fixed.invocationId ||
-     ['decision','feedback','comments','revision','revisionId','contentHash','previewId','requestId','idempotencyKey']
-       .some(key=>Object.prototype.hasOwnProperty.call(fixed,key)))throw new Error('Invalid bound interactive decision');
-  return {type:template.type,source:template.source,data:{...template.data,interactive:{
-   ...fixed,revision:review.contentHash,revisionId:review.revisionId,contentHash:review.contentHash,
-   previewId:review.previewId,requestId:review.requestId,decision:review.decision,
-   feedback:review.feedback||review.comments.map(c=>c.text).join('\\n'),
-   comments:review.comments,idempotencyKey:review.idempotencyKey
-  }}};
- }
- if(template.type!=='markcut.review.submitted' ||
-    Object.prototype.hasOwnProperty.call(template.data,'review'))throw new Error('Invalid bound review event template');
- return {type:template.type,source:template.source,data:{...template.data,review}};
+ if(!template || template.type!=='task.interactive_decision' || !template.source || !template.data)
+  throw new Error('Invalid bound review event template');
+ const match=template.source.match(/^job\\/([^/]+)\\/task\\/([^/]+)\\/execution\\/([^/]+)$/);
+ const fixed=template.data.interactive;
+ if(!match || !fixed || fixed.jobId!==match[1] || fixed.taskId!==match[2] ||
+    fixed.executionId!==match[3] || !fixed.invocationId ||
+    ['decision','feedback','comments','revision','revisionId','contentHash','previewId','requestId','idempotencyKey']
+      .some(key=>Object.prototype.hasOwnProperty.call(fixed,key)))throw new Error('Invalid bound interactive decision');
+ return {type:template.type,source:template.source,data:{...template.data,interactive:{
+  ...fixed,revision:review.contentHash,revisionId:review.revisionId,contentHash:review.contentHash,
+  previewId:review.previewId,requestId:review.requestId,decision:review.decision,
+  feedback:review.feedback||review.comments.map(c=>c.text).join('\\n'),
+  comments:review.comments,idempotencyKey:review.idempotencyKey
+ }}};
 }
+
 async function sendReviewEvent(result){
  const event=eventEnvelope(activeReview.eventTemplate,result);
  // MCP Apps tools/call is host-mediated; an unavailable or unauthorized Events

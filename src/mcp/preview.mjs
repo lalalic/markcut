@@ -9,7 +9,7 @@ import { externalizePreviewMedia, publicOrigin, resolveMountedFile, resolvePrevi
 import {fingerprintInputs} from "./source-fingerprint.mjs";
 
 export const TOOL_NAME = "markcut.preview";
-export const RESOURCE_URI = "ui://markcut/video-preview-v42.html";
+export const RESOURCE_URI = "ui://markcut/video-preview-v43.html";
 const PREVIEW_VERSION = RESOURCE_URI.match(/video-preview-(v\d+)/)?.[1] ?? "unknown";
 // Legacy entrypoints remain registered, but serve the current implementation.
 export const LEGACY_RESOURCE_URIS = [
@@ -50,6 +50,7 @@ export const LEGACY_RESOURCE_URIS = [
   "ui://markcut/video-preview-v37.html",
   "ui://markcut/video-preview-v40.html",
   "ui://markcut/video-preview-v41.html",
+  "ui://markcut/video-preview-v42.html",
   "ui://markcut/video-preview-v39.html",
   "ui://markcut/video-preview-v38.html",
 ];
