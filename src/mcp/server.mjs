@@ -3,6 +3,7 @@ import { McpServer } from "@modelcontextprotocol/server";
 import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 import { registerAppResource, registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import { z } from "zod";
+import {normalizeReviewConfig} from "./review-delivery.mjs";
 import {publishPreviewRevision,publishPlayerBundle,publicOrigin} from "./remote-assets.mjs";
 import {fileURLToPath} from "node:url";
 import {startCompileOperation} from "./compile-operation.mjs";
@@ -46,18 +47,19 @@ registerAppTool(
   server,
   TOOL_NAME,
   {
-    description: "Compile and publish an immutable Markcut preview revision for this ChatGPT conversation. The hosted player sends human review feedback directly to this conversation with ui/message; feedback is not stored or routed by the server. Approval applies only to the exact contentHash shown.",
+    description: "Compile and publish an immutable Markcut preview revision for this ChatGPT conversation. Review delivery defaults to ui/message, or submits an authorized caller-bound event when explicitly configured. Approval applies only to the exact contentHash shown.",
     inputSchema: z.object({
       path: z.string().describe("Absolute .md path or NeoY HTTPS mounted file URL"),
+      review: z.object({delivery:z.enum(["text","event"]).optional(),eventTemplate:z.object({type:z.string(),source:z.string(),data:z.record(z.string(),z.unknown())}).optional()}).optional(),
       relay: z.object({jobId:z.string(),taskId:z.union([z.string(),z.number()]),executionId:z.string().optional()}).optional().describe("Optional Agents Relay task correlation. No Relay dependency for standalone ChatGPT/Work reviews."),
     }),
     _meta: {
       ui: { resourceUri: RESOURCE_URI },
     },
   },
-  async ({ path, relay }) => {
+  async ({ path, relay, review }) => {
     try {
-      const operation=startCompileOperation(path,relay);
+      const operation=startCompileOperation(path,relay,normalizeReviewConfig(review));
       const payload={...operation,...(relay ? {relay} : {})};
       return {
         content: [{ type: "text", text: `Compilation started: ${operation.path}` }],

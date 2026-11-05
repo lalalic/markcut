@@ -1,7 +1,7 @@
 export function buildPreviewBridgeScript() {
 return `
 const feedback=document.getElementById('feedback'),status=document.getElementById('status'),pathLabel=document.getElementById('path-label');
-let nextId=0,identity=null,busy=false,expectedPath=null,activePath=null,activeRelay=null,submittedRevision=null;
+let nextId=0,identity=null,busy=false,expectedPath=null,activePath=null,activeRelay=null,activeReview={delivery:"text"},expectedDelivery="text",submittedRevision=null,submission=null;
 const comments=[];
 let currentScene={sceneId:null,sceneName:null,sceneStart:0,timeSeconds:0},selectedId=null,nextCommentId=0;
 const mode=document.getElementById('comment-mode');
@@ -93,6 +93,8 @@ async function loadRemoteScenes(path){
     const response=await fetch(url+'?try='+attempt,{cache:'no-store'});
     if(response.ok){const data=await response.json();
       if(data.requestedPath===path && (data.compiledUrl||data.compiled) && generation===fallbackGeneration){
+       // Public path cache contains media only, never a caller's private
+       // eventTemplate. Event delivery cannot be reconstructed from it.
        if(window.__markcutRevision?.requestedPath===path)return;
        resultsByPath.set(path,data);renderRevision(data);return;
       }
@@ -110,12 +112,15 @@ function applyToolInput(params){
  const input=params?.arguments||params?.input||params?.toolInput||params||{};
  if(typeof input.path!=='string')return;
  expectedPath=input.path;
+ expectedDelivery=input.review?.delivery==='event'?'event':'text';
+ // The selection has no authority to change delivery; only the compiled
+ // operation result supplies the provider-bound review configuration.
  loadRemoteScenes(expectedPath);
  showVideoName(expectedPath);
  const cached=resultsByPath.get(expectedPath);
  if(cached){if(cached.operationUrl)trackOperation(cached);else renderRevision(cached);return;}
  if(window.__markcutRevision?.path!==expectedPath && window.__markcutRevision?.requestedPath!==expectedPath){
-  identity=null;
+  identity=null;activeReview={delivery:"text"};
   window.__markcutRevision=null;
   window.dispatchEvent(new CustomEvent('markcut:revision',{detail:null}));
   pathLabel.textContent=expectedPath;
@@ -123,6 +128,25 @@ function applyToolInput(params){
  }
 }
 let operationGeneration=0;
+function eventEnvelope(template,review){
+ if(!template || template.type!=='markcut.review.submitted' || !template.source || !template.data ||
+    Object.prototype.hasOwnProperty.call(template.data,'review'))throw new Error('Invalid bound review event template');
+ return {type:template.type,source:template.source,data:{...template.data,review}};
+}
+async function sendReviewEvent(result){
+ const event=eventEnvelope(activeReview.eventTemplate,result);
+ // MCP Apps tools/call is host-mediated; an unavailable or unauthorized Events
+ // provider MUST fail, never be substituted with ui/message.
+ const response=await request('tools/call',{name:'events',arguments:{command:'publish',args:event}});
+ if(response?.isError)throw new Error(response.content?.[0]?.text||'Events MCP rejected review');
+ let receipt=response?.structuredContent||response;
+ if(!receipt?.published && response?.content?.[0]?.text){
+  try{receipt=JSON.parse(response.content[0].text);}catch{}
+ }
+ if(!receipt?.published && receipt?.result?.published)receipt=receipt.result;
+ if(receipt?.published!==true)throw new Error('Events MCP did not acknowledge publish');
+ return true;
+}
 async function sendDecisionMessage(result){
  for(let attempt=0;attempt<3;attempt++){
   try{await request('ui/message',{role:'user',content:[{type:'text',text:JSON.stringify(result)}]});return true;}catch(e){if(attempt===2){status.textContent='Could not send review to this conversation: '+String(e.message||e);return false;}await new Promise(resolve=>setTimeout(resolve,250*(attempt+1)));}
@@ -144,7 +168,8 @@ async function trackOperation(data){
    if(!response.ok)throw new Error('HTTP '+response.status);
    const progress=await response.json();
    if(generation!==operationGeneration)return;
-   if(progress.state==='ready'&&progress.result){renderRevision({...progress.result,requestedPath:data.requestedPath||data.path,relay:data.relay});return;}
+   if(progress.state==='ready'&&progress.result){renderRevision({...progress.result,requestedPath:data.requestedPath||data.path,
+    requestId:progress.result.requestId||data.requestId,review:progress.result.review||data.review,relay:data.relay});return;}
    if(progress.state==='failed'){reviewReadonly(true,'Compilation failed: '+progress.error);return;}
    const elapsed=Math.round((Date.now()-(progress.startedAt||Date.now()))/1000);
    status.textContent='Compiling · '+(progress.stage||'working')+' · '+elapsed+'s';
@@ -170,7 +195,7 @@ async function currentRevisionMatches(path,hash){
  const response=await fetch(__MARKCUT_ORIGIN__+'/files/_neoy/markcut/revisions/'+key+'.json?t='+Date.now(),{cache:'no-store'});
  if(!response.ok)throw new Error('Latest preview status unavailable');
  const latest=await response.json();
- return latest.contentHash===hash;
+ return latest.contentHash===hash && (!latest.requestId || !identity?.requestId || latest.requestId===identity.requestId);
 }
 function reviewReadonly(readonly,message){
  document.getElementById('approve').disabled=readonly;
@@ -182,10 +207,11 @@ async function renderRevision(data){
  if(identity?.revisionId&&identity.revisionId!==data.revisionId)clearComments();
  if(data.path){pathLabel.textContent=data.path;showVideoName(data.path,data.title||data.videoTitle);}
  if(!data.compiled&&!data.compiledUrl){status.textContent='Compiled scenes unavailable';return;}
- identity={previewId:data.id,revisionId:data.revisionId,contentHash:data.contentHash};
+ identity={requestId:data.requestId||data.operationId||data.revisionId,previewId:data.id,revisionId:data.revisionId,contentHash:data.contentHash};
+ activeReview=data.review||{delivery:'text'};
  activePath=data.requestedPath||data.path||expectedPath||null;
  activeRelay=data.relay||null;
- if(submittedRevision!==data.revisionId){busy=false;submittedRevision=null;}
+ if(submittedRevision!==data.revisionId){busy=false;submittedRevision=null;submission=null;}
  reviewReadonly(true,'Loading static compiled scenes…');
  try{
   let compiled=data.compiled;
@@ -202,10 +228,17 @@ async function renderRevision(data){
   window.__markcutRevision={...data,compiled};
   window.dispatchEvent(new CustomEvent('markcut:revision',{detail:window.__markcutRevision}));
   status.textContent='';
-  if(!data.compiledUrl){reviewReadonly(false);return;}
+  if(!data.compiledUrl){
+   reviewReadonly(expectedDelivery==='event' && activeReview.delivery!=='event',
+     'Event review configuration unavailable; await an authenticated Provider result.');
+   return;
+  }
   const same=await currentRevisionMatches(activePath,identity.contentHash);
   if(generation!==renderGeneration)return;
-  reviewReadonly(!same,same?'':'Historical Preview · Read-only');
+  const unboundEvent=expectedDelivery==='event' && activeReview.delivery!=='event';
+  reviewReadonly(!same||unboundEvent,unboundEvent?
+   'Event review configuration unavailable; cannot submit from shared media cache.':
+   (same?'':'Historical Preview · Read-only'));
  }catch(e){
   if(generation!==renderGeneration)return;
   reviewReadonly(true,'Preview unavailable or review state unverified: '+String(e));
@@ -228,6 +261,9 @@ async function initialize(){
 }
 async function submit(decision){
  if(busy)return;
+ if(document.getElementById(decision==='approved'?'approve':'changes').disabled){
+  status.textContent='Review disabled for this revision or delivery configuration.';return;
+ }
  if(feedback.value.trim()&&(selectedId===null||comments.find(x=>x.id===selectedId)?.text!==feedback.value.trim())){status.textContent='Add or remove the current comment before submitting.';return;}
  const preparedComments=allComments();
  if(decision==='changes_requested'&&!preparedComments.length){status.textContent='Feedback is required.';return;}
@@ -237,22 +273,30 @@ async function submit(decision){
   try{if(!await currentRevisionMatches(activePath,identity.contentHash)){reviewReadonly(true,'Historical Preview · Read-only');return;}}
   catch(e){reviewReadonly(true,'Cannot verify latest preview: '+String(e));return;}
  }
- const result={...identity,decision};
+ const result={...identity,decision,comments:preparedComments.map(item=>({
+  sceneId:item.playbackContext?.sceneId||null,timeSeconds:Number(item.playbackContext?.timeSeconds)||0,
+  text:item.text,scope:item.scope,playbackContext:item.playbackContext
+ }))};
+ // Retain the same submission key across retries, including lost ACKs.
+ const signature=JSON.stringify({result,delivery:activeReview.delivery});
+ if(!submission || submission.signature!==signature)submission={signature,key:crypto.randomUUID()};
+ result.idempotencyKey=submission.key;
  if(activePath)result.path=activePath;
  if(activeRelay)result.relay=activeRelay;
  if(decision==='changes_requested'){
-  result.comments=preparedComments;
   result.feedback=preparedComments.length===1?preparedComments[0].text:preparedComments.map((item,index)=>String(index+1)+'. ['+sceneKey(item.playbackContext)+' @ '+(item.playbackContext.timeSeconds??0)+'s] '+item.text).join('\\n');
   if(window.__markcutPlaybackContext)result.playbackContext=window.__markcutPlaybackContext;
  }
- busy=true;status.textContent='Sending review to this conversation…';
+ busy=true;status.textContent=activeReview.delivery==='event'?'Publishing review event…':'Sending review to this conversation…';
  const submittedId=result.revisionId;
  try{
-  const delivered=await sendDecisionMessage(result);
+  const delivered=activeReview.delivery==='event' ? await sendReviewEvent(result) : await sendDecisionMessage(result);
   if(!delivered){busy=false;return;}
-  if(identity?.revisionId===submittedId){submittedRevision=submittedId;status.textContent=decision==='approved'?'Review sent.':'Feedback sent. Waiting for the updated preview.';}
+  if(identity?.revisionId===submittedId){submittedRevision=submittedId;status.textContent=activeReview.delivery==='event'
+    ? 'Review event submitted (transport accepted; awaiting consumer).'
+    : (decision==='approved'?'Review sent.':'Feedback sent. Waiting for the updated preview.');}
  }
- catch(e){busy=false;status.textContent=e.message||'Unable to submit review';}
+ catch(e){busy=false;status.textContent='Review not submitted: '+(e.message||'Unable to submit review');}
 }
 document.getElementById('approve').onclick=()=>submit('approved');
 document.getElementById('changes').onclick=()=>submit('changes_requested');

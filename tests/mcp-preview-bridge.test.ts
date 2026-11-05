@@ -43,6 +43,20 @@ describe('MCP Remotion bridge',()=>{
   expect(h.events.at(-1)?.detail?.revisionId).toBe('remote-r1');
   expect(h.nodes.status.textContent).toBe('');
  });
+ it("never reconstructs event destinations from another caller's path cache",async()=>{
+  const path='/shared-video.md';
+  const remote={id:'shared',revisionId:'rev1',contentHash:'a'.repeat(64),requestedPath:path,
+    compiled:{children:[{name:'Shared'}]}};
+  const h=harness(remote);
+  h.dispatch({method:'ui/notifications/tool-input',params:{arguments:{path,
+    review:{delivery:'event',eventTemplate:{type:'markcut.review.submitted',
+      source:'job/a/task/b/execution/c',data:{correlation:{secret:'other'}}}}}}});
+  for(let i=0;i<20&&!h.events.some(e=>e.detail?.revisionId==='rev1');i++)await nextTick();
+  expect(h.events.some(e=>e.detail?.revisionId==='rev1')).toBe(true);
+  expect(h.nodes.approve.disabled).toBe(true);
+  h.nodes.approve.onclick?.();
+  expect(h.messages.filter(m=>m.method==='tools/call'||m.method==='ui/message')).toHaveLength(0);
+ });
  it('initializes, delivers compiled scenes and sends review directly to the caller',async()=>{
   const h=harness();
   expect(h.messages[0]).toMatchObject({id:1,method:'ui/initialize'});
@@ -59,7 +73,8 @@ describe('MCP Remotion bridge',()=>{
   expect(h.messages.filter(m=>m.method==='tools/call')).toHaveLength(0);
   await nextTick();
   const notification=h.messages.find(m=>m.method==='ui/message');
-  expect(JSON.parse(notification.params.content[0].text)).toEqual({previewId:'one',revisionId:'rev1',contentHash:'a'.repeat(64),path:'/tmp/a.md',decision:'approved'});
+  expect(JSON.parse(notification.params.content[0].text)).toMatchObject({requestId:'rev1',previewId:'one',revisionId:'rev1',contentHash:'a'.repeat(64),path:'/tmp/a.md',decision:'approved',comments:[]});
+  expect(JSON.parse(notification.params.content[0].text).idempotencyKey).toMatch(/^[a-f0-9-]{36}$/);
   h.respond(notification.id);
   await nextTick();
   expect(h.nodes.status.textContent).toBe('Review sent.');
@@ -342,5 +357,47 @@ describe('async compilation UI transition',()=>{
   expect(h.nodes['interactive-ui'].hidden).toBe(true);
   expect(h.nodes.approve.disabled).toBe(true);
   expect(h.nodes.status.textContent).toContain('TTS unavailable');
+ });
+});
+
+describe('Review event delivery',()=>{
+ const template={type:'markcut.review.submitted',
+  source:'job/551/task/producer/execution/e1',data:{correlation:{jobId:'551'},purpose:'video'}};
+ const media={id:'video1',requestId:'d9b2006a-0618-45aa-a3d8-31363fa629ca',revisionId:'rv1',
+   contentHash:'a'.repeat(64),path:'/tmp/video.md',compiled:{children:[]},review:{delivery:'event',eventTemplate:template}};
+ it('does not publish until explicit Submit, preserves fixed envelope and scoped comments',async()=>{
+  const h=harness(undefined,undefined, m=> m.method==='tools/call'?{published:true,event:{event_id:'ack'}}:undefined);
+  h.result(media);h.scene({sceneId:'intro',timeSeconds:2.25,sceneStart:0});
+  h.nodes.feedback.value='Trim opening';h.nodes['save-spot'].onclick?.();
+  expect(h.messages.filter(m=>m.method==='tools/call')).toHaveLength(0);
+  h.nodes.changes.onclick?.();await nextTick();
+  const calls=h.messages.filter(m=>m.method==='tools/call');
+  expect(calls).toHaveLength(1);
+  expect(calls[0]).toMatchObject({params:{name:'events',arguments:{command:'publish',
+    args:{type:template.type,source:template.source,data:{correlation:template.data.correlation,purpose:'video',
+      review:{requestId:media.requestId,revisionId:media.revisionId,contentHash:media.contentHash,
+        decision:'changes_requested',comments:[{sceneId:'intro',timeSeconds:2.25,text:'Trim opening'}]}}}}}});
+  expect(h.messages.filter(m=>m.method==='ui/message')).toHaveLength(0);
+  expect(h.nodes.status.textContent).toContain('submitted');
+ });
+ it('fails visibly without host Events access and reuses the idempotency key on retry',async()=>{
+  const h=harness(undefined,undefined,m=>m.method==='tools/call'?{rpcError:{message:'Host denies cross-server tool'}}:undefined);
+  h.result(media);h.nodes.approve.onclick?.();await nextTick();await nextTick();
+  expect(h.nodes.status.textContent).toContain('Review not submitted');
+  h.nodes.approve.onclick?.();await nextTick();await nextTick();
+  const calls=h.messages.filter(m=>m.method==='tools/call');
+  expect(calls).toHaveLength(2);
+  expect(calls[0].params.arguments.args.data.review.idempotencyKey)
+    .toBe(calls[1].params.arguments.args.data.review.idempotencyKey);
+  expect(h.messages.filter(m=>m.method==='ui/message')).toHaveLength(0);
+ });
+ it('rejects non-acknowledging host and prevents a second submit after acceptance',async()=>{
+  let accepted=false;
+  const h=harness(undefined,undefined,m=>m.method==='tools/call'?{published:accepted}:undefined);
+  h.result(media);h.nodes.approve.onclick?.();await nextTick();await nextTick();
+  expect(h.nodes.status.textContent).toContain('not submitted');
+  accepted=true;h.nodes.approve.onclick?.();await nextTick();await nextTick();
+  h.nodes.approve.onclick?.();
+  expect(h.messages.filter(m=>m.method==='tools/call')).toHaveLength(2);
  });
 });
