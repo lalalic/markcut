@@ -13,6 +13,7 @@ import { ComposeContext, AudioContext, useFrameEvents } from "../context/index";
 import { cssJS, toClassName } from "../utils/index";
 import type { Scene as SceneStream } from "../schema/index";
 import { FolderLeaf } from "./Folder";
+import { remotionFolderName } from "./remotion-folder-name";
 
 export function SceneLeaf({ stream }: { stream: SceneStream }) {
   const { Container } = React.useContext(ComposeContext);
@@ -33,7 +34,7 @@ export function SceneLeaf({ stream }: { stream: SceneStream }) {
         style={cssJS(stream.style) as React.CSSProperties}
         className={`scene ${toClassName(stream.name ?? "")}`}
       >
-        <Folder name={stream.name ?? ""}>
+        <Folder name={remotionFolderName(stream.name, stream.id)}>
           <FolderLeaf stream={stream as any} />
         </Folder>
       </Container>
