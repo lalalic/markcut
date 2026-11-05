@@ -20,7 +20,8 @@ describe('Markcut Remotion MCP App',()=>{
   expect(html).toContain('#comment-tools>*{width:30px;height:28px;padding:0;border:0');
   expect(html).toContain('https://neoy.example.test/files/_neoy/markcut/player/');
   expect(html).not.toContain('id="remotion-bundle"');
-  expect(html.length).toBeLessThan(24000);
+  // The generic event contract requires client-side identity and reserved-field validation.
+  expect(html.length).toBeLessThan(26000);
   expect(html).not.toContain('<video id="video-player"');
   expect(html).not.toContain('data:video/mp4');
   expect(html).not.toContain('127.0.0.1');

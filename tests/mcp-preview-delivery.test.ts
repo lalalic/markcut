@@ -30,4 +30,22 @@ describe('Provider-bound preview delivery',()=>{
   expect(()=>eventForReview(config,{...review,contentHash:'bogus'})).toThrow();
   expect(()=>eventForReview(config,{...review,decision:'task.completed'})).toThrow();
  });
+ it('supports Relay common interactive decision without a Markcut-specific event type',()=>{
+  const relayTemplate={type:'task.interactive_decision',source:'job/j1/task/t1/execution/e1',
+    data:{interactive:{jobId:'j1',taskId:'t1',executionId:'e1',invocationId:'preview-invocation'},context:{stage:'video'}}};
+  const config=normalizeReviewConfig({delivery:'event',eventTemplate:relayTemplate});
+  const event=eventForReview(config,{...review,feedback:'Shorten scene'});
+  expect(event).toMatchObject({type:'task.interactive_decision',source:relayTemplate.source,
+    data:{context:{stage:'video'},interactive:{jobId:'j1',taskId:'t1',executionId:'e1',
+      invocationId:'preview-invocation',revision:review.contentHash,revisionId:review.revisionId,
+      decision:'changes_requested',feedback:'Shorten scene',comments:review.comments,
+      idempotencyKey:review.idempotencyKey}}});
+  expect(relayTemplate.data.interactive).not.toHaveProperty('decision');
+  expect(()=>normalizeReviewConfig({delivery:'event',eventTemplate:{...relayTemplate,
+    data:{interactive:{...relayTemplate.data.interactive,decision:'approved'}}}})).toThrow();
+  expect(()=>normalizeReviewConfig({delivery:'event',eventTemplate:{...relayTemplate,
+    data:{interactive:{...relayTemplate.data.interactive,taskId:'forged'}}}})).toThrow();
+  expect(()=>normalizeReviewConfig({delivery:'event',eventTemplate:{...relayTemplate,
+    data:{interactive:{...relayTemplate.data.interactive,revision:review.contentHash}}}})).toThrow();
+ });
 });

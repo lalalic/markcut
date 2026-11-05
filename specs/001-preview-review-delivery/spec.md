@@ -50,9 +50,10 @@ markcut.preview({
   review: {
     delivery: "event",
     eventTemplate: {
-      type: "markcut.review.submitted",
+      type: "task.interactive_decision",
       source: "job/<job-id>/task/<task-id>/execution/<execution-id>",
-      data: { correlation: { /* caller-owned opaque values */ } }
+      data: { interactive: {jobId: "<job-id>", taskId: "<task-id>",
+        executionId: "<execution-id>", invocationId: "<review-request-id>"} }
     }
   }
 });
@@ -84,23 +85,28 @@ The Provider freezes the delivery choice, event template (if any), and preview i
 
 ### Event publish envelope
 
-The Provider's event template owns `type`, `source` and any fixed `data` fields. On Submit, the client attaches the normalized Review Result under `data.review` **without overwriting template-owned fields**, then publishes through the existing Events MCP interface:
+The Provider's event template owns `type`, `source` and any fixed `data` fields. For Relay managed Tasks, the canonical event is `task.interactive_decision` from the Relay Event Contract. On Submit, the client fills reserved `data.interactive` fields (`decision`, `feedback`, `comments`, `revision`, `contentHash`, `revisionId`, `previewId`, `requestId`, `idempotencyKey`); `revision` equals `contentHash`. It never overwrites caller-owned execution identity. Legacy non-Relay `markcut.review.submitted` templates remain supported with their `data.review` output. Then it publishes through the existing Events MCP interface:
 
 ```json
 {
   "command": "publish",
   "args": {
-    "type": "markcut.review.submitted",
-    "source": "<trusted-caller-source>",
+    "type": "task.interactive_decision",
+    "source": "job/<job-id>/task/<task-id>/execution/<execution-id>",
     "data": {
-      "correlation": { "...": "caller-owned" },
-      "review": { "decision": "changes_requested", "revisionId": "...", "contentHash": "...", "comments": [], "idempotencyKey": "..." }
+      "interactive": {
+        "jobId": "<job-id>", "taskId": "<task-id>", "executionId": "<execution-id>",
+        "invocationId": "<review-request-id>", "revision": "<contentHash>",
+        "contentHash": "<contentHash>", "revisionId": "<revisionId>",
+        "decision": "changes_requested", "feedback": "Shorten the opening",
+        "comments": [], "idempotencyKey": "<stable submission ID>"
+      }
     }
   }
 }
 ```
 
-The Neo MCP command façade accepts `events` with `command: "publish"` and `args: {type,source,data}`; the standalone Events MCP provider exposes `publish({type,source,data})`. The UI must call the actually available, authorized MCP interface. Browser MCP App availability of the Events tool must be verified before promising Event mode; no arbitrary HTTP URL or shell command may be specified as an event target.
+Relay's canonical Event Contract is at `agents-relay/skills/agents-relay/contracts/event-contract.md`. A managed Relay caller must build its Template from that Contract, not from Markcut-specific examples. The Neo MCP command façade accepts `events` with `command: "publish"` and `args: {type,source,data}`; the standalone Events MCP provider exposes `publish({type,source,data})`. The UI must call the actually available, authorized MCP interface. Browser MCP App availability of the Events tool must be verified before promising Event mode; no arbitrary HTTP URL or shell command may be specified as an event target.
 
 ## Functional requirements
 
@@ -122,7 +128,7 @@ The Neo MCP command façade accepts `events` with `command: "publish"` and `args
 - **Markcut Provider**: compiles/publishes immutable media, binds review delivery metadata, validates preview revision state, provides review template to clients.
 - **Markcut Preview UI**: gathers comments and decision, fills review fields, dispatches either text or event, displays honest receipt/failure state.
 - **Neo Mobile**: displays the same review/revision, submits through its authenticated Neo MCP connection, retains offline retry state.
-- **Caller/Event consumer**: owns authorization, durable business processing, any Relay Event → original Producer Agent continuation, rereview, workflow transitions, and video delivery. `markcut.review.submitted` is domain input, **not** Relay task-completion authority.
+- **Caller/Event consumer**: owns authorization, durable business processing, any Relay Event → original Producer Agent continuation, rereview, workflow transitions, and video delivery. `task.interactive_decision` is Relay human-interaction input, **not** Relay task-completion authority. A legacy `markcut.review.submitted` event is not automatically recognized by Relay.
 
 ## Edge cases and compatibility
 

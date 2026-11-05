@@ -380,6 +380,22 @@ describe('Review event delivery',()=>{
   expect(h.messages.filter(m=>m.method==='ui/message')).toHaveLength(0);
   expect(h.nodes.status.textContent).toContain('submitted');
  });
+ it('fills the generic Relay decision contract without changing caller identities',async()=>{
+  const common={type:'task.interactive_decision',source:'job/551/task/producer/execution/e1',
+    data:{interactive:{jobId:'551',taskId:'producer',executionId:'e1',invocationId:'request-7'}}};
+  const h=harness(undefined,undefined,m=>m.method==='tools/call'?{published:true}:undefined);
+  h.result({...media,review:{delivery:'event',eventTemplate:common}});
+  h.scene({sceneId:'opening',timeSeconds:3.5,sceneStart:0});
+  h.nodes.feedback.value='Cut opening';h.nodes['save-spot'].onclick?.();
+  h.nodes.changes.onclick?.();await nextTick();
+  const event=h.messages.find(m=>m.method==='tools/call')?.params?.arguments?.args;
+  expect(event).toMatchObject({type:'task.interactive_decision',source:common.source,
+    data:{interactive:{jobId:'551',taskId:'producer',executionId:'e1',
+      invocationId:'request-7',revision:media.contentHash,contentHash:media.contentHash,
+      revisionId:media.revisionId,decision:'changes_requested',feedback:'Cut opening',
+      comments:[{sceneId:'opening',timeSeconds:3.5,text:'Cut opening'}]}}});
+  expect(h.messages.some(m=>m.method==='ui/message')).toBe(false);
+ });
  it('fails visibly without host Events access and reuses the idempotency key on retry',async()=>{
   const h=harness(undefined,undefined,m=>m.method==='tools/call'?{rpcError:{message:'Host denies cross-server tool'}}:undefined);
   h.result(media);h.nodes.approve.onclick?.();await nextTick();await nextTick();
