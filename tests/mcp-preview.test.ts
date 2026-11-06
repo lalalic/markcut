@@ -5,6 +5,7 @@ import {buildPreviewBridgeScript} from '../src/mcp/bridge.mjs';
 import {mkdtemp,writeFile,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
+import {readFileSync} from 'node:fs';
 describe('Markcut Remotion MCP App',()=>{
  it('requires absolute Markdown path',()=>{expect(()=>validateMarkdownPath('a.md')).toThrow(/absolute/);expect(()=>validateMarkdownPath('/tmp/a.txt')).toThrow(/Markdown/);});
  it('loads the React Remotion bundle from remote HTTPS',()=>{
@@ -16,6 +17,12 @@ describe('Markcut Remotion MCP App',()=>{
   expect(html).toContain('<textarea id="feedback" rows="3"');
   expect(html).toContain('id="comment-tools"');
   expect(html).toContain('id="overall-mode" hidden>Overall');
+  expect(html).toContain('id="review-delivery-mode"');
+  expect(html).toContain('Text mode');
+  expect(html).toContain('Submit feedback');
+  expect(html).not.toContain('Submit all feedback');
+  expect(html).not.toContain('id="comment-count"');
+  expect(html).not.toContain('Add or remove the current comment before submitting.');
   expect(html).not.toContain('<option value="overall"');
   expect(html).toContain('#comment-tools>*{width:30px;height:28px;padding:0;border:0');
   expect(html).toContain('https://neoy.example.test/files/_neoy/markcut/player/');
@@ -26,6 +33,13 @@ describe('Markcut Remotion MCP App',()=>{
   expect(html).not.toContain('data:video/mp4');
   expect(html).not.toContain('127.0.0.1');
   expect(html).not.toContain('src="/player.js"');
+ });
+ it('omits the developer BGM decode-status row while preserving Web Audio playback',()=>{
+  const renderer=readFileSync(new URL('../src/mcp/remotion-app.tsx',import.meta.url),'utf8');
+  const audio=readFileSync(new URL('../src/mcp/web-audio-preview.ts',import.meta.url),'utf8');
+  expect(renderer).not.toContain('id="preview-audio-status"');
+  expect(audio).toContain('ctx.decodeAudioData(bytes)');
+  expect(audio).toContain("p.addEventListener('play',play)");
  });
  it('registers latest resource at startup and aliases previous URIs',()=>{
   for(const uri of [RESOURCE_URI,...LEGACY_RESOURCE_URIS]){

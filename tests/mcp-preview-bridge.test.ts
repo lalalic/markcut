@@ -12,7 +12,7 @@ function harness(remoteData?:any, fetchOverride?:(url:string)=>Promise<any>, too
   replaceChildren(){this.children=[]},append(...items:any[]){this.children.push(...items)}
  });
  const nodes:Record<string,ReturnType<typeof element>>={
-  feedback:element(),status:element(),'path-label':element(),'video-md-version':element(),'interactive-ui':element(),approve:element(),changes:element(),'save-spot':element(),'remove-spot':element(),'comment-target':element(),'comment-count':element(),'comment-mode':element(),'overall-mode':element()
+  feedback:element(),status:element(),'path-label':element(),'video-md-version':element(),'interactive-ui':element(),approve:element(),changes:element(),'save-spot':element(),'remove-spot':element(),'comment-target':element(),'comment-mode':element(),'overall-mode':element(),'review-delivery-mode':element()
  };
  nodes['comment-mode'].value='spot';
  let dispatch:(message:any,source?:any)=>void;
@@ -29,6 +29,7 @@ function harness(remoteData?:any, fetchOverride?:(url:string)=>Promise<any>, too
  const result=(data:any)=>dispatch({method:'ui/notifications/tool-result',params:{result:{structuredContent:{...data}}}});
  const respond=(id:number,result:any={})=>dispatch({id,result});
  vm.runInContext(buildPreviewBridgeScript().replaceAll("__MARKCUT_ORIGIN__",JSON.stringify("https://neoy.qili2.com")),context);
+ events.length=0; // Ignore the initial Overall marker/selection render in tests about later events.
  return {messages,nodes,events,dispatch,result,respond,scene:(detail:any)=>(listeners['markcut:scene-change']||[]).forEach(listener=>listener({detail})),selectSpot:(id:number)=>(listeners['markcut:spot-select']||[]).forEach(listener=>listener({detail:{id}}))};
 }
 const nextTick=()=>new Promise(resolve=>setTimeout(resolve,0));
@@ -79,6 +80,20 @@ describe('MCP Remotion bridge',()=>{
   await nextTick();
   expect(h.nodes.status.textContent).toBe('Review sent.');
  });
+ it('shows Text mode by default, Event mode only with a provider-bound template',()=>{
+  const h=harness();
+  expect(h.nodes['review-delivery-mode'].textContent).toBe('Text mode');
+  const eventTemplate={type:'task.interactive_decision',source:'job/1/task/2/execution/3',
+    data:{interactive:{jobId:'1',taskId:'2',executionId:'3',invocationId:'i1'}}};
+  h.dispatch({method:'ui/notifications/tool-input',params:{arguments:{path:'/test.md',review:{delivery:'event'}}}});
+  expect(h.nodes['review-delivery-mode'].textContent).toBe('Event mode · unavailable');
+  h.result({path:'/test.md',id:'one',revisionId:'r1',contentHash:'a'.repeat(64),
+    compiled:{children:[]},review:{delivery:'event',eventTemplate}});
+  expect(h.nodes['review-delivery-mode'].textContent).toBe('Event mode');
+  h.result({path:'/test.md',id:'two',revisionId:'r2',contentHash:'b'.repeat(64),
+    compiled:{children:[]},review:{delivery:'text'}});
+  expect(h.nodes['review-delivery-mode'].textContent).toBe('Event mode · unavailable');
+ });
  it('retries ui/message delivery errors and never reports success before delivery',async()=>{
   let failed=0;const h=harness(undefined,undefined,(m)=>{if(m.method==='ui/message'&&failed++<2)return {rpcError:{message:'temporary delivery failure'}};return {content:[]};});
   h.result({id:'retry',revisionId:'retry-r1',contentHash:'c'.repeat(64),path:'/retry.md',compiled:{children:[]}});
@@ -97,7 +112,6 @@ describe('MCP Remotion bridge',()=>{
   a.nodes.changes.onclick?.();
   expect(a.nodes.status.textContent).toBe('Feedback is required.');
   expect(a.messages.filter(m=>m.method==='ui/message')).toHaveLength(0);
-  a.selectSpot(0);
   a.nodes.feedback.value='Shorten the opening';
   a.nodes['save-spot'].onclick?.();
   a.nodes.changes.onclick?.();
@@ -137,7 +151,7 @@ describe('MCP Remotion bridge',()=>{
   const h=harness();
   const relay={jobId:'job-7',taskId:19,executionId:'exec-1'};
   h.result({id:'r',revisionId:'r',contentHash:'hash',path:'/video.md',relay,compiled:{children:[]}});
-  h.selectSpot(0);h.nodes.feedback.value='shorter title';h.nodes['save-spot'].onclick?.();h.nodes.changes.onclick?.();
+  h.nodes.feedback.value='shorter title';h.nodes['save-spot'].onclick?.();h.nodes.changes.onclick?.();
   await nextTick();
   expect(JSON.parse(h.messages.find(m=>m.method==='ui/message').params.content[0].text).relay).toEqual(relay);
  });
@@ -146,7 +160,7 @@ describe('MCP Remotion bridge',()=>{
   const first={id:'first',revisionId:'r1',contentHash:'sha1',path:'/video.md',compiled:{children:[{name:'First'}]}};
   const next={id:'second',revisionId:'r2',contentHash:'sha2',path:'/video.md',compiled:{children:[{name:'Next'}]}};
   h.result(first);
-  h.selectSpot(0);h.nodes.feedback.value='lowercase title';h.nodes['save-spot'].onclick?.();h.nodes.changes.onclick?.();
+  h.nodes.feedback.value='lowercase title';h.nodes['save-spot'].onclick?.();h.nodes.changes.onclick?.();
   expect(JSON.parse(h.messages.find(m=>m.method==='ui/message').params.content[0].text)).toMatchObject({decision:'changes_requested'});
   await nextTick();
   h.respond(3);await nextTick();
@@ -163,36 +177,37 @@ describe('MCP Remotion bridge',()=>{
 });
 
 
- it('keeps an empty overall marker and defaults to Spot, with Overall edited through its dot',()=>{
+ it('preselects Overall by default, with no extra comment-count row',()=>{
   const h=harness();
   expect(h.nodes['comment-mode'].value).toBe('spot');
-  h.selectSpot(0);
   expect(h.nodes['comment-mode'].hidden).toBe(true);
+  expect(h.nodes['review-delivery-mode'].textContent).toBe('Text mode');
   expect(h.nodes['overall-mode'].hidden).toBe(false);
   expect(h.nodes['remove-spot'].disabled).toBe(true);
   h.nodes.feedback.value='Overall note';h.nodes['save-spot'].onclick?.();
   let dots=h.events.filter(e=>e.type==='markcut:spots-change').at(-1).detail.spots;
   expect(dots.filter((x:any)=>x.scope==='overall')).toHaveLength(1);
   expect(dots[0].placeholder).toBeUndefined();
-  h.selectSpot(dots[0].id);h.nodes['remove-spot'].onclick?.();
+  h.nodes['remove-spot'].onclick?.();
   dots=h.events.filter(e=>e.type==='markcut:spots-change').at(-1).detail.spots;
   expect(dots[0]).toMatchObject({id:0,scope:'overall',placeholder:true});
  });
- it('toggles overall marker selection off when clicked again',()=>{
+ it('toggles default Overall marker off and back on',()=>{
   const h=harness();
-  h.selectSpot(0);
-  let dots=h.events.filter(e=>e.type==='markcut:spots-change').at(-1).detail.spots;
-  expect(dots[0].selected).toBe(true);
   expect(h.nodes['overall-mode'].hidden).toBe(false);
   h.selectSpot(0);
-  dots=h.events.filter(e=>e.type==='markcut:spots-change').at(-1).detail.spots;
+  let dots=h.events.filter(e=>e.type==='markcut:spots-change').at(-1).detail.spots;
   expect(dots[0].selected).toBe(false);
   expect(h.nodes['comment-mode'].hidden).toBe(false);
   expect(h.nodes['overall-mode'].hidden).toBe(true);
   expect(h.nodes.feedback.value).toBe('');
+  h.selectSpot(0);
+  expect(h.nodes['overall-mode'].hidden).toBe(false);
+  expect(h.events.filter(e=>e.type==='markcut:spots-change').at(-1).detail.spots[0].selected).toBe(true);
  });
  it('auto-saves edits and new overall drafts when switching marker selection',()=>{
   const h=harness();
+  h.selectSpot(0); // Leave default Overall to create timeline-specific spots.
   h.scene({sceneId:'s1',sceneName:'Scene-A',sceneStart:0,timeSeconds:0});
   h.nodes.feedback.value='First spot';h.nodes['save-spot'].onclick?.();
   h.scene({sceneId:'s1',sceneName:'Scene-A',sceneStart:0,timeSeconds:5});
@@ -215,8 +230,8 @@ describe('MCP Remotion bridge',()=>{
  });
  it('saves overall, scene and spot scopes at their canonical timeline positions',async()=>{
   const h=harness();h.result({id:'multi',revisionId:'r1',contentHash:'hash',compiled:{children:[]}});
-  h.selectSpot(0);
   h.nodes.feedback.value='Improve pacing';h.nodes['save-spot'].onclick?.();
+  h.selectSpot(0); // Deselect Overall before creating scene/spot comments.
   h.scene({sceneId:'s1',sceneName:'Scene-A',sceneStart:3,timeSeconds:4});
   h.nodes['comment-mode'].value='scene';
   h.nodes.feedback.value='Improve intro';h.nodes['save-spot'].onclick?.();
@@ -233,6 +248,7 @@ describe('MCP Remotion bridge',()=>{
  });
  it('supports multiple timed notes on one scene and restores a saved note',async()=>{
   const h=harness();
+  h.selectSpot(0);
   h.result({id:'spots',revisionId:'r1',contentHash:'hash',compiled:{children:[]}});
   h.scene({sceneId:'s1',sceneName:'Scene-A',timeSeconds:1});
   h.nodes.feedback.value='Trim opening';
@@ -253,27 +269,24 @@ describe('MCP Remotion bridge',()=>{
   await nextTick();
   const payload=JSON.parse(h.messages.at(-1).params.content[0].text);
   expect(payload.comments).toHaveLength(2);
-  expect(h.nodes['comment-count'].textContent).toBe('2 comments');
   expect(payload.comments.map((x:any)=>x.text)).toContain('Trim first second');
   expect(payload.comments.map((x:any)=>x.text)).toContain('Keep reaction');
  });
- it('keeps typed text across scope switches and blocks unsaved submission',async()=>{
+ it('submits typed unsaved text immediately as Overall feedback without an extra plus click',async()=>{
   const h=harness();h.result({id:'draft',revisionId:'r',contentHash:'hash',compiled:{children:[]}});
-  h.scene({sceneId:'s1',sceneName:'Scene-A',sceneStart:2,timeSeconds:3});
   h.nodes.feedback.value='Keep this text';
-  h.nodes['comment-mode'].value='scene';h.nodes['comment-mode'].onchange?.();
-  expect(h.nodes.feedback.value).toBe('Keep this text');
-  h.nodes.changes.onclick?.();
-  expect(h.nodes.status.textContent).toContain('Add or remove');
-  h.nodes['save-spot'].onclick?.();
-  const note=h.events.filter(e=>e.type==='markcut:spots-change').at(-1).detail.spots.find((x:any)=>!x.placeholder);
-  h.selectSpot(note.id);
   h.nodes.changes.onclick?.();
   await nextTick();
-  expect(h.messages.filter(m=>m.method==='ui/message')).toHaveLength(1);
+  const sent=h.messages.filter(m=>m.method==='ui/message');
+  expect(sent).toHaveLength(1);
+  expect(JSON.parse(sent[0].params.content[0].text)).toMatchObject({
+    decision:'changes_requested',feedback:'Keep this text',comments:[{scope:'overall',text:'Keep this text'}]
+  });
+  expect(h.nodes.status.textContent).not.toContain('Add or remove');
  });
  it('deletes only the selected timeline marker',async()=>{
-  const h=harness();h.result({id:'dots',revisionId:'r1',contentHash:'hash',compiled:{children:[]}});
+  const h=harness();
+  h.selectSpot(0);h.result({id:'dots',revisionId:'r1',contentHash:'hash',compiled:{children:[]}});
   h.scene({sceneId:'s1',sceneName:'Scene-A',timeSeconds:1});
   h.nodes.feedback.value='First';h.nodes['save-spot'].onclick?.();
   h.scene({sceneId:'s2',sceneName:'Scene-B',timeSeconds:3});
@@ -367,7 +380,7 @@ describe('Review event delivery',()=>{
    contentHash:'a'.repeat(64),path:'/tmp/video.md',compiled:{children:[]},review:{delivery:'event',eventTemplate:template}};
  it('does not publish until explicit Submit, preserves fixed envelope and scoped comments',async()=>{
   const h=harness(undefined,undefined, m=> m.method==='tools/call'?{published:true,event:{event_id:'ack'}}:undefined);
-  h.result(media);h.scene({sceneId:'intro',timeSeconds:2.25,sceneStart:0});
+  h.result(media);h.selectSpot(0);h.scene({sceneId:'intro',timeSeconds:2.25,sceneStart:0});
   h.nodes.feedback.value='Trim opening';h.nodes['save-spot'].onclick?.();
   expect(h.messages.filter(m=>m.method==='tools/call')).toHaveLength(0);
   h.nodes.changes.onclick?.();await nextTick();

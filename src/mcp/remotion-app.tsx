@@ -16,7 +16,7 @@ function App(){
  const [currentTime,setCurrentTime]=React.useState(0);
  const [browserTts,setBrowserTts]=React.useState(true);
  const [commentedScenes,setCommentedScenes]=React.useState<string[]>([]);
- const [spotMarkers,setSpotMarkers]=React.useState<Array<{id:number;scope:'overall'|'scene'|'spot';text:string;context:{timeSeconds:number;sceneName?:string};selected:boolean;placeholder?:boolean}>>([{id:0,scope:'overall',text:'',context:{timeSeconds:0},selected:false,placeholder:true}]);
+ const [spotMarkers,setSpotMarkers]=React.useState<Array<{id:number;scope:'overall'|'scene'|'spot';text:string;context:{timeSeconds:number;sceneName?:string};selected:boolean;placeholder?:boolean}>>([{id:0,scope:'overall',text:'',context:{timeSeconds:0},selected:true,placeholder:true}]);
  const [seekBar,setSeekBar]=React.useState<HTMLElement|null>(null);
  React.useEffect(()=>{
   const listener=(event:Event)=>setCommentedScenes((event as CustomEvent).detail?.sceneNames||[]);
@@ -31,7 +31,7 @@ function App(){
  React.useEffect(()=>{const receive=(e:Event)=>setRevision((e as CustomEvent).detail);window.addEventListener('markcut:revision',receive);return ()=>window.removeEventListener('markcut:revision',receive)},[]);
  const data=revision?.compiled?.root||revision?.compiled;
  const useBrowserTts=browserTts&&Boolean(data?.subtitle?.src);
- const {playbackRoot:generatedRoot,status}=useWebAudioPreview(data,ref);
+ const {playbackRoot:generatedRoot}=useWebAudioPreview(data,ref);
  const playbackRoot=React.useMemo(()=>{
   if(!useBrowserTts)return generatedRoot;
   return withoutRecordedNarration(generatedRoot);
@@ -112,7 +112,6 @@ function App(){
      onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();window.dispatchEvent(new CustomEvent('markcut:spot-select',{detail:{id:note.id}}));}}/>;
    })}
   </>,seekBar)}
-  {status && !/initializing|ready|paused/i.test(status) && <div id="preview-audio-status" role="status" style={{fontSize:12,padding:'4px 0'}}>{status.replace(/^Web Audio /,'Audio ')}</div>}
  </div>;
 }
 const el=document.getElementById('remotion-root');

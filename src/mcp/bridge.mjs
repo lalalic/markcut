@@ -3,17 +3,26 @@ return `
 const feedback=document.getElementById('feedback'),status=document.getElementById('status'),pathLabel=document.getElementById('path-label');
 let nextId=0,identity=null,busy=false,expectedPath=null,activePath=null,activeRelay=null,activeReview={delivery:"text"},expectedDelivery="text",submittedRevision=null,submission=null;
 const comments=[];
-let currentScene={sceneId:null,sceneName:null,sceneStart:0,timeSeconds:0},selectedId=null,nextCommentId=0;
+let currentScene={sceneId:null,sceneName:null,sceneStart:0,timeSeconds:0},selectedId=0,nextCommentId=0;
 const mode=document.getElementById('comment-mode');
 const sceneKey=c=>String(c?.sceneName||c?.sceneId||'Overall');
+function updateDeliveryMode(){
+ const el=document.getElementById('review-delivery-mode');
+ if(!el)return;
+ // Never claim a bound Event destination until the authoritative provider
+ // result actually supplies the authenticated event template.
+ const bound=activeReview?.delivery==='event'&&Boolean(activeReview.eventTemplate);
+ el.textContent=bound?'Event mode':expectedDelivery==='event'?'Event mode · unavailable':'Text mode';
+ el.title=bound?'Review decisions publish via the bound Events provider':
+  expectedDelivery==='event'?'Waiting for authenticated event delivery configuration':
+  'Review decisions are sent as messages in this conversation';
+}
 function allComments(){
  return comments.filter(x=>x.text.trim()).map(({scope,text,context})=>({scope,text:text.trim(),playbackContext:context}));
 }
 function redrawComments(){
  const names=[...new Set(comments.filter(x=>x.text.trim()&&x.scope!=='overall').map(x=>sceneKey(x.context)))];
  window.dispatchEvent(new CustomEvent('markcut:comments-change',{detail:{sceneNames:names}}));
- const count=document.getElementById('comment-count');
- if(count)count.textContent=comments.length+' comment'+(comments.length===1?'':'s');
  const remove=document.getElementById('remove-spot');
  if(remove)remove.disabled=selectedId===null||selectedId===0;
  const overall=selectedId===0||comments.some(x=>x.id===selectedId&&x.scope==='overall');
@@ -23,7 +32,7 @@ function redrawComments(){
  window.dispatchEvent(new CustomEvent('markcut:spots-change',{detail:{spots}}));
 }
 function clearComments(){
- comments.length=0;selectedId=null;currentScene={sceneId:null,sceneName:null,sceneStart:0,timeSeconds:0};feedback.value='';mode.value='spot';redrawComments();
+ comments.length=0;selectedId=0;currentScene={sceneId:null,sceneName:null,sceneStart:0,timeSeconds:0};feedback.value='';mode.value='spot';redrawComments();
 }
 window.addEventListener('markcut:scene-change',event=>{currentScene={...(event.detail||{})};});
 function autoSaveBeforeSwitch(){
@@ -66,19 +75,27 @@ document.getElementById('remove-spot').onclick=()=>{
  selectedId=null;feedback.value='';
  redrawComments();
 };
-document.getElementById('save-spot').onclick=()=>{
- const value=feedback.value.trim(),scope=(selectedId===0||comments.some(x=>x.id===selectedId&&x.scope==='overall'))?'overall':mode.value;
- if(!value){status.textContent='Write a comment first.';return;}
+function saveDraft({fallbackOverall=false}={}){
+ const value=feedback.value.trim();
+ if(!value){status.textContent='Write a comment first.';return false;}
+ let scope=(selectedId===0||comments.some(x=>x.id===selectedId&&x.scope==='overall'))?'overall':mode.value;
  const live=window.__markcutPlaybackContext||currentScene;
- if(scope!=='overall'&&!live.sceneId&&!live.sceneName){status.textContent='Choose a scene first.';return;}
+ if(scope!=='overall'&&!live.sceneId&&!live.sceneName){
+  if(!fallbackOverall){status.textContent='Choose a scene first.';return false;}
+  scope='overall';
+ }
  const context=scope==='overall'?{sceneId:null,sceneName:null,timeSeconds:0}:
   {...live,timeSeconds:scope==='scene'?(Number(live.sceneStart)||0):(Number(live.timeSeconds)||0)};
- if(selectedId!==null&&selectedId!==0){
-  const note=comments.find(x=>x.id===selectedId);
-  if(note){note.text=value;note.scope=scope;note.context=context;}
- }else comments.push({id:++nextCommentId,scope,text:value,context});
- selectedId=null;feedback.value='';status.textContent='';redrawComments();
-};
+ const existing=comments.find(x=>x.id===selectedId) ||
+  (selectedId===0?comments.find(x=>x.scope==='overall'):null);
+ const saved=existing||{id:++nextCommentId,scope,text:value,context};
+ if(existing){existing.text=value;existing.scope=scope;existing.context=context;}
+ else comments.push(saved);
+ selectedId=scope==='overall'?saved.id:null;
+ feedback.value='';status.textContent='';redrawComments();
+ return true;
+}
+document.getElementById('save-spot').onclick=()=>saveDraft({fallbackOverall:true});
 const pending=new Map();
 const resultsByPath=new Map();
 let fallbackGeneration=0;
@@ -113,6 +130,7 @@ function applyToolInput(params){
  if(typeof input.path!=='string')return;
  expectedPath=input.path;
  expectedDelivery=input.review?.delivery==='event'?'event':'text';
+ updateDeliveryMode();
  // The selection has no authority to change delivery; only the compiled
  // operation result supplies the provider-bound review configuration.
  loadRemoteScenes(expectedPath);
@@ -120,7 +138,7 @@ function applyToolInput(params){
  const cached=resultsByPath.get(expectedPath);
  if(cached){if(cached.operationUrl)trackOperation(cached);else renderRevision(cached);return;}
  if(window.__markcutRevision?.path!==expectedPath && window.__markcutRevision?.requestedPath!==expectedPath){
-  identity=null;activeReview={delivery:"text"};
+  identity=null;activeReview={delivery:"text"};updateDeliveryMode();
   window.__markcutRevision=null;
   window.dispatchEvent(new CustomEvent('markcut:revision',{detail:null}));
   pathLabel.textContent=expectedPath;
@@ -224,6 +242,7 @@ async function renderRevision(data){
  if(!data.compiled&&!data.compiledUrl){status.textContent='Compiled scenes unavailable';return;}
  identity={requestId:data.requestId||data.operationId||data.revisionId,previewId:data.id,revisionId:data.revisionId,contentHash:data.contentHash};
  activeReview=data.review||{delivery:'text'};
+ updateDeliveryMode();
  activePath=data.requestedPath||data.path||expectedPath||null;
  activeRelay=data.relay||null;
  if(submittedRevision!==data.revisionId){busy=false;submittedRevision=null;submission=null;}
@@ -279,7 +298,14 @@ async function submit(decision){
  if(document.getElementById(decision==='approved'?'approve':'changes').disabled){
   status.textContent='Review disabled for this revision or delivery configuration.';return;
  }
- if(feedback.value.trim()&&(selectedId===null||comments.find(x=>x.id===selectedId)?.text!==feedback.value.trim())){status.textContent='Add or remove the current comment before submitting.';return;}
+ // The submission button must save a draft, not silently require a second '+' action.
+ if(feedback.value.trim()){
+  if(decision==='approved'){
+   status.textContent='You have draft feedback. Submit feedback or clear it before approving.';
+   return;
+  }
+  if(!saveDraft({fallbackOverall:true}))return;
+ }
  const preparedComments=allComments();
  if(decision==='changes_requested'&&!preparedComments.length){status.textContent='Feedback is required.';return;}
  if(decision==='approved'&&preparedComments.length){status.textContent='Submit or remove draft comments before approval.';return;}
@@ -315,6 +341,8 @@ async function submit(decision){
 }
 document.getElementById('approve').onclick=()=>submit('approved');
 document.getElementById('changes').onclick=()=>submit('changes_requested');
+redrawComments();
+updateDeliveryMode();
 initialize();
 `;
 }
