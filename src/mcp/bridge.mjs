@@ -180,8 +180,15 @@ async function trackOperation(data){
    if(!response.ok)throw new Error('HTTP '+response.status);
    const progress=await response.json();
    if(generation!==operationGeneration)return;
-   if(progress.state==='ready'&&progress.result){renderRevision({...progress.result,requestedPath:data.requestedPath||data.path,
-    requestId:progress.result.requestId||data.requestId,review:progress.result.review||data.review,relay:data.relay});return;}
+   if(progress.state==='ready'&&progress.result){
+    await renderRevision({...progress.result,requestedPath:data.requestedPath||data.path,
+     requestId:progress.result.requestId||data.requestId,review:progress.result.review||data.review,relay:data.relay});
+    if(progress.mobileDelivery?.stored===false)
+      status.textContent='iPhone Preview delivery failed: '+(progress.mobileDelivery.error||'unknown error');
+    else if(progress.mobileDelivery?.stored===true&&progress.mobileDelivery.accepted===false)
+      status.textContent='Preview saved on Neo Master; APNs notification not confirmed. Open Neo on iPhone to sync.';
+    return;
+   }
    if(progress.state==='failed'){reviewReadonly(true,'Compilation failed: '+progress.error);return;}
    const elapsed=Math.round((Date.now()-(progress.startedAt||Date.now()))/1000);
    status.textContent='Compiling · '+(progress.stage||'working')+' · '+elapsed+'s';

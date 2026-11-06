@@ -27,7 +27,7 @@ export function writeOperation(id,data){
  writeFileSync(temp,JSON.stringify(data),{mode:0o644});
  renameSync(temp,join(folder,id+".json"));
 }
-export function startCompileOperation(path,relay,review={delivery:"text"}){
+export function startCompileOperation(path,relay,review={delivery:"text"},mobileOptions={}){
  const valid=validateMarkdownPath(resolvePreviewPath(path));
  if(!statSync(valid).isFile())throw new Error("Preview source must be a Markdown file");
  const input=fingerprintInputs(valid);
@@ -36,7 +36,7 @@ export function startCompileOperation(path,relay,review={delivery:"text"}){
  const id=randomUUID(),startedAt=Date.now();
   writeOperation(id,{id,state:"compiling",stage:"queued",startedAt,requestedPath:path});
  const worker=fileURLToPath(new URL("./compile-worker.mjs",import.meta.url));
-  const child=spawn(process.execPath,[worker,id,valid,path,JSON.stringify(relay||null),sourceHash,JSON.stringify(review)],{detached:true,stdio:"ignore"});
+  const child=spawn(process.execPath,[worker,id,valid,path,JSON.stringify(relay||null),sourceHash,JSON.stringify(review),JSON.stringify(mobileOptions)],{detached:true,stdio:"ignore"});
  child.on("error",e=>{
   writeOperation(id,{id,state:"failed",stage:"failed",startedAt,requestedPath:path,error:e.message});
  });

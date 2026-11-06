@@ -66,7 +66,7 @@ Commands:
   preview <file.json|.md>               Open player with live preview
     --delivery event                 Headless human review via Neo Mobile (requires .md)
     --event-template <file.json>     Relay task.interactive_decision envelope from current Task
-    --phone-url <url>                Neo Mobile HTTP MCP (optional; Bonjour autodiscovery)
+    (No phone URL)                  Neo Master stores and notifies through APNs
     --title <text>                   Optional title displayed in Review Inbox
     --group-id <id>                  Stable video group; later revisions supersede earlier ones
     --request-id <uuid>              Stable mobile request UUID for retry after uncertain ACK

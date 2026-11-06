@@ -50,10 +50,10 @@ See [docs/markdown-strict-descriptive.md](docs/markdown-strict-descriptive.md) f
 ```bash
 markcut render <file.json|.md> [--output path]
 markcut preview <file.json|.md> [--edit] [--label] [--port 3001]
-markcut preview <file.md> --delivery event --event-template /absolute/event.json [--phone-url http://17.local:9223/mcp]
+markcut preview <file.md> --delivery event --event-template /absolute/event.json
 ```
 
-For Codex/terminal event delivery, `preview --delivery event` uses the hosted MCP compiler and an **asynchronous** Neo Mobile human review, rather than the local interactive browser. The `--event-template` file must follow Relay's canonical `task.interactive_decision` Contract. See `skills/markcut/references/mobile-event-preview-cli.md`. Only `text` (native preview) and `event` (phone-review route) are supported.
+For Codex/terminal event delivery, `preview --delivery event` uses the hosted MCP compiler and stores the review on Neo Master. Neo Master sends an APNs notification; Neo Mobile fetches the request when opened and publishes an **asynchronous** Event after human review. Every hosted MCP Preview also sends a phone notification, independently of the result-delivery mode. Text-only previews without a Relay Event Template are read-only on phone. The `--event-template` file must follow Relay's canonical `task.interactive_decision` Contract. See `skills/markcut/references/mobile-event-preview-cli.md`. Only `text` (native preview) and `event` (phone-review route) are supported.
 
 ## Project structure
 

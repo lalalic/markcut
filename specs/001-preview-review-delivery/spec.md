@@ -2,7 +2,7 @@
 
 **Library:** Markcut (`markcut.preview` and Neo Mobile review clients)
 **Created:** 2026-11-05
-**Status:** Implemented — Text/Event MCP and Neo Mobile, plus headless Codex CLI Event submission
+**Status:** Implemented — uniform Master-to-iPhone Preview delivery; independent Text/Event Review Result delivery
 **Decision:** Use exactly two delivery modes, `text` and `event`. No callback registry, callback dispatcher, or Markcut-owned Relay workflow.
 
 ## Goal and boundaries
@@ -11,7 +11,8 @@ Let the same Markcut Preview player collect human review decisions, scene/timest
 
 - `text` (default): send the Review Result to the opening Agent conversation using the existing MCP App `ui/message` route.
 - `event`: the caller supplies an event template to the Markcut Provider. On Submit, the Preview UI fills the review-only fields and publishes it through the existing authorized Events MCP tool. The event consumer (Relay or another application) decides what to do next.
-- Neo Mobile supports the same two modes and the same Review Result. It uses its already authenticated Neo MCP connection for event delivery and its existing Agent-turn route for text delivery.
+- **Preview request delivery is independent from result delivery.** Every successful `markcut.preview` hosted MCP invocation and every Codex CLI Event Preview stores an immutable request in Neo Master's durable APNs review inbox. Apple receives only a request ID as a notification. iPhone fetches the request via authenticated `review.push.pending` on foreground/notification tap. No inbound iPhone MCP is needed.
+- Neo Mobile uses the caller-bound Event Template to fill standard `data.interactive` decision/feedback and publishes through the already authenticated Events MCP connection. It calls `review.push.complete` after transport acceptance. A default ChatGPT Text Preview without an owning thread is mirrored on iPhone **for viewing only**; its text Review Result continues in the ChatGPT UI. Do not synthesize unauthorized Relay event identity.
 - Do not add `callback`, a callback dispatcher, a Markcut review inbox, or direct Relay SQLite/Graph access inside Markcut.
 
 ## User stories and acceptance scenarios
@@ -38,10 +39,10 @@ Let the same Markcut Preview player collect human review decisions, scene/timest
 
 ### US-4: Trigger Event-mode Preview from Codex CLI (P1)
 
-1. Given a current Relay execution and a caller-authored JSON Event Template, when Codex runs `markcut preview <video.md> --delivery event --event-template <file.json>`, the CLI must validate the template, compile/publish the same immutable Markcut Preview assets as the MCP provider, then enqueue a native `review.request` on Neo Mobile.
-2. The CLI discovers Neo Mobile's current `_mcp._tcp` Bonjour service (or uses the explicit `--phone-url` / `NEOX_MCP_URL`), then requires a verifiable `{accepted:true,id:requestId}` phone receipt. It returns `review_requested` with the immutable revision hash. No ChatGPT iframe or callback registry is involved.
+1. Given a current Relay execution and a caller-authored JSON Event Template, when Codex runs `markcut preview <video.md> --delivery event --event-template <file.json>`, the CLI validates the template, compiles/publishes the same immutable Markcut Preview assets as the MCP provider, then persists a review request on Neo Master.
+2. The CLI and hosted MCP compiler use the same Neo Master push adapter; CLI requires `{stored:true,requestId}` from the durable queue. APNs `accepted` is optional and does not prove phone delivery. No direct phone URL, ChatGPT iframe, or callback registry is involved.
 3. The CLI exits after mobile receipt, rather than waiting for human action. User submission on iPhone publishes the canonical `task.interactive_decision` using the frozen template. **Event Bus transport acceptance is not Relay Graph completion or Codex continuation.**
-4. If the phone is asleep, unavailable, or its app is not listening, report delivery failure explicitly. The current CLI is foreground-phone-only; offline durable delivery/APNs are a separate feature. Do not fall back to a chat message.
+4. The iPhone may be asleep or offline; the request remains on Master even if APNs rejects the notification. App foreground/notification taps synchronize the pending list. Failed durable storage is an explicit error, never a success receipt or text fallback.
 5. On retry after an uncertain ACK, reuse the same mobile `--request-id` (UUID) so the phone can deduplicate the request. Never repurpose an old revision's approval to a changed source.
 
 ## Public contract (proposed)
@@ -130,13 +131,16 @@ Relay's canonical Event Contract is at `agents-relay/skills/agents-relay/contrac
 - **FR-010**: Preserve review and approval scope per exact immutable revision. A new video revision requires fresh human approval; an Agent review cannot substitute for it.
 - **FR-011**: Make submission failures visible and retryable, with no success banner until an actual accepted receipt. Do not change delivery modes automatically on failure.
 - **FR-012**: Text is the existing Agent conversation path; Event is exclusively the canonical Relay `task.interactive_decision`. Old Markcut-specific event types are rejected. Existing Neo Mobile legacy storage fields do not define an additional public delivery mode.
-- **FR-013**: Provide a headless `markcut preview --delivery event` CLI for Codex and terminal agents, using the same publisher/compiler, and enqueue the request through the phone's `review.request` MCP. Validate the caller-owned template and require an actual phone receipt.
+- **FR-013**: Provide a headless `markcut preview --delivery event` CLI for Codex and terminal agents, using the same publisher/compiler, and persist through Neo Master `review.push.notify`. Validate the caller-owned template and require a durable Master receipt.
+- **FR-014**: Preview delivery must be performed once on successful compilation for every Markcut MCP/CLI Preview, independent from result Text/Event mode. APNs notification contains only the request UUID, not the Event Template; Master stores the full immutable request and supports authenticated pending/complete operations. An offline phone must be able to fetch outstanding reviews later.
+- **FR-015**: Neo Mobile `review.push.complete` follows successful Events MCP result submission. Replay after completed human review must not restore an obsolete pending request.
 
 ## Ownership and downstream behavior
 
-- **Markcut Provider**: compiles/publishes immutable media, binds review delivery metadata, validates preview revision state, provides review template to clients.
+- **Markcut Provider and CLI**: compile/publish immutable media and deliver every Preview request to Neo Master (APNs notifier), independently of any user result.
 - **Markcut Preview UI**: gathers comments and decision, fills review fields, dispatches either text or event, displays honest receipt/failure state.
-- **Neo Mobile**: displays the same review/revision, submits through its authenticated Neo MCP connection, retains offline retry state.
+- **Neo Master/APNs**: persist pending Preview requests and notify Apple with the request ID. Provide authenticated `pending`/`complete` API; do not claim APNs acceptance as iPhone receipt.
+- **Neo Mobile**: synchronizes stored requests into its local Inbox, shows the same immutable revision, submits result Event through authenticated Neo MCP, then acknowledges completion. Offline local feedback retry remains.
 - **Caller/Event consumer**: owns authorization, durable business processing, any Relay Event → original Producer Agent continuation, rereview, workflow transitions, and video delivery. `task.interactive_decision` is Relay human-interaction input, **not** Relay task-completion authority. No alternate or legacy review event type is accepted by the Preview provider.
 
 ## Edge cases and compatibility
@@ -167,6 +171,6 @@ Relay's canonical Event Contract is at `agents-relay/skills/agents-relay/contrac
 
 - Markcut's MCP tool supports both `text` and canonical Relay `event` delivery. The hosted Review UI and the Neo Mobile Event requester use the immutable `data.interactive` field names.
 - Codex/terminal users can now call `markcut preview <video.md> --delivery event --event-template <file.json>`; this route starts the same hosted-preview compiler and sends the accepted revision to Neo Mobile using its `review.request` MCP, without invoking a ChatGPT iframe.
-- The first Codex CLI → physical iPhone 17 → Events Bus test (isolated Job `999999993`) returned `review_requested` and accepted the Event Template. The iPhone Review Inbox displayed the request and the phone submitted `changes_requested` with precise revision metadata, producing one persisted `task.interactive_decision`. This proves the transport and mobile UI paths, **not** real Relay Graph job continuation.
-- The CLI requires the Neo app's MCP listener to be reachable; at present this means the app needs to be active. An offline phone queue or APNs-mediated durable review request delivery remains a separate feature.
+- The earlier direct-phone Codex CLI → physical iPhone 17 → Events Bus test (isolated Job `999999993`) returned `review_requested` and accepted the Event Template. The iPhone Review Inbox displayed the request and the phone submitted `changes_requested` with precise revision metadata, producing one persisted `task.interactive_decision`. This proves the transport and mobile UI paths, **not** real Relay Graph job continuation.
+- The CLI does not call the phone's MCP server. Master holds pending reviews durably; APNs notification is a best-effort alert. A reachable Master is required to persist the review, but the phone can be offline.
 - Events Bus assigns the transport `event_id`; the mobile review result carries a stable `data.interactive.idempotencyKey`, and Relay consumes the canonical Task event. Code-level Graph/worker continuation verification remains owned by Relay.
