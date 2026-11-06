@@ -393,10 +393,18 @@ choose or manage a browser/model provider.
 
 ### Independent preview and mobile delivery
 
-`markcut.preview` and the standalone `markcut preview` CLI compile immutable
-video revisions and expose the review player. The provider does **not** send
-APNs notifications, manage Relay Invocations, or change Task state. When called
-through Neo MCP, Neo's `markcut.preview` federation wrapper optionally binds
-a Relay execution, watches compilation, persists the mobile review request,
-and sends the iPhone notification. Standalone Markcut usage does not require
-Neo Mobile or Agents Relay.
+`markcut.preview` compiles immutable video revisions and exposes the player.
+The MCP compiler itself does **not** send APNs notifications, manage Relay
+Invocations, or change Task state. Through Neo MCP, Neo's Federation Wrapper
+binds an optional Relay execution, watches compilation, and delivers the review
+through Neo.app Core's loopback-only `POST /mobile/review/notify` REST API.
+
+The terminal command `markcut preview video.md --delivery event --event-template
+/path/event.json` compiles the same immutable revision, then sends its request
+to that same Neo.app Core REST endpoint. Exit status is nonzero if Neo Core does
+not confirm durable Inbox storage; a `review_requested` receipt confirms only
+Inbox acceptance, not the person's decision. `--delivery text` similarly
+mirrors a view-only mobile preview when no ChatGPT thread is bound. Neither
+path embeds an APNs key or creates its own notification provider. Standalone
+Markcut compilation without human-review delivery does not require Neo Mobile
+or Agents Relay.

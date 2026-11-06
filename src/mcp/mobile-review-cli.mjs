@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /** Standalone terminal preview compiler. Notification is owned by the Neo MCP wrapper. */
-import {readFileSync} from 'node:fs';
-import {join,resolve} from 'node:path';
+import {readFileSync,existsSync} from 'node:fs';
+import {join,resolve,basename} from 'node:path';
+import {homedir} from 'node:os';
 import {pathToFileURL} from 'node:url';
 import {normalizeReviewConfig} from './review-delivery.mjs';
 
@@ -26,6 +27,56 @@ export function parseEventPreviewOptions(argv) {
   return options;
 }
 
+// The compiler stays platform-neutral. The explicit CLI review workflow
+// delivers to Neo.app's authenticated local Core REST boundary, never APNs or
+// the Agent-facing MCP tool surface. Inability to persist the inbox is fatal.
+export function neoReviewEndpoint(override=process.env.NEO_REVIEW_NOTIFY_URL,
+  deploymentFile=join(homedir(),'Library','Application Support','NeoY','deployment.json')){
+  let url;
+  if(override)url=new URL(override);
+  else{
+    let port=6767;
+    if(existsSync(deploymentFile)){
+      const config=JSON.parse(readFileSync(deploymentFile,'utf8'));
+      if(Number.isInteger(config.mcpPort)&&config.mcpPort>0&&config.mcpPort<=65535)port=config.mcpPort;
+    }
+    url=new URL('http://127.0.0.1:'+port+'/mobile/review/notify');
+  }
+  if(url.protocol!=='http:'||!['localhost','127.0.0.1'].includes(url.hostname)||
+     url.pathname!=='/mobile/review/notify'||url.search||url.hash||url.username||url.password)
+    throw Error('Neo Review delivery must use the local REST notify endpoint');
+  return url.href;
+}
+export function buildReviewRequest(options,config,state,operationId){
+  const data=state?.result;
+  if(!data||typeof data.contentHash!=='string'||typeof data.revisionId!=='string'||
+     !data.contentHash.match(/^[a-f0-9]{64}$/)||!data.revisionId)
+    throw Error('Compiled Preview has no immutable revision identity');
+  const request={id:operationId,contentHash:data.contentHash,revisionId:data.revisionId,
+    previewId:data.id,title:basename(options.file,'.md'),delivery:config.delivery};
+  if(config.delivery==='event'){
+    const fixed=config.eventTemplate.data.interactive;
+    request.eventTemplate=config.eventTemplate;
+    request.jobId=fixed.jobId;
+    request.groupId=`job/${fixed.jobId}/task/${fixed.taskId}`;
+  }else request.groupId=options.file;
+  return request;
+}
+export async function submitNeoReview(request,{fetchImpl=fetch,url=neoReviewEndpoint()}={}){
+  const destination=new URL(url);
+  if(destination.protocol!=='http:'||!['127.0.0.1','localhost'].includes(destination.hostname)||
+     destination.pathname!=='/mobile/review/notify'||destination.search||destination.hash)
+    throw Error('Refusing a nonlocal Neo Review notification destination');
+  const response=await fetchImpl(destination.href,{method:'POST',
+    headers:{'Content-Type':'application/json','Accept':'application/json'},
+    body:JSON.stringify(request),signal:AbortSignal.timeout(55000),redirect:'error'});
+  if(!response.ok)throw Error('Neo Review REST rejected delivery: HTTP '+response.status);
+  const receipt=await response.json();
+  if(receipt?.stored!==true||receipt.requestId!==request.id)
+    throw Error('Neo Review Core did not acknowledge durable Inbox storage');
+  return receipt;
+}
+
 export async function runMobilePreview(argv){
   const opts=parseEventPreviewOptions(argv);
   const config=opts.delivery==='event' ? normalizeReviewConfig({delivery:'event',
@@ -44,10 +95,12 @@ export async function runMobilePreview(argv){
     await delay(300);
   }
   if(state?.state!=='ready')throw new Error('Preview compile timed out; operation '+operation.operationId);
-  return {status:'preview_ready',operationId:operation.operationId,requestId:state.result.requestId,
+  const request=buildReviewRequest(opts,config,state,operation.operationId);
+  const receipt=await submitNeoReview(request);
+  return {status:'review_requested',operationId:operation.operationId,requestId:request.id,
     contentHash:state.result.contentHash,revisionId:state.result.revisionId,
     ...(config.delivery==='event' ? {jobId:config.eventTemplate.data.interactive.jobId} : {}),
-    delivery:config.delivery,notification:'not_requested'};
+    delivery:config.delivery,notification:receipt.accepted?'apns_submitted':'inbox_stored'};
 }
 
 if(process.argv[1] && import.meta.url===pathToFileURL(resolve(process.argv[1])).href){
