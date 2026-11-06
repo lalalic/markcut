@@ -21,7 +21,7 @@
     "render:all": "node src/render/cli.mjs render",
     "render:demo": "node src/render/cli.mjs render src/demo-components.json",
     "templates": "node src/render/cli.mjs templates",
-    "preview": "node src/render/cli.mjs preview",
+    "preview": "node bin/markcut preview",
     "mcp": "node src/mcp/server.mjs",
     "build:mcp": "scripts/build-mcp-preview.sh",
     "verify": "node src/render/cli.mjs verify",
