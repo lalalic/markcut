@@ -6,16 +6,26 @@ import { fileURLToPath } from "node:url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const root = resolve(__dirname, "..");
-if (process.argv[2] === "preview" && process.argv.includes("--delivery")) {
-  const index=process.argv.indexOf("--delivery");
-  if (process.argv[index+1] !== "event") {
-    console.error("CLI review delivery supports only --delivery event; omit --delivery for the native preview.");
-    process.exit(1);
+if (process.argv[2] === "preview") {
+  const argv=process.argv.slice(2);
+  const optionIndex=argv.indexOf("--delivery");
+  const explicit=optionIndex>=0;
+  const delivery=explicit ? argv[optionIndex+1] : "text";
+  if(explicit && delivery!=="text" && delivery!=="event"){
+    console.error("Preview delivery must be text or event.");process.exit(1);
   }
-  const entry=resolve(root,"src","mcp","mobile-review-cli.mjs");
-  const result=spawnSync(process.execPath,[entry,...process.argv.slice(2)],{stdio:"inherit"});
-  if(result.error)console.error(result.error.message);
-  process.exit(result.status??1);
+  // Standard local .md previews are mirrored to the same durable iPhone inbox.
+  // JSON previews retain their existing local-only renderer until a canonical
+  // immutable Markdown source is available (no silent fake mobile result).
+  const markdown=argv[1]?.toLowerCase().endsWith('.md');
+  if(explicit || markdown){
+    const eventArgs=explicit ? argv : ['preview',argv[1],'--delivery','text'];
+    const entry=resolve(root,'src','mcp','mobile-review-cli.mjs');
+    const deliveryResult=spawnSync(process.execPath,[entry,...eventArgs],{stdio:'inherit'});
+    if(deliveryResult.error)console.error(deliveryResult.error.message);
+    if(deliveryResult.status!==0)process.exit(deliveryResult.status??1);
+    if(explicit)process.exit(0);
+  }
 }
 if (process.argv[2] === "queue") {
   const result = spawnSync(process.execPath, [resolve(root, "src", "queue-worker.mjs"), ...process.argv.slice(3)], { stdio: "inherit" });
