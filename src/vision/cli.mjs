@@ -282,7 +282,7 @@ function normalizeImage(srcPath, normDir, maxDim = MAX_IMAGE_DIMENSION) {
   const outPath = join(normDir, outName);
   if (existsSync(outPath)) return outPath;
   const filter = `scale='min(${maxDim},iw)':'min(${maxDim},ih)':force_original_aspect_ratio=decrease`;
-  const cmd = `ffmpeg -y -i ${shQuote(srcPath)} -vf ${shQuote(filter)} -q:v 3 -update 1 ${shQuote(outPath)}`;
+  const cmd = `ffmpeg -y -i ${shQuote(srcPath)} -map_metadata -1 -vf ${shQuote(filter)} -q:v 3 -update 1 ${shQuote(outPath)}`;
   try { run(cmd); return outPath; }
   catch (e) { emitWarn(`Failed to normalize image ${basename(srcPath)}: ${e.message}`); return srcPath; }
 }
@@ -299,7 +299,7 @@ function normalizeVideo(srcPath, normDir, duration, maxDim = MAX_VIDEO_DIMENSION
     const outPath = join(normDir, outName);
     if (existsSync(outPath)) return { path: outPath, trimmedDuration: totalDur, timeHint };
     const filter = `scale='min(${maxDim},iw)':'min(${maxDim},ih)':force_original_aspect_ratio=decrease,pad='ceil(iw/2)*2':'ceil(ih/2)*2':-1:-1`;
-    const cmd = `ffmpeg -y -i ${shQuote(srcPath)} -t ${totalDur} -vf ${shQuote(filter)} -c:v libx264 -preset fast -crf 28 -c:a aac -b:a 64k ${shQuote(outPath)}`;
+    const cmd = `ffmpeg -y -i ${shQuote(srcPath)} -t ${totalDur} -map_metadata -1 -map_chapters -1 -vf ${shQuote(filter)} -c:v libx264 -preset fast -crf 28 -c:a aac -b:a 64k ${shQuote(outPath)}`;
     try { run(cmd, { timeout: 600_000 }); return { path: outPath, trimmedDuration: totalDur, timeHint }; }
     catch (e) { emitWarn(`Failed to normalize video ${basename(srcPath)}: ${e.message}`); return { path: srcPath, trimmedDuration: totalDur, timeHint }; }
   }
@@ -313,7 +313,7 @@ function normalizeVideo(srcPath, normDir, duration, maxDim = MAX_VIDEO_DIMENSION
   const step = Math.max(1, Math.floor(frameCount / maxSamples));
   const actualSamples = Math.min(maxSamples, Math.ceil(frameCount / step));
   const filter = `select='not(mod(n,${step}))',setpts=N/TB,scale='min(${maxDim},iw)':'min(${maxDim},ih)':force_original_aspect_ratio=decrease,pad='ceil(iw/2)*2':'ceil(ih/2)*2':-1:-1`;
-  const cmd = `ffmpeg -y -i ${shQuote(srcPath)} -vf ${shQuote(filter)} -c:v libx264 -preset fast -crf 28 -an -t ${actualSamples} -r 1 ${shQuote(outPath)}`;
+  const cmd = `ffmpeg -y -i ${shQuote(srcPath)} -map_metadata -1 -map_chapters -1 -vf ${shQuote(filter)} -c:v libx264 -preset fast -crf 28 -an -t ${actualSamples} -r 1 ${shQuote(outPath)}`;
   try {
     emitInfo(`  Sampling ${actualSamples} frames across ${totalDur.toFixed(1)}s video`);
     run(cmd, { timeout: 600_000 });
@@ -1152,9 +1152,11 @@ markcut vision — Analyze images and videos in a folder for video generation
 Usage:
   markcut vision <folder>                Full pipeline: extract → normalize → percept → segments
   markcut vision <folder> --label        Same as default, plus interactive labeling step before AI
+  markcut vision <folder> --normalize-only  Produce token-efficient Vision Understanding inputs without AI
 
 Options:
   --label              Open interactive labeling preview before running AI pipeline
+  --normalize-only     360px video / 384px image inputs, full input-time mapping; long videos sampled; no AI
   --instruct "text"    Background context about people/places (injected into prompts)
   --prompts-file <path> Path to prompts markdown file (default: vision_prompts.md)
   --vtt-sample-interval <n> Sample one video frame every N seconds (default: 5)
@@ -1180,6 +1182,7 @@ export async function main(args) {
   let skipSTT = false;
   let dryRun = false;
   let doLabel = false;
+  let normalizeOnly = false;
   let candidateMode = false;
   let output = "";
   let modelCommand = "";
@@ -1199,6 +1202,7 @@ export async function main(args) {
     const flag = args[i++];
     if (flag === "--help") { printUsage(); return; }
     else if (flag === "--label") { doLabel = true; }
+    else if (flag === "--normalize-only") { normalizeOnly = true; }
     else if (["--itt", "--vtt", "--agent", "--stt", "--tts", "--tti", "--ttv", "--edit-cli"].includes(flag) && args[i]) { i++; }
     else if (flag === "--candidate") { candidateMode = true; }
     else if (flag === "--output" && args[i]) { output = resolve(args[i++]); }
@@ -1248,6 +1252,36 @@ export async function main(args) {
     return;
   }
 
+  if (normalizeOnly) {
+    if (doLabel || candidateMode || dryRun || pickSet.size > 0) {
+      throw new Error('--normalize-only cannot be combined with label, candidate, pick or dry-run');
+    }
+    // Reuse exactly the normalization used by the VTT/ITT pipeline. No AI
+    // inference or full-resolution media is sent to an understanding model.
+    const media = scanMedia(folder);
+    if (media.images.length + media.videos.length === 0) throw new Error('No Vision Understanding source media');
+    const normDir = join(folder, '.normalized');
+    mkdirSync(normDir, { recursive: true });
+    const files = [];
+    for (const original of media.images) {
+      const normalized = normalizeImage(original, normDir);
+      if (normalized === original || !existsSync(normalized)) throw new Error(`Failed to normalize Vision image: ${original}`);
+      files.push({ source: basename(original), path: normalized, kind: 'image', sampled: false,
+        maxDimension: MAX_IMAGE_DIMENSION });
+    }
+    for (const original of media.videos) {
+      const duration = getVideoDuration(original);
+      if (!Number.isFinite(duration) || duration <= 0) throw new Error(`Video has no usable duration: ${original}`);
+      const info = normalizeVideo(original, normDir, duration);
+      if (info.path === original || !existsSync(info.path)) throw new Error(`Failed to normalize Vision video: ${original}`);
+      files.push({ source: basename(original), path: info.path, kind: 'video',
+        sampled: duration > MAX_VIDEO_DURATION, sourceDurationSeconds: duration,
+        maxDimension: MAX_VIDEO_DIMENSION });
+    }
+    console.log(JSON.stringify({ status: 'PASS', usage: 'vision-understanding-only',
+      profile: 'markcut-vision-normalized-v1', files }));
+    return;
+  }
   if (doLabel) {
     // Full pipeline with interactive labeling
     await runFullPipeline(folder, prompts, context, pickSet, vttSampleInterval, skipSTT, dryRun);

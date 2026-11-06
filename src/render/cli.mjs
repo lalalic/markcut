@@ -85,6 +85,7 @@ Commands:
     --verbose                           Show full per-frame progress (default: compact)
 
   vision <folder>                      Full pipeline: extract → normalize → percept → segments
+    --normalize-only                 Produce lightweight Vision Understanding files without AI
     --label                            Add interactive labeling step before AI pipeline
     --instruct "text"                   Background context about people/places (injected into prompts)
 
