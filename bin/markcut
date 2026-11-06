@@ -14,9 +14,8 @@ if (process.argv[2] === "preview") {
   if(explicit && delivery!=="text" && delivery!=="event"){
     console.error("Preview delivery must be text or event.");process.exit(1);
   }
-  // Standard local .md previews are mirrored to the same durable iPhone inbox.
-  // JSON previews retain their existing local-only renderer until a canonical
-  // immutable Markdown source is available (no silent fake mobile result).
+  // Markdown previews compile independently; Neo owns optional mobile review delivery.
+  // JSON previews retain their existing local-only renderer.
   const markdown=argv[1]?.toLowerCase().endsWith('.md');
   if(explicit || markdown){
     const eventArgs=explicit ? argv : ['preview',argv[1],'--delivery','text'];

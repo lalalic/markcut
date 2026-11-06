@@ -390,3 +390,13 @@ then supply `--itt`, `--vtt` and `--agent` (or `MARKCUT_ITT_CLI`,
 `MARKCUT_VTT_CLI` and `MARKCUT_AGENT_CLI`). See `markcut vision --help`
 and `markcut --show-clis` for the supported placeholders. Markcut does not
 choose or manage a browser/model provider.
+
+### Independent preview and mobile delivery
+
+`markcut.preview` and the standalone `markcut preview` CLI compile immutable
+video revisions and expose the review player. The provider does **not** send
+APNs notifications, manage Relay Invocations, or change Task state. When called
+through Neo MCP, Neo's `markcut.preview` federation wrapper optionally binds
+a Relay execution, watches compilation, persists the mobile review request,
+and sends the iPhone notification. Standalone Markcut usage does not require
+Neo Mobile or Agents Relay.
