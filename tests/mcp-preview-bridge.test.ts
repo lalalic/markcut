@@ -377,7 +377,7 @@ describe('Review event delivery',()=>{
  const template={type:'task.interactive_decision',
   source:'job/551/task/producer/execution/e1',data:{interactive:{jobId:'551',taskId:'producer',executionId:'e1',invocationId:'review-551'},purpose:'video'}};
  const media={id:'video1',requestId:'d9b2006a-0618-45aa-a3d8-31363fa629ca',revisionId:'rv1',
-   contentHash:'a'.repeat(64),path:'/tmp/video.md',compiled:{children:[]},review:{delivery:'event',eventTemplate:template}};
+   contentHash:'a'.repeat(64),path:'/tmp/video.md',compiled:{children:[]},review:{delivery:'event',commitSha:'c'.repeat(40),eventTemplate:template}};
  it('does not publish until explicit Submit, preserves fixed envelope and scoped comments',async()=>{
   const h=harness(undefined,undefined, m=> m.method==='tools/call'?{published:true,event:{event_id:'ack'}}:undefined);
   h.result(media);h.selectSpot(0);h.scene({sceneId:'intro',timeSeconds:2.25,sceneStart:0});
@@ -389,7 +389,7 @@ describe('Review event delivery',()=>{
   expect(calls[0]).toMatchObject({params:{name:'events',arguments:{command:'publish',
     args:{type:template.type,source:template.source,data:{purpose:'video',
       interactive:{jobId:'551',taskId:'producer',executionId:'e1',invocationId:'review-551',
-        requestId:media.requestId,revisionId:media.revisionId,revision:media.contentHash,contentHash:media.contentHash,
+        requestId:media.requestId,revision:'c'.repeat(40),commitSha:'c'.repeat(40),
         decision:'changes_requested',feedback:'Trim opening',comments:[{sceneId:'intro',timeSeconds:2.25,text:'Trim opening'}]}}}}}});
   expect(h.messages.filter(m=>m.method==='ui/message')).toHaveLength(0);
   expect(h.nodes.status.textContent).toContain('submitted');

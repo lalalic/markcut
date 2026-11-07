@@ -153,10 +153,10 @@ function eventEnvelope(template,review){
  const fixed=template.data.interactive;
  if(!match || !fixed || fixed.jobId!==match[1] || fixed.taskId!==match[2] ||
     fixed.executionId!==match[3] || !fixed.invocationId ||
-    ['decision','feedback','comments','revision','revisionId','contentHash','previewId','requestId','idempotencyKey']
+    ['decision','feedback','comments','revision','revisionId','contentHash','commitSha','previewId','requestId','idempotencyKey']
       .some(key=>Object.prototype.hasOwnProperty.call(fixed,key)))throw new Error('Invalid bound interactive decision');
  return {type:template.type,source:template.source,data:{...template.data,interactive:{
-  ...fixed,revision:review.contentHash,revisionId:review.revisionId,contentHash:review.contentHash,
+  ...fixed,revision:activeReview.commitSha,commitSha:activeReview.commitSha,
   previewId:review.previewId,requestId:review.requestId,decision:review.decision,
   feedback:review.feedback||review.comments.map(c=>c.text).join('\\n'),
   comments:review.comments,idempotencyKey:review.idempotencyKey
@@ -164,6 +164,8 @@ function eventEnvelope(template,review){
 }
 
 async function sendReviewEvent(result){
+ if(!/^[a-f0-9]{40}$/.test(activeReview.commitSha||''))throw new Error('Review requires Git Commit SHA');
+ result.commitSha=activeReview.commitSha;
  const event=eventEnvelope(activeReview.eventTemplate,result);
  // MCP Apps tools/call is host-mediated; an unavailable or unauthorized Events
  // provider MUST fail, never be substituted with ui/message.

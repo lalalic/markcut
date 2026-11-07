@@ -316,3 +316,7 @@ When extracting HTTPS BGM from a preview tree, traverse the tree **before** retu
 ## Route map framing
 
 For `map view:route`, omit `zoom` to auto-fit geotagged stops to the Remotion composition dimensions, including 9:16 vertical output; auto-fit reserves 14% padding. The route schema and both descriptive compiler paths must leave omitted zoom undefined, or their old `zoom:10` defaults silently override the runtime fit. Explicit `zoom` and camera tweens still override fit. Verify the real browser map's zoom/center and rendered tiles, not just a successful Markdown compile or Google API HTTP response. A calculated Directions line is not proof of a recorded GPS track.
+
+## Git-backed interactive Review identity (2026-11)
+
+Event-mode Markcut Preview requires a full 40-character Git Commit SHA from a **validated** Neo Project Stage, supplied with `--commit-sha SHA` (CLI) or `review.commitSha` (MCP). The Neo Project Runner commits *before* preview delivery, then adds an immutable `review/rN` tag. The Neo Master REST request and Relay `task.interactive_decision` use `commitSha` as the only review revision identity (with `interactive.revision=commitSha`). `mediaHash` is retained separately for compiled preview media retrieval, **not** for decision binding; standalone `delivery:text` continues to use Markcut's internal compile cache identity. Never accept an Event review without an explicit SHA or silently revert to content-hash identity.

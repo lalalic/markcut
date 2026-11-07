@@ -47,10 +47,10 @@ registerAppTool(
   server,
   TOOL_NAME,
   {
-    description: "Compile and publish an immutable Markcut preview revision for this ChatGPT conversation. Review delivery defaults to ui/message, or submits an authorized caller-bound event when explicitly configured. Approval applies only to the exact contentHash shown.",
+    description: "Compile and publish an immutable Markcut preview revision for this ChatGPT conversation. Review delivery defaults to ui/message, or submits an authorized caller-bound event when explicitly configured. Event-mode decisions bind the verified 40-character Git Commit SHA, not the compiled-media cache hash.",
     inputSchema: z.object({
       path: z.string().describe("Absolute .md path or NeoY HTTPS mounted file URL"),
-      review: z.object({delivery:z.enum(["text","event"]).optional(),eventTemplate:z.object({type:z.string(),source:z.string(),data:z.record(z.string(),z.unknown())}).optional()}).optional(),
+      review: z.object({delivery:z.enum(["text","event"]).optional(),commitSha:z.string().regex(/^[a-f0-9]{40}$/).optional(),eventTemplate:z.object({type:z.string(),source:z.string(),data:z.record(z.string(),z.unknown())}).optional()}).optional(),
       relay: z.object({jobId:z.string(),taskId:z.union([z.string(),z.number()]),executionId:z.string().optional()}).optional().describe("Optional Agents Relay task correlation. No Relay dependency for standalone ChatGPT/Work reviews."),
     }),
     _meta: {
