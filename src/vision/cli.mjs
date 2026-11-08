@@ -207,8 +207,10 @@ function extractMetadata(filePath) {
     }
   } catch { /* fall through */ }
 
-  // Fallback: ffprobe
-  if (!width || !height) {
+  // Always probe videos for their precise duration. ExifTool's formatted
+  // Duration can be "0:01:16" or "1 min 16 sec", which parseFloat misreads
+  // as 0 or 1 even when it has already reported valid width/height.
+  if (!width || !height || VIDEO_EXTS.has(extname(filePath).toLowerCase())) {
     try {
       const probe = JSON.parse(run(
         `ffprobe -v quiet -print_format json -show_format -show_streams ${shQuote(filePath)}`,
@@ -218,7 +220,8 @@ function extractMetadata(filePath) {
       const videoStream = streams.find((s) => s.codec_type === "video") || {};
       width = width || videoStream.width || 0;
       height = height || videoStream.height || 0;
-      duration = duration || (format.duration ? parseFloat(format.duration) : null);
+      const probedDuration = Number(format.duration);
+      if (Number.isFinite(probedDuration) && probedDuration > 0) duration = probedDuration;
       created = created || format.tags?.creation_time || videoStream.tags?.creation_time || null;
       if (!location && format.tags) {
         const iso = format.tags["com.apple.quicktime.location.ISO6709"] || "";
@@ -809,6 +812,27 @@ function buildMergedCues(userHint, cues, sceneChangesMs, totalDurationMs) {
   return merged;
 }
 
+/** Make a source-time-faithful, metadata-stripped clip for one VTT segment.
+ * Never seek a long video's uniformly sampled understanding copy with original
+ * timestamps, and never let an empty ffmpeg output masquerade as evidence.
+ */
+function extractOriginalSegment(original, output, startSec, durationSec) {
+  if (!Number.isFinite(startSec) || startSec < 0 || !Number.isFinite(durationSec) || durationSec <= 0) {
+    throw new Error("Invalid source segment range");
+  }
+  const clipFilter = "scale='min(360,iw)':'min(360,ih)':force_original_aspect_ratio=decrease,pad='ceil(iw/2)*2':'ceil(ih/2)*2':-1:-1";
+  if (!existsSync(output) || getVideoDuration(output) <= 0) {
+    try { rmSync(output, { force: true }); } catch {}
+    run(`ffmpeg -y -i ${shQuote(original)} -ss ${startSec} -t ${durationSec} -map_metadata -1 -map_chapters -1 -vf ${shQuote(clipFilter)} -c:v libx264 -preset fast -crf 28 -an -fflags +genpts ${shQuote(output)}`, { timeout: 120_000 });
+  }
+  const actualDuration = getVideoDuration(output);
+  if (!Number.isFinite(actualDuration) || actualDuration <= 0) {
+    try { rmSync(output, { force: true }); } catch {}
+    throw new Error(`Cannot decode source segment at ${startSec}s for ${durationSec}s`);
+  }
+  return output;
+}
+
 function analyzeVideo(videoPath, normInfo, normDir, prompts, context = "", userHint = "", sampleInterval = DEFAULT_VTT_SAMPLE_INTERVAL, userHints = null, skipSTT = false) {
   let ctxParts = [];
   if (context) ctxParts.push(`Context: ${context}`);
@@ -937,23 +961,18 @@ function analyzeVideo(videoPath, normInfo, normDir, prompts, context = "", userH
 
       const clipName = `${basename(normInfo.path, extname(normInfo.path))}_seg_${key}.mp4`;
       const clipOut = join(segDir, clipName);
-      let clipPath = normInfo.path;
-
-      if (!existsSync(clipOut)) {
-        const srcForClip = existsSync(normInfo.path) ? normInfo.path : videoPath;
-        const clipFilter = "scale='min(360,iw)':'min(360,ih)':force_original_aspect_ratio=decrease,pad='ceil(iw/2)*2':'ceil(ih/2)*2':-1:-1";
-        try {
-          // Use -ss after -i (output seek) for accurate duration metadata
-          run(`ffmpeg -y -i ${shQuote(srcForClip)} -ss ${startSec} -t ${durSec} -vf ${shQuote(clipFilter)} -c:v libx264 -preset fast -crf 28 -an -fflags +genpts ${shQuote(clipOut)}`, { timeout: 120_000 });
-          if (existsSync(clipOut)) clipPath = clipOut;
-        } catch { /* fallback */ }
-      } else { clipPath = clipOut; }
+      // Segment keys are ORIGINAL source timestamps. Long recordings have a
+      // uniformly sampled understanding copy whose seconds do not map 1:1 to
+      // the original timeline; seeking it can produce empty late segments.
+      // Extract from the original, then scale/strip its metadata for VTT.
+      const clipPath = extractOriginalSegment(videoPath, clipOut, startSec, durSec);
 
       // Use runVTT for video clips (extracts frames, then runs ITT)
       const segRawVis = runVTT(clipPath, visSegPrompt, DEFAULT_VTT_CLI, DEFAULT_ITT_CLI, sampleInterval);
       const segVisText = extractRawText(segRawVis);
       seg.vision = stripThinkBlocks(looseJSONParse(segRawVis)?.desc || segVisText.slice(0, 300) || segRawVis.slice(0, 300));
-      try { if (clipPath !== normInfo.path) rmSync(clipPath, { force: true }); } catch {}
+      if (!seg.vision?.trim()) throw new Error(`Segment ${key} returned no verified visual response`);
+      try { rmSync(clipPath, { force: true }); } catch {}
     }
     try { rmSync(segDir, { recursive: true, force: true }); } catch {}
     perception.segments = segments;
@@ -1105,7 +1124,14 @@ async function runNormalizeAndPercept(folder, metadataPath, prompts, context, pi
 
     emitInfo(`\n🎬 Video: ${base}${userHint ? ` (hint: "${userHint}")` : ""}`);
     const vidPath = join(folder, fileName);
-    const normInfo = normalizeVideo(vidPath, normDir, meta.duration);
+    // Existing metadata.json may contain an incomplete or incorrectly parsed
+    // ExifTool Duration from a previous extraction. Reconcile against the
+    // original container before using it for segmentation and handoff.
+    const originalDuration = getVideoDuration(vidPath);
+    if (!Number.isFinite(originalDuration) || originalDuration <= 0)
+      throw new Error(`Video has no usable original duration: ${fileName}`);
+    meta.duration = originalDuration;
+    const normInfo = normalizeVideo(vidPath, normDir, originalDuration);
     let perception = {};
     let cacheKey = "";
     const ctxV = context ? `Context: ${context}\n\n` : "";
@@ -1310,6 +1336,8 @@ export async function main(args) {
 // ═════════════════════════════════════════════════════════════════════════
 
 export {
+  extractOriginalSegment,
+  extractMetadata,
   scanMedia,
   buildPreviewTree,
   mergeLabelsIntoMetadata,
