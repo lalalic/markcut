@@ -101,7 +101,12 @@ export function FolderLeaf({ stream }: { stream: FolderStream }) {
           ? <EffectWrapper stream={child as any}><FolderLeaf stream={child as any} /></EffectWrapper>
           : React.createElement(FolderLeaf, { stream: child as FolderStream });
       return (
-        <SequenceWrap key={child.id} durationInFrames={durFrames} layout="none">
+        <SequenceWrap
+          key={child.id}
+          durationInFrames={durFrames}
+          layout="absolute-fill"
+          premountFor={isSeries && !allAudio ? fps : undefined}
+        >
           <Container
             id={child.id}
             type={child.type}
