@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Sequence, OffthreadVideo, Video, useRemotionEnvironment, useVideoConfig, staticFile } from "remotion";
+import { Sequence, OffthreadVideo, Video as Html5Video, useRemotionEnvironment, useVideoConfig, staticFile } from "remotion";
 
 function resolveVideoSrc(src: string): string {
   if (/^(https?:|data:|blob:|file:|\/)/.test(src)) return src;
@@ -14,7 +14,7 @@ export function VideoLeaf({ stream }: { stream: Video }) {
   const { fps } = useVideoConfig();
   const { isPlayer } = useRemotionEnvironment();
   // The player uses HTML5 media; offline rendering retains OffthreadVideo.
-  const Media = isPlayer ? Video : OffthreadVideo;
+  const Media = isPlayer ? Html5Video : OffthreadVideo;
   const audio = React.useContext(AudioContext);
   const start = stream.start ?? 0;
   const end = stream.end ?? start + (stream.duration ?? 1);
