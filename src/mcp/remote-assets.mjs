@@ -100,6 +100,16 @@ export function externalizePreviewMedia(compiled,revisionId,origin=publicOrigin(
     try {real=realpathSync(full);} catch {return resolvePreviewSource(src,sourceDir,origin);}
     if(!real.startsWith(root+sep))return resolvePreviewSource(src,sourceDir,origin);
     if(frozenPaths.has(real))return frozenPaths.get(real);
+    // Dedicated preview route lets NeoY reuse Visioner proxies without changing video.md.
+    // If no proxy exists, NeoY serves the original media at the same preview URL.
+    if(/\.(mov|mp4|webm)$/i.test(real)) {
+      const mounted=resolveMountedFile(real,origin);
+      if(mounted) {
+        const previewUrl=mounted.replace(origin+"/files/",origin+"/preview-files/");
+        frozenPaths.set(real,previewUrl);
+        return previewUrl;
+      }
+    }
     const stats=statSync(real);
     if(!stats.isFile()||stats.size>512*1024*1024)throw new Error("Preview local media must be a file of at most 512 MB");
     const ext=extname(real).toLowerCase();
