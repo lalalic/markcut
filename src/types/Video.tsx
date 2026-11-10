@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Sequence, OffthreadVideo, useVideoConfig, staticFile } from "remotion";
+import { Sequence, OffthreadVideo, Video, useRemotionEnvironment, useVideoConfig, staticFile } from "remotion";
 
 function resolveVideoSrc(src: string): string {
   if (/^(https?:|data:|blob:|file:|\/)/.test(src)) return src;
@@ -12,6 +12,9 @@ import { FrameSyncStyle } from "./FrameSyncStyle";
 
 export function VideoLeaf({ stream }: { stream: Video }) {
   const { fps } = useVideoConfig();
+  const { isPlayer } = useRemotionEnvironment();
+  // The player uses HTML5 media; offline rendering retains OffthreadVideo.
+  const Media = isPlayer ? Video : OffthreadVideo;
   const audio = React.useContext(AudioContext);
   const start = stream.start ?? 0;
   const end = stream.end ?? start + (stream.duration ?? 1);
@@ -35,25 +38,27 @@ export function VideoLeaf({ stream }: { stream: Video }) {
     >
       {hasAnimation ? (
         <FrameSyncStyle style={streamStyle}>
-          <OffthreadVideo
+          <Media
             src={resolvedSrc}
             startFrom={Math.floor(startFrom * fps)}
             endAt={Math.floor(startFrom * fps) + Math.floor(((endAt - startFrom) * fps) / playbackRate)}
             muted={volume === 0 || !!audio?.foreground}
             volume={volume}
             playbackRate={playbackRate}
+            pauseWhenBuffering={isPlayer}
             showInTimeline={false}
             style={{ width: "100%", height: "100%" }}
           />
         </FrameSyncStyle>
       ) : (
-        <OffthreadVideo
+        <Media
           src={resolvedSrc}
           startFrom={Math.floor(startFrom * fps)}
           endAt={Math.floor(startFrom * fps) + Math.floor(((endAt - startFrom) * fps) / playbackRate)}
           muted={volume === 0 || !!audio?.foreground}
           volume={volume}
           playbackRate={playbackRate}
+          pauseWhenBuffering={isPlayer}
           showInTimeline={false}
           style={{ width: "100%", height: "100%", ...streamStyle }}
         />
