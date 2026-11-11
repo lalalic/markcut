@@ -7,7 +7,7 @@
  *                                        (TTS/STT/durations)
  */
 import { execSync, spawn } from "node:child_process";
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, existsSync, copyFileSync } from "node:fs";
 import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -401,7 +401,15 @@ edit=${DEFAULT_EDIT_CLI}`);
         mkdirSync(bundleDir, { recursive: true });
         const bundle = await bundleFromEntries(entries, extraSpecs, rawSource, bundleDir);
         if (bundle.url) {
-          streamTree.imports = join(bundleDir, bundle.url.split("/").pop());
+          // Remotion fetches modules from its publicDir, not absolute host paths.
+          // Stage this cached bundle alongside the Markdown's generated media.
+          const bundleName = bundle.url.split("/").pop();
+          const publicDir = renderPublicDir || join(ROOT, "public");
+          const relativeBundle = join(".markcut", "generated", "components", bundleName);
+          const target = join(publicDir, relativeBundle);
+          mkdirSync(dirname(target), { recursive: true });
+          copyFileSync(join(bundleDir, bundleName), target);
+          streamTree.imports = relativeBundle;
           console.log(`  \u2705 components \u2192 ${bundle.exports.join(", ")}`);
         }
       }
