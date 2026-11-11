@@ -7,12 +7,12 @@ function harness(remoteData?:any, fetchOverride?:(url:string)=>Promise<any>, too
  const messages:any[]=[];
  const listeners:Record<string,Array<(evt:any)=>void>>={};
  const element=()=>({value:'',textContent:'',onclick:null as null|(()=>void),oninput:null as null|(()=>void),
-  disabled:false,hidden:false,type:'',children:[] as any[],listeners:{} as Record<string,Function>,
+  disabled:false,hidden:false,type:'',style:{display:''},children:[] as any[],listeners:{} as Record<string,Function>,
   addEventListener(type:string,listener:Function){this.listeners[type]=listener},
   replaceChildren(){this.children=[]},append(...items:any[]){this.children.push(...items)}
  });
  const nodes:Record<string,ReturnType<typeof element>>={
-  feedback:element(),status:element(),'path-label':element(),'video-md-version':element(),'interactive-ui':element(),approve:element(),changes:element(),'save-spot':element(),'remove-spot':element(),'comment-target':element(),'comment-mode':element(),'overall-mode':element(),'review-delivery-mode':element()
+  feedback:element(),status:element(),'path-label':element(),'video-md-version':element(),'interactive-ui':element(),'comment-entry':element(),approve:element(),changes:element(),'save-spot':element(),'remove-spot':element(),'comment-target':element(),'comment-mode':element(),'overall-mode':element(),'review-delivery-mode':element()
  };
  nodes['comment-mode'].value='spot';
  let dispatch:(message:any,source?:any)=>void;
@@ -35,6 +35,23 @@ function harness(remoteData?:any, fetchOverride?:(url:string)=>Promise<any>, too
 const nextTick=()=>new Promise(resolve=>setTimeout(resolve,0));
 
 describe('MCP Remotion bridge',()=>{
+ it('readonly input displays playback without review controls or messages',async()=>{
+  const h=harness();
+  h.dispatch({method:'ui/notifications/tool-input',params:{arguments:{path:'/tmp/read-only.md',readonly:true}}});
+  h.result({id:'view',revisionId:'r-view',contentHash:'a'.repeat(64),path:'/tmp/read-only.md',
+    review:{delivery:'text',readonly:true},compiled:{children:[{name:'Scene'}]}});
+  await nextTick();
+  expect(h.nodes['review-delivery-mode'].textContent).toBe('Read-only mode');
+  expect(h.nodes['interactive-ui'].hidden).toBe(false);
+  expect(h.nodes['comment-entry'].style.display).toBe('none');
+  expect(h.nodes.approve.style.display).toBe('none');
+  expect(h.nodes.changes.style.display).toBe('none');
+  expect(h.nodes.approve.disabled).toBe(true);
+  h.nodes.approve.onclick?.();
+  h.nodes.changes.onclick?.();
+  expect(h.messages.filter(m=>m.method==='ui/message'||m.method==='tools/call')).toHaveLength(0);
+ });
+
  it('hydrates scenes from NeoY when ChatGPT does not deliver tool-result',async()=>{
   const path='https://neoy.qili2.com/files/markcut-review/video-a-v4.md';
   const data={id:'remote',revisionId:'remote-r1',contentHash:'sha',path,requestedPath:path,compiled:{children:[{type:'scene'}]}};

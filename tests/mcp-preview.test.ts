@@ -41,6 +41,10 @@ describe('Markcut Remotion MCP App',()=>{
   expect(audio).toContain('ctx.decodeAudioData(bytes)');
   expect(audio).toContain("p.addEventListener('play',play)");
  });
+ it('publishes v46 while retaining v45 as a compatible alias',()=>{
+  expect(RESOURCE_URI).toBe('ui://markcut/video-preview-v46.html');
+  expect(LEGACY_RESOURCE_URIS).toContain('ui://markcut/video-preview-v45.html');
+ });
  it('registers latest resource at startup and aliases previous URIs',()=>{
   for(const uri of [RESOURCE_URI,...LEGACY_RESOURCE_URIS]){
    const result=buildPreviewResourceResult(uri);

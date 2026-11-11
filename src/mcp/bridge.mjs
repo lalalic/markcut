@@ -1,17 +1,17 @@
 export function buildPreviewBridgeScript() {
 return `
 const feedback=document.getElementById('feedback'),status=document.getElementById('status'),pathLabel=document.getElementById('path-label');
-let nextId=0,identity=null,busy=false,expectedPath=null,activePath=null,activeRelay=null,activeReview={delivery:"text"},expectedDelivery="text",submittedRevision=null,submission=null;
+let nextId=0,identity=null,busy=false,expectedPath=null,activePath=null,activeRelay=null,activeReview={delivery:"text"},expectedDelivery="text",expectedReadonly=false,submittedRevision=null,submission=null;
 const comments=[];
 let currentScene={sceneId:null,sceneName:null,sceneStart:0,timeSeconds:0},selectedId=0,nextCommentId=0;
 const mode=document.getElementById('comment-mode');
+const isViewOnly=()=>expectedReadonly||activeReview?.readonly===true;
 const sceneKey=c=>String(c?.sceneName||c?.sceneId||'Overall');
 function updateDeliveryMode(){
  const el=document.getElementById('review-delivery-mode');
  if(!el)return;
- // Never claim a bound Event destination until the authoritative provider
- // result actually supplies the authenticated event template.
  const bound=activeReview?.delivery==='event'&&Boolean(activeReview.eventTemplate);
+ if(isViewOnly()){el.textContent='Read-only mode';el.title='Watch without submitting review';return;}
  el.textContent=bound?'Event mode':expectedDelivery==='event'?'Event mode · unavailable':'Text mode';
  el.title=bound?'Review decisions publish via the bound Events provider':
   expectedDelivery==='event'?'Waiting for authenticated event delivery configuration':
@@ -130,6 +130,7 @@ function applyToolInput(params){
  if(typeof input.path!=='string')return;
  expectedPath=input.path;
  expectedDelivery=input.review?.delivery==='event'?'event':'text';
+ expectedReadonly=input.readonly===true;
  updateDeliveryMode();
  // The selection has no authority to change delivery; only the compiled
  // operation result supplies the provider-bound review configuration.
@@ -233,8 +234,13 @@ async function currentRevisionMatches(path,hash){
  return latest.contentHash===hash && (!latest.requestId || !identity?.requestId || latest.requestId===identity.requestId);
 }
 function reviewReadonly(readonly,message){
- document.getElementById('approve').disabled=readonly;
- document.getElementById('changes').disabled=readonly;
+ const viewOnly=isViewOnly();
+ for(const id of ['approve','changes']){
+  const button=document.getElementById(id);
+  button.disabled=viewOnly||readonly;
+  button.style.display=viewOnly?'none':'';
+ }
+ document.getElementById('comment-entry').style.display=viewOnly?'none':'';
  if(readonly&&message)status.textContent=message;
 }
 async function renderRevision(data){
@@ -296,7 +302,7 @@ async function initialize(){
  catch(e){status.textContent=e.message||'MCP initialization failed';}
 }
 async function submit(decision){
- if(busy)return;
+ if(busy||isViewOnly())return;
  if(document.getElementById(decision==='approved'?'approve':'changes').disabled){
   status.textContent='Review disabled for this revision or delivery configuration.';return;
  }
