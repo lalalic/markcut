@@ -10339,6 +10339,9 @@ function parseKeyValueTokens(tokens, ctx) {
         const strVal = String(val);
         if (strVal.startsWith("{") || strVal.startsWith("[")) {
           val = parseProps(strVal);
+          if (["camera", "cinematic", "streetView"].includes(key) && strVal.trim() !== "{}" && typeof val === "object" && val !== null && !Array.isArray(val) && Object.keys(val).length === 0) {
+            fail(`invalid structured ${key} value`, { ...ctx, token });
+          }
         } else {
           val = parseNumberMaybe(strVal);
         }
