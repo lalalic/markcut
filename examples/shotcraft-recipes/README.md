@@ -4,6 +4,41 @@ A **12.65-second, 720 × 1280, 30-fps vertical demo** that tests three
 video-shotcraft animation recipes as **native Markcut component scenes**.
 It does not splice pre-rendered Shotcraft gallery movies.
 
+## Ten-scene comparison reel (new)
+
+The editable **video-10.md** has **10 sequential scenes**, each driven by
+a **different** Shotcraft shot card, expressed as a working Markcut JSX
+component, not a pre-rendered Gallery clip. The demo uses intentionally
+illustrative scenery rather than pretending to show real user footage.
+
+| Scene | Recipe card | Gallery style key | Source frames | What to compare |
+| --- | --- | --- | ---: | --- |
+| 01 PaperTitle | paper-title-card | paper-title-card | 55 | Word-by-word embossed title |
+| 02 Multiplane | depth-layer-moves | multiplane | 165 | Three speeds of parallax |
+| 03 FreezeAnnotate | speed-ramp-freeze | freeze-annotate | 158 | Stop → ink annotation → move |
+| 04 Letterspace | letterspace-materialize | letterspace-materialize | 112 | Simultaneous vector stroke draw |
+| 05 BlurSlide | blur-slide | blur-slide | 120 | Shared blur, rise and opacity |
+| 06 MosaicReframe | mosaic-reframe | mosaic-reframe | 214 | Grid → hero mosaic → waterfall |
+| 07 CardFlip | card-flip-reveal | card-flip-reveal | 150 | 3D flip and distinct reverse side |
+| 08 PageTurn | page-turn-transitions | barn-door-split | 150 | Lit center seam and two door halves |
+| 09 CraneRise | crane-rise-reveal | crane-rise-reveal | 165 | 3× close-up to 1× full layout |
+| 10 GrainDissolve | grain-dissolve | grain-dissolve | 90 | Noise breakup and wordmark reform |
+
+The timings and principles were adapted for a vertical personal Vlog:
+they are not pixel-for-pixel reproductions of the widescreen Shotcraft
+references. The full reel has no narration or music to keep attention on
+the animation itself. Its source is video-10.md; showcase-10.md embeds
+the rendered output for phone-hosted preview, which currently cannot
+resolve inline JS imports directly.
+
+~~~sh
+node bin/markcut verify examples/shotcraft-recipes/video-10.md
+node bin/markcut render examples/shotcraft-recipes/video-10.md   --output out/shotcraft-ten-scenes.mp4
+node bin/markcut preview examples/shotcraft-recipes/showcase-10.md
+~~~
+
+The original three-scene video.md and showcase.md remain available.
+
 ## Examples
 
 | Scene | Frames | Shotcraft card + implementation | What to look for |
