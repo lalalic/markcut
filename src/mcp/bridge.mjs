@@ -1,7 +1,7 @@
 export function buildPreviewBridgeScript() {
 return `
 const feedback=document.getElementById('feedback'),status=document.getElementById('status'),pathLabel=document.getElementById('path-label');
-let nextId=0,identity=null,busy=false,expectedPath=null,activePath=null,activeRelay=null,activeReview={delivery:"text"},expectedDelivery="text",expectedReadonly=false,submittedRevision=null,submission=null;
+let nextId=0,identity=null,busy=false,expectedPath=null,activePath=null,activeReview={delivery:"text"},expectedDelivery="text",expectedReadonly=false,submittedRevision=null,submission=null;
 const comments=[];
 let currentScene={sceneId:null,sceneName:null,sceneStart:0,timeSeconds:0},selectedId=0,nextCommentId=0;
 const mode=document.getElementById('comment-mode');
@@ -148,22 +148,23 @@ function applyToolInput(params){
 }
 let operationGeneration=0;
 function eventEnvelope(template,review){
- if(!template || template.type!=='task.interactive_decision' || !template.source || !template.data)
-  throw new Error('Invalid bound review event template');
- const match=template.source.match(/^job\\/([^/]+)\\/task\\/([^/]+)\\/execution\\/([^/]+)$/);
- const fixed=template.data.interactive;
- if(!match || !fixed || fixed.jobId!==match[1] || fixed.taskId!==match[2] ||
-    fixed.executionId!==match[3] ||
-    ['decision','feedback','comments','revision','revisionId','contentHash','commitSha','invocationId','previewId','requestId','idempotencyKey']
-      .some(key=>Object.prototype.hasOwnProperty.call(fixed,key)))throw new Error('Invalid bound interactive decision');
- return {type:template.type,source:template.source,data:{...template.data,interactive:{
-  ...fixed,
-  previewId:review.previewId,requestId:review.requestId,decision:review.decision,
+ // Markcut delivers caller-authored events without inspecting their business type or identity.
+ if(!template || typeof template.type!=='string'||typeof template.source!=='string'||
+    !template.data||typeof template.data!=='object'||Array.isArray(template.data))
+  throw new Error('Invalid caller event template');
+ const key=template.responseKey||'review';
+ if(!/^[A-Za-z_][A-Za-z0-9_-]{0,63}$/.test(key)||['__proto__','constructor','prototype'].includes(key)||
+    (template.data[key]!==undefined && (typeof template.data[key]!=='object'||Array.isArray(template.data[key])||!template.data[key])))
+  throw new Error('Invalid caller response key');
+ const fixed=template.data[key]||{};
+ if(['decision','feedback','comments','previewId','requestId','idempotencyKey'].some(k=>Object.prototype.hasOwnProperty.call(fixed,k)))
+  throw new Error('Review data cannot be prefilled');
+ return {type:template.type,source:template.source,data:{...template.data,[key]:{
+  ...fixed,previewId:review.previewId,requestId:review.requestId,decision:review.decision,
   feedback:review.feedback||review.comments.map(c=>c.text).join('\\n'),
   comments:review.comments,idempotencyKey:review.idempotencyKey
  }}};
 }
-
 async function sendReviewEvent(result){
  if(!activeReview.eventTemplate)throw new Error('Review event template unavailable');
  const event=eventEnvelope(activeReview.eventTemplate,result);
@@ -202,7 +203,7 @@ async function trackOperation(data){
    if(generation!==operationGeneration)return;
    if(progress.state==='ready'&&progress.result){
     await renderRevision({...progress.result,requestedPath:data.requestedPath||data.path,
-     requestId:progress.result.requestId||data.requestId,review:progress.result.review||data.review,relay:data.relay});
+     requestId:progress.result.requestId||data.requestId,review:progress.result.review||data.review});
     return;
    }
    if(progress.state==='failed'){reviewReadonly(true,'Compilation failed: '+progress.error);return;}
@@ -251,7 +252,6 @@ async function renderRevision(data){
  activeReview=data.review||{delivery:'text'};
  updateDeliveryMode();
  activePath=data.requestedPath||data.path||expectedPath||null;
- activeRelay=data.relay||null;
  if(submittedRevision!==data.revisionId){busy=false;submittedRevision=null;submission=null;}
  reviewReadonly(true,'Loading static compiled scenes…');
  try{
@@ -330,7 +330,6 @@ async function submit(decision){
  if(!submission || submission.signature!==signature)submission={signature,key:crypto.randomUUID()};
  result.idempotencyKey=submission.key;
  if(activePath)result.path=activePath;
- if(activeRelay)result.relay=activeRelay;
  if(decision==='changes_requested'){
   result.feedback=preparedComments.length===1?preparedComments[0].text:preparedComments.map((item,index)=>String(index+1)+'. ['+sceneKey(item.playbackContext)+' @ '+(item.playbackContext.timeSeconds??0)+'s] '+item.text).join('\\n');
   if(window.__markcutPlaybackContext)result.playbackContext=window.__markcutPlaybackContext;

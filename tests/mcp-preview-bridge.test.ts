@@ -164,13 +164,13 @@ describe('MCP Remotion bridge',()=>{
   second.nodes.approve.onclick?.();
   expect(second.messages.filter(m=>m.method==='tools/call')).toHaveLength(0);
  });
- it('preserves optional Relay job/task context across review decisions',async()=>{
+ it('does not interpret or expose caller-owned Relay context in a text review',async()=>{
   const h=harness();
   const relay={jobId:'job-7',taskId:19,executionId:'exec-1'};
   h.result({id:'r',revisionId:'r',contentHash:'hash',path:'/video.md',relay,compiled:{children:[]}});
   h.nodes.feedback.value='shorter title';h.nodes['save-spot'].onclick?.();h.nodes.changes.onclick?.();
   await nextTick();
-  expect(JSON.parse(h.messages.find(m=>m.method==='ui/message').params.content[0].text).relay).toEqual(relay);
+  expect(JSON.parse(h.messages.find(m=>m.method==='ui/message').params.content[0].text).relay).toBeUndefined();
  });
  it('handles request changes followed by a new revision and approval in the same app',async()=>{
   const h=harness();h.respond(1);await nextTick();
@@ -392,7 +392,7 @@ describe('async compilation UI transition',()=>{
 
 describe('Review event delivery',()=>{
  const template={type:'task.interactive_decision',
-  source:'job/551/task/producer/execution/e1',data:{interactive:{jobId:'551',taskId:'producer',executionId:'e1'},purpose:'video'}};
+  source:'job/551/task/producer/execution/e1',responseKey:'interactive',data:{interactive:{jobId:'551',taskId:'producer',executionId:'e1'},purpose:'video'}};
  const media={id:'video1',requestId:'d9b2006a-0618-45aa-a3d8-31363fa629ca',revisionId:'rv1',
    contentHash:'a'.repeat(64),path:'/tmp/video.md',compiled:{children:[]},review:{delivery:'event',eventTemplate:template}};
  it('does not publish until explicit Submit, preserves fixed envelope and scoped comments',async()=>{
@@ -411,13 +411,16 @@ describe('Review event delivery',()=>{
   expect(h.messages.filter(m=>m.method==='ui/message')).toHaveLength(0);
   expect(h.nodes.status.textContent).toContain('submitted');
  });
- it('rejects legacy Markcut event templates instead of publishing or falling back to messages',async()=>{
-  const legacy={...template,type:'markcut.review.submitted'};
+ it('publishes arbitrary caller event types without interpreting semantics',async()=>{
+  const arbitrary={...template,type:'markcut.review.submitted',source:'custom/feedback/events'};
   const h=harness(undefined,undefined,m=>m.method==='tools/call'?{published:true}:undefined);
-  h.result({...media,review:{delivery:'event',eventTemplate:legacy}});
+  h.result({...media,review:{delivery:'event',eventTemplate:arbitrary}});
   h.nodes.approve.onclick?.();await nextTick();
-  expect(h.nodes.status.textContent).toContain('Review not submitted');
-  expect(h.messages.filter(m=>m.method==='tools/call'||m.method==='ui/message')).toHaveLength(0);
+  expect(h.nodes.status.textContent).toContain('submitted');
+  const calls=h.messages.filter(m=>m.method==='tools/call');
+  expect(calls).toHaveLength(1);
+  expect(calls[0].params.arguments.args.type).toBe('markcut.review.submitted');
+  expect(calls[0].params.arguments.args.source).toBe('custom/feedback/events');
  });
  it('fails visibly without host Events access and reuses the idempotency key on retry',async()=>{
   const h=harness(undefined,undefined,m=>m.method==='tools/call'?{rpcError:{message:'Host denies cross-server tool'}}:undefined);

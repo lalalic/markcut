@@ -22,11 +22,12 @@ describe('Neo-owned REST notification from standalone CLI',()=>{
   expect(request).toMatchObject({id,contentHash:hash,revisionId:'revision-123',
     previewId:'preview-123',title:'preview',delivery:'text',groupId:'/tmp/preview.md'});
  });
- it('uses exact caller-bound template for Relay event review',()=>{
+ it('passes an opaque event template without interpreting the caller identity',()=>{
   const template={type:'task.interactive_decision',source:'job/12/task/prod/execution/ex1',
     data:{interactive:{jobId:'12',taskId:'prod',executionId:'ex1'}}};
   const request=buildReviewRequest(eventOptions,{delivery:'event',eventTemplate:template},state,id);
-  expect(request).toMatchObject({id,mediaHash:hash,eventTemplate:template,jobId:'12',groupId:'job/12/task/prod'});
+  expect(request).toMatchObject({id,mediaHash:hash,eventTemplate:template,groupId:'/tmp/preview.md'});
+  expect(request).not.toHaveProperty('jobId');
   expect(request).not.toHaveProperty('revisionId');expect(request).not.toHaveProperty('contentHash');
  });
  it('POSTs to local Neo Core REST and requires persisted matching ACK',async()=>{

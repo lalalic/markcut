@@ -55,10 +55,8 @@ export function buildReviewRequest(options,config,state,operationId){
   const request={id:operationId,previewId:data.id,title:basename(options.file,'.md'),delivery:config.delivery};
   if(config.delivery==='event'){
     request.mediaHash=data.contentHash; // Transport-only lookup for the compiled player, never the review identity.
-    const fixed=config.eventTemplate.data.interactive;
     request.eventTemplate=config.eventTemplate;
-    request.jobId=fixed.jobId;
-    request.groupId=`job/${fixed.jobId}/task/${fixed.taskId}`;
+    request.groupId=options.file;
   }else {request.contentHash=data.contentHash;request.revisionId=data.revisionId;request.groupId=options.file;}
   return request;
 }
@@ -84,7 +82,7 @@ export async function runMobilePreview(argv){
   const [{startCompileOperation},{EXPORT_ROOT}]=await Promise.all([
     import('./compile-operation.mjs'),import('./remote-assets.mjs'),
   ]);
-  const operation=startCompileOperation(opts.file,undefined,config);
+  const operation=startCompileOperation(opts.file,config);
   const stateFile=join(EXPORT_ROOT,'operations',operation.operationId+'.json');
   let state;
   const until=Date.now()+opts.timeoutMs;
@@ -99,7 +97,6 @@ export async function runMobilePreview(argv){
   const receipt=await submitNeoReview(request);
   return {status:'review_requested',operationId:operation.operationId,requestId:request.id,
     ...(opts.delivery==='event' ? {} : {contentHash:state.result.contentHash,revisionId:state.result.revisionId}),
-    ...(config.delivery==='event' ? {jobId:config.eventTemplate.data.interactive.jobId} : {}),
     delivery:config.delivery,notification:receipt.accepted?'apns_submitted':'inbox_stored'};
 }
 

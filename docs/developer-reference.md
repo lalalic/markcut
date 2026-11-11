@@ -317,6 +317,21 @@ When extracting HTTPS BGM from a preview tree, traverse the tree **before** retu
 
 For `map view:route`, omit `zoom` to auto-fit geotagged stops to the Remotion composition dimensions, including 9:16 vertical output; auto-fit reserves 14% padding. The route schema and both descriptive compiler paths must leave omitted zoom undefined, or their old `zoom:10` defaults silently override the runtime fit. Explicit `zoom` and camera tweens still override fit. Verify the real browser map's zoom/center and rendered tiles, not just a successful Markdown compile or Google API HTTP response. A calculated Directions line is not proof of a recorded GPS track.
 
-## Git-backed interactive Review identity (2026-11)
+## Generic Preview event delivery
 
-Event-mode Markcut Preview requires a full 40-character Git Commit SHA from a **validated** Neo Project Stage, supplied with `--commit-sha SHA` (CLI) or `review.commitSha` (MCP). The Neo Project Runner commits *before* preview delivery, then adds an immutable `review/rN` tag. The Neo Master REST request and Relay `task.interactive_decision` use `commitSha` as the only review revision identity (with `interactive.revision=commitSha`). `mediaHash` is retained separately for compiled preview media retrieval, **not** for decision binding; standalone `delivery:text` continues to use Markcut's internal compile cache identity. Never accept an Event review without an explicit SHA or silently revert to content-hash identity.
+Markcut is a renderer and event transport, not a workflow or review authority. With
+`review: {delivery: "event", eventTemplate: {type, source, data, responseKey?}}`,
+the caller supplies an Events Bus envelope. Markcut validates only its transport
+shape and basic safety constraints, preserves the opaque caller data, appends the
+human decision and comments at `data[responseKey ?? "review"]`, then calls the
+host Events provider with `command: "publish"`. A positive publish receipt
+means **transport accepted**, not that the receiving workflow completed.
+
+Neither Markcut Preview nor its standalone CLI interprets the event type/source,
+Relay Task/Execution IDs, commits, or revision policy. The Neo Wrapper owns
+Relay-specific event construction and identity verification; Relay owns Task
+state and recovery. Neo Mobile follows the same generic event transport rule.
+Media `contentHash` is only for compiled player retrieval and does not become
+an event revision or Git identity. On event publication failures, preserve
+comments/idempotency and report the transport failure; do not silently change
+delivery channels.

@@ -3,7 +3,7 @@ import {ensureVideoPreview} from "./preview.mjs";
 import {publishPreviewRevision} from "./remote-assets.mjs";
 import {writeOperation} from "./compile-operation.mjs";
 import {fingerprintInputs} from "./source-fingerprint.mjs";
-const [id,path,requestedPath,relayText,sourceHash,reviewText]=process.argv.slice(2);
+const [id,path,requestedPath,sourceHash,reviewText]=process.argv.slice(2);
 const startedAt=Date.now();
 const review=JSON.parse(reviewText||'{"delivery":"text"}');
 function update(stage){writeOperation(id,{id,state:"compiling",stage,startedAt,updatedAt:Date.now(),requestedPath});}
@@ -17,9 +17,9 @@ try{
  publishPreviewRevision(requestedPath,{...result,requestedPath});
  // Markcut is a pure preview provider. The Neo MCP wrapper owns mobile delivery.
  writeOperation(id,{id,state:"ready",stage:"complete",startedAt,updatedAt:Date.now(),requestedPath,
-   result:{...result,requestedPath,requestId:id,review,relay:JSON.parse(relayText)}});
+   result:{...result,requestedPath,requestId:id,review}});
 
 }catch(e){
- writeOperation(id,{id,state:"failed",stage:"failed",startedAt,updatedAt:Date.now(),requestedPath,review,relay:JSON.parse(relayText||"null"),error:e?.message||String(e)});
+ writeOperation(id,{id,state:"failed",stage:"failed",startedAt,updatedAt:Date.now(),requestedPath,review,error:e?.message||String(e)});
  process.exitCode=1;
 }
