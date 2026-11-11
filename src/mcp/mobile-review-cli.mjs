@@ -10,20 +10,17 @@ const delay = ms => new Promise(done => setTimeout(done,ms));
 
 export function parseEventPreviewOptions(argv) {
   if (argv[0] !== 'preview' || !argv[1] || argv[1].startsWith('--')) throw new Error('Usage: markcut preview <file.md> --delivery event --event-template <file.json>');
-  const allowed=new Set(['--delivery','--event-template','--timeout-ms','--commit-sha']);
+  const allowed=new Set(['--delivery','--event-template','--timeout-ms']);
   const options={file:resolve(argv[1])};
   for(let i=2;i<argv.length;i+=2){
     const flag=argv[i],value=argv[i+1];
     if(!allowed.has(flag) || !value || value.startsWith('--'))throw new Error('Missing or unsupported preview event flag: '+flag);
-    const key={'--delivery':'delivery','--event-template':'eventTemplatePath','--timeout-ms':'timeoutMs','--commit-sha':'commitSha'}[flag];
+    const key={'--delivery':'delivery','--event-template':'eventTemplatePath','--timeout-ms':'timeoutMs'}[flag];
     if(Object.hasOwn(options,key))throw new Error('Duplicate flag: '+flag);
     options[key]=value;
   }
   if(!['text','event'].includes(options.delivery) || (options.delivery==='event')!==Boolean(options.eventTemplatePath))
     throw new Error('Event delivery requires --event-template; Text delivery must omit it');
-  if(options.delivery==='event' && !/^[a-f0-9]{40}$/.test(options.commitSha||''))
-    throw new Error('Event review requires --commit-sha with full 40-character Git SHA');
-  if(options.delivery==='text' && options.commitSha)throw new Error('Text previews do not bind a Git Commit SHA');
   const limit=options.timeoutMs===undefined ? 300000 : Number(options.timeoutMs);
   if(!Number.isSafeInteger(limit) || limit<1000 || limit>1800000)throw new Error('--timeout-ms must be 1000..1800000');
   options.timeoutMs=limit;
@@ -57,8 +54,6 @@ export function buildReviewRequest(options,config,state,operationId){
     throw Error('Compiled Preview has no immutable revision identity');
   const request={id:operationId,previewId:data.id,title:basename(options.file,'.md'),delivery:config.delivery};
   if(config.delivery==='event'){
-    if(!/^[a-f0-9]{40}$/.test(options.commitSha||''))throw Error('Git Commit SHA required for Event Review');
-    request.commitSha=options.commitSha;
     request.mediaHash=data.contentHash; // Transport-only lookup for the compiled player, never the review identity.
     const fixed=config.eventTemplate.data.interactive;
     request.eventTemplate=config.eventTemplate;
@@ -84,7 +79,7 @@ export async function submitNeoReview(request,{fetchImpl=fetch,url=neoReviewEndp
 
 export async function runMobilePreview(argv){
   const opts=parseEventPreviewOptions(argv);
-  const config=opts.delivery==='event' ? normalizeReviewConfig({delivery:'event',commitSha:opts.commitSha,
+  const config=opts.delivery==='event' ? normalizeReviewConfig({delivery:'event',
     eventTemplate:JSON.parse(readFileSync(resolve(opts.eventTemplatePath),'utf8'))}) : {delivery:'text'};
   const [{startCompileOperation},{EXPORT_ROOT}]=await Promise.all([
     import('./compile-operation.mjs'),import('./remote-assets.mjs'),
@@ -103,7 +98,7 @@ export async function runMobilePreview(argv){
   const request=buildReviewRequest(opts,config,state,operation.operationId);
   const receipt=await submitNeoReview(request);
   return {status:'review_requested',operationId:operation.operationId,requestId:request.id,
-    ...(opts.delivery==='event' ? {commitSha:opts.commitSha} : {contentHash:state.result.contentHash,revisionId:state.result.revisionId}),
+    ...(opts.delivery==='event' ? {} : {contentHash:state.result.contentHash,revisionId:state.result.revisionId}),
     ...(config.delivery==='event' ? {jobId:config.eventTemplate.data.interactive.jobId} : {}),
     delivery:config.delivery,notification:receipt.accepted?'apns_submitted':'inbox_stored'};
 }

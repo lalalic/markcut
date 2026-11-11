@@ -47,11 +47,11 @@ registerAppTool(
   server,
   TOOL_NAME,
   {
-    description: "Compile and publish an immutable Markcut preview revision for this ChatGPT conversation. Review delivery defaults to ui/message, or submits an authorized caller-bound event when explicitly configured. Event-mode decisions bind the verified 40-character Git Commit SHA, not the compiled-media cache hash.",
+    description: "Compile and publish an immutable Markcut preview revision for this ChatGPT conversation. Review delivery defaults to ui/message, or submits an authorized caller-bound event when explicitly configured. Event-mode decisions bind only the current Relay Task execution; compiled media is used for playback.",
     inputSchema: z.object({
       path: z.string().describe("Absolute .md path or NeoY HTTPS mounted file URL; Neo Wrapper also accepts single local image/audio/video files"),
       readonly: z.boolean().optional().describe("View-only preview: no review controls, Relay binding, Git checkpoint, or mobile review notification."),
-      review: z.object({delivery:z.enum(["text","event"]).optional(),commitSha:z.string().regex(/^[a-f0-9]{40}$/).optional(),eventTemplate:z.object({type:z.string(),source:z.string(),data:z.record(z.string(),z.unknown())}).optional(),
+      review: z.object({delivery:z.enum(["text","event"]).optional(),eventTemplate:z.object({type:z.string(),source:z.string(),data:z.record(z.string(),z.unknown())}).optional(),
         relay:z.object({jobId:z.string(),taskId:z.union([z.string(),z.number()]),executionId:z.string().optional()}).optional().describe("Optional managed review correlation; no Relay needed for standalone review."),
       }).optional(),
     }),
