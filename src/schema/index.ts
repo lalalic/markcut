@@ -284,7 +284,7 @@ export const mapStream = base.extend({
   routeWeight: z.number().default(4),
   zoom: z.number().optional().describe("Optional fixed zoom; route view auto-fits when omitted"),
   center: z.object({ lat: z.number(), lng: z.number() }).optional().describe("map view center (defaults to first waypoint)"),
-  mapType: z.enum(["roadmap", "satellite", "hybrid", "terrain"]).default("roadmap").describe("Google Maps style"),
+  mapType: z.enum(["roadmap", "satellite", "hybrid", "terrain", "schematic"]).default("roadmap").describe("Google Maps style, or deterministic offline route schematic"),
   language: z.string().optional().describe("Google Maps UI/label language, e.g. zh-CN"),
   region: z.string().optional().describe("Google Maps region code, e.g. CN"),
   travelMode: z.enum(["DRIVING", "WALKING", "BICYCLING", "TRANSIT"]).default("DRIVING").describe("Directions API travel mode"),

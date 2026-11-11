@@ -158,7 +158,7 @@ export interface DescriptiveMap extends DescriptiveBaseNode {
   routeWeight?: number;
   zoom?: number;
   center?: { lat: number; lng: number };
-  mapType?: "roadmap" | "satellite" | "hybrid" | "terrain";
+  mapType?: "roadmap" | "satellite" | "hybrid" | "terrain" | "schematic";
   language?: string;
   region?: string;
   travelMode?: "DRIVING" | "WALKING" | "BICYCLING" | "TRANSIT";
