@@ -326,3 +326,11 @@ layout:parallel
 - **Media assets** — photo thumbnails (`waypoint.media`), images, bgm etc. should live in the md file's folder (e.g. `assets/...`). See the asset-path rules in `markdown-descriptive.md` §14 (verify enforces md-folder-relative paths).
 - **Don't set duration from script length** — the resolver computes it from TTS audio.
 - **3D (Map3D)** is experimental and opt-in (`cinematic.fallback:"none"`); the default `fallback:"2d"` gives the safe drone-chase look.
+
+## Google Maps four-view production gate (2026-11-11)
+
+When working with native Google maps, prefer `view:overview|route|cinematic|streetview` directly in the authoritative `video.md`, rather than replacing them with schematic visuals. Use the source-linked Vlog GPS waypoints; never invent a track. A four-scene tested authoring reference lives in Vlog `templates/google-map-four-scenes.md`. The Google `streetview` node uses Maps JavaScript `StreetViewPanorama`, **not** the separately enabled Street View Static REST API.
+
+**Fixed root cause:** Hosted Preview already stamped `GOOGLE_MAPS_API_KEY` during compilation, but `markcut render`'s Markdown pipeline previously called `compileDescriptiveRoot(final)` without options, leaving native maps unkeyed. The CLI now supplies `{googleMapsApiKey:process.env.GOOGLE_MAPS_API_KEY}` and refuses an unkeyed native map or fatal Google/Routes render error. The produced H.264 container alone is not proof that Google tiles, computed route or panorama are visible. Inspect real moving preview frames and confirm each view individually.
+
+**Critical differences:** `route` is Google-computed navigational path between observed GPS positions, *not* proof of which road the creator traveled. `cinematic` defaults to 2D Google satellite pan/tilt/heading rather than actual drone/3D terrain. `streetview` needs a covered nearby panorama, otherwise the scene is invalid for that spot. For four-mode Vlog scenes, use `markcut verify /absolute/video.md` then the Neo-hosted `markcut.preview` UI. Its internal MP4 map cache is a playback optimization and must never replace the editable Markdown deliverable. Check Google Maps JavaScript API billing, restrictions, quotas and Routes API permissions before live rendering; preserve provider attribution and content-use terms for any public video.

@@ -7,9 +7,10 @@
  *                                        (TTS/STT/durations)
  */
 import { execSync, spawn } from "node:child_process";
-import { readFileSync, writeFileSync, mkdirSync, existsSync, copyFileSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, existsSync, copyFileSync, rmSync } from "node:fs";
 import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { googleMapErrorLine, nativeMapMissingKey } from "./google-map-health.mjs";
 import {
   DEFAULT_TTS_CLI, DEFAULT_STT_CLI, DEFAULT_TTI_CLI, DEFAULT_TTV_CLI,
   DEFAULT_ITT_CLI, DEFAULT_VTT_CLI, DEFAULT_AGENT_CLI, DEFAULT_EDIT_CLI,
@@ -139,6 +140,7 @@ console.log(`\n▶ Rendering → ${outputPath}`);
     let lastLoggedFrame = 0;
     let totalFrames = 0;
     let lineBuffer = "";
+    let googleMapFailure = "";
 
     // Parse "Rendered X/Y, time remaining: ..." or "Rendered X/Y" lines
     const progressRe = /^Rendered\s+(\d+)\/(\d+)/;
@@ -150,6 +152,7 @@ console.log(`\n▶ Rendering → ${outputPath}`);
       lineBuffer = lines.pop() || "";
       for (const line of lines) {
         if (!line) continue;
+        if (!googleMapFailure) googleMapFailure = googleMapErrorLine(line);
 
         const match = line.match(progressRe);
         if (match) {
@@ -186,9 +189,13 @@ console.log(`\n▶ Rendering → ${outputPath}`);
     proc.on("exit", (code) => {
       // Flush any remaining line in the buffer (non-progress lines only)
       if (lineBuffer && !lineBuffer.match(progressRe)) {
+        if (!googleMapFailure) googleMapFailure = googleMapErrorLine(lineBuffer);
         console.error(lineBuffer);
       }
-      if (code === 0) {
+      if (code === 0 && googleMapFailure) {
+        rmSync(outputPath,{force:true}); // A valid MP4 container with failed Google maps is NOT a valid video.
+        reject(new Error(`Google Maps rendering failed: ${googleMapFailure}`));
+      } else if (code === 0) {
         console.log(`✓ ${outputPath}`);
         resolvePromise();
       } else {
@@ -343,7 +350,7 @@ edit=${DEFAULT_EDIT_CLI}`);
         }
 
         const final = await resolveAll(resolved, options);
-        return compileDescriptiveRoot(final);
+        return compileDescriptiveRoot(final, {googleMapsApiKey:process.env.GOOGLE_MAPS_API_KEY});
       }
 
       if (filePath.endsWith(".md")) {
@@ -431,6 +438,9 @@ edit=${DEFAULT_EDIT_CLI}`);
       }
     }
 
+    // A Maps JS node must carry a valid key in its compiled props before Remotion starts.
+    // Otherwise Chrome may report ApiProjectMapError yet encode a superficially valid MP4.
+    if (nativeMapMissingKey(streamTree,process.env.GOOGLE_MAPS_API_KEY)) throw new Error("Google Maps view requires GOOGLE_MAPS_API_KEY; refusing an invalid map render");
     const output = args.output ? resolve(args.output) : join(ROOT, "out", "video.mp4");
     await renderOne(streamTree, output, args.verbose, renderPublicDir);
 
