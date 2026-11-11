@@ -77,6 +77,8 @@ describe('Markcut Remotion MCP App',()=>{
  it('includes a local audio track for Remotion playback',async()=>{
   const dir=await mkdtemp(join(tmpdir(),'markcut-audio-'));
   try {
+   await writeFile(join(dir,'.ghost.markcut.md'),'# video\n');
+   expect(await readPreviewAudio(join(dir,'.ghost.markcut.md'))).toEqual({});
    await writeFile(join(dir,'clip.md'),'# video\naudio: sample.wav\n');
    await writeFile(join(dir,'sample.wav'),Buffer.from([82,73,70,70]));
    const media=await readPreviewAudio(join(dir,'clip.md'));

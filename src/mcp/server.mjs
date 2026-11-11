@@ -49,18 +49,20 @@ registerAppTool(
   {
     description: "Compile and publish an immutable Markcut preview revision for this ChatGPT conversation. Review delivery defaults to ui/message, or submits an authorized caller-bound event when explicitly configured. Event-mode decisions bind the verified 40-character Git Commit SHA, not the compiled-media cache hash.",
     inputSchema: z.object({
-      path: z.string().describe("Absolute .md path or NeoY HTTPS mounted file URL"),
+      path: z.string().describe("Absolute .md path or NeoY HTTPS mounted file URL; Neo Wrapper also accepts single local image/audio/video files"),
       readonly: z.boolean().optional().describe("View-only preview: no review controls, Relay binding, Git checkpoint, or mobile review notification."),
-      review: z.object({delivery:z.enum(["text","event"]).optional(),commitSha:z.string().regex(/^[a-f0-9]{40}$/).optional(),eventTemplate:z.object({type:z.string(),source:z.string(),data:z.record(z.string(),z.unknown())}).optional()}).optional(),
-      relay: z.object({jobId:z.string(),taskId:z.union([z.string(),z.number()]),executionId:z.string().optional()}).optional().describe("Optional Agents Relay task correlation. No Relay dependency for standalone ChatGPT/Work reviews."),
+      review: z.object({delivery:z.enum(["text","event"]).optional(),commitSha:z.string().regex(/^[a-f0-9]{40}$/).optional(),eventTemplate:z.object({type:z.string(),source:z.string(),data:z.record(z.string(),z.unknown())}).optional(),
+        relay:z.object({jobId:z.string(),taskId:z.union([z.string(),z.number()]),executionId:z.string().optional()}).optional().describe("Optional managed review correlation; no Relay needed for standalone review."),
+      }).optional(),
     }),
     _meta: {
       ui: { resourceUri: RESOURCE_URI },
     },
   },
-  async ({ path, relay, review, readonly }) => {
+  async ({ path, review, readonly }) => {
+    const relay=review?.relay;
     try {
-      if (readonly && (relay !== undefined || review !== undefined))
+      if (readonly && review !== undefined)
         throw new Error("Read-only preview cannot request Relay or review delivery");
       const config={...normalizeReviewConfig(review),...(readonly ? {readonly:true} : {})};
       const operation=startCompileOperation(path,relay,config);

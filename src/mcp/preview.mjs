@@ -122,6 +122,9 @@ export async function readPreviewAudio(path) {
   const markdown = await readFile(path, "utf8");
   const match = markdown.match(/^audio:\s*([^\r\n]+)\s*$/m);
   const filename = match ? match[1].trim() : `${basename(path, ".md")}.wav`;
+  // Hidden generated Markdown has no implicit sibling audio; explicit audio
+  // declarations still use the normal safe-local-filename validation.
+  if (!match && filename.startsWith(".")) return {};
   if (!/^[\w. -]+\.(wav|mp3|m4a|ogg)$/i.test(filename) || filename.startsWith(".")) throw new Error("audio must be a local audio filename in the Markdown directory");
   const file = resolve(dirname(path), filename);
   try { await access(file, fsConstants.R_OK); } catch (e) { if (!match && e.code === "ENOENT") return {}; throw e; }
