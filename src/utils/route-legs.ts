@@ -119,6 +119,42 @@ export function modeEmoji(mode?: string): string {
   }
 }
 
+/** Interpolate by actual polyline length, not array index: Routes samples are not evenly spaced. */
+export function pointAlongPath(
+  path: readonly {lat: number; lng: number}[],
+  progress: number,
+): {lat: number; lng: number} | null {
+  if (!path.length) return null;
+  if (path.length === 1) return path[0]!;
+  const lengths = path.slice(1).map((p, i) => haversineKm(path[i]!, p));
+  const total = lengths.reduce((a, b) => a + b, 0);
+  if (total < 1e-9) return path[0]!;
+  let target = Math.max(0, Math.min(1, progress)) * total;
+  for (let i = 0; i < lengths.length; i++) {
+    const length = lengths[i]!;
+    if (target <= length || i === lengths.length - 1) {
+      const a = path[i]!, b = path[i + 1]!;
+      const ratio = length ? Math.min(1, Math.max(0, target / length)) : 0;
+      const deltaLng = ((b.lng - a.lng + 540) % 360) - 180;
+      const lng = ((a.lng + deltaLng * ratio + 540) % 360) - 180;
+      return {lat: a.lat + (b.lat - a.lat) * ratio, lng};
+    }
+    target -= length;
+  }
+  return path[path.length - 1]!;
+}
+
+/** The whole Google road path must fit, including detours outside recorded GPS bounds. */
+export function locationsForRouteFit(
+  waypoints: readonly {lat: number; lng: number}[],
+  legs: readonly RouteLeg[],
+): {lat: number; lng: number}[] {
+  return [
+    ...waypoints,
+    ...legs.flatMap(leg => leg.steps.flatMap(step => step.path)),
+  ];
+}
+
 /** Position within one leg at normalized progress t ∈ [0,1] (step-timed). */
 export function positionAlongLeg(
   leg: RouteLeg,
@@ -131,11 +167,7 @@ export function positionAlongLeg(
     if (currentInSecond <= acc + step.durationSec) {
       const stepElapsed = currentInSecond - acc;
       const stepProgress = step.durationSec > 0 ? stepElapsed / step.durationSec : 0;
-      const idx = Math.min(
-        Math.max(0, Math.floor(stepProgress * step.path.length)),
-        step.path.length - 1,
-      );
-      return step.path[idx] ?? null;
+      return pointAlongPath(step.path, stepProgress);
     }
     acc += step.durationSec;
   }
@@ -169,6 +201,7 @@ export function routePositionAtLegs(
   actionDuration: number,
   seconds: number,
   stops: RouteStopWindow[] = [],
+  timing: {startHold?: number; endHold?: number; easing?: "linear" | "easeInOut"} = {},
 ): { lat: number; lng: number; mode: string } | null {
   if (legs.length === 0) return null;
 
@@ -184,11 +217,17 @@ export function routePositionAtLegs(
     if (seconds >= s.toSec) dwellBefore += s.toSec - s.fromSec;
     else if (seconds > s.fromSec) dwellBefore += seconds - s.fromSec;
   }
-  const driveTime = Math.max(0, seconds - dwellBefore);
+  const startHold = Math.max(0, Math.min(actionDuration * 0.4, timing.startHold ?? 0));
+  const endHold = Math.max(0, Math.min(actionDuration * 0.4, timing.endHold ?? 0));
+  const driveTime = Math.max(0, seconds - dwellBefore - startHold);
   const totalDwell = stops.reduce((s, st) => s + (st.toSec - st.fromSec), 0);
-  const driveBudget = Math.max(0.1, actionDuration - totalDwell);
+  const driveBudget = Math.max(0.1, actionDuration - totalDwell - startHold - endHold);
   const total = legs.reduce((s, l) => s + l.durationSec, 0);
-  const currentInSecond = driveTime * (total / driveBudget);
+  const progress = Math.max(0, Math.min(1, driveTime / driveBudget));
+  // Ease the full motion only when no authored intermediate dwell windows need exact arrival times.
+  const eased = timing.easing === "easeInOut" && stops.length === 0
+    ? progress * progress * (3 - 2 * progress) : progress;
+  const currentInSecond = eased * total;
   let acc = 0;
   for (const leg of legs) {
     if (currentInSecond <= acc + leg.durationSec) {

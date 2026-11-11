@@ -289,6 +289,11 @@ export const mapStream = base.extend({
   region: z.string().optional().describe("Google Maps region code, e.g. CN"),
   travelMode: z.enum(["DRIVING", "WALKING", "BICYCLING", "TRANSIT"]).default("DRIVING").describe("Directions API travel mode"),
   routeMarker: z.string().default("🚗").describe("emoji/character for the animated traveling marker"),
+  routeAnimation: z.object({
+    startHold: z.number().min(0).optional(),
+    endHold: z.number().min(0).optional(),
+    easing: z.enum(["linear", "easeInOut"]).optional(),
+  }).optional().describe("Vlog route pacing: endpoint holds (seconds) and eased marker motion"),
   camera: mapCamera.optional().describe("generic camera tween (dolly/pan/tilt)"),
   cinematic: mapCinematic.optional().describe("cinematic camera behavior"),
   streetView: mapStreetView.optional().describe("immersive street view config"),

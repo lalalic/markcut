@@ -101,7 +101,7 @@ function preserveVariantAttrs(node: Record<string, unknown>, attrs: Record<strin
     "foreground", "visible", "isBackground", "instruction", "style", "effects", "on",
     "spots", "waypoints", "routeColor", "routeWeight", "routeMarker",
     "travelMode", "zoom", "center", "mapType", "data", "prompt",
-    "view", "camera", "cinematic", "streetView",
+    "view", "camera", "cinematic", "streetView", "routeAnimation",
     "name", "title", "transition", "transitionTime", "layout",
     "componentName", "props", "speaker", "isNarration",
   ]);
@@ -342,6 +342,7 @@ function parseNodeLine(content: string, lineNum?: number): DescriptiveNode {
         start: attrs.start as any,
         view: attrs.view as any,
         routeMarker: attrs.routeMarker as any,
+        routeAnimation: attrs.routeAnimation as any,
         travelMode: attrs.travelMode as any,
         routeColor: attrs.routeColor as any,
         routeWeight: attrs.routeWeight as any,

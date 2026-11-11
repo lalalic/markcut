@@ -357,6 +357,7 @@ function compileLeaf(node2, ctx, parentKind) {
         region: node2.region,
         travelMode: node2.travelMode ?? "DRIVING",
         routeMarker: node2.routeMarker ?? "\u{1F697}",
+        routeAnimation: node2.routeAnimation,
         camera: node2.camera,
         cinematic: node2.cinematic,
         streetView: node2.streetView,
@@ -558,6 +559,7 @@ function compileMap(node2, ctx, parentKind) {
     region: node2.region,
     travelMode: node2.travelMode ?? "DRIVING",
     routeMarker: node2.routeMarker ?? "\u{1F697}",
+    routeAnimation: node2.routeAnimation,
     camera: node2.camera,
     cinematic: node2.cinematic,
     streetView: node2.streetView,
@@ -890,9 +892,9 @@ var init_compiler = __esm({
   }
 });
 
-// node_modules/extend/index.js
+// ../../../markcut/node_modules/extend/index.js
 var require_extend = __commonJS({
-  "node_modules/extend/index.js"(exports, module) {
+  "../../../markcut/node_modules/extend/index.js"(exports, module) {
     "use strict";
     var hasOwn = Object.prototype.hasOwnProperty;
     var toStr = Object.prototype.toString;
@@ -981,9 +983,9 @@ var require_extend = __commonJS({
   }
 });
 
-// node_modules/format/format.js
+// ../../../markcut/node_modules/format/format.js
 var require_format = __commonJS({
-  "node_modules/format/format.js"(exports, module) {
+  "../../../markcut/node_modules/format/format.js"(exports, module) {
     (function() {
       var namespace;
       if (typeof module !== "undefined") {
@@ -1374,21 +1376,21 @@ function generateTTV(prompt, outputPath, cli, ttiCmd, seed) {
 init_utils();
 init_compiler();
 
-// node_modules/bail/index.js
+// ../../../markcut/node_modules/bail/index.js
 function bail(error) {
   if (error) {
     throw error;
   }
 }
 
-// node_modules/unified/lib/index.js
+// ../../../markcut/node_modules/unified/lib/index.js
 var import_extend = __toESM(require_extend(), 1);
 
-// node_modules/devlop/lib/default.js
+// ../../../markcut/node_modules/devlop/lib/default.js
 function ok() {
 }
 
-// node_modules/is-plain-obj/index.js
+// ../../../markcut/node_modules/is-plain-obj/index.js
 function isPlainObject(value2) {
   if (typeof value2 !== "object" || value2 === null) {
     return false;
@@ -1397,7 +1399,7 @@ function isPlainObject(value2) {
   return (prototype === null || prototype === Object.prototype || Object.getPrototypeOf(prototype) === null) && !(Symbol.toStringTag in value2) && !(Symbol.iterator in value2);
 }
 
-// node_modules/trough/lib/index.js
+// ../../../markcut/node_modules/trough/lib/index.js
 function trough() {
   const fns = [];
   const pipeline = { run, use };
@@ -1481,7 +1483,7 @@ function wrap(middleware, callback) {
   }
 }
 
-// node_modules/unist-util-stringify-position/lib/index.js
+// ../../../markcut/node_modules/unist-util-stringify-position/lib/index.js
 function stringifyPosition(value2) {
   if (!value2 || typeof value2 !== "object") {
     return "";
@@ -1507,7 +1509,7 @@ function index(value2) {
   return value2 && typeof value2 === "number" ? value2 : 1;
 }
 
-// node_modules/vfile-message/lib/index.js
+// ../../../markcut/node_modules/vfile-message/lib/index.js
 var VFileMessage = class extends Error {
   /**
    * Create a message for `reason`.
@@ -1643,16 +1645,16 @@ VFileMessage.prototype.place = void 0;
 VFileMessage.prototype.ruleId = void 0;
 VFileMessage.prototype.source = void 0;
 
-// node_modules/vfile/lib/minpath.js
+// ../../../markcut/node_modules/vfile/lib/minpath.js
 import { default as default2 } from "node:path";
 
-// node_modules/vfile/lib/minproc.js
+// ../../../markcut/node_modules/vfile/lib/minproc.js
 import { default as default3 } from "node:process";
 
-// node_modules/vfile/lib/minurl.js
+// ../../../markcut/node_modules/vfile/lib/minurl.js
 import { fileURLToPath as fileURLToPath3 } from "node:url";
 
-// node_modules/vfile/lib/minurl.shared.js
+// ../../../markcut/node_modules/vfile/lib/minurl.shared.js
 function isUrl(fileUrlOrPath) {
   return Boolean(
     fileUrlOrPath !== null && typeof fileUrlOrPath === "object" && "href" in fileUrlOrPath && fileUrlOrPath.href && "protocol" in fileUrlOrPath && fileUrlOrPath.protocol && // @ts-expect-error: indexing is fine.
@@ -1660,7 +1662,7 @@ function isUrl(fileUrlOrPath) {
   );
 }
 
-// node_modules/vfile/lib/index.js
+// ../../../markcut/node_modules/vfile/lib/index.js
 var order = (
   /** @type {const} */
   [
@@ -2116,7 +2118,7 @@ function isUint8Array(value2) {
   );
 }
 
-// node_modules/unified/lib/callable-instance.js
+// ../../../markcut/node_modules/unified/lib/callable-instance.js
 var CallableInstance = (
   /**
    * @type {new <Parameters extends Array<unknown>, Result>(property: string | symbol) => (...parameters: Parameters) => Result}
@@ -2145,7 +2147,7 @@ var CallableInstance = (
   })
 );
 
-// node_modules/unified/lib/index.js
+// ../../../markcut/node_modules/unified/lib/index.js
 var own = {}.hasOwnProperty;
 var Processor = class _Processor extends CallableInstance {
   /**
@@ -2781,7 +2783,7 @@ function isUint8Array2(value2) {
   );
 }
 
-// node_modules/mdast-util-to-string/lib/index.js
+// ../../../markcut/node_modules/mdast-util-to-string/lib/index.js
 var emptyOptions = {};
 function toString(value2, options) {
   const settings = options || emptyOptions;
@@ -2818,7 +2820,7 @@ function node(value2) {
   return Boolean(value2 && typeof value2 === "object");
 }
 
-// node_modules/character-entities/index.js
+// ../../../markcut/node_modules/character-entities/index.js
 var characterEntities = {
   AElig: "\xC6",
   AMP: "&",
@@ -4947,13 +4949,13 @@ var characterEntities = {
   zwnj: "\u200C"
 };
 
-// node_modules/decode-named-character-reference/index.js
+// ../../../markcut/node_modules/decode-named-character-reference/index.js
 var own2 = {}.hasOwnProperty;
 function decodeNamedCharacterReference(value2) {
   return own2.call(characterEntities, value2) ? characterEntities[value2] : false;
 }
 
-// node_modules/micromark-util-chunked/index.js
+// ../../../markcut/node_modules/micromark-util-chunked/index.js
 function splice(list2, start, remove, items) {
   const end = list2.length;
   let chunkStart = 0;
@@ -4987,7 +4989,7 @@ function push(list2, items) {
   return items;
 }
 
-// node_modules/micromark-util-combine-extensions/index.js
+// ../../../markcut/node_modules/micromark-util-combine-extensions/index.js
 var hasOwnProperty = {}.hasOwnProperty;
 function combineExtensions(extensions) {
   const all2 = {};
@@ -5027,7 +5029,7 @@ function constructs(existing, list2) {
   splice(existing, 0, 0, before);
 }
 
-// node_modules/micromark-util-decode-numeric-character-reference/index.js
+// ../../../markcut/node_modules/micromark-util-decode-numeric-character-reference/index.js
 function decodeNumericCharacterReference(value2, base) {
   const code = Number.parseInt(value2, base);
   if (
@@ -5045,12 +5047,12 @@ function decodeNumericCharacterReference(value2, base) {
   return String.fromCodePoint(code);
 }
 
-// node_modules/micromark-util-normalize-identifier/index.js
+// ../../../markcut/node_modules/micromark-util-normalize-identifier/index.js
 function normalizeIdentifier(value2) {
   return value2.replace(/[\t\n\r ]+/g, " ").replace(/^ | $/g, "").toLowerCase().toUpperCase();
 }
 
-// node_modules/micromark-util-character/index.js
+// ../../../markcut/node_modules/micromark-util-character/index.js
 var asciiAlpha = regexCheck(/[A-Za-z]/);
 var asciiAlphanumeric = regexCheck(/[\dA-Za-z]/);
 var asciiAtext = regexCheck(/[#-'*+\--9=?A-Z^-~]/);
@@ -5082,7 +5084,7 @@ function regexCheck(regex) {
   }
 }
 
-// node_modules/micromark-factory-space/index.js
+// ../../../markcut/node_modules/micromark-factory-space/index.js
 function factorySpace(effects, ok2, type, max) {
   const limit = max ? max - 1 : Number.POSITIVE_INFINITY;
   let size = 0;
@@ -5104,7 +5106,7 @@ function factorySpace(effects, ok2, type, max) {
   }
 }
 
-// node_modules/micromark/lib/initialize/content.js
+// ../../../markcut/node_modules/micromark/lib/initialize/content.js
 var content = {
   tokenize: initializeContent
 };
@@ -5154,7 +5156,7 @@ function initializeContent(effects) {
   }
 }
 
-// node_modules/micromark/lib/initialize/document.js
+// ../../../markcut/node_modules/micromark/lib/initialize/document.js
 var document = {
   tokenize: initializeDocument
 };
@@ -5336,7 +5338,7 @@ function tokenizeContainer(effects, ok2, nok) {
   return factorySpace(effects, effects.attempt(this.parser.constructs.document, ok2, nok), "linePrefix", this.parser.constructs.disable.null.includes("codeIndented") ? void 0 : 4);
 }
 
-// node_modules/micromark-util-classify-character/index.js
+// ../../../markcut/node_modules/micromark-util-classify-character/index.js
 function classifyCharacter(code) {
   if (code === null || markdownLineEndingOrSpace(code) || unicodeWhitespace(code)) {
     return 1;
@@ -5346,7 +5348,7 @@ function classifyCharacter(code) {
   }
 }
 
-// node_modules/micromark-util-resolve-all/index.js
+// ../../../markcut/node_modules/micromark-util-resolve-all/index.js
 function resolveAll(constructs2, events, context) {
   const called = [];
   let index2 = -1;
@@ -5360,7 +5362,7 @@ function resolveAll(constructs2, events, context) {
   return events;
 }
 
-// node_modules/micromark-core-commonmark/lib/attention.js
+// ../../../markcut/node_modules/micromark-core-commonmark/lib/attention.js
 var attention = {
   name: "attention",
   resolveAll: resolveAllAttention,
@@ -5491,7 +5493,7 @@ function movePoint(point3, offset) {
   point3._bufferIndex += offset;
 }
 
-// node_modules/micromark-core-commonmark/lib/autolink.js
+// ../../../markcut/node_modules/micromark-core-commonmark/lib/autolink.js
 var autolink = {
   name: "autolink",
   tokenize: tokenizeAutolink
@@ -5592,7 +5594,7 @@ function tokenizeAutolink(effects, ok2, nok) {
   }
 }
 
-// node_modules/micromark-core-commonmark/lib/blank-line.js
+// ../../../markcut/node_modules/micromark-core-commonmark/lib/blank-line.js
 var blankLine = {
   partial: true,
   tokenize: tokenizeBlankLine
@@ -5607,7 +5609,7 @@ function tokenizeBlankLine(effects, ok2, nok) {
   }
 }
 
-// node_modules/micromark-core-commonmark/lib/block-quote.js
+// ../../../markcut/node_modules/micromark-core-commonmark/lib/block-quote.js
 var blockQuote = {
   continuation: {
     tokenize: tokenizeBlockQuoteContinuation
@@ -5665,7 +5667,7 @@ function exit(effects) {
   effects.exit("blockQuote");
 }
 
-// node_modules/micromark-core-commonmark/lib/character-escape.js
+// ../../../markcut/node_modules/micromark-core-commonmark/lib/character-escape.js
 var characterEscape = {
   name: "characterEscape",
   tokenize: tokenizeCharacterEscape
@@ -5691,7 +5693,7 @@ function tokenizeCharacterEscape(effects, ok2, nok) {
   }
 }
 
-// node_modules/micromark-core-commonmark/lib/character-reference.js
+// ../../../markcut/node_modules/micromark-core-commonmark/lib/character-reference.js
 var characterReference = {
   name: "characterReference",
   tokenize: tokenizeCharacterReference
@@ -5756,7 +5758,7 @@ function tokenizeCharacterReference(effects, ok2, nok) {
   }
 }
 
-// node_modules/micromark-core-commonmark/lib/code-fenced.js
+// ../../../markcut/node_modules/micromark-core-commonmark/lib/code-fenced.js
 var nonLazyContinuation = {
   partial: true,
   tokenize: tokenizeNonLazyContinuation
@@ -5939,7 +5941,7 @@ function tokenizeNonLazyContinuation(effects, ok2, nok) {
   }
 }
 
-// node_modules/micromark-core-commonmark/lib/code-indented.js
+// ../../../markcut/node_modules/micromark-core-commonmark/lib/code-indented.js
 var codeIndented = {
   name: "codeIndented",
   tokenize: tokenizeCodeIndented
@@ -6003,7 +6005,7 @@ function tokenizeFurtherStart(effects, ok2, nok) {
   }
 }
 
-// node_modules/micromark-core-commonmark/lib/code-text.js
+// ../../../markcut/node_modules/micromark-core-commonmark/lib/code-text.js
 var codeText = {
   name: "codeText",
   previous,
@@ -6118,7 +6120,7 @@ function tokenizeCodeText(effects, ok2, nok) {
   }
 }
 
-// node_modules/micromark-util-subtokenize/lib/splice-buffer.js
+// ../../../markcut/node_modules/micromark-util-subtokenize/lib/splice-buffer.js
 var SpliceBuffer = class {
   /**
    * @param {ReadonlyArray<T> | null | undefined} [initial]
@@ -6311,7 +6313,7 @@ function chunkedPush(list2, right) {
   }
 }
 
-// node_modules/micromark-util-subtokenize/index.js
+// ../../../markcut/node_modules/micromark-util-subtokenize/index.js
 function subtokenize(eventsArray) {
   const jumps = {};
   let index2 = -1;
@@ -6464,7 +6466,7 @@ function subcontent(events, eventIndex) {
   return gaps;
 }
 
-// node_modules/micromark-core-commonmark/lib/content.js
+// ../../../markcut/node_modules/micromark-core-commonmark/lib/content.js
 var content2 = {
   resolve: resolveContent,
   tokenize: tokenizeContent
@@ -6535,7 +6537,7 @@ function tokenizeContinuation(effects, ok2, nok) {
   }
 }
 
-// node_modules/micromark-factory-destination/index.js
+// ../../../markcut/node_modules/micromark-factory-destination/index.js
 function factoryDestination(effects, ok2, nok, type, literalType, literalMarkerType, rawType, stringType, max) {
   const limit = max || Number.POSITIVE_INFINITY;
   let balance = 0;
@@ -6627,7 +6629,7 @@ function factoryDestination(effects, ok2, nok, type, literalType, literalMarkerT
   }
 }
 
-// node_modules/micromark-factory-label/index.js
+// ../../../markcut/node_modules/micromark-factory-label/index.js
 function factoryLabel(effects, ok2, nok, type, markerType, stringType) {
   const self = this;
   let size = 0;
@@ -6688,7 +6690,7 @@ function factoryLabel(effects, ok2, nok, type, markerType, stringType) {
   }
 }
 
-// node_modules/micromark-factory-title/index.js
+// ../../../markcut/node_modules/micromark-factory-title/index.js
 function factoryTitle(effects, ok2, nok, type, markerType, stringType) {
   let marker;
   return start;
@@ -6750,7 +6752,7 @@ function factoryTitle(effects, ok2, nok, type, markerType, stringType) {
   }
 }
 
-// node_modules/micromark-factory-whitespace/index.js
+// ../../../markcut/node_modules/micromark-factory-whitespace/index.js
 function factoryWhitespace(effects, ok2) {
   let seen;
   return start;
@@ -6769,7 +6771,7 @@ function factoryWhitespace(effects, ok2) {
   }
 }
 
-// node_modules/micromark-core-commonmark/lib/definition.js
+// ../../../markcut/node_modules/micromark-core-commonmark/lib/definition.js
 var definition = {
   name: "definition",
   tokenize: tokenizeDefinition
@@ -6855,7 +6857,7 @@ function tokenizeTitleBefore(effects, ok2, nok) {
   }
 }
 
-// node_modules/micromark-core-commonmark/lib/hard-break-escape.js
+// ../../../markcut/node_modules/micromark-core-commonmark/lib/hard-break-escape.js
 var hardBreakEscape = {
   name: "hardBreakEscape",
   tokenize: tokenizeHardBreakEscape
@@ -6876,7 +6878,7 @@ function tokenizeHardBreakEscape(effects, ok2, nok) {
   }
 }
 
-// node_modules/micromark-core-commonmark/lib/heading-atx.js
+// ../../../markcut/node_modules/micromark-core-commonmark/lib/heading-atx.js
 var headingAtx = {
   name: "headingAtx",
   resolve: resolveHeadingAtx,
@@ -6967,7 +6969,7 @@ function tokenizeHeadingAtx(effects, ok2, nok) {
   }
 }
 
-// node_modules/micromark-util-html-tag-name/index.js
+// ../../../markcut/node_modules/micromark-util-html-tag-name/index.js
 var htmlBlockNames = [
   "address",
   "article",
@@ -7034,7 +7036,7 @@ var htmlBlockNames = [
 ];
 var htmlRawNames = ["pre", "script", "style", "textarea"];
 
-// node_modules/micromark-core-commonmark/lib/html-flow.js
+// ../../../markcut/node_modules/micromark-core-commonmark/lib/html-flow.js
 var htmlFlow = {
   concrete: true,
   name: "htmlFlow",
@@ -7413,7 +7415,7 @@ function tokenizeBlankLineBefore(effects, ok2, nok) {
   }
 }
 
-// node_modules/micromark-core-commonmark/lib/html-text.js
+// ../../../markcut/node_modules/micromark-core-commonmark/lib/html-text.js
 var htmlText = {
   name: "htmlText",
   tokenize: tokenizeHtmlText
@@ -7719,7 +7721,7 @@ function tokenizeHtmlText(effects, ok2, nok) {
   }
 }
 
-// node_modules/micromark-core-commonmark/lib/label-end.js
+// ../../../markcut/node_modules/micromark-core-commonmark/lib/label-end.js
 var labelEnd = {
   name: "labelEnd",
   resolveAll: resolveAllLabelEnd,
@@ -7945,7 +7947,7 @@ function tokenizeReferenceCollapsed(effects, ok2, nok) {
   }
 }
 
-// node_modules/micromark-core-commonmark/lib/label-start-image.js
+// ../../../markcut/node_modules/micromark-core-commonmark/lib/label-start-image.js
 var labelStartImage = {
   name: "labelStartImage",
   resolveAll: labelEnd.resolveAll,
@@ -7976,7 +7978,7 @@ function tokenizeLabelStartImage(effects, ok2, nok) {
   }
 }
 
-// node_modules/micromark-core-commonmark/lib/label-start-link.js
+// ../../../markcut/node_modules/micromark-core-commonmark/lib/label-start-link.js
 var labelStartLink = {
   name: "labelStartLink",
   resolveAll: labelEnd.resolveAll,
@@ -7998,7 +8000,7 @@ function tokenizeLabelStartLink(effects, ok2, nok) {
   }
 }
 
-// node_modules/micromark-core-commonmark/lib/line-ending.js
+// ../../../markcut/node_modules/micromark-core-commonmark/lib/line-ending.js
 var lineEnding = {
   name: "lineEnding",
   tokenize: tokenizeLineEnding
@@ -8013,7 +8015,7 @@ function tokenizeLineEnding(effects, ok2) {
   }
 }
 
-// node_modules/micromark-core-commonmark/lib/thematic-break.js
+// ../../../markcut/node_modules/micromark-core-commonmark/lib/thematic-break.js
 var thematicBreak = {
   name: "thematicBreak",
   tokenize: tokenizeThematicBreak
@@ -8052,7 +8054,7 @@ function tokenizeThematicBreak(effects, ok2, nok) {
   }
 }
 
-// node_modules/micromark-core-commonmark/lib/list.js
+// ../../../markcut/node_modules/micromark-core-commonmark/lib/list.js
 var list = {
   continuation: {
     tokenize: tokenizeListContinuation
@@ -8182,7 +8184,7 @@ function tokenizeListItemPrefixWhitespace(effects, ok2, nok) {
   }
 }
 
-// node_modules/micromark-core-commonmark/lib/setext-underline.js
+// ../../../markcut/node_modules/micromark-core-commonmark/lib/setext-underline.js
 var setextUnderline = {
   name: "setextUnderline",
   resolveTo: resolveToSetextUnderline,
@@ -8274,7 +8276,7 @@ function tokenizeSetextUnderline(effects, ok2, nok) {
   }
 }
 
-// node_modules/micromark/lib/initialize/flow.js
+// ../../../markcut/node_modules/micromark/lib/initialize/flow.js
 var flow = {
   tokenize: initializeFlow
 };
@@ -8312,7 +8314,7 @@ function initializeFlow(effects) {
   }
 }
 
-// node_modules/micromark/lib/initialize/text.js
+// ../../../markcut/node_modules/micromark/lib/initialize/text.js
 var resolver = {
   resolveAll: createResolver()
 };
@@ -8451,7 +8453,7 @@ function resolveAllLineSuffixes(events, context) {
   return events;
 }
 
-// node_modules/micromark/lib/constructs.js
+// ../../../markcut/node_modules/micromark/lib/constructs.js
 var constructs_exports = {};
 __export(constructs_exports, {
   attentionMarkers: () => attentionMarkers,
@@ -8526,7 +8528,7 @@ var disable = {
   null: []
 };
 
-// node_modules/micromark/lib/create-tokenizer.js
+// ../../../markcut/node_modules/micromark/lib/create-tokenizer.js
 function createTokenizer(parser, initialize, from) {
   let point3 = {
     _bufferIndex: -1,
@@ -8849,7 +8851,7 @@ function serializeChunks(chunks, expandTabs) {
   return result.join("");
 }
 
-// node_modules/micromark/lib/parse.js
+// ../../../markcut/node_modules/micromark/lib/parse.js
 function parse(options) {
   const settings = options || {};
   const constructs2 = (
@@ -8875,14 +8877,14 @@ function parse(options) {
   }
 }
 
-// node_modules/micromark/lib/postprocess.js
+// ../../../markcut/node_modules/micromark/lib/postprocess.js
 function postprocess(events) {
   while (!subtokenize(events)) {
   }
   return events;
 }
 
-// node_modules/micromark/lib/preprocess.js
+// ../../../markcut/node_modules/micromark/lib/preprocess.js
 var search = /[\0\t\n\r]/g;
 function preprocess() {
   let column = 1;
@@ -8961,7 +8963,7 @@ function preprocess() {
   }
 }
 
-// node_modules/micromark-util-decode-string/index.js
+// ../../../markcut/node_modules/micromark-util-decode-string/index.js
 var characterEscapeOrReference = /\\([!-/:-@[-`{-~])|&(#(?:\d{1,7}|x[\da-f]{1,6})|[\da-z]{1,31});/gi;
 function decodeString(value2) {
   return value2.replace(characterEscapeOrReference, decode);
@@ -8979,7 +8981,7 @@ function decode($0, $1, $2) {
   return decodeNamedCharacterReference($2) || $0;
 }
 
-// node_modules/mdast-util-from-markdown/lib/index.js
+// ../../../markcut/node_modules/mdast-util-from-markdown/lib/index.js
 var own3 = {}.hasOwnProperty;
 function fromMarkdown(value2, encoding, options) {
   if (encoding && typeof encoding === "object") {
@@ -9688,7 +9690,7 @@ function defaultOnError(left, right) {
   }
 }
 
-// node_modules/remark-parse/lib/index.js
+// ../../../markcut/node_modules/remark-parse/lib/index.js
 function remarkParse(options) {
   const self = this;
   self.parser = parser;
@@ -9705,7 +9707,7 @@ function remarkParse(options) {
   }
 }
 
-// node_modules/fault/index.js
+// ../../../markcut/node_modules/fault/index.js
 var import_format = __toESM(require_format(), 1);
 var fault = Object.assign(create(Error), {
   eval: create(EvalError),
@@ -9724,7 +9726,7 @@ function create(Constructor) {
   }
 }
 
-// node_modules/micromark-extension-frontmatter/lib/to-matters.js
+// ../../../markcut/node_modules/micromark-extension-frontmatter/lib/to-matters.js
 var own4 = {}.hasOwnProperty;
 var markers = {
   yaml: "-",
@@ -9761,7 +9763,7 @@ function matter(option) {
   return result;
 }
 
-// node_modules/micromark-extension-frontmatter/lib/syntax.js
+// ../../../markcut/node_modules/micromark-extension-frontmatter/lib/syntax.js
 function frontmatter(options) {
   const matters = toMatters(options);
   const flow3 = {};
@@ -9947,7 +9949,7 @@ function pick(schema, prop) {
   return typeof schema === "string" ? schema : schema[prop];
 }
 
-// node_modules/escape-string-regexp/index.js
+// ../../../markcut/node_modules/escape-string-regexp/index.js
 function escapeStringRegexp(string3) {
   if (typeof string3 !== "string") {
     throw new TypeError("Expected a string");
@@ -9955,7 +9957,7 @@ function escapeStringRegexp(string3) {
   return string3.replace(/[|\\{}()[\]^$+*?.]/g, "\\$&").replace(/-/g, "\\x2d");
 }
 
-// node_modules/mdast-util-frontmatter/lib/index.js
+// ../../../markcut/node_modules/mdast-util-frontmatter/lib/index.js
 function frontmatterFromMarkdown(options) {
   const matters = toMatters(options);
   const enter = {};
@@ -10022,7 +10024,7 @@ function pick2(schema, prop) {
   return typeof schema === "string" ? schema : schema[prop];
 }
 
-// node_modules/remark-frontmatter/lib/index.js
+// ../../../markcut/node_modules/remark-frontmatter/lib/index.js
 var emptyOptions2 = "yaml";
 function remarkFrontmatter(options) {
   const self = (
@@ -10445,6 +10447,7 @@ function preserveVariantAttrs(node2, attrs) {
     "camera",
     "cinematic",
     "streetView",
+    "routeAnimation",
     "name",
     "title",
     "transition",
@@ -10671,6 +10674,7 @@ function parseNodeLine(content3, lineNum) {
         start: attrs.start,
         view: attrs.view,
         routeMarker: attrs.routeMarker,
+        routeAnimation: attrs.routeAnimation,
         travelMode: attrs.travelMode,
         routeColor: attrs.routeColor,
         routeWeight: attrs.routeWeight,

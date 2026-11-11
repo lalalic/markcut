@@ -163,6 +163,7 @@ export interface DescriptiveMap extends DescriptiveBaseNode {
   region?: string;
   travelMode?: "DRIVING" | "WALKING" | "BICYCLING" | "TRANSIT";
   routeMarker?: string;
+  routeAnimation?: {startHold?: number; endHold?: number; easing?: "linear" | "easeInOut"};
   camera?: {
     zoom?: DescriptiveTweenable;
     center?: { lat: DescriptiveTweenable; lng: DescriptiveTweenable };
@@ -658,6 +659,7 @@ function compileLeaf(node: Exclude<DescriptiveNode, DescriptiveContainer | Descr
         region: node.region,
         travelMode: node.travelMode ?? "DRIVING",
         routeMarker: node.routeMarker ?? "🚗",
+        routeAnimation: node.routeAnimation,
         camera: node.camera,
         cinematic: node.cinematic,
         streetView: node.streetView,
@@ -943,6 +945,7 @@ function compileMap(
     region: node.region,
     travelMode: node.travelMode ?? "DRIVING",
     routeMarker: node.routeMarker ?? "🚗",
+    routeAnimation: node.routeAnimation,
     camera: node.camera,
     cinematic: node.cinematic,
     streetView: node.streetView,

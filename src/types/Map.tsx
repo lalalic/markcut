@@ -44,6 +44,8 @@ import {
   routePositionAtLegs,
   modeEmoji,
   routeMarkerGlyph,
+  pointAlongPath,
+  locationsForRouteFit,
   type RouteLeg,
   type RouteStopWindow,
 } from "../utils/route-legs";
@@ -284,26 +286,8 @@ function MapChildRender({ child }: { child: Stream }): React.ReactElement | null
   return React.createElement(Renderer, { stream: child });
 }
 
-// ============================================================
-// Hide Google Maps attribution / UI text (Google logo, "Keyboard
-// shortcuts", "Terms", "Report a map error", "Map data ©...") from the
-// rendered output. Both the 2D map and Street View share the `.gm-style`
-// DOM, so two rules cover every view. Injected once, globally.
-// ============================================================
-let googleMapsUiHidden = false;
-function hideGoogleMapsUi(): void {
-  if (googleMapsUiHidden || typeof document === "undefined") return;
-  googleMapsUiHidden = true;
-  const style = document.createElement("style");
-  style.textContent = [
-    // Attribution / copyright blocks: "Map data ©Google", "Keyboard shortcuts",
-    // "Terms", "Report a map error" / "Report a problem".
-    ".gm-style-cc { display: none !important; }",
-    // Google logo link ("Google" in the bottom-left).
-    '.gm-style a[href*="maps.google.com/maps"] { display: none !important; }',
-  ].join("\n");
-  document.head.appendChild(style);
-}
+// Google Maps branding and legal attribution must remain visible in the rendered video.
+// Do not hide, crop or obscure Google's copyright notices or provider logos.
 
 // Cache identical routing requests within one preview session. Scrubbing the
 // Remotion timeline remounts scenes; do not issue a billable Routes request
@@ -359,8 +343,6 @@ export function MapLeaf({ stream }: { stream: MapStream }) {
 
   React.useEffect(() => {
     if (stream.mapType === "schematic") return;
-    // Strip Google Maps attribution / UI text from the rendered video.
-    hideGoogleMapsUi();
 
     mapLoadHandleRef.current = delayRender("Waiting for map to load...");
     mapLoadContinuedRef.current = false;
@@ -480,9 +462,16 @@ function RouteMap({
   const waypoints = stream.waypoints ?? [];
   const start = stream.start ?? 0;
   const end = stream.end ?? start + (stream.duration ?? 1);
-  // Fit all observed stops to the video composition by default. Explicit
-  // stream/camera center and zoom take precedence over automatic framing.
-  const fitted = React.useMemo(() => fitRouteViewport(waypoints, width, height), [waypoints, width, height]);
+  // After Google Routes loads, fit its actual road geometry (which can detour
+  // far beyond source stops). Preserve explicit center/zoom overrides.
+  const [routePath, setRoutePath] = React.useState<Array<{lat: number; lng: number}>>([]);
+  const handleRoutePath = React.useCallback((path: Array<{lat: number; lng: number}>) => {
+    setRoutePath(path);
+  }, []);
+  const fitted = React.useMemo(
+    () => fitRouteViewport([...waypoints, ...routePath], width, height, {padding: 0.19}),
+    [waypoints, routePath, width, height],
+  );
   const fallbackCenter = stream.center ?? fitted?.center ?? waypoints[0] ?? {lat: 0, lng: 0};
   const center = {
     lat: resolveTween(frame, fps, stream.camera?.center?.lat, start, end, fallbackCenter.lat),
@@ -506,9 +495,11 @@ function RouteMap({
         travelMode={stream.travelMode ?? "DRIVING"}
         markerEmoji={stream.routeMarker ?? "🚗"}
         actionDuration={end - start}
+        routeAnimation={stream.routeAnimation}
         routeColor={stream.routeColor ?? "#4285F4"}
         routeWeight={stream.routeWeight ?? 4}
         children={stream.children as Stream[]}
+        onRoutePath={handleRoutePath}
       />
     </GoogleMap>
   );
@@ -1008,19 +999,24 @@ function RouteWithMarker({
 // (✈️ 🚢 🚶 🚲 🚌 🚗).
 // ============================================================
 function RouteWithMarkerLegs({
-  waypoints, travelMode, markerEmoji, actionDuration, routeColor, routeWeight, children,
+  waypoints, travelMode, markerEmoji, actionDuration, routeColor, routeWeight, children, onRoutePath, routeAnimation,
 }: {
   waypoints: { lat: number; lng: number; label?: string; media?: string; mode?: string }[];
   travelMode: string;
   markerEmoji: string;
   actionDuration: number;
+  routeAnimation?: {startHold?: number; endHold?: number; easing?: "linear" | "easeInOut"};
   routeColor: string;
   routeWeight: number;
   children?: Stream[];
+  onRoutePath?: (path: Array<{lat: number; lng: number}>) => void;
 }) {
   const legs = useRouteLegs(waypoints, travelMode);
+  React.useEffect(() => {
+    if (legs.length) onRoutePath?.(locationsForRouteFit([], legs));
+  }, [legs, onRoutePath]);
   const stops = useRouteStops(children, waypoints, legs);
-  const position = useAnimatedPositionLegs({ legs, actionDuration, stops });
+  const position = useAnimatedPositionLegs({ legs, actionDuration, stops, timing: routeAnimation });
   const glyph = routeMarkerGlyph(markerEmoji, position?.mode);
 
   return (
@@ -1145,17 +1141,18 @@ function useRouteLegs(
 // (view:"route"): returns { lat, lng, mode } for the current frame
 // ============================================================
 function useAnimatedPositionLegs({
-  legs, actionDuration, stops = [],
+  legs, actionDuration, stops = [], timing,
 }: {
   legs: RouteLeg[];
   actionDuration: number;
   stops?: RouteStopWindow[];
+  timing?: {startHold?: number; endHold?: number; easing?: "linear" | "easeInOut"};
 }) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   return React.useMemo(
-    () => routePositionAtLegs(legs, actionDuration, frame / fps, stops),
-    [legs, frame, fps, actionDuration, stops],
+    () => routePositionAtLegs(legs, actionDuration, frame / fps, stops, timing),
+    [legs, frame, fps, actionDuration, stops, timing],
   );
 }
 
@@ -1280,13 +1277,7 @@ function routePositionAt(
 
   const stepElapsed = currentInSecond - elapsedInSeconds;
   const stepProgress = stepElapsed / (step.duration?.value ?? 1);
-  const pathIdx = Math.min(
-    Math.max(0, Math.floor(stepProgress * step.path.length)),
-    step.path.length - 1,
-  );
-  const pt = step.path[pathIdx];
-  if (!pt) return null;
-  return { lat: pt.lat(), lng: pt.lng() };
+  return pointAlongPath(step.path.map((p) => ({lat: p.lat(), lng: p.lng()})), stepProgress);
 }
 
 // ============================================================

@@ -188,3 +188,37 @@ describe('routeMarkerGlyph',()=>{
   expect(routeMarkerGlyph('🚗','DRIVING')).toBe('🚗');
  });
 });
+
+describe('natural road-video polyline interpolation and fit', () => {
+  it('interpolates by distance, not by the uneven vertex count', async () => {
+    const {pointAlongPath} = await import('../src/utils/route-legs');
+    const path=[{lat:45,lng:-76},{lat:45,lng:-75.999},{lat:45,lng:-75.99}];
+    const mid=pointAlongPath(path,0.5)!;
+    expect(mid.lng).toBeCloseTo(-75.995,3);
+    expect(pointAlongPath(path,1)!.lng).toBeCloseTo(-75.99,5);
+  });
+  it('fits full Google road detour, not only filmed GPS endpoints', async () => {
+    const {locationsForRouteFit} = await import('../src/utils/route-legs');
+    const {fitRouteViewport} = await import('../src/utils/map-viewport');
+    const gps=[{lat:45,lng:-76},{lat:45,lng:-75.99}];
+    const route=[{mode:'DRIVING',from:gps[0]!,to:gps[1]!,durationSec:90,
+      steps:[{durationSec:90,path:[gps[0]!,{lat:45.1,lng:-75.995},gps[1]!]}]}];
+    const before=fitRouteViewport(gps,540,960,{padding:0.19})!;
+    const after=fitRouteViewport(locationsForRouteFit(gps,route),540,960,{padding:0.19})!;
+    expect(after.zoom).toBeLessThan(before.zoom);
+    expect(after.center.lat).toBeGreaterThan(before.center.lat);
+  });
+});
+
+describe('video route animation timing',()=>{
+  it('holds on the source start/end GPS location and eases movement in between',async()=>{
+    const {routePositionAtLegs}=await import('../src/utils/route-legs');
+    const from={lat:45,lng:-76},to={lat:45,lng:-75.99};
+    const legs=[{mode:'WALKING',from,to,durationSec:200,steps:[{durationSec:200,path:[from,to]}]}];
+    const config={startHold:0.6,endHold:0.8,easing:'easeInOut' as const};
+    expect(routePositionAtLegs(legs,8,.3,[],config)?.lng).toBeCloseTo(-76,4);
+    expect(routePositionAtLegs(legs,8,7.6,[],config)?.lng).toBeCloseTo(-75.99,4);
+    expect(routePositionAtLegs(legs,8,.9,[],config)!.lng).toBeLessThan(-75.999);
+    expect(routePositionAtLegs(legs,8,4,[],config)!.lng).toBeGreaterThan(-76);
+  });
+});

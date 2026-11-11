@@ -334,3 +334,15 @@ When working with native Google maps, prefer `view:overview|route|cinematic|stre
 **Fixed root cause:** Hosted Preview already stamped `GOOGLE_MAPS_API_KEY` during compilation, but `markcut render`'s Markdown pipeline previously called `compileDescriptiveRoot(final)` without options, leaving native maps unkeyed. The CLI now supplies `{googleMapsApiKey:process.env.GOOGLE_MAPS_API_KEY}` and refuses an unkeyed native map or fatal Google/Routes render error. The produced H.264 container alone is not proof that Google tiles, computed route or panorama are visible. Inspect real moving preview frames and confirm each view individually.
 
 **Critical differences:** `route` is Google-computed navigational path between observed GPS positions, *not* proof of which road the creator traveled. `cinematic` defaults to 2D Google satellite pan/tilt/heading rather than actual drone/3D terrain. `streetview` needs a covered nearby panorama, otherwise the scene is invalid for that spot. For four-mode Vlog scenes, use `markcut verify /absolute/video.md` then the Neo-hosted `markcut.preview` UI. Its internal MP4 map cache is a playback optimization and must never replace the editable Markdown deliverable. Check Google Maps JavaScript API billing, restrictions, quotas and Routes API permissions before live rendering; preserve provider attribution and content-use terms for any public video.
+
+### 9:16 framing and human-paced route animation
+
+For native Google `view:route`, the camera auto-fits the **full provider-returned road polyline** when available, with 19% padding for vertical mobile layouts; it falls back to fit filmed GPS stops while waiting for Google Routes. Do not set `zoom`/`center` on this mode unless you intentionally override the fit. Google road detours can extend outside the source stop bounds. Travel marker positions interpolate along polyline **distance**, not vertex indices, to avoid jerky movement. Route duration is **editorial screen time**; Google leg duration merely determines the proportions of time allocated to individual legs.
+
+```md
+## Map-Route
+layout:parallel
+- map view:route mapType:roadmap duration:8 routeAnimation:{startHold:0.5,endHold:0.7,easing:easeInOut} waypoints:[45.3,-75.9,"A";45.33,-75.87,"B"]
+```
+
+This holds 0.5s at the start, animates the road route with gently eased start/finish, and holds 0.7s at the destination. If a map has children with `at:"Stop"` + timed duration (explicit intermediate dwell), the marker holds at the chosen stop and uses linear travel in the remaining time to keep manual stop times aligned. `fps:24` or `fps:30` produces smoother map footage than 12fps test renders. Cinematic remains a follow camera; consider `headingFollow:false` and a slow heading tween at sharp turns. Always keep original Google Maps branding, legal attribution and required map data notices visible; do not hide them in CSS, crop them out, or place captions over them.
