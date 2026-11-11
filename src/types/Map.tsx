@@ -48,6 +48,7 @@ import {
   type RouteStopWindow,
 } from "../utils/route-legs";
 import type { MapStream, Stream } from "../schema/index";
+import { SchematicRouteMap } from "./SchematicRouteMap";
 
 // API key is injected by the compiler onto the stream node (see compileLeaf in compiler.ts).
 // This fallback handles the case where Map.tsx is used directly without the compiler.
@@ -357,6 +358,7 @@ export function MapLeaf({ stream }: { stream: MapStream }) {
   const mapLoadContinuedRef = React.useRef(false);
 
   React.useEffect(() => {
+    if (stream.mapType === "schematic") return;
     // Strip Google Maps attribution / UI text from the rendered video.
     hideGoogleMapsUi();
 
@@ -379,7 +381,7 @@ export function MapLeaf({ stream }: { stream: MapStream }) {
       }
       mapLoadHandleRef.current = null;
     };
-  }, [stream.id, start, end]);
+  }, [stream.id, stream.mapType, start, end]);
 
   const handleMapReady = React.useCallback(() => {
     if (!mapLoadContinuedRef.current && mapLoadHandleRef.current !== null) {
@@ -394,6 +396,17 @@ export function MapLeaf({ stream }: { stream: MapStream }) {
     view === "cinematic" &&
     stream.cinematic?.fallback === "none" &&
     (stream.cinematic.mode === "flyTo" || stream.cinematic.mode === "orbit");
+
+  if (stream.mapType === "schematic" && view !== "route") {
+    throw Error("mapType:schematic currently supports only view:route");
+  }
+  if (stream.mapType === "schematic" && view === "route") {
+    return (
+      <Sequence durationInFrames={durFrames} from={Math.floor(fps * start)} layout="none">
+        <SchematicRouteMap stream={stream} />
+      </Sequence>
+    );
+  }
 
   return (
     <Sequence

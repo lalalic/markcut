@@ -408,3 +408,7 @@ mirrors a view-only mobile preview when no ChatGPT thread is bound. Neither
 path embeds an APNs key or creates its own notification provider. Standalone
 Markcut compilation without human-review delivery does not require Neo Mobile
 or Agents Relay.
+
+### Offline schematic routes
+
+Use `- map view:route mapType:schematic duration:5 waypoints:[45.4236,-75.7009,"Start";45.4295,-75.7090,"End"]` in a Markcut scene for a deterministic, Google-independent, animated geographic schematic. It labels connections as illustrative (not computed roads or recorded GPS tracks). The renderer accepts verified waypoint coordinates and produces real moving map frames without a web request. For a route chapter in a larger Vlog, render it separately, verify decode/motion, and insert the resulting MP4 into the main film. Other map types still require working provider credentials and render checks.
