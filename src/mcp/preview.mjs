@@ -5,7 +5,7 @@ import { constants as fsConstants, readFileSync } from "node:fs";
 import { isAbsolute, extname, dirname, resolve, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildPreviewBridgeScript } from "./bridge.mjs";
-import { externalizePreviewMedia, publicOrigin, resolveMountedFile, resolvePreviewPath, publishPlayerBundle, publishCompiledCache, prunePublishedCache, EXPORT_ROOT } from "./remote-assets.mjs";
+import { externalizePreviewMedia, publicOrigin, resolveMountedFile, resolvePreviewPath, publishPlayerBundle, publishCompiledCache, prunePublishedCache, versionPreviewMedia, EXPORT_ROOT } from "./remote-assets.mjs";
 import {fingerprintInputs} from "./source-fingerprint.mjs";
 
 export const TOOL_NAME = "markcut.preview";
@@ -84,7 +84,7 @@ const KEEP = 10;
 export function getPreviewMedia(contentHash) {
   if (!/^[a-f0-9]{64}$/.test(contentHash)) throw new Error("Invalid Markcut content hash");
   try {
-    return {compiled:JSON.parse(readFileSync(resolve(EXPORT_ROOT,"cache",contentHash+".json"),"utf8"))};
+    return {compiled:versionPreviewMedia(JSON.parse(readFileSync(resolve(EXPORT_ROOT,"cache",contentHash+".json"),"utf8")))};
   } catch {throw new Error("Unknown or expired Markcut compiled scenes");}
 }
 
@@ -242,7 +242,7 @@ export async function ensureVideoPreview(path, options = {}) {
     });
     report("freezing-preview-assets");
     const external=externalizePreviewMedia(footage.compiled,id,publicOrigin(),baseDir);
-    finalCompiled=external.compiled;
+    finalCompiled=versionPreviewMedia(external.compiled);
     await mkdir(cacheDir,{recursive:true});
     try {await writeFile(cached,JSON.stringify(finalCompiled,null,2),{flag:"wx"});}
     catch(error){if(error.code!=="EEXIST")throw error;}

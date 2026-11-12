@@ -72,6 +72,48 @@ export function publishPlayerBundle(bundlePath, origin=publicOrigin()) {
   return origin+"/files/_neoy/markcut/player/"+filename;
 }
 
+// Preview media URLs are a transport view, not the authored Markdown source.
+// Include a stable revision of the source file in their cache key. A CDN may
+// otherwise keep serving an old large original after the Master activates a
+// smaller preview proxy under the same mounted source path.
+export function versionPreviewMedia(compiled, origin=publicOrigin(), mountedRoots=null) {
+  const prefix=origin+"/preview-files/";
+  let mounts=mountedRoots;
+  if(!mounts)try{mounts=JSON.parse(readFileSync(join(supportDir,"file-mounts.json"),"utf8"));}catch{mounts={};}
+  const versioned=(value)=>{
+    if(typeof value!=="string"||!value.startsWith(prefix))return value;
+    let url;
+    try {url=new URL(value);}catch{return value;}
+    if(url.origin!==origin||!url.pathname.startsWith("/preview-files/"))return value;
+    const parts=url.pathname.slice("/preview-files/".length).split("/");
+    const [mount,...relative]=parts.map(decodeURIComponent);
+    let fingerprint="unmounted";
+    if(/^[A-Za-z0-9_-]{1,64}$/.test(mount) && relative.length &&
+       relative.every(s=>s&&!s.startsWith(".")&&s!==".."&&!s.includes("/")&&!s.includes("\\")) &&
+       typeof mounts[mount]==="string"){
+      try{
+        const root=realpathSync(mounts[mount]);
+        const source=realpathSync(resolve(root,...relative));
+        if(source.startsWith(root+sep)){
+          const stats=statSync(source);
+          fingerprint=`${stats.size}:${stats.mtimeMs}`;
+        }
+      }catch{}
+    }
+    const version=createHash("sha256").update("markcut-preview-proxy-v2\0")
+      .update(url.pathname).update("\0").update(fingerprint).digest("hex").slice(0,16);
+    url.searchParams.set("pv",version);
+    return url.href;
+  };
+  const walk=(value)=>{
+    if(typeof value==="string")return versioned(value);
+    if(Array.isArray(value))return value.map(walk);
+    if(value&&typeof value==="object")return Object.fromEntries(Object.entries(value).map(([k,v])=>[k,walk(v)]));
+    return value;
+  };
+  return walk(compiled);
+}
+
 export function resolvePreviewSource(src,sourceDir,origin=publicOrigin(),mounts=null) {
   if(src.startsWith("data:"))return src;
   if(src.startsWith("https://"))return src;

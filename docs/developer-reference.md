@@ -307,6 +307,15 @@ Whenever Markcut MCP server, preview UI, bridge, or bundled player code changes,
 
 ## Stateless MCP review
 
+For media served by `/preview-files/`, Markcut versions each compiled video URL with
+a stable `pv` query key based on the mounted source path, size, and modification
+time. `markcut.preview.media` also adds the key when reading previously compiled
+revisions, so old Cloudflare-cached originals do not override the latest mobile
+transcode proxy. The NeoY Rust file server validates the key and serves preview
+responses with `Cache-Control: no-store`; the unmodified `/files/` route still
+streams the original. No `video.md` edits are needed. See
+`tests/mcp-preview-proxy-version.test.mjs`.
+
 `markcut.preview` compiles and publishes an immutable revision for the calling ChatGPT conversation. The hosted app verifies the current path-keyed revision record before enabling review and sends decisions to that same conversation with `ui/message`. Neo Mobile owns its locally notified requests and delivery. Markcut does not store shared review history or poll for decisions. `markcut.preview.media({contentHash})` reads a compiled revision when a client needs its scene tree; operation status, immutable content fingerprints, media cache and safe pruning remain server-owned.
 
 ## MCP background-audio regression guard
