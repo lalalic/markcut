@@ -1,0 +1,44 @@
+/* ChatGPT MCP iframe on phones: keep scenes, video controls and review actions
+ * in separate normal-flow rows. Never position the footer over the player. */
+@media (max-width: 640px), (max-height: 520px) {
+  html, body { min-width: 0; width: 100%; overflow-x: hidden; }
+  main { box-sizing: border-box; width: 100%; padding: 8px 10px 12px; }
+  main > header { flex-wrap: wrap; gap: 4px 8px; min-width: 0; padding-bottom: 4px; }
+  main > header h1 { flex: 1 1 145px; min-width: 0; margin: 4px 0; font-size: 15px; line-height: 21px;
+    overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  main > header > div { flex: 0 1 auto; margin-left: 0 !important; gap: 7px !important;
+    flex-wrap: wrap; justify-content: flex-end; }
+  #review-delivery-mode, #player-version { font-size: 11px !important; }
+  #remotion-preview { display: flex; flex-direction: column; min-width: 0; }
+  /* A vertical 9:16 movie must scale BOTH dimensions together. The original
+     width:100% / max-height:65vh combination filled the screen and clipped
+     Remotion's bottom transport and the scene selector in mobile chat. */
+  #remotion-canvas {
+    box-sizing: border-box;
+    width: min(100%, calc(min(58dvh, 440px) * var(--markcut-player-ratio, 0.5625))) !important;
+    max-height: min(58dvh, 440px) !important;
+    flex: 0 0 auto;
+    overflow: visible;
+  }
+  #scene-thumbnails { order: -1; min-width: 0; max-width: 100%; gap: 6px;
+    padding: 4px 0 9px; margin: 0; scroll-snap-type: x proximity; }
+  .scene-pill { flex-shrink: 0; max-width: 145px; box-sizing: border-box;
+    overflow: hidden; text-overflow: ellipsis; scroll-snap-align: start;
+    min-height: 36px; padding: 9px 10px; }
+  #comment-entry { margin: 9px 0 6px; }
+  #feedback { box-sizing: border-box; height: 76px !important; min-height: 76px !important;
+    max-height: 112px !important; font-size: 14px; line-height: 19px; }
+  .review-actions { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr);
+    grid-template-areas: 'changes approve' 'status status'; gap: 7px 8px; align-items: center; }
+  #approve:disabled, #changes:disabled { opacity: .55; cursor: default; }
+  #changes { grid-area: changes; }
+  #approve { grid-area: approve; }
+  .review-actions button { box-sizing: border-box; min-width: 0; width: 100%; min-height: 42px; font-size: 13px; }
+  #status { grid-area: status; width: 100%; min-width: 0; text-align: center;
+    font-size: 12px; line-height: 16px; }
+}
+@media (max-width: 360px) {
+  main { padding-inline: 7px; }
+  main > header h1 { flex-basis: 130px; font-size: 14px; }
+  .scene-pill { max-width: 125px; }
+}

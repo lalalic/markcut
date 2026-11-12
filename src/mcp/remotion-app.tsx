@@ -15,6 +15,13 @@ function App(){
  const ref=React.useRef<PlayerRef|null>(null);
  const [currentTime,setCurrentTime]=React.useState(0);
  const [browserTts,setBrowserTts]=React.useState(true);
+ const [compact,setCompact]=React.useState(()=>window.matchMedia('(max-width: 640px), (max-height: 520px)').matches);
+ React.useEffect(()=>{
+  const query=window.matchMedia('(max-width: 640px), (max-height: 520px)');
+  const update=()=>setCompact(query.matches);
+  query.addEventListener('change',update);
+  return ()=>query.removeEventListener('change',update);
+ },[]);
  const [commentedScenes,setCommentedScenes]=React.useState<string[]>([]);
  const [spotMarkers,setSpotMarkers]=React.useState<Array<{id:number;scope:'overall'|'scene'|'spot';text:string;context:{timeSeconds:number;sceneName?:string};selected:boolean;placeholder?:boolean}>>([{id:0,scope:'overall',text:'',context:{timeSeconds:0},selected:true,placeholder:true}]);
  const [seekBar,setSeekBar]=React.useState<HTMLElement|null>(null);
@@ -89,13 +96,13 @@ function App(){
  if(!data)return <div>Missing compiled scene tree</div>;
  const videoName=String(revision.title||revision.videoTitle||revision.path?.split('/').pop()?.replace(/\.md$/i,'').replace(/[-_]+/g,' ')||'Video');
  return <div id="remotion-preview" data-revision={revision.revisionId}>
-  {document.getElementById("header-tts")&&createPortal(
+  {Boolean(data?.subtitle?.src)&&document.getElementById("header-tts")&&createPortal(
    <label style={{display:"flex",gap:5,alignItems:"center",fontSize:12,whiteSpace:"nowrap",cursor:"pointer"}} title="Use browser narration with captions from the script">
     <input type="checkbox" checked={useBrowserTts} disabled={!data?.subtitle?.src} onChange={e=>setBrowserTts(e.target.checked)}/>
     Browser TTS
    </label>,document.getElementById("header-tts")!)}
-  <div id="remotion-canvas" style={{position:'relative',width:'100%',aspectRatio:`${data.width||1080}/${data.height||1920}`,maxHeight:'65vh',margin:'auto'}}>
-   <SharedPlayer key={revision.revisionId} root={playbackRoot} playerRef={ref} numberOfSharedAudioTags={0} style={{width:'100%',height:'100%'}} />
+  <div id="remotion-canvas" style={{position:'relative',width:'100%',aspectRatio:`${data.width||1080}/${data.height||1920}`,maxHeight:'65vh',margin:'auto', '--markcut-player-ratio':String((data.width||1080)/(data.height||1920))} as React.CSSProperties}>
+   <SharedPlayer key={revision.revisionId} root={playbackRoot} playerRef={ref} numberOfSharedAudioTags={0} showPlaybackRateControl={!compact} style={{width:'100%',height:'100%'}} />
    {useBrowserTts&&caption&&<div id="browser-tts-caption" aria-live="off" style={{position:'absolute',bottom:50,left:12,right:12,zIndex:5,pointerEvents:'none',textAlign:'center'}}>
     <span style={{display:'inline-block',maxWidth:'90%',padding:'5px 10px',borderRadius:5,background:'rgba(0,0,0,.72)',color:'#fff',fontSize:'clamp(12px,1.6vw,18px)',lineHeight:1.4,textShadow:'0 1px 2px #000',overflowWrap:'anywhere'}}>{caption}</span>
    </div>}

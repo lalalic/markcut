@@ -28,11 +28,22 @@ describe('Markcut Remotion MCP App',()=>{
   expect(html).toContain('https://neoy.example.test/files/_neoy/markcut/player/');
   expect(html).not.toContain('id="remotion-bundle"');
   // The generic event contract requires client-side identity and reserved-field validation.
-  expect(html.length).toBeLessThan(26000);
+  expect(html.length).toBeLessThan(30000);
   expect(html).not.toContain('<video id="video-player"');
   expect(html).not.toContain('data:video/mp4');
   expect(html).not.toContain('127.0.0.1');
   expect(html).not.toContain('src="/player.js"');
+ });
+ it('fits the phone player by BOTH width and height, with scenes above canvas and actions in normal flow',()=>{
+  const html=buildPreviewHtml();
+  expect(html).toContain('@media (max-width: 640px), (max-height: 520px)');
+  expect(html).toContain('var(--markcut-player-ratio, 0.5625)');
+  expect(html).toContain('#scene-thumbnails { order: -1;');
+  expect(html).toContain("grid-template-areas: 'changes approve' 'status status'");
+  expect(html).not.toMatch(/#remotion-canvas\s*\{[^}]*position\s*:\s*absolute/);
+  const app=readFileSync(new URL('../src/mcp/remotion-app.tsx',import.meta.url),'utf8');
+  expect(app).toContain('showPlaybackRateControl={!compact}');
+  expect(app).toContain('Boolean(data?.subtitle?.src)&&document.getElementById');
  });
  it('omits the developer BGM decode-status row while preserving Web Audio playback',()=>{
   const renderer=readFileSync(new URL('../src/mcp/remotion-app.tsx',import.meta.url),'utf8');
@@ -41,9 +52,9 @@ describe('Markcut Remotion MCP App',()=>{
   expect(audio).toContain('ctx.decodeAudioData(bytes)');
   expect(audio).toContain("p.addEventListener('play',play)");
  });
- it('publishes v46 while retaining v45 as a compatible alias',()=>{
-  expect(RESOURCE_URI).toBe('ui://markcut/video-preview-v46.html');
-  expect(LEGACY_RESOURCE_URIS).toContain('ui://markcut/video-preview-v45.html');
+ it('publishes v47 while retaining v46 as a compatible alias',()=>{
+  expect(RESOURCE_URI).toBe('ui://markcut/video-preview-v47.html');
+  expect(LEGACY_RESOURCE_URIS).toContain('ui://markcut/video-preview-v46.html');
  });
  it('registers latest resource at startup and aliases previous URIs',()=>{
   for(const uri of [RESOURCE_URI,...LEGACY_RESOURCE_URIS]){
