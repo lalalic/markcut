@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest';
-import {parseEventPreviewOptions,neoReviewEndpoint,buildReviewRequest,submitNeoReview} from '../src/mcp/mobile-review-cli.mjs';
+import {parseEventPreviewOptions,neoReviewWrapper,buildReviewRequest,submitNeoReview} from '../src/mcp/mobile-review-cli.mjs';
 
 describe('Standalone Markcut CLI preview (notification belongs to Neo)',()=>{
  it('accepts externally supplied event templates without a phone or APNs URL',()=>{
@@ -11,7 +11,7 @@ describe('Standalone Markcut CLI preview (notification belongs to Neo)',()=>{
  });
 });
 
-describe('Neo-owned REST notification from standalone CLI',()=>{
+describe('Neo-owned wrapper delivery from standalone CLI',()=>{
  const id='82ba2e6c-6432-4ecd-83ee-cb78ba87c668';
  const hash='f'.repeat(64);
  const options={file:'/tmp/preview.md'};
@@ -30,22 +30,17 @@ describe('Neo-owned REST notification from standalone CLI',()=>{
   expect(request).not.toHaveProperty('jobId');
   expect(request).not.toHaveProperty('revisionId');expect(request).not.toHaveProperty('contentHash');
  });
- it('POSTs to local Neo Core REST and requires persisted matching ACK',async()=>{
+ it('delegates the complete immutable request to the Neo-owned wrapper',async()=>{
   const request=buildReviewRequest(options,{delivery:'text'},state,id);
   const seen:any[]=[];
-  const fetchImpl=async (url:string,init:any)=>{
-    seen.push({url,init});return {ok:true,json:async()=>({stored:true,requestId:id,accepted:false})};
-  };
-  const receipt=await submitNeoReview(request,{url:'http://127.0.0.1:6767/mobile/review/notify',fetchImpl} as any);
+  const receipt=await submitNeoReview(request,{deliver:async (value:any)=>{
+   seen.push(value);return {stored:true,requestId:id,accepted:false};
+  }} as any);
   expect(receipt.stored).toBe(true);
-  expect(seen[0].init.method).toBe('POST');
-  expect(JSON.parse(seen[0].init.body)).toEqual(request);
-  expect(seen[0].init.headers['Content-Type']).toBe('application/json');
-  await expect(submitNeoReview(request,{url:'http://127.0.0.1:6767/mobile/review/notify',fetchImpl:async()=>({ok:true,json:async()=>({stored:false,requestId:id})})} as any)).rejects.toThrow('acknowledge');
-  await expect(submitNeoReview(request,{url:'http://127.0.0.1:6767/mobile/review/notify',fetchImpl:async()=>({ok:false,status:403})} as any)).rejects.toThrow('403');
+  expect(seen).toEqual([request]);
+  await expect(submitNeoReview(request,{deliver:async()=>({stored:false,requestId:id})} as any)).rejects.toThrow('acknowledge');
  });
- it('rejects delivery to remote origins and non-review routes',async()=>{
-  expect(()=>neoReviewEndpoint('https://evil.example/mobile/review/notify')).toThrow('local REST');
-  await expect(submitNeoReview({id} as any,{url:'http://127.0.0.1:6767/mcp'})).rejects.toThrow('nonlocal');
+ it('requires a real Neo wrapper, never a direct review notification URL',()=>{
+  expect(()=>neoReviewWrapper('/does/not/exist')).toThrow('unavailable');
  });
 });

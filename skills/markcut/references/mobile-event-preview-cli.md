@@ -1,6 +1,6 @@
 # Codex / terminal → Neo Mobile Event Preview
 
-On **Neo Master**, with a current managed Relay Task execution context, create a JSON Event Template according to `agents-relay/skills/agents-relay/contracts/event-contract.md`. **Do not invent Job/Task/Execution identity.** Use the exact execution identity supplied by Relay, and a stable, unique `invocationId` for each new video review request. Do not prefill `decision`, `feedback`, `comments`, `revision`, `contentHash`, `revisionId`, `previewId`, `requestId`, or `idempotencyKey`.
+On **Neo Master**, with a current managed Relay Task execution context, create a JSON Event Template according to `agents-relay/skills/agents-relay/contracts/event-contract.md`. **Do not invent Job/Task/Execution identity.** Use the exact execution identity supplied by Relay, without manufacturing an invocation ID; the Task execution ID is authoritative. Do not prefill `decision`, `feedback`, `comments`, `revision`, `contentHash`, `revisionId`, `previewId`, `requestId`, or `idempotencyKey`.
 
 Example illustrative template file (`/tmp/review-event.json`; replace placeholders with actual Relay Task values):
 
@@ -12,8 +12,7 @@ Example illustrative template file (`/tmp/review-event.json`; replace placeholde
     "interactive": {
       "jobId": "<jobId>",
       "taskId": "<taskId>",
-      "executionId": "<executionId>",
-      "invocationId": "<unique-review-request-id>"
+      "executionId": "<executionId>"
     }
   }
 }
@@ -26,8 +25,13 @@ markcut verify /absolute/video.md
 markcut preview /absolute/video.md --delivery event --event-template /tmp/review-event.json
 ```
 
-The CLI submits to Neo Master’s durable review inbox. The existing APNs provider notifies the registered iPhone; the phone syncs outstanding reviews when opened or when a push arrives. **There is no phone MCP dependency.** Options: `--title`, `--group-id`, `--group-title`, `--request-id <UUID>`, `--timeout-ms`.
+The CLI submits the request through Neo's installed wrapper. The wrapper keeps a
+30-day pending-delivery queue; NeoY sends an APNs wake-up hint. The phone
+acquires through authenticated `review.preview.acquire` and stores its own
+history. Options: `--delivery`, `--event-template`, `--timeout-ms`.
 
-It starts the same detached Markcut MCP compile worker, waits for an immutable revision, and calls the phone's `review.request`. On phone acceptance it prints JSON, including `status: "review_requested"`, `requestId`, `contentHash`, and `revisionId`. It **does not wait for a human decision**. The phone can be offline or Neo can be suspended. The Master stores the review, with APNs as a best-effort wake-up hint. A rejected/missing ACK exits nonzero. If reattempting after an uncertain ACK, supply the **same** request UUID to avoid duplicate phone requests. Phone users can inspect the compiled scenes and submit `approved` or `changes_requested`, which publishes `task.interactive_decision` through the existing authenticated Events MCP. The Event's `data.interactive` includes the exact reviewed hash, scene/timestamp comments, and idempotency key.
+It starts the same detached Markcut MCP compile worker, waits for an immutable revision, and stores the request in Neo Wrapper. On durable storage it prints JSON, including `status: "review_requested"`, `requestId`, `contentHash`, and `revisionId`. It **does not wait for a human decision**. The phone can be offline or Neo can be suspended. The wrapper stores the delivery request, with APNs as a best-effort wake-up hint.
+Neo Mobile acknowledges only after its local persistent import, and retains
+its own history. If the wrapper cannot persist the request, CLI delivery fails. Phone users can inspect the compiled scenes and submit `approved` or `changes_requested`, which publishes `task.interactive_decision` through the existing authenticated Events MCP. The Event's `data.interactive` includes the exact reviewed hash, scene/timestamp comments, and idempotency key.
 
 Relay's Event receiver and Graph decide whether to resume/revise the original Task. **A successful phone enqueue is not a human approval or a resumed Codex thread.** Do not mark the Task complete until a real human decision was correlated to the correct immutable revision and the downstream workflow actually completed. For a local browser-only preview, omit `--delivery event` and use normal `markcut preview`.

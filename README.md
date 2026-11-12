@@ -397,13 +397,15 @@ choose or manage a browser/model provider.
 The MCP compiler itself does **not** send APNs notifications, manage Relay
 Invocations, or change Task state. Through Neo MCP, Neo's Federation Wrapper
 binds an optional Relay execution, watches compilation, and delivers the review
-through Neo.app Core's loopback-only `POST /mobile/review/notify` REST API.
+through the Neo wrapper-owned durable request queue and NeoY's generic
+loopback-only `POST /mobile/notify` APNs sender.
 
 The terminal command `markcut preview video.md --delivery event --event-template
 /path/event.json` compiles the same immutable revision, then sends its request
-to that same Neo.app Core REST endpoint. Exit status is nonzero if Neo Core does
-not confirm durable Inbox storage; a `review_requested` receipt confirms only
-Inbox acceptance, not the person's decision. `--delivery text` similarly
+to the installed Neo wrapper's `deliver` command. Exit status is nonzero if
+the wrapper does not confirm durable request storage; a `review_requested`
+receipt means the phone can acquire the request, not that it already accepted
+or decided it. `--delivery text` similarly
 mirrors a view-only mobile preview when no ChatGPT thread is bound. Neither
 path embeds an APNs key or creates its own notification provider. Standalone
 Markcut compilation without human-review delivery does not require Neo Mobile

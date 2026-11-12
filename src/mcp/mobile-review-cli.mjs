@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /** Standalone terminal preview compiler. Notification is owned by the Neo MCP wrapper. */
 import {readFileSync,existsSync} from 'node:fs';
-import {join,resolve,basename} from 'node:path';
+import {spawn,execFileSync} from 'node:child_process';
+import {join,resolve,basename,dirname} from 'node:path';
 import {homedir} from 'node:os';
 import {pathToFileURL} from 'node:url';
 import {normalizeReviewConfig} from './review-delivery.mjs';
@@ -27,25 +28,39 @@ export function parseEventPreviewOptions(argv) {
   return options;
 }
 
-// The compiler stays platform-neutral. The explicit CLI review workflow
-// delivers to Neo.app's authenticated local Core REST boundary, never APNs or
-// the Agent-facing MCP tool surface. Inability to persist the inbox is fatal.
-export function neoReviewEndpoint(override=process.env.NEO_REVIEW_NOTIFY_URL,
-  deploymentFile=join(homedir(),'Library','Application Support','NeoY','deployment.json')){
-  let url;
-  if(override)url=new URL(override);
-  else{
-    let port=6767;
-    if(existsSync(deploymentFile)){
-      const config=JSON.parse(readFileSync(deploymentFile,'utf8'));
-      if(Number.isInteger(config.mcpPort)&&config.mcpPort>0&&config.mcpPort<=65535)port=config.mcpPort;
-    }
-    url=new URL('http://127.0.0.1:'+port+'/mobile/review/notify');
-  }
-  if(url.protocol!=='http:'||!['localhost','127.0.0.1'].includes(url.hostname)||
-     url.pathname!=='/mobile/review/notify'||url.search||url.hash||url.username||url.password)
-    throw Error('Neo Review delivery must use the local REST notify endpoint');
-  return url.href;
+// The explicit Neo Mobile delivery CLI resolves the installed Neo wrapper.
+// No application-specific queue, APNs key or direct Review REST dependency
+// is embedded in Markcut's compiler/server.
+export function neoReviewWrapper(override=process.env.NEO_REVIEW_WRAPPER,
+                                 discover=execFileSync){
+ if(override){
+  const path=resolve(override);
+  if(!existsSync(path))throw Error('Neo preview wrapper is unavailable');
+  return path;
+ }
+ const catalog=JSON.parse(String(discover('neo',['skill','list'],
+   {encoding:'utf8',timeout:10000,maxBuffer:1024*1024})));
+ const entry=catalog.find(x=>x.name==='mcp-wrapper'&&typeof x.path==='string');
+ if(!entry)throw Error('Neo mcp-wrapper skill is unavailable');
+ const path=join(dirname(entry.path),'markcut.mjs');
+ if(!existsSync(path))throw Error('Neo preview wrapper is unavailable');
+ return path;
+}
+export async function deliverThroughNeoWrapper(request,{wrapper=neoReviewWrapper()}={}){
+ const child=spawn(process.execPath,[wrapper,'deliver'],{stdio:['pipe','pipe','pipe']});
+ return await new Promise((resolve,reject)=>{
+  let out='',err='';
+  const timer=setTimeout(()=>{child.kill();reject(Error('Neo review delivery timed out'))},20000);
+  child.stdout.on('data',bytes=>{out+=String(bytes);if(out.length>65536)child.kill();});
+  child.stderr.on('data',bytes=>{err+=String(bytes);if(err.length>2000)err=err.slice(0,2000);});
+  child.on('error',error=>{clearTimeout(timer);reject(error)});
+  child.on('close',code=>{
+   clearTimeout(timer);
+   if(code!==0){reject(Error('Neo review wrapper delivery failed: '+err.slice(0,300)));return;}
+   try{resolve(JSON.parse(out))}catch{reject(Error('Invalid Neo review receipt'))}
+  });
+  child.stdin.end(JSON.stringify(request));
+ });
 }
 export function buildReviewRequest(options,config,state,operationId){
   const data=state?.result;
@@ -60,19 +75,11 @@ export function buildReviewRequest(options,config,state,operationId){
   }else {request.contentHash=data.contentHash;request.revisionId=data.revisionId;request.groupId=options.file;}
   return request;
 }
-export async function submitNeoReview(request,{fetchImpl=fetch,url=neoReviewEndpoint()}={}){
-  const destination=new URL(url);
-  if(destination.protocol!=='http:'||!['127.0.0.1','localhost'].includes(destination.hostname)||
-     destination.pathname!=='/mobile/review/notify'||destination.search||destination.hash)
-    throw Error('Refusing a nonlocal Neo Review notification destination');
-  const response=await fetchImpl(destination.href,{method:'POST',
-    headers:{'Content-Type':'application/json','Accept':'application/json'},
-    body:JSON.stringify(request),signal:AbortSignal.timeout(55000),redirect:'error'});
-  if(!response.ok)throw Error('Neo Review REST rejected delivery: HTTP '+response.status);
-  const receipt=await response.json();
-  if(receipt?.stored!==true||receipt.requestId!==request.id)
-    throw Error('Neo Review Core did not acknowledge durable Inbox storage');
-  return receipt;
+export async function submitNeoReview(request,{deliver=deliverThroughNeoWrapper}={}){
+ const receipt=await deliver(request);
+ if(receipt?.stored!==true||receipt.requestId!==request.id)
+   throw Error('Neo preview wrapper did not acknowledge durable delivery');
+ return receipt;
 }
 
 export async function runMobilePreview(argv){
