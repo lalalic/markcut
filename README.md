@@ -416,7 +416,7 @@ Use `- map view:route mapType:schematic duration:5 waypoints:[45.4236,-75.7009,"
 
 ## Recipe catalog (Markcut native + video-shotcraft)
 
-Choose reusable shots with `markcut recipes list --json`. It dynamically combines Markcut-owned **executable Markdown** recipes with installed video-shotcraft **reference shot cards**, without copying Shotcraft sources. See [Recipe catalog](docs/recipes.md) for the status/ownership contract.
+Choose reusable shots with `markcut recipes list --json`. It dynamically combines Markcut-owned **executable Markdown** recipes with installed video-shotcraft **reference shot cards**, without copying Shotcraft sources. See [Recipe catalog](skills/markcut/docs/recipes.md) for the status/ownership contract.
 
 ```sh
 markcut recipes list --source markcut --category map

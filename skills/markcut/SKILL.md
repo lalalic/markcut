@@ -13,7 +13,7 @@ Markcut turns a Markdown video definition into a compiled stream tree and a play
 |---|---|
 | Understand a folder of photos or clips | Inspect the files; use `markcut vision <folder>` if scene selection needs visual/media understanding. |
 | Make or revise a video | Load the project-selected template, author/edit its Markdown scenes, run `markcut verify <file>`, and **inspect real playback before claiming a finished video**. |
-| Browse reusable motion/map recipes | Use `markcut recipes list --json` to see both Markcut-owned native scenes and installed Shotcraft reference cards; `markcut recipes show <qualified-id>` to inspect the selected card. Only `executable:true` cards provide ready-to-customize Markcut snippets. |
+| Browse reusable motion/map recipes | Use `markcut recipes list --json` to see both Markcut-owned native scenes and installed Shotcraft reference cards; `markcut recipes show <qualified-id>` to inspect the selected card. Only `executable:true` cards provide ready-to-customize Markcut snippets. Read [Recipe catalog](docs/recipes.md) for source ownership, parameters and selection rules. |
 | Quickly assess story structure | `markcut preview <file> --storyboard` (placeholder media, not a final-video quality check). |
 | Watch a native work-in-progress video | `markcut preview <file>`; test real visuals, sound, and seeking. |
 | Watch a hosted preview without reviewing | Call `markcut.preview({path,readonly:true})`; no approval, comment submission, Git checkpoint, Relay change, or iPhone review request. |
@@ -78,6 +78,7 @@ If the user asks only for a script or structure, stop at the requested stage. Do
 |---|---|
 | Markdown grammar, nodes, variants and asset syntax | [docs/markdown-descriptive.md](docs/markdown-descriptive.md) |
 | Map/GPS videos and camera movement | [docs/map-dynamic-camera.md](docs/map-dynamic-camera.md) |
+| Reusable recipes (Markcut native + installed Shotcraft) | [docs/recipes.md](docs/recipes.md) |
 | JSX components and package examples | [docs/components.md](docs/components.md) |
 | Sound effects | [docs/sound-effects.md](docs/sound-effects.md) |
 | Review criteria, evidence and feedback contract | [review.md](review.md) |
