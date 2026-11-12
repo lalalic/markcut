@@ -34,11 +34,11 @@ describe('Markcut Remotion MCP App',()=>{
   expect(html).not.toContain('127.0.0.1');
   expect(html).not.toContain('src="/player.js"');
  });
- it('fits the phone player by BOTH width and height, with scenes above canvas and actions in normal flow',()=>{
+ it('fits the phone player by BOTH width and height, with scenes below canvas and actions in normal flow',()=>{
   const html=buildPreviewHtml();
   expect(html).toContain('@media (max-width: 640px), (max-height: 520px)');
   expect(html).toContain('var(--markcut-player-ratio, 0.5625)');
-  expect(html).toContain('#scene-thumbnails { order: -1;');
+  expect(html).toContain('#scene-thumbnails { order: 0;');
   expect(html).toContain("grid-template-areas: 'changes approve' 'status status'");
   expect(html).not.toMatch(/#remotion-canvas\s*\{[^}]*position\s*:\s*absolute/);
   const app=readFileSync(new URL('../src/mcp/remotion-app.tsx',import.meta.url),'utf8');
@@ -52,9 +52,9 @@ describe('Markcut Remotion MCP App',()=>{
   expect(audio).toContain('ctx.decodeAudioData(bytes)');
   expect(audio).toContain("p.addEventListener('play',play)");
  });
- it('publishes v47 while retaining v46 as a compatible alias',()=>{
-  expect(RESOURCE_URI).toBe('ui://markcut/video-preview-v47.html');
-  expect(LEGACY_RESOURCE_URIS).toContain('ui://markcut/video-preview-v46.html');
+ it('publishes v48 while retaining v47 as a compatible alias',()=>{
+  expect(RESOURCE_URI).toBe('ui://markcut/video-preview-v48.html');
+  expect(LEGACY_RESOURCE_URIS).toContain('ui://markcut/video-preview-v47.html');
  });
  it('registers latest resource at startup and aliases previous URIs',()=>{
   for(const uri of [RESOURCE_URI,...LEGACY_RESOURCE_URIS]){
