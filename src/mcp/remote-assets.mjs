@@ -76,27 +76,48 @@ export function publishPlayerBundle(bundlePath, origin=publicOrigin()) {
 // Include a stable revision of the source file in their cache key. A CDN may
 // otherwise keep serving an old large original after the Master activates a
 // smaller preview proxy under the same mounted source path.
-export function versionPreviewMedia(compiled, origin=publicOrigin(), mountedRoots=null) {
+export function versionPreviewMedia(compiled, origin=publicOrigin(), mountedRoots=null, exportRoot=EXPORT_ROOT) {
   const prefix=origin+"/preview-files/";
+  const originalPrefix=origin+"/files/";
   let mounts=mountedRoots;
   if(!mounts)try{mounts=JSON.parse(readFileSync(join(supportDir,"file-mounts.json"),"utf8"));}catch{mounts={};}
   const versioned=(value)=>{
-    if(typeof value!=="string"||!value.startsWith(prefix))return value;
+    if(typeof value!=="string"||(!value.startsWith(prefix)&&!value.startsWith(originalPrefix)))return value;
     let url;
     try {url=new URL(value);}catch{return value;}
-    if(url.origin!==origin||!url.pathname.startsWith("/preview-files/"))return value;
+    if(url.origin!==origin)return value;
+    // Old previews and generated snapshots used regular /files/ URLs, which
+    // bypassed the proxy entirely. Redirect only real video source URLs;
+    // /files/ still returns the original outside the Markcut preview tree.
+    if(url.pathname.startsWith("/files/")){
+      if(!/\.(?:mp4|mov|m4v|webm)$/i.test(url.pathname))return value;
+      const mount=url.pathname.slice("/files/".length).split("/")[0];
+      const generated=url.pathname.startsWith("/files/_neoy/markcut/generated/");
+      if(!generated && (mount==="_neoy" || typeof mounts[mount]!=="string"))return value;
+      url.pathname="/preview-files/"+url.pathname.slice("/files/".length);
+    }
+    if(!url.pathname.startsWith("/preview-files/"))return value;
     const parts=url.pathname.slice("/preview-files/".length).split("/");
-    const [mount,...relative]=parts.map(decodeURIComponent);
+    let mount,relative;
+    try {[mount,...relative]=parts.map(decodeURIComponent);}catch{return value;}
     let fingerprint="unmounted";
     if(/^[A-Za-z0-9_-]{1,64}$/.test(mount) && relative.length &&
-       relative.every(s=>s&&!s.startsWith(".")&&s!==".."&&!s.includes("/")&&!s.includes("\\")) &&
-       typeof mounts[mount]==="string"){
+       relative.every(s=>s&&!s.startsWith(".")&&s!==".."&&!s.includes("/")&&!s.includes("\\"))){
       try{
-        const root=realpathSync(mounts[mount]);
-        const source=realpathSync(resolve(root,...relative));
-        if(source.startsWith(root+sep)){
-          const stats=statSync(source);
-          fingerprint=`${stats.size}:${stats.mtimeMs}`;
+        let root, pathParts;
+        if(mount==="_neoy" && relative[0]==="markcut" && relative[1]==="generated" && relative.length>=4){
+          root=realpathSync(join(exportRoot,"generated"));
+          pathParts=relative.slice(2);
+        } else if(mount!=="_neoy" && typeof mounts[mount]==="string"){
+          root=realpathSync(mounts[mount]);
+          pathParts=relative;
+        }
+        if(root && pathParts){
+          const source=realpathSync(resolve(root,...pathParts));
+          if(source.startsWith(root+sep)){
+            const stats=statSync(source);
+            fingerprint=`${stats.size}:${stats.mtimeMs}`;
+          }
         }
       }catch{}
     }
@@ -106,7 +127,13 @@ export function versionPreviewMedia(compiled, origin=publicOrigin(), mountedRoot
     return url.href;
   };
   const walk=(value)=>{
-    if(typeof value==="string")return versioned(value);
+    if(typeof value==="string"){
+      if(value.includes("<video") && value.includes("src=")){
+        return value.replace(/(\bsrc\s*=\s*)(['"])(https:\/\/[^'"\n]+)\2/g,
+          (all,prefix,quote,uri)=>prefix+quote+versioned(uri)+quote);
+      }
+      return versioned(value);
+    }
     if(Array.isArray(value))return value.map(walk);
     if(value&&typeof value==="object")return Object.fromEntries(Object.entries(value).map(([k,v])=>[k,walk(v)]));
     return value;
@@ -221,17 +248,26 @@ export function publishCompiledCache(hash, compiled, origin=publicOrigin()) {
   if(!/^[a-f0-9]{64}$/.test(hash))throw new Error("Invalid compiled hash");
   const dir=join(EXPORT_ROOT,"cache");
   mkdirSync(dir,{recursive:true});
-  const file=join(dir,hash+".json");
   const bytes=JSON.stringify(compiled);
+  const canonical=join(dir,hash+".json");
+  // An old immutable revision may reference the pre-proxy scene tree. Never
+  // overwrite it: publish a content-addressed transport variant instead.
+  const suffix=existsSync(canonical) && readFileSync(canonical,"utf8")!==bytes
+    ? "-"+createHash("sha256").update(bytes).digest("hex").slice(0,16) : "";
+  const filename=hash+suffix+".json";
+  const file=join(dir,filename);
   if(existsSync(file)){
     if(readFileSync(file,"utf8")!==bytes)throw new Error("Immutable compiled cache collision");
   }else writeFileSync(file,bytes,{flag:"wx",mode:0o644});
-  return origin+"/files/_neoy/markcut/cache/"+hash+".json";
+  return origin+"/files/_neoy/markcut/cache/"+filename;
 }
 
 export async function prunePublishedCache(hash) {
   if(!/^[a-f0-9]{64}$/.test(hash))throw new Error("Invalid compiled hash");
-  const {rm}=await import("node:fs/promises");
-  await rm(join(EXPORT_ROOT,"cache",hash+".json"),{force:true});
+  const {rm,readdir}=await import("node:fs/promises");
+  const cache=join(EXPORT_ROOT,"cache");
+  const variants=(await readdir(cache).catch(()=>[])).filter(name=>
+    name===hash+".json" || new RegExp("^"+hash+"-[a-f0-9]{16}\\.json$").test(name));
+  await Promise.all(variants.map(name=>rm(join(cache,name),{force:true})));
   await rm(join(EXPORT_ROOT,"generated",hash),{recursive:true,force:true});
 }

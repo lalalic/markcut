@@ -247,6 +247,10 @@ export async function ensureVideoPreview(path, options = {}) {
     try {await writeFile(cached,JSON.stringify(finalCompiled,null,2),{flag:"wx"});}
     catch(error){if(error.code!=="EEXIST")throw error;}
     }
+    // Source identities are immutable, but transport routes can improve (for
+    // example, a later version adds preview proxies to old /files/ URLs).
+    // Publish a new immutable transport variant when the scene tree changes.
+    finalCompiled=versionPreviewMedia(finalCompiled);
     const currentSource=await readFile(validatedPath,"utf8");
     const current=fingerprintInputs(validatedPath,Buffer.from(currentSource));
     const currentHash=createHash("sha256").update(current.source).update("\0").update(JSON.stringify(current.assets)).digest("hex");

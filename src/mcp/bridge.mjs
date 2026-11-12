@@ -258,7 +258,7 @@ async function renderRevision(data){
   let compiled=data.compiled;
   if(data.compiledUrl){
    const url=new URL(data.compiledUrl);
-   if(url.origin!==__MARKCUT_ORIGIN__||!url.pathname.startsWith('/files/_neoy/markcut/cache/')||!(/^[a-f0-9]{64}[.]json$/.test(url.pathname.split('/').pop())))
+   if(url.origin!==__MARKCUT_ORIGIN__||!url.pathname.startsWith('/files/_neoy/markcut/cache/')||!(/^[a-f0-9]{64}(?:-[a-f0-9]{16})?[.]json$/.test(url.pathname.split('/').pop())))
     throw new Error('Invalid immutable preview URL');
    const response=await fetch(url.href,{cache:'force-cache'});
    if(!response.ok)throw new Error('Static compiled scenes unavailable: HTTP '+response.status);

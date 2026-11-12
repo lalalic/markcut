@@ -316,6 +316,14 @@ responses with `Cache-Control: no-store`; the unmodified `/files/` route still
 streams the original. No `video.md` edits are needed. See
 `tests/mcp-preview-proxy-version.test.mjs`.
 
+Older compiled video sources using `/files/` are automatically upgraded to
+`/preview-files/` inside the preview scene tree, including media snapshots under
+`_neoy/markcut/generated/`. Other file types and direct original URLs stay
+unchanged. If an immutable compiled scene cache already exists for the same
+content hash, updated proxy URLs publish a deterministic `hash-transportHash.json`
+variant rather than overwriting the original hash URL. The bridge validates
+both formats, and normal cache retirement removes the variants as well.
+
 `markcut.preview` compiles and publishes an immutable revision for the calling ChatGPT conversation. The hosted app verifies the current path-keyed revision record before enabling review and sends decisions to that same conversation with `ui/message`. Neo Mobile owns its locally notified requests and delivery. Markcut does not store shared review history or poll for decisions. `markcut.preview.media({contentHash})` reads a compiled revision when a client needs its scene tree; operation status, immutable content fingerprints, media cache and safe pruning remain server-owned.
 
 ## MCP background-audio regression guard
