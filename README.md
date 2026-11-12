@@ -412,3 +412,17 @@ or Agents Relay.
 ### Offline schematic routes
 
 Use `- map view:route mapType:schematic duration:5 waypoints:[45.4236,-75.7009,"Start";45.4295,-75.7090,"End"]` in a Markcut scene for a deterministic, Google-independent, animated geographic schematic. It labels connections as illustrative (not computed roads or recorded GPS tracks). The renderer accepts verified waypoint coordinates and produces real moving map frames without a web request. For a route chapter in a larger Vlog, render it separately, verify decode/motion, and insert the resulting MP4 into the main film. Other map types still require working provider credentials and render checks.
+
+
+## Recipe catalog (Markcut native + video-shotcraft)
+
+Choose reusable shots with `markcut recipes list --json`. It dynamically combines Markcut-owned **executable Markdown** recipes with installed video-shotcraft **reference shot cards**, without copying Shotcraft sources. See [Recipe catalog](docs/recipes.md) for the status/ownership contract.
+
+```sh
+markcut recipes list --source markcut --category map
+markcut recipes show markcut:map-route-journey
+markcut recipes list --source shotcraft --category camera
+markcut recipes show shotcraft:cursor-flyover
+```
+
+A Markcut-native map recipe supplies an editable `- map` snippet; replace its example coordinates and verify/preview it. Shotcraft cards supply reference timing and demo implementation notes; they are **not executable Markcut scenes** without adaptation. The catalog continues to expose native recipes when video-shotcraft is not installed.

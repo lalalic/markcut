@@ -62,6 +62,12 @@ global options:
 
 Commands:
 
+  recipes [list|show <recipe-id>]      Browse Markcut native + installed Shotcraft recipes
+    --json                            JSON catalog for agents and scripts
+    --source markcut|shotcraft        Filter by recipe owner
+    --category <name>                 Filter by category (e.g. map, camera)
+    --search <text>                   Search by intent or motion
+
   verify <file>                         Parse + validate descriptive file
 
   preview <file.json|.md>               Open player with live preview

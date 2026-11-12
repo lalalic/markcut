@@ -1,0 +1,17 @@
+{
+  "name": "map-location-reveal",
+  "title": "Google Location Reveal",
+  "category": "map",
+  "description": "Start with a wide Google satellite overview and gently zoom to a verified filming location.",
+  "use": "Introduce a city or neighbourhood before the first real-life shot.",
+  "duration": "2.5–3.5s",
+  "durationSeconds": 3,
+  "view": "overview",
+  "parameters": ["center", "camera.zoom", "duration", "mapType"],
+  "snippet": "## Location-Reveal\nlayout:parallel\n- map view:overview mapType:satellite duration:3 center:{lat:37.7749,lng:-122.4194} camera:{zoom:tween(10,14,easeInOut)}",
+  "notes": [
+    "Replace example coordinates with a verified filming location.",
+    "Keep location titles readable; do not obscure required Google attribution.",
+    "A satellite zoom is not real drone footage."
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "name": "map-cinematic-follow",
+  "title": "Google Satellite Cinematic Follow",
+  "category": "map",
+  "description": "Follow a short portion of a Directions route with a controlled satellite-map camera and gentle heading movement.",
+  "use": "A short cinematic route interlude between two actual Vlog shots.",
+  "duration": "3–5s",
+  "durationSeconds": 4,
+  "view": "cinematic",
+  "parameters": ["waypoints", "cinematic.mode", "cinematic.headingFollow", "cinematic.tilt", "camera", "duration"],
+  "snippet": "## Cinematic-Follow\nlayout:parallel\n- map view:cinematic mapType:satellite duration:4 cinematic:{mode:flyAlong,headingFollow:false,tilt:25} camera:{zoom:tween(13,14,easeInOut),heading:tween(0,12,easeInOut)} waypoints:[37.7749,-122.4194,\"Start\";37.7799,-122.4144,\"Middle\";37.7849,-122.4094,\"Finish\"]",
+  "notes": [
+    "Use a short contiguous waypoint subset rather than forcing six stops through a four-second shot.",
+    "headingFollow:true can swing sharply at turns; the calmer template uses false.",
+    "Default is a moving 2D Google satellite map, not real drone or photorealistic 3D footage."
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "name": "map-streetview-explore",
+  "title": "Google Street View Explore",
+  "category": "map",
+  "description": "Animate a small panorama-heading sweep at a verified Google Street View location.",
+  "use": "Briefly reveal the street-level setting for a source-backed filmed stop.",
+  "duration": "3–4s",
+  "durationSeconds": 3.5,
+  "view": "streetview",
+  "parameters": ["streetView.location", "streetView.radius", "streetView.pov.heading", "streetView.pov.pitch", "duration"],
+  "snippet": "## Street-View\nlayout:parallel\n- map view:streetview duration:3.5 streetView:{location:{lat:37.7749,lng:-122.4194},radius:70,pov:{heading:tween(195,240,easeInOut),pitch:0}}",
+  "notes": [
+    "Verify a StreetViewPanorama exists near the source GPS before using this card.",
+    "Keep the heading sweep near 30–60 degrees and confirm the panorama is actually loaded.",
+    "Street View is Google imagery, not contemporaneous camera footage; retain attribution."
+  ]
+}

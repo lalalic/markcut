@@ -26,6 +26,11 @@ if (process.argv[2] === "preview") {
     if(explicit)process.exit(0);
   }
 }
+if (process.argv[2] === "recipes" || process.argv[2] === "recipe") {
+  const result = spawnSync(process.execPath, [resolve(root, "src", "recipes", "cli.mjs"), ...process.argv.slice(3)], { stdio: "inherit" });
+  if (result.error) console.error(result.error.message);
+  process.exit(result.status ?? 1);
+}
 if (process.argv[2] === "queue") {
   const result = spawnSync(process.execPath, [resolve(root, "src", "queue-worker.mjs"), ...process.argv.slice(3)], { stdio: "inherit" });
   if (result.error) console.error(result.error.message);

@@ -1,0 +1,18 @@
+{
+  "name": "map-route-journey",
+  "title": "Google Road Route Journey",
+  "category": "map",
+  "description": "Fit the complete Google Directions road geometry and animate a marker between verified GPS stops with smooth travel and endpoint holds.",
+  "use": "Bridge Vlog scenes with a map route; Google road geometry serves as the displayed route trajectory.",
+  "duration": "4–10s depending on stops",
+  "durationSeconds": 8,
+  "view": "route",
+  "parameters": ["waypoints", "travelMode", "routeAnimation", "routeColor", "routeWeight", "duration"],
+  "snippet": "## Road-Route\nlayout:parallel\n- map view:route mapType:roadmap duration:8 routeAnimation:{startHold:0.5,endHold:0.7,easing:easeInOut} routeColor:\"#4285F4\" routeWeight:5 routeMarker:\"📍\" waypoints:[37.7749,-122.4194,\"Start\";37.7849,-122.4094,\"Finish\"]",
+  "notes": [
+    "Replace example waypoints with source-backed GPS in chronological order.",
+    "Do not force center or zoom: the renderer fits Google's full road polyline automatically.",
+    "duration is editorial screen time, not Google travel ETA; record route geometry source as google_directions.",
+    "Use the verified transport mode where known; the default is DRIVING."
+  ]
+}
