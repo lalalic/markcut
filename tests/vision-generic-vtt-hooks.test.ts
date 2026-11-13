@@ -42,12 +42,12 @@ it('generic --vtt/--itt plus --agent uses the existing STT→semantic segment wo
     '--vtt-sample-interval','2'];
   execFileSync(process.execPath,args,{cwd:base,timeout:200000,encoding:'utf8'});
   const meta=JSON.parse(readFileSync(join(media,'metadata.json'),'utf8'));
-  expect(meta.photo.perception.desc).toContain('Recognized landscape');
-  expect(meta.clip.perception.subtitle).toBe('clip.vtt');
-  expect(meta.clip.perception.desc).toContain('Recognized landscape');
-  expect(Object.keys(meta.clip.perception.segments)).toEqual(['0to2000','2000to4000']);
-  expect(meta.clip.perception.segments['0to2000'].vision).toContain('Recognized landscape');
-  expect(meta.clip.perception.segments['2000to4000'].instructions).toEqual([
+  expect(meta['photo.png'].perception.desc).toContain('Recognized landscape');
+  expect(meta['clip.mp4'].perception.subtitle).toBe('clip.vtt');
+  expect(meta['clip.mp4'].perception.desc).toContain('Recognized landscape');
+  expect(Object.keys(meta['clip.mp4'].perception.segments)).toEqual(['0to2000','2000to4000']);
+  expect(meta['clip.mp4'].perception.segments['0to2000'].vision).toContain('Recognized landscape');
+  expect(meta['clip.mp4'].perception.segments['2000to4000'].instructions).toEqual([
     {utterance:'嘿 Neo，这里是一个重要镜头',intent:'emphasize later',time_seconds:2.2,confidence:'high'},
   ]);
 });
@@ -66,7 +66,7 @@ it('invalid semantic Agent response does not silently fall back to code-selected
   expect(()=>execFileSync(process.execPath,args,{cwd:base,timeout:90000,stdio:'pipe'}))
     .toThrow();
   const meta=JSON.parse(readFileSync(join(other,'metadata.json'),'utf8'));
-  expect(meta.clip?.perception?.segments).toBeUndefined();
+  expect(meta['clip.mp4']?.perception?.segments).toBeUndefined();
 });
 
 it('obsolete provider switch is rejected instead of silently becoming a prompt override',()=>{

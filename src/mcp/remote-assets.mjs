@@ -90,7 +90,7 @@ export function versionPreviewMedia(compiled, origin=publicOrigin(), mountedRoot
     // bypassed the proxy entirely. Redirect only real video source URLs;
     // /files/ still returns the original outside the Markcut preview tree.
     if(url.pathname.startsWith("/files/")){
-      if(!/\.(?:mp4|mov|m4v|webm)$/i.test(url.pathname))return value;
+      if(!/\.(?:mp4|mov|m4v|webm|png|jpe?g|heic|webp)$/i.test(url.pathname))return value;
       const mount=url.pathname.slice("/files/".length).split("/")[0];
       const generated=url.pathname.startsWith("/files/_neoy/markcut/generated/");
       if(!generated && (mount==="_neoy" || typeof mounts[mount]!=="string"))return value;
@@ -171,7 +171,7 @@ export function externalizePreviewMedia(compiled,revisionId,origin=publicOrigin(
     if(frozenPaths.has(real))return frozenPaths.get(real);
     // Dedicated preview route lets NeoY reuse Visioner proxies without changing video.md.
     // If no proxy exists, NeoY serves the original media at the same preview URL.
-    if(/\.(mov|mp4|webm)$/i.test(real)) {
+    if(/\.(mov|mp4|m4v|webm|png|jpe?g|heic|webp)$/i.test(real)) {
       const mounted=resolveMountedFile(real,origin);
       if(mounted) {
         const previewUrl=mounted.replace(origin+"/files/",origin+"/preview-files/");

@@ -95,6 +95,23 @@ function loadMetadata(folder) {
   const path = join(folder, "metadata.json");
   try {
     const raw = JSON.parse(readFileSync(path, "utf-8"));
+    // Metadata keys are exact source filenames, including their extensions.
+    // Re-key any existing basename-only data when there is one unambiguous match.
+    const media = [...scanMedia(folder).images, ...scanMedia(folder).videos];
+    const byStem = new Map();
+    for (const source of media) {
+      const stem = basename(source, extname(source));
+      byStem.set(stem, [...(byStem.get(stem) || []), basename(source)]);
+    }
+    for (const [stem, names] of byStem) {
+      if (Object.hasOwn(raw, stem)) {
+        if (names.length === 1 && !Object.hasOwn(raw, names[0])) raw[names[0]] = raw[stem];
+        // A stem-only entry is ambiguous when both photo.jpg and photo.mp4 exist.
+        delete raw[stem];
+      }
+    }
+    const files = new Set(media.map(source => basename(source)));
+    for (const name of Object.keys(raw)) if (!files.has(name)) delete raw[name];
     const cacheMap = {};
     for (const [key, entry] of Object.entries(raw)) {
       if (entry._cache && entry.perception?.desc) {
@@ -281,7 +298,7 @@ function tryParseGPS(val, ref) {
 
 function normalizeImage(srcPath, normDir, maxDim = MAX_IMAGE_DIMENSION) {
   const srcExt = extname(srcPath);
-  const outName = `${basename(srcPath, srcExt)}_${maxDim}.jpg`;
+  const outName = `${basename(srcPath)}_${maxDim}.jpg`;
   const outPath = join(normDir, outName);
   if (existsSync(outPath)) return outPath;
   const filter = `scale='min(${maxDim},iw)':'min(${maxDim},ih)':force_original_aspect_ratio=decrease`;
@@ -293,35 +310,30 @@ function normalizeImage(srcPath, normDir, maxDim = MAX_IMAGE_DIMENSION) {
 function normalizeVideo(srcPath, normDir, duration, maxDim = MAX_VIDEO_DIMENSION, maxDur = MAX_VIDEO_DURATION, maxSamples = 60) {
   const srcExt = extname(srcPath); // Keep original case for basename stripping
   const ext = srcExt.toLowerCase() || ".mp4";
-  const base = basename(srcPath, srcExt);
+  const base = basename(srcPath);
   const totalDur = duration || getVideoDuration(srcPath);
 
-  if (totalDur <= maxDur) {
-    const timeHint = `0to${Math.floor(totalDur)}`;
-    const outName = `${base}_${timeHint}.mp4`;
-    const outPath = join(normDir, outName);
-    if (existsSync(outPath)) return { path: outPath, trimmedDuration: totalDur, timeHint };
-    const filter = `scale='min(${maxDim},iw)':'min(${maxDim},ih)':force_original_aspect_ratio=decrease,pad='ceil(iw/2)*2':'ceil(ih/2)*2':-1:-1`;
-    const cmd = `ffmpeg -y -i ${shQuote(srcPath)} -t ${totalDur} -map_metadata -1 -map_chapters -1 -vf ${shQuote(filter)} -c:v libx264 -preset fast -crf 28 -c:a aac -b:a 64k ${shQuote(outPath)}`;
-    try { run(cmd, { timeout: 600_000 }); return { path: outPath, trimmedDuration: totalDur, timeHint }; }
-    catch (e) { emitWarn(`Failed to normalize video ${basename(srcPath)}: ${e.message}`); return { path: srcPath, trimmedDuration: totalDur, timeHint }; }
+  // Preserve the complete original time axis for preview and segment lookup.
+  // Vision frame sampling belongs in the model adapter, not in the proxy.
+  const timeHint = "full";
+  const outPath = join(normDir, `${base}_full.mp4`);
+  if (existsSync(outPath)) {
+    // Earlier releases used the same _full.mp4 name for a 1 fps sample reel.
+    // Reject that cache when its duration differs from the original timeline.
+    const cachedDuration = getVideoDuration(outPath);
+    if (cachedDuration > 0 && Math.abs(cachedDuration - totalDur) < 0.5)
+      return { path: outPath, trimmedDuration: totalDur, timeHint };
+    rmSync(outPath, { force: true });
   }
-
-  const timeHint = `full`;
-  const outName = `${base}_${timeHint}.mp4`;
-  const outPath = join(normDir, outName);
-  if (existsSync(outPath)) return { path: outPath, trimmedDuration: totalDur, timeHint };
-
-  const frameCount = getVideoFrameCount(srcPath);
-  const step = Math.max(1, Math.floor(frameCount / maxSamples));
-  const actualSamples = Math.min(maxSamples, Math.ceil(frameCount / step));
-  const filter = `select='not(mod(n,${step}))',setpts=N/TB,scale='min(${maxDim},iw)':'min(${maxDim},ih)':force_original_aspect_ratio=decrease,pad='ceil(iw/2)*2':'ceil(ih/2)*2':-1:-1`;
-  const cmd = `ffmpeg -y -i ${shQuote(srcPath)} -map_metadata -1 -map_chapters -1 -vf ${shQuote(filter)} -c:v libx264 -preset fast -crf 28 -an -t ${actualSamples} -r 1 ${shQuote(outPath)}`;
+  const filter = `scale='min(${maxDim},iw)':'min(${maxDim},ih)':force_original_aspect_ratio=decrease,pad='ceil(iw/2)*2':'ceil(ih/2)*2':-1:-1`;
+  const cmd = `ffmpeg -y -i ${shQuote(srcPath)} -map_metadata -1 -map_chapters -1 -vf ${shQuote(filter)} -c:v libx264 -preset fast -crf 28 -c:a aac -b:a 64k -movflags +faststart ${shQuote(outPath)}`;
   try {
-    emitInfo(`  Sampling ${actualSamples} frames across ${totalDur.toFixed(1)}s video`);
     run(cmd, { timeout: 600_000 });
     return { path: outPath, trimmedDuration: totalDur, timeHint };
-  } catch (e) { emitWarn(`Failed to normalize video ${basename(srcPath)}: ${e.message}`); return { path: srcPath, trimmedDuration: totalDur, timeHint }; }
+  } catch (e) {
+    emitWarn(`Failed to normalize video ${basename(srcPath)}: ${e.message}`);
+    return { path: srcPath, trimmedDuration: totalDur, timeHint };
+  }
 }
 
 function getVideoDuration(filePath) {
@@ -616,7 +628,7 @@ async function runMetadataMode(folder, pickSet, dryRun) {
 
   for (const filePath of [...images, ...videos]) {
     if (pickSet.size > 0 && !pickSet.has(basename(filePath))) continue;
-    const base = basename(filePath, extname(filePath));
+    const base = basename(filePath);
     const isVideo = VIDEO_EXTS.has(extname(filePath).toLowerCase());
     emitInfo(`\n${isVideo ? "🎬" : "📷"} ${base}`);
 
@@ -650,7 +662,7 @@ function buildPreviewTree(folder, metadata) {
   for (const f of allFiles) {
     const st = statSync(join(folder, f));
     if (!st.isFile()) continue;
-    const key = basename(f, extname(f)).toLowerCase();
+    const key = f.toLowerCase();
     if (!fileMap.has(key)) fileMap.set(key, f);
   }
 
@@ -997,7 +1009,7 @@ async function runFullPipeline(folder, prompts, context, pickSet, vttSampleInter
     return;
   }
 
-  const metadata = JSON.parse(readFileSync(metadataPath, "utf-8"));
+  const { results: metadata } = loadMetadata(folder);
   if (Object.keys(metadata).length === 0) {
     emitError("metadata.json is empty — no media found.");
     return;
@@ -1074,7 +1086,7 @@ async function runNormalizeAndPercept(folder, metadataPath, prompts, context, pi
   // Process images
   for (const fileName of imageFiles) {
     if (pickSet.size > 0 && !pickSet.has(fileName)) continue;
-    const base = basename(fileName, extname(fileName));
+    const base = fileName;
     const meta = results[base];
     if (!meta) { emitWarn(`  No metadata for ${fileName}, skipping.`); continue; }
     const userHint = meta.userHints?.overall || meta.userHint || "";
@@ -1101,7 +1113,7 @@ async function runNormalizeAndPercept(folder, metadataPath, prompts, context, pi
       if (perception.desc) cache[cacheKey] = perception;
       emitInfo(`  ${perception.desc?.slice(0, 80)}...`);
     }
-    results[base] = { ...meta, perception, _cache: cacheKey };
+    results[base] = { ...meta, normalized: normPath !== imgPath ? ".normalized/" + basename(normPath) : null, perception, _cache: cacheKey };
     writeFileSync(metadataPath, JSON.stringify(results, null, 2), "utf-8");
 
     // Enrich location for images too
@@ -1116,7 +1128,7 @@ async function runNormalizeAndPercept(folder, metadataPath, prompts, context, pi
   // Process videos
   for (const fileName of videoFiles) {
     if (pickSet.size > 0 && !pickSet.has(fileName)) continue;
-    const base = basename(fileName, extname(fileName));
+    const base = fileName;
     const meta = results[base];
     if (!meta) { emitWarn(`  No metadata for ${fileName}, skipping.`); continue; }
     const userHint = meta.userHints?.overall || meta.userHint || "";
@@ -1160,7 +1172,7 @@ async function runNormalizeAndPercept(folder, metadataPath, prompts, context, pi
     let location = meta.location;
     if (location) location = await enrichLocation(location);
 
-    results[base] = { ...meta, location, perception, _cache: cacheKey };
+    results[base] = { ...meta, location, normalized: normInfo.path !== vidPath ? ".normalized/" + basename(normInfo.path) : null, perception, _cache: cacheKey };
     writeFileSync(metadataPath, JSON.stringify(results, null, 2), "utf-8");
   }
 
@@ -1182,7 +1194,7 @@ Usage:
 
 Options:
   --label              Open interactive labeling preview before running AI pipeline
-  --normalize-only     360px video / 384px image inputs, full input-time mapping; long videos sampled; no AI
+  --normalize-only     Full-timeline 360px video / 384px image proxies; writes metadata.json; no AI
   --instruct "text"    Background context about people/places (injected into prompts)
   --prompts-file <path> Path to prompts markdown file (default: vision_prompts.md)
   --vtt-sample-interval <n> Sample one video frame every N seconds (default: 5)
@@ -1282,30 +1294,31 @@ export async function main(args) {
     if (doLabel || candidateMode || dryRun || pickSet.size > 0) {
       throw new Error('--normalize-only cannot be combined with label, candidate, pick or dry-run');
     }
-    // Reuse exactly the normalization used by the VTT/ITT pipeline. No AI
-    // inference or full-resolution media is sent to an understanding model.
     const media = scanMedia(folder);
     if (media.images.length + media.videos.length === 0) throw new Error('No Vision Understanding source media');
+    // Keep existing perception: normalization only edits proxy and source metadata.
+    await runMetadataMode(folder, new Set(), false);
+    const { results } = loadMetadata(folder);
     const normDir = join(folder, '.normalized');
     mkdirSync(normDir, { recursive: true });
     const files = [];
-    for (const original of media.images) {
-      const normalized = normalizeImage(original, normDir);
-      if (normalized === original || !existsSync(normalized)) throw new Error(`Failed to normalize Vision image: ${original}`);
-      files.push({ source: basename(original), path: normalized, kind: 'image', sampled: false,
-        maxDimension: MAX_IMAGE_DIMENSION });
+    for (const original of [...media.images, ...media.videos]) {
+      const filename = basename(original);
+      const image = IMAGE_EXTS.has(extname(original).toLowerCase());
+      const duration = image ? null : getVideoDuration(original);
+      const normalized = image ? normalizeImage(original, normDir)
+        : duration > 0 ? normalizeVideo(original, normDir, duration).path : original;
+      const usable = normalized !== original && existsSync(normalized);
+      results[filename] = { ...results[filename],
+        normalized: usable ? '.normalized/' + basename(normalized) : null,
+        ...(image ? {} : {duration}) };
+      files.push({ source: filename, path: usable ? normalized : original,
+        kind: image ? 'image' : 'video', normalized: usable, sampled: false,
+        ...(duration !== null ? {sourceDurationSeconds:duration} : {}),
+        maxDimension: image ? MAX_IMAGE_DIMENSION : MAX_VIDEO_DIMENSION });
     }
-    for (const original of media.videos) {
-      const duration = getVideoDuration(original);
-      if (!Number.isFinite(duration) || duration <= 0) throw new Error(`Video has no usable duration: ${original}`);
-      const info = normalizeVideo(original, normDir, duration);
-      if (info.path === original || !existsSync(info.path)) throw new Error(`Failed to normalize Vision video: ${original}`);
-      files.push({ source: basename(original), path: info.path, kind: 'video',
-        sampled: duration > MAX_VIDEO_DURATION, sourceDurationSeconds: duration,
-        maxDimension: MAX_VIDEO_DIMENSION });
-    }
-    console.log(JSON.stringify({ status: 'PASS', usage: 'vision-understanding-only',
-      profile: 'markcut-vision-normalized-v1', files }));
+    writeFileSync(join(folder, 'metadata.json'), JSON.stringify(results, null, 2) + '\n');
+    console.log(JSON.stringify({ status: 'PASS', files }));
     return;
   }
   if (doLabel) {
