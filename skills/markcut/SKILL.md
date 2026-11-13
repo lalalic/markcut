@@ -21,6 +21,7 @@ Markcut turns a Markdown video definition into a compiled stream tree and a play
 | Ask for human review from Codex/terminal via iPhone | Use `markcut preview <video.md> --delivery event --event-template <relay-event.json>` on Neo Master. Neo Master stores the Preview and APNs notifies iPhone; the phone publishes the Event when the person submits. |
 | Deliver a finished MP4 | `markcut render <file> --output <path>`; inspect the resulting video and sound. |
 | Visualize a route or trip | Use a Markdown `map` stream; load [route/map reference](docs/map-dynamic-camera.md). |
+| Preview or animate a 3D model | Use a `model3d` stream for a GLB/GLTF asset; frame-controlled turntable or orbit can render to MP4. See [3D models](docs/markdown-descriptive.md#native-3d-models-model3d). USDZ needs GLB conversion first. |
 
 `markcut` means the `npx @lalalic/markcut` CLI in the examples below. For supported flags and generation adapters, consult `npx @lalalic/markcut --help`, `npx @lalalic/markcut vision --help`, and `npx @lalalic/markcut --show-clis` rather than guessing. Media generation is handled by the configured Markcut pipeline; this Skill does not select a project's private vision provider.
 

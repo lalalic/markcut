@@ -20,6 +20,23 @@ describe("NeoY backed preview files",()=>{
       expect(input.root.children[0].src).toContain("data:audio/");
     }finally{rmSync(join(EXPORT_ROOT,"generated",id),{recursive:true,force:true});}
   });
+  it("snapshots a local GLB for hosted model3d preview without changing the source",()=>{
+    const dir=mkdtempSync(join(tmpdir(),"markcut-model3d-"));
+    const source=join(dir,"toy.glb");
+    const data=Buffer.from("glTF\x02\x00\x00\x00","binary");
+    writeFileSync(source,data);
+    try {
+      const tree={root:{type:"root",children:[{type:"model3d",src:"toy.glb",durationInSeconds:2}]}};
+      const {compiled,assets}=externalizePreviewMedia(tree,id,"https://example.org",dir);
+      expect(assets).toEqual(["file-0.glb"]);
+      expect(compiled.root.children[0].src).toBe("https://example.org/files/_neoy/markcut/generated/"+id+"/file-0.glb");
+      expect(readFileSync(join(EXPORT_ROOT,"generated",id,"file-0.glb"))).toEqual(data);
+      expect(readFileSync(source)).toEqual(data);
+    } finally {
+      rmSync(dir,{recursive:true,force:true});
+      rmSync(join(EXPORT_ROOT,"generated",id),{recursive:true,force:true});
+    }
+  });
   it("rejects a local HTTP media reference",()=>{
     expect(()=>externalizePreviewMedia({src:"http://127.0.0.1:4571/asset"},id,"https://example.org")).toThrow(/HTTPS|local media URL/);
   });

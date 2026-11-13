@@ -764,3 +764,46 @@ layout:series transition:fade transitionTime:1.2
     start:1.2                               # let vision play for 1.2s before the script/audio start, so that the transition effect can be completed
 
 ~~~
+
+## Native 3D models (`model3d`)
+
+Render **GLB/GLTF** models as a native Remotion/Three.js scene (frame-synchronized,
+seekable, and renderable to MP4). **USDZ is not supported by the browser loader**;
+convert to GLB first. Assets follow the normal Markcut contract: keep local
+`.glb` files inside the folder containing `video.md` (or a subfolder), and use
+relative paths. Never place private model files in a public Git repository.
+
+```md
+# video
+width:720 height:720 fps:30 layout:series
+
+## Turntable
+- model3d src:assets/toy.glb duration:8 motion:turntable turns:1 autoFit:true background:#f4f4f4 camera:{"position":[0,0,4.5],"fov":40}
+
+## Camera orbit
+- model3d src:assets/toy.glb duration:5 motion:orbit turns:0.5 rotation:[0,20,0] scale:1.1
+
+## Still model
+- model3d src:assets/toy.glb duration:2 motion:none
+```
+
+Attributes: `src` (required `.glb`/`.gltf`), `duration` (seconds; default 4),
+`motion` (`none`, `turntable` rotating the model, `orbit` revolving the camera),
+`turns` (revolutions over scene duration), `rotation:[x,y,z]` (**degrees**, Y-up),
+`position:[x,y,z]`, `scale` (positive multiplier), `autoFit` (default true:
+centers and normalizes bounding box to two world units),
+`camera:{"position":[x,y,z],"fov":40}`, `background` (CSS color or `transparent`).
+Animation is deterministic: `useCurrentFrame()` drives the angle, so pausing and
+seeking don't depend on browser wall clock.
+
+GLB/GLTF supports embedded mesh/material, textures and **already-existing**
+skinning. Model3D does not generate rigs, deform mouths, synthesize lip-sync,
+perform interactive mouse orbit controls, or run Blender; these require a
+separate authoring or viewer layer. Hosted preview snapshots a `.glb` asset through the existing NeoY Markcut
+revision media store (max 512 MB; subject to NeoY file access). Standalone
+`.gltf` with external textures and `.bin` files requires packaging as GLB
+before hosted review. Do not publish private assets without owner authorization.
+For MP4, the CLI selects Chromium `--gl=angle` automatically for streams
+containing `model3d`. `--gl=swangle` is a possible software fallback on a
+headless GPU-less machine. Do not equate compilation with successful WebGL
+rendering; inspect actual frames and seek.

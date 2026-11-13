@@ -125,6 +125,26 @@ export const image = base.extend({
 });
 export type Image = z.infer<typeof image>;
 
+/** A deterministic, timeline-synchronized GLB/GLTF scene. Positions and
+ * rotations are in Three.js Y-up coordinates; rotation angles are degrees. */
+const modelVector = z.tuple([z.number(), z.number(), z.number()]);
+export const model3d = base.extend({
+  type: z.literal("model3d"),
+  src: z.string().min(1).regex(/\.(glb|gltf)(?:[?#].*)?$/i, "model3d requires a .glb or .gltf asset; convert USDZ first"),
+  motion: z.enum(["none", "turntable", "orbit"]).default("none"),
+  turns: z.number().finite().default(1).describe("full revolutions over this stream's duration"),
+  rotation: modelVector.default([0, 0, 0]).describe("initial Euler rotation in degrees (XYZ)"),
+  position: modelVector.default([0, 0, 0]).describe("offset after model is centered"),
+  scale: z.number().positive().default(1),
+  autoFit: z.boolean().default(true).describe("center and normalize model to fit view"),
+  camera: z.object({
+    position: modelVector.default([0, 0, 4.5]),
+    fov: z.number().min(1).max(150).default(40),
+  }).optional(),
+  background: z.string().optional().describe("3D canvas background CSS color, default transparent"),
+});
+export type Model3D = z.infer<typeof model3d>;
+
 /**
  * Component node — JSX usage expression compiled at runtime.
  *
@@ -311,6 +331,7 @@ export const stream = z.discriminatedUnion("type", [
   video,
   audio,
   image,
+  model3d,
   component,
   effect,
   rhythm,

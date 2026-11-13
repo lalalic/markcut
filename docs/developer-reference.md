@@ -39,6 +39,7 @@ See [docs/markdown-strict-descriptive.md](docs/markdown-strict-descriptive.md) f
 | `scene` | Storyboard container: name, layout, script, children |
 | `folder` | Internal container (series/parallel) |
 | `image` | Still photo with fit mode |
+| `model3d` | GLB/GLTF in frame-synced Remotion `<ThreeCanvas>` (turntable/orbit, camera, scale) |
 | `video` | Video clip with startFrom/endAt trimming, playbackRate |
 | `audio` | Soundtrack/SFX with foreground ducking |
 | `component` | External React component by componentName + props |
@@ -128,7 +129,7 @@ Computed by `getDurationInSeconds()` in `src/utils/index.ts`:
 - **Include with `src`**: treated as leaf (duration from base `end`)
 - Sets `durationInSeconds` on every node as a side effect
 
-### 12 Stream Types
+### Stream Types
 
 All types share base fields from `BaseShape`: `id`, `name`, `title`, `description`, `script`, `src`, `style`, `visible`, `isBackground`, `start`, `end`, `duration`, `startFrom`, `endAt`, `durationInSeconds`.
 
@@ -138,6 +139,7 @@ All types share base fields from `BaseShape`: `id`, `name`, `title`, `descriptio
 | `folder` | Group children | `isSeries`, `transition`, `children[]` |
 | `scene` | Storyboard node (alias for folder) | `name`, `description`, `script`, `children[]` |
 | `image` | Still photo | `src`, `fit` (contain/cover/fill) |
+| `model3d` | Three.js GLB/GLTF model | `src`, `motion`, `turns`, `rotation`, `camera`, `autoFit` |
 | `video` | Video clip | `src`, `volume`, `playbackRate` |
 | `audio` | Soundtrack/SFX | `src`, `volume`, `foreground` (ducks parent) |
 | `subtitle` | Text overlay | `src` (text/VTT) or `cues[]`, `fontSize`, `style` |

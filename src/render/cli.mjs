@@ -141,6 +141,11 @@ console.log(`\n▶ Rendering → ${outputPath}`);
     // Serve local media (TTS, subtitles, images) from the .markcut base dir.
     const renderArgs = ["remotion", "render", "Root", outputPath, "--props", tmpProps, "--config", "remotion.config.ts"];
     if (publicDir) renderArgs.push("--public-dir", publicDir);
+    // ThreeCanvas needs a WebGL-capable Chromium backend for deterministic MP4.
+    const has3D = (node) => node?.type === "model3d" ||
+      (Array.isArray(node?.children) && node.children.some(has3D));
+    if (has3D(streamTree)) renderArgs.push("--gl=angle");
+
     const proc = spawn("npx", renderArgs, spawnOpts);
 
     let lastLoggedFrame = 0;
@@ -555,6 +560,21 @@ function hasScript(root) {
         }
       }
       walkMedia(descriptive.children);
+
+      // GLB/GLTF is a renderer contract, not a media-generation prompt.
+      // Fail verify before reaching Remotion for unsupported USDZ and typos.
+      function verifyModels(nodes) {
+        for (const n of nodes || []) {
+          if (n.type === "model3d") {
+            if (typeof n.src !== "string" || !/\.(glb|gltf)(?:[?#].*)?$/i.test(n.src))
+              errors.push('model3d requires a .glb or .gltf src (USDZ must be converted to GLB)');
+            if (n.motion && !["none", "turntable", "orbit"].includes(n.motion))
+              errors.push('model3d motion must be none, turntable, or orbit');
+          }
+          if (n.children) verifyModels(n.children);
+        }
+      }
+      verifyModels(descriptive.children);
 
       // ── Check: all assets relative to baseDir ───────────────────────────
       // Every local asset must be a path relative to the source file's folder

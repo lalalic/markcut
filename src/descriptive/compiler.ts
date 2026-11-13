@@ -7,6 +7,7 @@ import type {
   Image,
   Include,
   MapStream,
+  Model3D,
   Rhythm,
   Root,
   Scene,
@@ -18,7 +19,7 @@ import { uid, walkDown } from "../utils/index";
 import { BUILTIN_COMPONENT_NAMES } from "../components/builtin-registry";
 
 export interface CompileOptions {
-  defaults?: Partial<Record<"image" | "video" | "audio" | "component" | "rhythm" | "include" | "map", number>>;
+  defaults?: Partial<Record<"image" | "video" | "audio" | "component" | "rhythm" | "include" | "map" | "model3d", number>>;
   /** Google Maps API key, injected onto map nodes during compilation. */
   googleMapsApiKey?: string;
 }
@@ -86,6 +87,19 @@ export interface DescriptiveImage extends DescriptiveBaseNode {
   /** Text-to-image generation prompt. When set without src, triggers TTI pipeline. */
   prompt?: string;
   fit?: "contain" | "cover" | "fill";
+}
+
+export interface DescriptiveModel3D extends DescriptiveBaseNode {
+  type: "model3d";
+  src: string;
+  motion?: "none" | "turntable" | "orbit";
+  turns?: number;
+  rotation?: [number, number, number];
+  position?: [number, number, number];
+  scale?: number;
+  autoFit?: boolean;
+  camera?: { position?: [number, number, number]; fov?: number };
+  background?: string;
 }
 
 export interface DescriptiveComponent extends DescriptiveBaseNode {
@@ -208,6 +222,7 @@ export type DescriptiveNode =
   | DescriptiveVideo
   | DescriptiveAudio
   | DescriptiveImage
+  | DescriptiveModel3D
   | DescriptiveComponent
   | DescriptiveRhythm
   | DescriptiveInclude
@@ -313,7 +328,7 @@ export function resolveAllTemplateVars(
 }
 
 interface CompileContext {
-  defaults: Record<"image" | "video" | "audio" | "component" | "rhythm" | "include" | "map" | "effect", number>;
+  defaults: Record<"image" | "video" | "audio" | "component" | "rhythm" | "include" | "map" | "model3d" | "effect", number>;
   googleMapsApiKey: string;
 }
 
@@ -350,6 +365,7 @@ const DEFAULTS: CompileContext["defaults"] = {
   rhythm: 4,
   include: 3,
   map: 4,
+  model3d: 4,
   effect: 2,
 };
 
@@ -608,6 +624,25 @@ function compileLeaf(node: Exclude<DescriptiveNode, DescriptiveContainer | Descr
         type: "image",
         src: node.src,
         fit: node.fit ?? "contain",
+      };
+      return { stream, duration: end ?? 0 };
+    }
+    case "model3d": {
+      const stream: Model3D = {
+        ...base,
+        type: "model3d",
+        src: node.src,
+        motion: node.motion ?? "none",
+        turns: node.turns ?? 1,
+        rotation: node.rotation ?? [0, 0, 0],
+        position: node.position ?? [0, 0, 0],
+        scale: node.scale ?? 1,
+        autoFit: node.autoFit ?? true,
+        camera: node.camera ? {
+          position: node.camera.position ?? [0, 0, 4.5],
+          fov: node.camera.fov ?? 40,
+        } : undefined,
+        background: node.background,
       };
       return { stream, duration: end ?? 0 };
     }
@@ -1271,6 +1306,7 @@ const PRIMARY_CONTENT_KEY: Record<string, string> = {
   audio: "script",
   component: "jsx",
   image: "src",
+  model3d: "src",
   video: "src",
 };
 

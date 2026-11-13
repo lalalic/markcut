@@ -5,6 +5,7 @@ import type {
   DescriptiveImage,
   DescriptiveInclude,
   DescriptiveMap,
+  DescriptiveModel3D,
   DescriptiveMapWaypoint,
   DescriptiveNode,
   DescriptiveRhythm,
@@ -35,6 +36,7 @@ export type { ParseContext };
 
 const TYPE_TOKENS: Record<string, string> = {
   image: "image",
+  model3d: "model3d",
   video: "video",
   audio: "audio",
   component: "component",
@@ -104,6 +106,7 @@ function preserveVariantAttrs(node: Record<string, unknown>, attrs: Record<strin
     "view", "camera", "cinematic", "streetView", "routeAnimation",
     "name", "title", "transition", "transitionTime", "layout",
     "componentName", "props", "speaker", "isNarration",
+    "motion", "turns", "rotation", "position", "scale", "autoFit", "background",
   ]);
   for (const [k, v] of Object.entries(attrs)) {
     if (!STANDARD.has(k)) {
@@ -172,6 +175,33 @@ function parseNodeLine(content: string, lineNum?: number): DescriptiveNode {
         fit: attrs.fit as any,
         duration: attrs.duration as any,
         start: attrs.start as any,
+        instruction: attrs.instruction as any,
+        visible: attrs.visible as any,
+        isBackground: attrs.isBackground as any,
+        style: attrs.style as any,
+        effects: attrs.effects as any,
+        on: attrs.on as any,
+      };
+      preserveVariantAttrs(node, attrs);
+      return node;
+    }
+    case "model3d": {
+      const src = firstPositional ?? (attrs.src as string | undefined);
+      if (!src) throw new DslError("model3d requires src (.glb or .gltf)", ctx);
+      const node: DescriptiveModel3D = {
+        type: "model3d",
+        id: attrs.id as any,
+        src,
+        duration: attrs.duration as any,
+        start: attrs.start as any,
+        motion: attrs.motion as any,
+        turns: attrs.turns as any,
+        rotation: attrs.rotation as any,
+        position: attrs.position as any,
+        scale: attrs.scale as any,
+        autoFit: attrs.autoFit as any,
+        camera: attrs.camera as any,
+        background: attrs.background as any,
         instruction: attrs.instruction as any,
         visible: attrs.visible as any,
         isBackground: attrs.isBackground as any,

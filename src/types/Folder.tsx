@@ -14,6 +14,7 @@ import type { Folder as FolderStream, Stream } from "../schema/index";
 import { VideoLeaf } from "./Video";
 import { AudioLeaf } from "./Audio";
 import { ImageLeaf } from "./Image";
+import { Model3DLeaf } from "./Model3D";
 import { ComponentLeaf } from "./Component";
 import { RhythmLeaf } from "./Rhythm";
 import { MapLeaf } from "./Map";
@@ -25,6 +26,7 @@ const Leaves: Record<string, React.ComponentType<{ stream: any }>> = {
   video: VideoLeaf,
   audio: AudioLeaf,
   image: ImageLeaf,
+  model3d: Model3DLeaf,
   component: ComponentLeaf,
   rhythm: RhythmLeaf,
   map: MapLeaf,

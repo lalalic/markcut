@@ -304,6 +304,25 @@ function compileLeaf(node2, ctx, parentKind) {
       };
       return { stream, duration: end ?? 0 };
     }
+    case "model3d": {
+      const stream = {
+        ...base,
+        type: "model3d",
+        src: node2.src,
+        motion: node2.motion ?? "none",
+        turns: node2.turns ?? 1,
+        rotation: node2.rotation ?? [0, 0, 0],
+        position: node2.position ?? [0, 0, 0],
+        scale: node2.scale ?? 1,
+        autoFit: node2.autoFit ?? true,
+        camera: node2.camera ? {
+          position: node2.camera.position ?? [0, 0, 4.5],
+          fov: node2.camera.fov ?? 40
+        } : void 0,
+        background: node2.background
+      };
+      return { stream, duration: end ?? 0 };
+    }
     case "component": {
       const KNOWN_COMPONENT_KEYS = /* @__PURE__ */ new Set([
         "type",
@@ -880,6 +899,7 @@ var init_compiler = __esm({
       rhythm: 4,
       include: 3,
       map: 4,
+      model3d: 4,
       effect: 2
     };
     VALID_TRANSITIONS = /* @__PURE__ */ new Set(["fade", "slide", "wipe", "flip", "clockWipe"]);
@@ -887,14 +907,15 @@ var init_compiler = __esm({
       audio: "script",
       component: "jsx",
       image: "src",
+      model3d: "src",
       video: "src"
     };
   }
 });
 
-// ../../../markcut/node_modules/extend/index.js
+// node_modules/extend/index.js
 var require_extend = __commonJS({
-  "../../../markcut/node_modules/extend/index.js"(exports, module) {
+  "node_modules/extend/index.js"(exports, module) {
     "use strict";
     var hasOwn = Object.prototype.hasOwnProperty;
     var toStr = Object.prototype.toString;
@@ -983,9 +1004,9 @@ var require_extend = __commonJS({
   }
 });
 
-// ../../../markcut/node_modules/format/format.js
+// node_modules/format/format.js
 var require_format = __commonJS({
-  "../../../markcut/node_modules/format/format.js"(exports, module) {
+  "node_modules/format/format.js"(exports, module) {
     (function() {
       var namespace;
       if (typeof module !== "undefined") {
@@ -1376,21 +1397,21 @@ function generateTTV(prompt, outputPath, cli, ttiCmd, seed) {
 init_utils();
 init_compiler();
 
-// ../../../markcut/node_modules/bail/index.js
+// node_modules/bail/index.js
 function bail(error) {
   if (error) {
     throw error;
   }
 }
 
-// ../../../markcut/node_modules/unified/lib/index.js
+// node_modules/unified/lib/index.js
 var import_extend = __toESM(require_extend(), 1);
 
-// ../../../markcut/node_modules/devlop/lib/default.js
+// node_modules/devlop/lib/default.js
 function ok() {
 }
 
-// ../../../markcut/node_modules/is-plain-obj/index.js
+// node_modules/is-plain-obj/index.js
 function isPlainObject(value2) {
   if (typeof value2 !== "object" || value2 === null) {
     return false;
@@ -1399,7 +1420,7 @@ function isPlainObject(value2) {
   return (prototype === null || prototype === Object.prototype || Object.getPrototypeOf(prototype) === null) && !(Symbol.toStringTag in value2) && !(Symbol.iterator in value2);
 }
 
-// ../../../markcut/node_modules/trough/lib/index.js
+// node_modules/trough/lib/index.js
 function trough() {
   const fns = [];
   const pipeline = { run, use };
@@ -1483,7 +1504,7 @@ function wrap(middleware, callback) {
   }
 }
 
-// ../../../markcut/node_modules/unist-util-stringify-position/lib/index.js
+// node_modules/unist-util-stringify-position/lib/index.js
 function stringifyPosition(value2) {
   if (!value2 || typeof value2 !== "object") {
     return "";
@@ -1509,7 +1530,7 @@ function index(value2) {
   return value2 && typeof value2 === "number" ? value2 : 1;
 }
 
-// ../../../markcut/node_modules/vfile-message/lib/index.js
+// node_modules/vfile-message/lib/index.js
 var VFileMessage = class extends Error {
   /**
    * Create a message for `reason`.
@@ -1645,16 +1666,16 @@ VFileMessage.prototype.place = void 0;
 VFileMessage.prototype.ruleId = void 0;
 VFileMessage.prototype.source = void 0;
 
-// ../../../markcut/node_modules/vfile/lib/minpath.js
+// node_modules/vfile/lib/minpath.js
 import { default as default2 } from "node:path";
 
-// ../../../markcut/node_modules/vfile/lib/minproc.js
+// node_modules/vfile/lib/minproc.js
 import { default as default3 } from "node:process";
 
-// ../../../markcut/node_modules/vfile/lib/minurl.js
+// node_modules/vfile/lib/minurl.js
 import { fileURLToPath as fileURLToPath3 } from "node:url";
 
-// ../../../markcut/node_modules/vfile/lib/minurl.shared.js
+// node_modules/vfile/lib/minurl.shared.js
 function isUrl(fileUrlOrPath) {
   return Boolean(
     fileUrlOrPath !== null && typeof fileUrlOrPath === "object" && "href" in fileUrlOrPath && fileUrlOrPath.href && "protocol" in fileUrlOrPath && fileUrlOrPath.protocol && // @ts-expect-error: indexing is fine.
@@ -1662,7 +1683,7 @@ function isUrl(fileUrlOrPath) {
   );
 }
 
-// ../../../markcut/node_modules/vfile/lib/index.js
+// node_modules/vfile/lib/index.js
 var order = (
   /** @type {const} */
   [
@@ -2118,7 +2139,7 @@ function isUint8Array(value2) {
   );
 }
 
-// ../../../markcut/node_modules/unified/lib/callable-instance.js
+// node_modules/unified/lib/callable-instance.js
 var CallableInstance = (
   /**
    * @type {new <Parameters extends Array<unknown>, Result>(property: string | symbol) => (...parameters: Parameters) => Result}
@@ -2147,7 +2168,7 @@ var CallableInstance = (
   })
 );
 
-// ../../../markcut/node_modules/unified/lib/index.js
+// node_modules/unified/lib/index.js
 var own = {}.hasOwnProperty;
 var Processor = class _Processor extends CallableInstance {
   /**
@@ -2783,7 +2804,7 @@ function isUint8Array2(value2) {
   );
 }
 
-// ../../../markcut/node_modules/mdast-util-to-string/lib/index.js
+// node_modules/mdast-util-to-string/lib/index.js
 var emptyOptions = {};
 function toString(value2, options) {
   const settings = options || emptyOptions;
@@ -2820,7 +2841,7 @@ function node(value2) {
   return Boolean(value2 && typeof value2 === "object");
 }
 
-// ../../../markcut/node_modules/character-entities/index.js
+// node_modules/character-entities/index.js
 var characterEntities = {
   AElig: "\xC6",
   AMP: "&",
@@ -4949,13 +4970,13 @@ var characterEntities = {
   zwnj: "\u200C"
 };
 
-// ../../../markcut/node_modules/decode-named-character-reference/index.js
+// node_modules/decode-named-character-reference/index.js
 var own2 = {}.hasOwnProperty;
 function decodeNamedCharacterReference(value2) {
   return own2.call(characterEntities, value2) ? characterEntities[value2] : false;
 }
 
-// ../../../markcut/node_modules/micromark-util-chunked/index.js
+// node_modules/micromark-util-chunked/index.js
 function splice(list2, start, remove, items) {
   const end = list2.length;
   let chunkStart = 0;
@@ -4989,7 +5010,7 @@ function push(list2, items) {
   return items;
 }
 
-// ../../../markcut/node_modules/micromark-util-combine-extensions/index.js
+// node_modules/micromark-util-combine-extensions/index.js
 var hasOwnProperty = {}.hasOwnProperty;
 function combineExtensions(extensions) {
   const all2 = {};
@@ -5029,7 +5050,7 @@ function constructs(existing, list2) {
   splice(existing, 0, 0, before);
 }
 
-// ../../../markcut/node_modules/micromark-util-decode-numeric-character-reference/index.js
+// node_modules/micromark-util-decode-numeric-character-reference/index.js
 function decodeNumericCharacterReference(value2, base) {
   const code = Number.parseInt(value2, base);
   if (
@@ -5047,12 +5068,12 @@ function decodeNumericCharacterReference(value2, base) {
   return String.fromCodePoint(code);
 }
 
-// ../../../markcut/node_modules/micromark-util-normalize-identifier/index.js
+// node_modules/micromark-util-normalize-identifier/index.js
 function normalizeIdentifier(value2) {
   return value2.replace(/[\t\n\r ]+/g, " ").replace(/^ | $/g, "").toLowerCase().toUpperCase();
 }
 
-// ../../../markcut/node_modules/micromark-util-character/index.js
+// node_modules/micromark-util-character/index.js
 var asciiAlpha = regexCheck(/[A-Za-z]/);
 var asciiAlphanumeric = regexCheck(/[\dA-Za-z]/);
 var asciiAtext = regexCheck(/[#-'*+\--9=?A-Z^-~]/);
@@ -5084,7 +5105,7 @@ function regexCheck(regex) {
   }
 }
 
-// ../../../markcut/node_modules/micromark-factory-space/index.js
+// node_modules/micromark-factory-space/index.js
 function factorySpace(effects, ok2, type, max) {
   const limit = max ? max - 1 : Number.POSITIVE_INFINITY;
   let size = 0;
@@ -5106,7 +5127,7 @@ function factorySpace(effects, ok2, type, max) {
   }
 }
 
-// ../../../markcut/node_modules/micromark/lib/initialize/content.js
+// node_modules/micromark/lib/initialize/content.js
 var content = {
   tokenize: initializeContent
 };
@@ -5156,7 +5177,7 @@ function initializeContent(effects) {
   }
 }
 
-// ../../../markcut/node_modules/micromark/lib/initialize/document.js
+// node_modules/micromark/lib/initialize/document.js
 var document = {
   tokenize: initializeDocument
 };
@@ -5338,7 +5359,7 @@ function tokenizeContainer(effects, ok2, nok) {
   return factorySpace(effects, effects.attempt(this.parser.constructs.document, ok2, nok), "linePrefix", this.parser.constructs.disable.null.includes("codeIndented") ? void 0 : 4);
 }
 
-// ../../../markcut/node_modules/micromark-util-classify-character/index.js
+// node_modules/micromark-util-classify-character/index.js
 function classifyCharacter(code) {
   if (code === null || markdownLineEndingOrSpace(code) || unicodeWhitespace(code)) {
     return 1;
@@ -5348,7 +5369,7 @@ function classifyCharacter(code) {
   }
 }
 
-// ../../../markcut/node_modules/micromark-util-resolve-all/index.js
+// node_modules/micromark-util-resolve-all/index.js
 function resolveAll(constructs2, events, context) {
   const called = [];
   let index2 = -1;
@@ -5362,7 +5383,7 @@ function resolveAll(constructs2, events, context) {
   return events;
 }
 
-// ../../../markcut/node_modules/micromark-core-commonmark/lib/attention.js
+// node_modules/micromark-core-commonmark/lib/attention.js
 var attention = {
   name: "attention",
   resolveAll: resolveAllAttention,
@@ -5493,7 +5514,7 @@ function movePoint(point3, offset) {
   point3._bufferIndex += offset;
 }
 
-// ../../../markcut/node_modules/micromark-core-commonmark/lib/autolink.js
+// node_modules/micromark-core-commonmark/lib/autolink.js
 var autolink = {
   name: "autolink",
   tokenize: tokenizeAutolink
@@ -5594,7 +5615,7 @@ function tokenizeAutolink(effects, ok2, nok) {
   }
 }
 
-// ../../../markcut/node_modules/micromark-core-commonmark/lib/blank-line.js
+// node_modules/micromark-core-commonmark/lib/blank-line.js
 var blankLine = {
   partial: true,
   tokenize: tokenizeBlankLine
@@ -5609,7 +5630,7 @@ function tokenizeBlankLine(effects, ok2, nok) {
   }
 }
 
-// ../../../markcut/node_modules/micromark-core-commonmark/lib/block-quote.js
+// node_modules/micromark-core-commonmark/lib/block-quote.js
 var blockQuote = {
   continuation: {
     tokenize: tokenizeBlockQuoteContinuation
@@ -5667,7 +5688,7 @@ function exit(effects) {
   effects.exit("blockQuote");
 }
 
-// ../../../markcut/node_modules/micromark-core-commonmark/lib/character-escape.js
+// node_modules/micromark-core-commonmark/lib/character-escape.js
 var characterEscape = {
   name: "characterEscape",
   tokenize: tokenizeCharacterEscape
@@ -5693,7 +5714,7 @@ function tokenizeCharacterEscape(effects, ok2, nok) {
   }
 }
 
-// ../../../markcut/node_modules/micromark-core-commonmark/lib/character-reference.js
+// node_modules/micromark-core-commonmark/lib/character-reference.js
 var characterReference = {
   name: "characterReference",
   tokenize: tokenizeCharacterReference
@@ -5758,7 +5779,7 @@ function tokenizeCharacterReference(effects, ok2, nok) {
   }
 }
 
-// ../../../markcut/node_modules/micromark-core-commonmark/lib/code-fenced.js
+// node_modules/micromark-core-commonmark/lib/code-fenced.js
 var nonLazyContinuation = {
   partial: true,
   tokenize: tokenizeNonLazyContinuation
@@ -5941,7 +5962,7 @@ function tokenizeNonLazyContinuation(effects, ok2, nok) {
   }
 }
 
-// ../../../markcut/node_modules/micromark-core-commonmark/lib/code-indented.js
+// node_modules/micromark-core-commonmark/lib/code-indented.js
 var codeIndented = {
   name: "codeIndented",
   tokenize: tokenizeCodeIndented
@@ -6005,7 +6026,7 @@ function tokenizeFurtherStart(effects, ok2, nok) {
   }
 }
 
-// ../../../markcut/node_modules/micromark-core-commonmark/lib/code-text.js
+// node_modules/micromark-core-commonmark/lib/code-text.js
 var codeText = {
   name: "codeText",
   previous,
@@ -6120,7 +6141,7 @@ function tokenizeCodeText(effects, ok2, nok) {
   }
 }
 
-// ../../../markcut/node_modules/micromark-util-subtokenize/lib/splice-buffer.js
+// node_modules/micromark-util-subtokenize/lib/splice-buffer.js
 var SpliceBuffer = class {
   /**
    * @param {ReadonlyArray<T> | null | undefined} [initial]
@@ -6313,7 +6334,7 @@ function chunkedPush(list2, right) {
   }
 }
 
-// ../../../markcut/node_modules/micromark-util-subtokenize/index.js
+// node_modules/micromark-util-subtokenize/index.js
 function subtokenize(eventsArray) {
   const jumps = {};
   let index2 = -1;
@@ -6466,7 +6487,7 @@ function subcontent(events, eventIndex) {
   return gaps;
 }
 
-// ../../../markcut/node_modules/micromark-core-commonmark/lib/content.js
+// node_modules/micromark-core-commonmark/lib/content.js
 var content2 = {
   resolve: resolveContent,
   tokenize: tokenizeContent
@@ -6537,7 +6558,7 @@ function tokenizeContinuation(effects, ok2, nok) {
   }
 }
 
-// ../../../markcut/node_modules/micromark-factory-destination/index.js
+// node_modules/micromark-factory-destination/index.js
 function factoryDestination(effects, ok2, nok, type, literalType, literalMarkerType, rawType, stringType, max) {
   const limit = max || Number.POSITIVE_INFINITY;
   let balance = 0;
@@ -6629,7 +6650,7 @@ function factoryDestination(effects, ok2, nok, type, literalType, literalMarkerT
   }
 }
 
-// ../../../markcut/node_modules/micromark-factory-label/index.js
+// node_modules/micromark-factory-label/index.js
 function factoryLabel(effects, ok2, nok, type, markerType, stringType) {
   const self = this;
   let size = 0;
@@ -6690,7 +6711,7 @@ function factoryLabel(effects, ok2, nok, type, markerType, stringType) {
   }
 }
 
-// ../../../markcut/node_modules/micromark-factory-title/index.js
+// node_modules/micromark-factory-title/index.js
 function factoryTitle(effects, ok2, nok, type, markerType, stringType) {
   let marker;
   return start;
@@ -6752,7 +6773,7 @@ function factoryTitle(effects, ok2, nok, type, markerType, stringType) {
   }
 }
 
-// ../../../markcut/node_modules/micromark-factory-whitespace/index.js
+// node_modules/micromark-factory-whitespace/index.js
 function factoryWhitespace(effects, ok2) {
   let seen;
   return start;
@@ -6771,7 +6792,7 @@ function factoryWhitespace(effects, ok2) {
   }
 }
 
-// ../../../markcut/node_modules/micromark-core-commonmark/lib/definition.js
+// node_modules/micromark-core-commonmark/lib/definition.js
 var definition = {
   name: "definition",
   tokenize: tokenizeDefinition
@@ -6857,7 +6878,7 @@ function tokenizeTitleBefore(effects, ok2, nok) {
   }
 }
 
-// ../../../markcut/node_modules/micromark-core-commonmark/lib/hard-break-escape.js
+// node_modules/micromark-core-commonmark/lib/hard-break-escape.js
 var hardBreakEscape = {
   name: "hardBreakEscape",
   tokenize: tokenizeHardBreakEscape
@@ -6878,7 +6899,7 @@ function tokenizeHardBreakEscape(effects, ok2, nok) {
   }
 }
 
-// ../../../markcut/node_modules/micromark-core-commonmark/lib/heading-atx.js
+// node_modules/micromark-core-commonmark/lib/heading-atx.js
 var headingAtx = {
   name: "headingAtx",
   resolve: resolveHeadingAtx,
@@ -6969,7 +6990,7 @@ function tokenizeHeadingAtx(effects, ok2, nok) {
   }
 }
 
-// ../../../markcut/node_modules/micromark-util-html-tag-name/index.js
+// node_modules/micromark-util-html-tag-name/index.js
 var htmlBlockNames = [
   "address",
   "article",
@@ -7036,7 +7057,7 @@ var htmlBlockNames = [
 ];
 var htmlRawNames = ["pre", "script", "style", "textarea"];
 
-// ../../../markcut/node_modules/micromark-core-commonmark/lib/html-flow.js
+// node_modules/micromark-core-commonmark/lib/html-flow.js
 var htmlFlow = {
   concrete: true,
   name: "htmlFlow",
@@ -7415,7 +7436,7 @@ function tokenizeBlankLineBefore(effects, ok2, nok) {
   }
 }
 
-// ../../../markcut/node_modules/micromark-core-commonmark/lib/html-text.js
+// node_modules/micromark-core-commonmark/lib/html-text.js
 var htmlText = {
   name: "htmlText",
   tokenize: tokenizeHtmlText
@@ -7721,7 +7742,7 @@ function tokenizeHtmlText(effects, ok2, nok) {
   }
 }
 
-// ../../../markcut/node_modules/micromark-core-commonmark/lib/label-end.js
+// node_modules/micromark-core-commonmark/lib/label-end.js
 var labelEnd = {
   name: "labelEnd",
   resolveAll: resolveAllLabelEnd,
@@ -7947,7 +7968,7 @@ function tokenizeReferenceCollapsed(effects, ok2, nok) {
   }
 }
 
-// ../../../markcut/node_modules/micromark-core-commonmark/lib/label-start-image.js
+// node_modules/micromark-core-commonmark/lib/label-start-image.js
 var labelStartImage = {
   name: "labelStartImage",
   resolveAll: labelEnd.resolveAll,
@@ -7978,7 +7999,7 @@ function tokenizeLabelStartImage(effects, ok2, nok) {
   }
 }
 
-// ../../../markcut/node_modules/micromark-core-commonmark/lib/label-start-link.js
+// node_modules/micromark-core-commonmark/lib/label-start-link.js
 var labelStartLink = {
   name: "labelStartLink",
   resolveAll: labelEnd.resolveAll,
@@ -8000,7 +8021,7 @@ function tokenizeLabelStartLink(effects, ok2, nok) {
   }
 }
 
-// ../../../markcut/node_modules/micromark-core-commonmark/lib/line-ending.js
+// node_modules/micromark-core-commonmark/lib/line-ending.js
 var lineEnding = {
   name: "lineEnding",
   tokenize: tokenizeLineEnding
@@ -8015,7 +8036,7 @@ function tokenizeLineEnding(effects, ok2) {
   }
 }
 
-// ../../../markcut/node_modules/micromark-core-commonmark/lib/thematic-break.js
+// node_modules/micromark-core-commonmark/lib/thematic-break.js
 var thematicBreak = {
   name: "thematicBreak",
   tokenize: tokenizeThematicBreak
@@ -8054,7 +8075,7 @@ function tokenizeThematicBreak(effects, ok2, nok) {
   }
 }
 
-// ../../../markcut/node_modules/micromark-core-commonmark/lib/list.js
+// node_modules/micromark-core-commonmark/lib/list.js
 var list = {
   continuation: {
     tokenize: tokenizeListContinuation
@@ -8184,7 +8205,7 @@ function tokenizeListItemPrefixWhitespace(effects, ok2, nok) {
   }
 }
 
-// ../../../markcut/node_modules/micromark-core-commonmark/lib/setext-underline.js
+// node_modules/micromark-core-commonmark/lib/setext-underline.js
 var setextUnderline = {
   name: "setextUnderline",
   resolveTo: resolveToSetextUnderline,
@@ -8276,7 +8297,7 @@ function tokenizeSetextUnderline(effects, ok2, nok) {
   }
 }
 
-// ../../../markcut/node_modules/micromark/lib/initialize/flow.js
+// node_modules/micromark/lib/initialize/flow.js
 var flow = {
   tokenize: initializeFlow
 };
@@ -8314,7 +8335,7 @@ function initializeFlow(effects) {
   }
 }
 
-// ../../../markcut/node_modules/micromark/lib/initialize/text.js
+// node_modules/micromark/lib/initialize/text.js
 var resolver = {
   resolveAll: createResolver()
 };
@@ -8453,7 +8474,7 @@ function resolveAllLineSuffixes(events, context) {
   return events;
 }
 
-// ../../../markcut/node_modules/micromark/lib/constructs.js
+// node_modules/micromark/lib/constructs.js
 var constructs_exports = {};
 __export(constructs_exports, {
   attentionMarkers: () => attentionMarkers,
@@ -8528,7 +8549,7 @@ var disable = {
   null: []
 };
 
-// ../../../markcut/node_modules/micromark/lib/create-tokenizer.js
+// node_modules/micromark/lib/create-tokenizer.js
 function createTokenizer(parser, initialize, from) {
   let point3 = {
     _bufferIndex: -1,
@@ -8851,7 +8872,7 @@ function serializeChunks(chunks, expandTabs) {
   return result.join("");
 }
 
-// ../../../markcut/node_modules/micromark/lib/parse.js
+// node_modules/micromark/lib/parse.js
 function parse(options) {
   const settings = options || {};
   const constructs2 = (
@@ -8877,14 +8898,14 @@ function parse(options) {
   }
 }
 
-// ../../../markcut/node_modules/micromark/lib/postprocess.js
+// node_modules/micromark/lib/postprocess.js
 function postprocess(events) {
   while (!subtokenize(events)) {
   }
   return events;
 }
 
-// ../../../markcut/node_modules/micromark/lib/preprocess.js
+// node_modules/micromark/lib/preprocess.js
 var search = /[\0\t\n\r]/g;
 function preprocess() {
   let column = 1;
@@ -8963,7 +8984,7 @@ function preprocess() {
   }
 }
 
-// ../../../markcut/node_modules/micromark-util-decode-string/index.js
+// node_modules/micromark-util-decode-string/index.js
 var characterEscapeOrReference = /\\([!-/:-@[-`{-~])|&(#(?:\d{1,7}|x[\da-f]{1,6})|[\da-z]{1,31});/gi;
 function decodeString(value2) {
   return value2.replace(characterEscapeOrReference, decode);
@@ -8981,7 +9002,7 @@ function decode($0, $1, $2) {
   return decodeNamedCharacterReference($2) || $0;
 }
 
-// ../../../markcut/node_modules/mdast-util-from-markdown/lib/index.js
+// node_modules/mdast-util-from-markdown/lib/index.js
 var own3 = {}.hasOwnProperty;
 function fromMarkdown(value2, encoding, options) {
   if (encoding && typeof encoding === "object") {
@@ -9690,7 +9711,7 @@ function defaultOnError(left, right) {
   }
 }
 
-// ../../../markcut/node_modules/remark-parse/lib/index.js
+// node_modules/remark-parse/lib/index.js
 function remarkParse(options) {
   const self = this;
   self.parser = parser;
@@ -9707,7 +9728,7 @@ function remarkParse(options) {
   }
 }
 
-// ../../../markcut/node_modules/fault/index.js
+// node_modules/fault/index.js
 var import_format = __toESM(require_format(), 1);
 var fault = Object.assign(create(Error), {
   eval: create(EvalError),
@@ -9726,7 +9747,7 @@ function create(Constructor) {
   }
 }
 
-// ../../../markcut/node_modules/micromark-extension-frontmatter/lib/to-matters.js
+// node_modules/micromark-extension-frontmatter/lib/to-matters.js
 var own4 = {}.hasOwnProperty;
 var markers = {
   yaml: "-",
@@ -9763,7 +9784,7 @@ function matter(option) {
   return result;
 }
 
-// ../../../markcut/node_modules/micromark-extension-frontmatter/lib/syntax.js
+// node_modules/micromark-extension-frontmatter/lib/syntax.js
 function frontmatter(options) {
   const matters = toMatters(options);
   const flow3 = {};
@@ -9949,7 +9970,7 @@ function pick(schema, prop) {
   return typeof schema === "string" ? schema : schema[prop];
 }
 
-// ../../../markcut/node_modules/escape-string-regexp/index.js
+// node_modules/escape-string-regexp/index.js
 function escapeStringRegexp(string3) {
   if (typeof string3 !== "string") {
     throw new TypeError("Expected a string");
@@ -9957,7 +9978,7 @@ function escapeStringRegexp(string3) {
   return string3.replace(/[|\\{}()[\]^$+*?.]/g, "\\$&").replace(/-/g, "\\x2d");
 }
 
-// ../../../markcut/node_modules/mdast-util-frontmatter/lib/index.js
+// node_modules/mdast-util-frontmatter/lib/index.js
 function frontmatterFromMarkdown(options) {
   const matters = toMatters(options);
   const enter = {};
@@ -10024,7 +10045,7 @@ function pick2(schema, prop) {
   return typeof schema === "string" ? schema : schema[prop];
 }
 
-// ../../../markcut/node_modules/remark-frontmatter/lib/index.js
+// node_modules/remark-frontmatter/lib/index.js
 var emptyOptions2 = "yaml";
 function remarkFrontmatter(options) {
   const self = (
@@ -10360,6 +10381,7 @@ function parseKeyValueTokens(tokens, ctx) {
 // src/descriptive/markdown.ts
 var TYPE_TOKENS = {
   image: "image",
+  model3d: "model3d",
   video: "video",
   audio: "audio",
   component: "component",
@@ -10456,7 +10478,14 @@ function preserveVariantAttrs(node2, attrs) {
     "componentName",
     "props",
     "speaker",
-    "isNarration"
+    "isNarration",
+    "motion",
+    "turns",
+    "rotation",
+    "position",
+    "scale",
+    "autoFit",
+    "background"
   ]);
   for (const [k, v] of Object.entries(attrs)) {
     if (!STANDARD.has(k)) {
@@ -10510,6 +10539,33 @@ function parseNodeLine(content3, lineNum) {
         fit: attrs.fit,
         duration: attrs.duration,
         start: attrs.start,
+        instruction: attrs.instruction,
+        visible: attrs.visible,
+        isBackground: attrs.isBackground,
+        style: attrs.style,
+        effects: attrs.effects,
+        on: attrs.on
+      };
+      preserveVariantAttrs(node2, attrs);
+      return node2;
+    }
+    case "model3d": {
+      const src = firstPositional ?? attrs.src;
+      if (!src) throw new DslError("model3d requires src (.glb or .gltf)", ctx);
+      const node2 = {
+        type: "model3d",
+        id: attrs.id,
+        src,
+        duration: attrs.duration,
+        start: attrs.start,
+        motion: attrs.motion,
+        turns: attrs.turns,
+        rotation: attrs.rotation,
+        position: attrs.position,
+        scale: attrs.scale,
+        autoFit: attrs.autoFit,
+        camera: attrs.camera,
+        background: attrs.background,
         instruction: attrs.instruction,
         visible: attrs.visible,
         isBackground: attrs.isBackground,

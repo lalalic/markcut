@@ -160,9 +160,9 @@ export function externalizePreviewMedia(compiled,revisionId,origin=publicOrigin(
   let bytes=0;
   const frozenPaths=new Map();
   function snapshotSource(src){
-    if(!sourceDir||src.startsWith("https://")||src.startsWith("data:"))return src;
     if(src.startsWith("http://")||src.startsWith("blob:"))
       throw new Error("Preview media must use HTTPS or local source files");
+    if(!sourceDir||src.startsWith("https://")||src.startsWith("data:"))return src;
     const full=src.startsWith("file://")?fileURLToPath(src):isAbsolute(src)?src:resolve(sourceDir,src);
     const root=realpathSync(sourceDir);
     let real;
@@ -182,7 +182,7 @@ export function externalizePreviewMedia(compiled,revisionId,origin=publicOrigin(
     const stats=statSync(real);
     if(!stats.isFile()||stats.size>512*1024*1024)throw new Error("Preview local media must be a file of at most 512 MB");
     const ext=extname(real).toLowerCase();
-    if(!/^[.](png|jpg|jpeg|webp|svg|gif|mp4|mov|webm|wav|mp3|m4a|ogg|vtt|srt)$/.test(ext))
+    if(!/^[.](png|jpg|jpeg|webp|svg|gif|mp4|mov|webm|wav|mp3|m4a|ogg|vtt|srt|glb)$/.test(ext))
       throw new Error("Unsupported local preview media extension: "+ext);
     mkdirSync(directory,{recursive:true});
     const filename="file-"+frozenPaths.size+ext;
