@@ -40,6 +40,13 @@ describe('Markcut Remotion MCP App',()=>{
   expect(html).not.toContain('127.0.0.1');
   expect(html).not.toContain('src="/player.js"');
  });
+ it('keeps askquestions Markdown and answers readable in both color schemes',()=>{
+  const html=buildPreviewHtml();
+  expect(html).toContain('#markcut-questions{');
+  expect(html).toContain('background:#fff;color:#17202a');
+  expect(html).toContain('background:#161b22;color:#f2f5fb');
+  expect(html).toContain('#markcut-questions textarea');
+ });
  it('fits the phone player by BOTH width and height, with scenes below canvas and actions in normal flow',()=>{
   const html=buildPreviewHtml();
   expect(html).toContain('@media (max-width: 640px), (max-width: 900px) and (max-height: 520px)');
@@ -63,8 +70,8 @@ describe('Markcut Remotion MCP App',()=>{
   expect(audio).toContain("p.addEventListener('play',play)");
  });
  it('maps every historical preview version and the stable URI to the latest',()=>{
-  expect(PREVIEW_VERSION_NUMBER).toBe(51);
-  expect(RESOURCE_URI).toBe('ui://markcut/video-preview-v51.html');
+  expect(PREVIEW_VERSION_NUMBER).toBe(52);
+  expect(RESOURCE_URI).toBe('ui://markcut/video-preview-v52.html');
   expect(STABLE_RESOURCE_URI).toBe('ui://markcut/video-preview.html');
   expect(LEGACY_RESOURCE_URIS).toHaveLength(PREVIEW_VERSION_NUMBER);
   expect(new Set([RESOURCE_URI,...LEGACY_RESOURCE_URIS]).size).toBe(PREVIEW_VERSION_NUMBER+1);

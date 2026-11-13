@@ -1,3 +1,6 @@
+#markcut-questions{background:#fff;color:#17202a}
+#markcut-questions textarea{background:#fff;color:#17202a}
+@media(prefers-color-scheme:dark){#markcut-questions{background:#161b22;color:#f2f5fb}#markcut-questions textarea{background:#242b36;color:#f2f5fb}}
 /* The MCP iframe can be very short even when its card is wide on desktop.
  * Never derive DESKTOP canvas width from iframe viewport height: it reduces a
  * 1:1 model to ~300px in a wide review card. Limit the longest video dimension
