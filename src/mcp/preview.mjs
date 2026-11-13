@@ -12,7 +12,7 @@ export const TOOL_NAME = "markcut.preview";
 // One source of truth for preview resources. Every historical version (and
 // the versionless alias) serves the same current UI and player bundle.
 // Increment the version only to bypass clients that cache an already-open UI.
-export const PREVIEW_VERSION_NUMBER = 49;
+export const PREVIEW_VERSION_NUMBER = 50;
 export const RESOURCE_URI = `ui://markcut/video-preview-v${PREVIEW_VERSION_NUMBER}.html`;
 export const STABLE_RESOURCE_URI = "ui://markcut/video-preview.html";
 const PREVIEW_VERSION = `v${PREVIEW_VERSION_NUMBER}`;

@@ -42,13 +42,17 @@ describe('Markcut Remotion MCP App',()=>{
  });
  it('fits the phone player by BOTH width and height, with scenes below canvas and actions in normal flow',()=>{
   const html=buildPreviewHtml();
-  expect(html).toContain('@media (max-width: 640px), (max-height: 520px)');
-  expect(html).toContain('var(--markcut-player-ratio, 0.5625)');
+  expect(html).toContain('@media (max-width: 640px), (max-width: 900px) and (max-height: 520px)');
+  expect(html).toContain('width: min(100%, calc(760px * var(--markcut-player-ratio, 0.5625)))');
+  expect(html).toContain('width: min(100%, calc(min(76dvh, 520px) * var(--markcut-player-ratio, 0.5625)))');
+  expect(html).not.toContain('58dvh');
   expect(html).toContain('#scene-thumbnails { order: 0;');
   expect(html).toContain("grid-template-areas: 'changes approve' 'status status'");
   expect(html).not.toMatch(/#remotion-canvas\s*\{[^}]*position\s*:\s*absolute/);
   const app=readFileSync(new URL('../src/mcp/remotion-app.tsx',import.meta.url),'utf8');
   expect(app).toContain('showPlaybackRateControl={!compact}');
+  expect(app).not.toContain("maxHeight:'65vh'");
+  expect(app).not.toContain("width:'100%',aspectRatio");
   expect(app).toContain('Boolean(data?.subtitle?.src)&&document.getElementById');
  });
  it('omits the developer BGM decode-status row while preserving Web Audio playback',()=>{
@@ -59,8 +63,8 @@ describe('Markcut Remotion MCP App',()=>{
   expect(audio).toContain("p.addEventListener('play',play)");
  });
  it('maps every historical preview version and the stable URI to the latest',()=>{
-  expect(PREVIEW_VERSION_NUMBER).toBe(49);
-  expect(RESOURCE_URI).toBe('ui://markcut/video-preview-v49.html');
+  expect(PREVIEW_VERSION_NUMBER).toBe(50);
+  expect(RESOURCE_URI).toBe('ui://markcut/video-preview-v50.html');
   expect(STABLE_RESOURCE_URI).toBe('ui://markcut/video-preview.html');
   expect(LEGACY_RESOURCE_URIS).toHaveLength(PREVIEW_VERSION_NUMBER);
   expect(new Set([RESOURCE_URI,...LEGACY_RESOURCE_URIS]).size).toBe(PREVIEW_VERSION_NUMBER+1);

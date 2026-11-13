@@ -15,9 +15,9 @@ function App(){
  const ref=React.useRef<PlayerRef|null>(null);
  const [currentTime,setCurrentTime]=React.useState(0);
  const [browserTts,setBrowserTts]=React.useState(true);
- const [compact,setCompact]=React.useState(()=>window.matchMedia('(max-width: 640px), (max-height: 520px)').matches);
+ const [compact,setCompact]=React.useState(()=>window.matchMedia('(max-width: 640px), (max-width: 900px) and (max-height: 520px)').matches);
  React.useEffect(()=>{
-  const query=window.matchMedia('(max-width: 640px), (max-height: 520px)');
+  const query=window.matchMedia('(max-width: 640px), (max-width: 900px) and (max-height: 520px)');
   const update=()=>setCompact(query.matches);
   query.addEventListener('change',update);
   return ()=>query.removeEventListener('change',update);
@@ -101,7 +101,7 @@ function App(){
     <input type="checkbox" checked={useBrowserTts} disabled={!data?.subtitle?.src} onChange={e=>setBrowserTts(e.target.checked)}/>
     Browser TTS
    </label>,document.getElementById("header-tts")!)}
-  <div id="remotion-canvas" style={{position:'relative',width:'100%',aspectRatio:`${data.width||1080}/${data.height||1920}`,maxHeight:'65vh',margin:'auto', '--markcut-player-ratio':String((data.width||1080)/(data.height||1920))} as React.CSSProperties}>
+  <div id="remotion-canvas" style={{position:'relative',aspectRatio:`${data.width||1080}/${data.height||1920}`,margin:'auto', '--markcut-player-ratio':String((data.width||1080)/(data.height||1920))} as React.CSSProperties}>
    <SharedPlayer key={revision.revisionId} root={playbackRoot} playerRef={ref} numberOfSharedAudioTags={0} showPlaybackRateControl={!compact} style={{width:'100%',height:'100%'}} />
    {useBrowserTts&&caption&&<div id="browser-tts-caption" aria-live="off" style={{position:'absolute',bottom:50,left:12,right:12,zIndex:5,pointerEvents:'none',textAlign:'center'}}>
     <span style={{display:'inline-block',maxWidth:'90%',padding:'5px 10px',borderRadius:5,background:'rgba(0,0,0,.72)',color:'#fff',fontSize:'clamp(12px,1.6vw,18px)',lineHeight:1.4,textShadow:'0 1px 2px #000',overflowWrap:'anywhere'}}>{caption}</span>
