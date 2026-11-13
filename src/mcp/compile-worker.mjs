@@ -14,10 +14,10 @@ try{
  if(actualHash!==sourceHash)throw new Error("Source changed while queued; retry preview");
  const result=await ensureVideoPreview(path,{onProgress:update});
  update("publishing");
- publishPreviewRevision(requestedPath,{...result,requestedPath});
+ publishPreviewRevision(requestedPath,{...result,requestedPath,...(review.title ? {title:review.title} : {})});
  // Markcut is a pure preview provider. The Neo MCP wrapper owns mobile delivery.
  writeOperation(id,{id,state:"ready",stage:"complete",startedAt,updatedAt:Date.now(),requestedPath,
-   result:{...result,requestedPath,requestId:id,review}});
+   result:{...result,requestedPath,requestId:id,review,...(review.title ? {title:review.title} : {})}});
 
 }catch(e){
  writeOperation(id,{id,state:"failed",stage:"failed",startedAt,updatedAt:Date.now(),requestedPath,review,error:e?.message||String(e)});

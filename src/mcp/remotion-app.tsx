@@ -1,4 +1,6 @@
 import * as React from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import {createRoot} from 'react-dom/client';
 import {createPortal} from 'react-dom';
 import type {PlayerRef} from '@remotion/player';
@@ -7,6 +9,29 @@ import {SceneThumbnails} from '../player/components/SceneThumbnails';
 import {useWebAudioPreview} from './web-audio-preview';
 import {withoutRecordedNarration} from './audio-preview-tree';
 import {useBrowserSpeechPreview} from './browser-speech-preview';
+// The question text is stored as base64 UTF-8 in the normal compiled Scene title.
+function QuestionsPanel({data,revisionId}:{data:any;revisionId:string}){
+ const scenes=React.useMemo(()=> (data?.children||[]).filter((scene:any)=>scene.type==='scene').map((scene:any,index:number)=>({
+  name:String(scene.name||'Q'+(index+1)),id:scene.id,
+  markdown:decodeQuestion(String(scene.title||'')),
+ })),[data]);
+ const [answers,setAnswers]=React.useState<Record<string,string>>({});
+ const emit=(next:Record<string,string>)=>window.dispatchEvent(new CustomEvent('markcut:questions-change',{detail:{answers:next}}));
+ React.useEffect(()=>{setAnswers({});emit({});},[revisionId]);
+ return <section id="markcut-questions" aria-label="Questions" style={{display:'grid',gap:18,padding:'10px 0 18px'}}>
+  {scenes.map((q:{name:string;id:string;markdown:string},index:number)=><div key={q.name} className="markcut-question" style={{borderTop:"1px solid #e2e8f0",paddingTop:10}}>
+   <div style={{color:'#64748b',fontSize:12,fontWeight:600}}>Q{index+1}</div>
+   <div className="markcut-question-md" style={{lineHeight:1.55,overflowWrap:"anywhere"}}><ReactMarkdown remarkPlugins={[remarkGfm]}>{q.markdown}</ReactMarkdown></div>
+   <textarea aria-label={'Answer '+(index+1)} placeholder="Your answer…" rows={3} style={{boxSizing:"border-box",width:"100%",minHeight:75,border:"1px solid #b5bdc8",borderRadius:6,padding:9,font:"inherit",resize:"vertical"}} value={answers[q.name]||''}
+     onChange={e=>{const next={...answers,[q.name]:e.target.value};setAnswers(next);emit(next);}}/>
+  </div>)}
+ </section>;
+}
+function decodeQuestion(value:string){
+ if(!value.startsWith('md64:'))return value;
+ try{return new TextDecoder().decode(Uint8Array.from(atob(value.slice(5)),char=>char.charCodeAt(0)));}
+ catch{return 'Question unavailable';}
+}
 const PLAYER_VERSION='v38';
 const contextTime=(scene:{start:number;end:number}|undefined,time:number)=>
  Math.round(Math.max(scene?.start??0,Math.min(scene?.end??time,time))*10)/10;
@@ -94,6 +119,7 @@ function App(){
  },[scenes,fps]);
  if(!revision)return <div id="remotion-waiting">Player {PLAYER_VERSION} · Waiting for compiled scenes…</div>;
  if(!data)return <div>Missing compiled scene tree</div>;
+ if(revision.review?.mode==='questions')return <QuestionsPanel key={revision.revisionId} data={data} revisionId={revision.revisionId}/>;
  const videoName=String(revision.title||revision.videoTitle||revision.path?.split('/').pop()?.replace(/\.md$/i,'').replace(/[-_]+/g,' ')||'Video');
  return <div id="remotion-preview" data-revision={revision.revisionId}>
   {Boolean(data?.subtitle?.src)&&document.getElementById("header-tts")&&createPortal(

@@ -336,6 +336,18 @@ When extracting HTTPS BGM from a preview tree, traverse the tree **before** retu
 
 For `map view:route`, omit `zoom` to auto-fit geotagged stops to the Remotion composition dimensions, including 9:16 vertical output; auto-fit reserves 14% padding. The route schema and both descriptive compiler paths must leave omitted zoom undefined, or their old `zoom:10` defaults silently override the runtime fit. Explicit `zoom` and camera tweens still override fit. Verify the real browser map's zoom/center and rendered tiles, not just a successful Markdown compile or Google API HTTP response. A calculated Directions line is not proof of a recorded GPS track.
 
+## Preview display title and question presentation
+
+`markcut.preview({path, title?})` uses `title` as a UI and notification
+display label without changing the compiled media/content hash. The optional
+`mode: "questions"` is a presentation-only variant used by the Neo
+`askquestions` wrapper: each compiled Scene has a Markdown question in its
+UTF-8/base64-encoded `title` (prefixed `md64:`). The generic Preview UI
+renders those titles as Markdown and collects one Scene comment per answer.
+Only Submit is available; generic event delivery remains unchanged.
+The Neo wrapper owns question generation and Relay binding, Markcut owns
+Markdown rendering, compilation and opaque event delivery.
+
 ## Generic Preview event delivery
 
 Markcut is a renderer and event transport, not a workflow or review authority. With

@@ -50,6 +50,8 @@ registerAppTool(
     description: "Compile and publish an immutable Markcut preview revision for this ChatGPT conversation. Review delivery defaults to ui/message, or submits an authorized caller-bound event when explicitly configured. Event-mode decisions use the caller-provided event envelope; Markcut does not interpret the event type or payload.",
     inputSchema: z.object({
       path: z.string().describe("Absolute .md path or NeoY HTTPS mounted file URL; Neo Wrapper also accepts single local image/audio/video files"),
+      title: z.string().trim().min(1).max(160).optional().describe("Optional display title for Preview and mobile Review Inbox."),
+      mode: z.enum(["questions"]).optional().describe("Render scene titles as Markdown questions, with answer fields and only Submit."),
       readonly: z.boolean().optional().describe("View-only preview: no review controls, Relay binding, Git checkpoint, or mobile review notification."),
       review: z.object({delivery:z.enum(["text","event"]).optional(),eventTemplate:z.object({type:z.string(),source:z.string(),data:z.record(z.string(),z.unknown()),responseKey:z.string().optional()}).optional(),
       }).optional(),
@@ -58,11 +60,11 @@ registerAppTool(
       ui: { resourceUri: RESOURCE_URI },
     },
   },
-  async ({ path, review, readonly }) => {
+  async ({ path, title, mode, review, readonly }) => {
     try {
       if (readonly && review !== undefined)
         throw new Error("Read-only preview cannot request Relay or review delivery");
-      const config={...normalizeReviewConfig(review),...(readonly ? {readonly:true} : {})};
+      const config={...normalizeReviewConfig(review),...(readonly ? {readonly:true} : {}),...(title ? {title} : {}),...(mode ? {mode} : {})};
       const operation=startCompileOperation(path,config);
       const payload=operation;
       return {

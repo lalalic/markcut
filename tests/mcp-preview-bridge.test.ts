@@ -11,8 +11,9 @@ function harness(remoteData?:any, fetchOverride?:(url:string)=>Promise<any>, too
   addEventListener(type:string,listener:Function){this.listeners[type]=listener},
   replaceChildren(){this.children=[]},append(...items:any[]){this.children.push(...items)}
  });
+ const actions=element();
  const nodes:Record<string,ReturnType<typeof element>>={
-  feedback:element(),status:element(),'path-label':element(),'video-md-version':element(),'interactive-ui':element(),'comment-entry':element(),approve:element(),changes:element(),'save-spot':element(),'remove-spot':element(),'comment-target':element(),'comment-mode':element(),'overall-mode':element(),'review-delivery-mode':element()
+  feedback:element(),status:element(),'path-label':element(),'video-md-version':element(),'interactive-ui':element(),'comment-entry':element(),approve:element(),changes:element(),'questions-submit':element(),'save-spot':element(),'remove-spot':element(),'comment-target':element(),'comment-mode':element(),'overall-mode':element(),'review-delivery-mode':element()
  };
  nodes['comment-mode'].value='spot';
  let dispatch:(message:any,source?:any)=>void;
@@ -24,15 +25,55 @@ function harness(remoteData?:any, fetchOverride?:(url:string)=>Promise<any>, too
   dispatchEvent:(evt:any)=>{events.push(evt);return true},
  };
  const fetch=fetchOverride|| (async()=>({ok:true,json:async()=>remoteData}));
- const context=vm.createContext({crypto:webcrypto,TextEncoder,URL,fetch,setTimeout,clearTimeout,window,document:{getElementById:(id:string)=>nodes[id],createElement:()=>element()},CustomEvent:class {type:string;detail:any;constructor(t:string,opts:any){this.type=t;this.detail=opts.detail}}});
+ const context=vm.createContext({crypto:webcrypto,TextEncoder,URL,fetch,setTimeout,clearTimeout,window,document:{getElementById:(id:string)=>nodes[id],querySelector:()=>actions,createElement:()=>element()},CustomEvent:class {type:string;detail:any;constructor(t:string,opts:any){this.type=t;this.detail=opts.detail}}});
  dispatch=(message:any,source=parent)=>(listeners.message??[]).forEach(listener=>listener({source,data:{jsonrpc:'2.0',...message}}));
  const result=(data:any)=>dispatch({method:'ui/notifications/tool-result',params:{result:{structuredContent:{...data}}}});
  const respond=(id:number,result:any={})=>dispatch({id,result});
  vm.runInContext(buildPreviewBridgeScript().replaceAll("__MARKCUT_ORIGIN__",JSON.stringify("https://neoy.qili2.com")),context);
  events.length=0; // Ignore the initial Overall marker/selection render in tests about later events.
- return {messages,nodes,events,dispatch,result,respond,scene:(detail:any)=>(listeners['markcut:scene-change']||[]).forEach(listener=>listener({detail})),selectSpot:(id:number)=>(listeners['markcut:spot-select']||[]).forEach(listener=>listener({detail:{id}}))};
+ return {messages,nodes,events,dispatch,result,respond,scene:(detail:any)=>(listeners['markcut:scene-change']||[]).forEach(listener=>listener({detail})),selectSpot:(id:number)=>(listeners['markcut:spot-select']||[]).forEach(listener=>listener({detail:{id}})),questionAnswers:(answers:Record<string,string>)=>(listeners['markcut:questions-change']||[]).forEach(listener=>listener({detail:{answers}}))};
 }
 const nextTick=()=>new Promise(resolve=>setTimeout(resolve,0));
+
+describe('Markdown questions mode',()=>{
+ it('renders question UI state, stores per-Scene answers and has only one Submit action',async()=>{
+  const h=harness();
+  h.result({path:'/tmp/.ghost.askquestions.md',title:'Vlog 选择',id:'questions',
+   revisionId:'qrev',contentHash:'a'.repeat(64),review:{delivery:'text',mode:'questions'},
+   compiled:{children:[{id:'scene-a',type:'scene',name:'Q1',title:'md64:YWJj'},
+      {id:'scene-b',type:'scene',name:'Q2',title:'md64:ZGVm'}]}});
+  expect(h.nodes['video-md-version'].textContent).toBe('Vlog 选择');
+  expect(h.nodes.approve.style.display).toBe('none');
+  expect(h.nodes.changes.style.display).toBe('none');
+  expect(h.nodes['comment-entry'].style.display).toBe('none');
+  expect(h.nodes['questions-submit'].hidden).toBe(false);
+  h.questionAnswers({Q1:'加拿大生活 **很有趣**'});
+  h.nodes['questions-submit'].onclick?.();
+  await nextTick();
+  const result=JSON.parse(h.messages.find(m=>m.method==='ui/message').params.content[0].text);
+  expect(result).toMatchObject({status:'submitted',decision:'approved',answers:[
+    {questionId:'Q1',answer:'加拿大生活 **很有趣**'},{questionId:'Q2',answer:''}]});
+  expect(result.comments).toMatchObject([
+    {sceneId:'scene-a',scope:'scene',text:'加拿大生活 **很有趣**',playbackContext:{sceneName:'Q1'}},
+    {sceneId:'scene-b',scope:'scene',text:'',playbackContext:{sceneName:'Q2'}}]);
+ });
+ it('publishes the existing bound event with scene answers on Submit',async()=>{
+  const h=harness();
+  const eventTemplate={type:'task.interactive_decision',source:'job/1/task/2/execution/3',
+   responseKey:'interactive',data:{interactive:{jobId:'1',taskId:'2',executionId:'3'}}};
+  h.result({path:'/tmp/questions.md',id:'qa',revisionId:'qa-rev',contentHash:'b'.repeat(64),
+   review:{delivery:'event',mode:'questions',eventTemplate},
+   compiled:{children:[{id:'s1',type:'scene',name:'Q1',title:'md64:Zm9v'}]}});
+  h.questionAnswers({Q1:'答案'});
+  h.nodes['questions-submit'].onclick?.();
+  await nextTick();
+  const published=h.messages.find(m=>m.method==='tools/call'&&m.params.name==='events');
+  expect(published.params.arguments.args).toMatchObject({
+    type:'task.interactive_decision',data:{interactive:{decision:'approved',comments:[
+      {sceneId:'s1',text:'答案',scope:'scene',playbackContext:{sceneName:'Q1'}}
+    ]}}});
+ });
+});
 
 describe('MCP Remotion bridge',()=>{
  it('readonly input displays playback without review controls or messages',async()=>{

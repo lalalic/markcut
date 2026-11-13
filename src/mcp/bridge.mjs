@@ -3,6 +3,11 @@ return `
 const feedback=document.getElementById('feedback'),status=document.getElementById('status'),pathLabel=document.getElementById('path-label');
 let nextId=0,identity=null,busy=false,expectedPath=null,activePath=null,activeReview={delivery:"text"},expectedDelivery="text",expectedReadonly=false,submittedRevision=null,submission=null;
 const comments=[];
+let questions=[],questionAnswers={};
+const isQuestionMode=()=>activeReview?.mode==='questions';
+window.addEventListener('markcut:questions-change',event=>{
+ if(isQuestionMode())questionAnswers={...(event.detail?.answers||{})};
+});
 let currentScene={sceneId:null,sceneName:null,sceneStart:0,timeSeconds:0},selectedId=0,nextCommentId=0;
 const mode=document.getElementById('comment-mode');
 const isViewOnly=()=>expectedReadonly||activeReview?.readonly===true;
@@ -238,9 +243,16 @@ function reviewReadonly(readonly,message){
  for(const id of ['approve','changes']){
   const button=document.getElementById(id);
   button.disabled=viewOnly||readonly;
-  button.style.display=viewOnly?'none':'';
+  button.style.display=viewOnly||isQuestionMode()?'none':'';
  }
- document.getElementById('comment-entry').style.display=viewOnly?'none':'';
+ document.getElementById('comment-entry').style.display=viewOnly||isQuestionMode()?'none':'';
+ const actions=document.querySelector('.review-actions');
+ actions.style.display=isQuestionMode()?'flex':'';
+ actions.style.justifyContent=isQuestionMode()?'center':'';
+ actions.style.flexWrap=isQuestionMode()?'wrap':'';
+ const submitButton=document.getElementById('questions-submit');
+ submitButton.hidden=!isQuestionMode();
+ submitButton.disabled=!isQuestionMode()||viewOnly||readonly;
  if(readonly&&message)status.textContent=message;
 }
 async function renderRevision(data){
@@ -267,6 +279,8 @@ async function renderRevision(data){
   if(generation!==renderGeneration)return;
   document.getElementById('interactive-ui').hidden=false;
   window.__markcutRevision={...data,compiled};
+  questions=(compiled.root?.children||compiled.children||[]).filter(scene=>scene.type==='scene').map((scene,index)=>({name:String(scene.name||'Q'+(index+1)),id:scene.id}));
+  questionAnswers={};
   window.dispatchEvent(new CustomEvent('markcut:revision',{detail:window.__markcutRevision}));
   status.textContent='';
   if(!data.compiledUrl){
@@ -302,20 +316,20 @@ async function initialize(){
 }
 async function submit(decision){
  if(busy||isViewOnly())return;
- if(document.getElementById(decision==='approved'?'approve':'changes').disabled){
+ if(document.getElementById(isQuestionMode()?'questions-submit':(decision==='approved'?'approve':'changes')).disabled){
   status.textContent='Review disabled for this revision or delivery configuration.';return;
  }
  // The submission button must save a draft, not silently require a second '+' action.
- if(feedback.value.trim()){
+ if(!isQuestionMode()&&feedback.value.trim()){
   if(decision==='approved'){
    status.textContent='You have draft feedback. Submit feedback or clear it before approving.';
    return;
   }
   if(!saveDraft({fallbackOverall:true}))return;
  }
- const preparedComments=allComments();
- if(decision==='changes_requested'&&!preparedComments.length){status.textContent='Feedback is required.';return;}
- if(decision==='approved'&&preparedComments.length){status.textContent='Submit or remove draft comments before approval.';return;}
+ const preparedComments=isQuestionMode()?questions.map(q=>({scope:'scene',text:questionAnswers[q.name]||'',playbackContext:{sceneId:q.id||null,sceneName:q.name,sceneStart:0,timeSeconds:0}})):allComments();
+ if(!isQuestionMode()&&decision==='changes_requested'&&!preparedComments.length){status.textContent='Feedback is required.';return;}
+ if(!isQuestionMode()&&decision==='approved'&&preparedComments.length){status.textContent='Submit or remove draft comments before approval.';return;}
  if(!identity){status.textContent='Preview identity unavailable.';return;}
  if(window.__markcutRevision?.compiledUrl){
   try{if(!await currentRevisionMatches(activePath,identity.contentHash)){reviewReadonly(true,'Historical Preview · Read-only');return;}}
@@ -325,6 +339,7 @@ async function submit(decision){
   sceneId:item.playbackContext?.sceneId||null,timeSeconds:Number(item.playbackContext?.timeSeconds)||0,
   text:item.text,scope:item.scope,playbackContext:item.playbackContext
  }))};
+ if(isQuestionMode()){result.status='submitted';result.answers=questions.map(q=>({questionId:q.name,answer:questionAnswers[q.name]||''}));}
  // Retain the same submission key across retries, including lost ACKs.
  const signature=JSON.stringify({result,delivery:activeReview.delivery});
  if(!submission || submission.signature!==signature)submission={signature,key:crypto.randomUUID()};
@@ -341,10 +356,11 @@ async function submit(decision){
   if(!delivered){busy=false;return;}
   if(identity?.revisionId===submittedId){submittedRevision=submittedId;status.textContent=activeReview.delivery==='event'
     ? 'Review event submitted (transport accepted; awaiting consumer).'
-    : (decision==='approved'?'Review sent.':'Feedback sent. Waiting for the updated preview.');}
+    : (isQuestionMode()?'Answers submitted.':(decision==='approved'?'Review sent.':'Feedback sent. Waiting for the updated preview.'));}
  }
  catch(e){busy=false;status.textContent='Review not submitted: '+(e.message||'Unable to submit review');}
 }
+document.getElementById('questions-submit').onclick=()=>submit('approved');
 document.getElementById('approve').onclick=()=>submit('approved');
 document.getElementById('changes').onclick=()=>submit('changes_requested');
 redrawComments();
