@@ -1,6 +1,6 @@
 import {describe,it,expect} from 'vitest';
 process.env.NEOY_PUBLIC_ORIGIN = 'https://neoy.example.test';
-import {buildPreviewHtml,buildPreviewResourceResult,RESOURCE_URI,LEGACY_RESOURCE_URIS,validateMarkdownPath,getPreviewMedia,readPreviewAudio,withPreviewAudio} from '../src/mcp/preview.mjs';
+import {buildPreviewHtml,buildPreviewResourceResult,RESOURCE_URI,STABLE_RESOURCE_URI,PREVIEW_VERSION_NUMBER,LEGACY_RESOURCE_URIS,validateMarkdownPath,getPreviewMedia,readPreviewAudio,withPreviewAudio} from '../src/mcp/preview.mjs';
 import {buildPreviewBridgeScript} from '../src/mcp/bridge.mjs';
 import {mkdtemp,writeFile,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
@@ -26,6 +26,12 @@ describe('Markcut Remotion MCP App',()=>{
   expect(html).not.toContain('<option value="overall"');
   expect(html).toContain('#comment-tools>*{width:30px;height:28px;padding:0;border:0');
   expect(html).toContain('https://neoy.example.test/files/_neoy/markcut/player/');
+  // On iOS an MCP UI resource URI may remain cached across server upgrades.
+  // Bumping the URI forces the WebGL-capable schema/player to be reloaded.
+  const bundle=readFileSync(new URL('../src/mcp/remotion-app.bundle.js',import.meta.url),'utf8');
+  expect(bundle).toContain('model3d');
+  expect(bundle).toContain('model3d requires a .glb');
+
   expect(html).not.toContain('id="remotion-bundle"');
   // The generic event contract requires client-side identity and reserved-field validation.
   expect(html.length).toBeLessThan(30000);
@@ -52,9 +58,24 @@ describe('Markcut Remotion MCP App',()=>{
   expect(audio).toContain('ctx.decodeAudioData(bytes)');
   expect(audio).toContain("p.addEventListener('play',play)");
  });
- it('publishes v48 while retaining v47 as a compatible alias',()=>{
-  expect(RESOURCE_URI).toBe('ui://markcut/video-preview-v48.html');
-  expect(LEGACY_RESOURCE_URIS).toContain('ui://markcut/video-preview-v47.html');
+ it('maps every historical preview version and the stable URI to the latest',()=>{
+  expect(PREVIEW_VERSION_NUMBER).toBe(49);
+  expect(RESOURCE_URI).toBe('ui://markcut/video-preview-v49.html');
+  expect(STABLE_RESOURCE_URI).toBe('ui://markcut/video-preview.html');
+  expect(LEGACY_RESOURCE_URIS).toHaveLength(PREVIEW_VERSION_NUMBER);
+  expect(new Set([RESOURCE_URI,...LEGACY_RESOURCE_URIS]).size).toBe(PREVIEW_VERSION_NUMBER+1);
+  expect(LEGACY_RESOURCE_URIS).toContain(STABLE_RESOURCE_URI);
+  const latestHtml=buildPreviewResourceResult(RESOURCE_URI).contents[0].text;
+  expect(buildPreviewResourceResult(STABLE_RESOURCE_URI).contents[0].text).toBe(latestHtml);
+  for (let version=1;version<PREVIEW_VERSION_NUMBER;version++) {
+   const uri=`ui://markcut/video-preview-v${version}.html`;
+   expect(LEGACY_RESOURCE_URIS).toContain(uri);
+   const resource=buildPreviewResourceResult(uri);
+   expect(resource.contents[0].uri).toBe(uri);
+   expect(resource.contents[0].text).toBe(latestHtml);
+   expect(resource.contents[0].text).toContain(`>${'v'+PREVIEW_VERSION_NUMBER}</span>`);
+   expect(resource.contents[0].text).toContain('https://neoy.example.test/files/_neoy/markcut/player/');
+  }
  });
  it('registers latest resource at startup and aliases previous URIs',()=>{
   for(const uri of [RESOURCE_URI,...LEGACY_RESOURCE_URIS]){

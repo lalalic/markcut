@@ -9,55 +9,17 @@ import { externalizePreviewMedia, publicOrigin, resolveMountedFile, resolvePrevi
 import {fingerprintInputs} from "./source-fingerprint.mjs";
 
 export const TOOL_NAME = "markcut.preview";
-export const RESOURCE_URI = "ui://markcut/video-preview-v48.html";
-const PREVIEW_VERSION = RESOURCE_URI.match(/video-preview-(v\d+)/)?.[1] ?? "unknown";
-// Legacy entrypoints remain registered, but serve the current implementation.
+// One source of truth for preview resources. Every historical version (and
+// the versionless alias) serves the same current UI and player bundle.
+// Increment the version only to bypass clients that cache an already-open UI.
+export const PREVIEW_VERSION_NUMBER = 49;
+export const RESOURCE_URI = `ui://markcut/video-preview-v${PREVIEW_VERSION_NUMBER}.html`;
+export const STABLE_RESOURCE_URI = "ui://markcut/video-preview.html";
+const PREVIEW_VERSION = `v${PREVIEW_VERSION_NUMBER}`;
 export const LEGACY_RESOURCE_URIS = [
-  "ui://markcut/video-preview-v47.html",
-  "ui://markcut/video-preview-v46.html",
-  "ui://markcut/video-preview-v45.html",
-  "ui://markcut/video-preview-v44.html",
-  "ui://markcut/video-preview-v3.html",
-  "ui://markcut/video-preview-v4.html",
-  "ui://markcut/video-preview-v5.html",
-  "ui://markcut/video-preview-v6.html",
-  "ui://markcut/video-preview-v7.html",
-  "ui://markcut/video-preview-v8.html",
-  "ui://markcut/video-preview-v9.html",
-  "ui://markcut/video-preview-v10.html",
-  "ui://markcut/video-preview-v11.html",
-  "ui://markcut/video-preview-v12.html",
-  "ui://markcut/video-preview-v13.html",
-  "ui://markcut/video-preview-v14.html",
-  "ui://markcut/video-preview-v15.html",
-  "ui://markcut/video-preview-v16.html",
-  "ui://markcut/video-preview-v17.html",
-  "ui://markcut/video-preview-v18.html",
-  "ui://markcut/video-preview-v19.html",
-  "ui://markcut/video-preview-v20.html",
-  "ui://markcut/video-preview-v21.html",
-  "ui://markcut/video-preview-v22.html",
-  "ui://markcut/video-preview-v23.html",
-  "ui://markcut/video-preview-v24.html",
-  "ui://markcut/video-preview-v25.html",
-  "ui://markcut/video-preview-v26.html",
-  "ui://markcut/video-preview-v27.html",
-  "ui://markcut/video-preview-v28.html",
-  "ui://markcut/video-preview-v29.html",
-  "ui://markcut/video-preview-v30.html",
-  "ui://markcut/video-preview-v31.html",
-  "ui://markcut/video-preview-v32.html",
-  "ui://markcut/video-preview-v33.html",
-  "ui://markcut/video-preview-v34.html",
-  "ui://markcut/video-preview-v35.html",
-  "ui://markcut/video-preview-v36.html",
-  "ui://markcut/video-preview-v37.html",
-  "ui://markcut/video-preview-v40.html",
-  "ui://markcut/video-preview-v41.html",
-  "ui://markcut/video-preview-v42.html",
-  "ui://markcut/video-preview-v43.html",
-  "ui://markcut/video-preview-v39.html",
-  "ui://markcut/video-preview-v38.html",
+  STABLE_RESOURCE_URI,
+  ...Array.from({length: PREVIEW_VERSION_NUMBER - 1}, (_, index) =>
+    `ui://markcut/video-preview-v${index + 1}.html`),
 ];
 export const RESOURCE_MIME_TYPE = "text/html;profile=mcp-app";
 // Google Maps JS loads libraries, tiles and Routes RPCs from these HTTPS origins.
