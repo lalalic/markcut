@@ -314763,7 +314763,7 @@ function SharedPlayer({ root: root8, playerRef, ...props }) {
 // src/player/components/HeaderBar.tsx
 var React58 = __toESM(require_react(), 1);
 var import_jsx_runtime103 = __toESM(require_jsx_runtime(), 1);
-function HeaderBar({ mode, sceneInfo, sseConnected, locale: locale3 = "en" }) {
+function HeaderBar({ mode, sceneInfo, sseConnected, locale: locale3 = "en", selector }) {
   const isZh = locale3 === "zh";
   const handleClose = React58.useCallback(() => {
     navigator.sendBeacon("/api/shutdown", "{}");
@@ -314788,7 +314788,10 @@ function HeaderBar({ mode, sceneInfo, sseConnected, locale: locale3 = "en" }) {
         }
       )
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime103.jsx)("div", { id: "header-actions", children: /* @__PURE__ */ (0, import_jsx_runtime103.jsx)("button", { id: "close-btn", title: isZh ? "\u5173\u95ED\u64AD\u653E\u5668\u5E76\u8FD4\u56DE\u7EC8\u7AEF" : "Close player and return to terminal", onClick: handleClose, children: "\u2715" }) })
+    /* @__PURE__ */ (0, import_jsx_runtime103.jsxs)("div", { id: "header-actions", children: [
+      selector,
+      /* @__PURE__ */ (0, import_jsx_runtime103.jsx)("button", { id: "close-btn", title: isZh ? "\u5173\u95ED\u64AD\u653E\u5668\u5E76\u8FD4\u56DE\u7EC8\u7AEF" : "Close player and return to terminal", onClick: handleClose, children: "\u2715" })
+    ] })
   ] });
 }
 
@@ -315250,23 +315253,40 @@ function VariantBar() {
   const [variants, setVariants] = React63.useState([]);
   const currentVariant = (typeof window !== "undefined" ? window.VARIANT : null) || "default";
   React63.useEffect(() => {
-    fetch("/api/video-info").then((r3) => r3.json()).then((info3) => {
-      if (info3.variants && info3.variants.length > 1) {
-        setVariants(info3.variants);
-      }
+    fetch("/api/video-info").then((response) => response.json()).then((info3) => {
+      if (Array.isArray(info3.variants) && info3.variants.length > 1) setVariants(info3.variants);
     }).catch(() => {
     });
   }, []);
   if (variants.length <= 1) return null;
-  return /* @__PURE__ */ (0, import_jsx_runtime108.jsx)("div", { id: "variant-bar", children: variants.map((v6) => /* @__PURE__ */ (0, import_jsx_runtime108.jsx)(
-    "a",
+  return /* @__PURE__ */ (0, import_jsx_runtime108.jsx)(
+    "select",
     {
-      href: `/${v6 === "default" ? "" : v6}`,
-      className: "variant-link" + (v6 === currentVariant ? " active" : ""),
-      children: v6 === "default" ? "Video" : v6 === "editor-decisions" ? "Editor Decisions" : v6
-    },
-    v6
-  )) });
+      id: "video-selector",
+      "aria-label": "Video selector",
+      title: "Select video",
+      value: currentVariant,
+      onChange: (event3) => {
+        const variant = event3.currentTarget.value;
+        window.location.assign(variant === "default" ? "/" : "/" + encodeURIComponent(variant));
+      },
+      style: {
+        maxWidth: 190,
+        minWidth: 110,
+        padding: "6px 28px 6px 10px",
+        background: "#20252e",
+        color: "#eee",
+        border: "1px solid #414955",
+        borderRadius: 8,
+        fontSize: 12,
+        cursor: "pointer",
+        textOverflow: "ellipsis"
+      },
+      children: variants.map(
+        (variant) => /* @__PURE__ */ (0, import_jsx_runtime108.jsx)("option", { value: variant, children: variant === "default" ? "Original" : variant === "editor-decisions" ? "Editor Decisions" : variant }, variant)
+      )
+    }
+  );
 }
 
 // src/player/browser.tsx
@@ -315670,10 +315690,10 @@ function PlayerApp() {
             mode,
             sseConnected,
             sceneInfo: mode === "label" ? labelSceneInfo : void 0,
-            locale: locale3
+            locale: locale3,
+            selector: /* @__PURE__ */ (0, import_jsx_runtime109.jsx)(VariantBar, {})
           }
         ),
-        /* @__PURE__ */ (0, import_jsx_runtime109.jsx)(VariantBar, {}),
         /* @__PURE__ */ (0, import_jsx_runtime109.jsxs)("div", { id: "player-frame", style: { flex: 1, width: "100%", maxWidth: 480, minHeight: 0 }, children: [
           /* @__PURE__ */ (0, import_jsx_runtime109.jsx)(SharedPlayer, { root: data7, playerRef, style: { width: "100%", height: "100%" }, autoPlay }),
           mode === "edit" && showEditOverlay && /* @__PURE__ */ (0, import_jsx_runtime109.jsx)("div", { id: "edit-message-overlay", children: /* @__PURE__ */ (0, import_jsx_runtime109.jsx)(

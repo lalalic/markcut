@@ -17,7 +17,8 @@ describe('Markcut Remotion MCP App',()=>{
   expect(html).toContain('<textarea id="feedback" rows="3"');
   expect(html).toContain('id="comment-tools"');
   expect(html).toContain('id="overall-mode" hidden>Overall');
-  expect(html).toContain('id="review-delivery-mode"');
+  expect(html).toContain('id="markcut-video-selector-slot"');
+  expect(html).not.toContain('id="review-delivery-mode"');
   expect(html).toContain('Text mode');
   expect(html).toContain('Submit feedback');
   expect(html).not.toContain('Submit all feedback');
@@ -70,8 +71,8 @@ describe('Markcut Remotion MCP App',()=>{
   expect(audio).toContain("p.addEventListener('play',play)");
  });
  it('maps every historical preview version and the stable URI to the latest',()=>{
-  expect(PREVIEW_VERSION_NUMBER).toBe(54);
-  expect(RESOURCE_URI).toBe('ui://markcut/video-preview-v54.html');
+  expect(PREVIEW_VERSION_NUMBER).toBe(55);
+  expect(RESOURCE_URI).toBe('ui://markcut/video-preview-v55.html');
   expect(STABLE_RESOURCE_URI).toBe('ui://markcut/video-preview.html');
   expect(LEGACY_RESOURCE_URIS).toHaveLength(PREVIEW_VERSION_NUMBER);
   expect(new Set([RESOURCE_URI,...LEGACY_RESOURCE_URIS]).size).toBe(PREVIEW_VERSION_NUMBER+1);

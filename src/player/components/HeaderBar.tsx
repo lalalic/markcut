@@ -16,9 +16,10 @@ interface HeaderBarProps {
   sseConnected?: boolean;
   /** UI locale */
   locale?: "en" | "zh";
+  selector?: React.ReactNode;
 }
 
-export function HeaderBar({ mode, sceneInfo, sseConnected, locale = "en" }: HeaderBarProps) {
+export function HeaderBar({ mode, sceneInfo, sseConnected, locale = "en", selector }: HeaderBarProps) {
   const isZh = locale === "zh";
   const handleClose = React.useCallback(() => {
     navigator.sendBeacon("/api/shutdown", "{}");
@@ -49,6 +50,7 @@ export function HeaderBar({ mode, sceneInfo, sseConnected, locale = "en" }: Head
       </span>
       {/* Right: close button */}
       <div id="header-actions">
+        {selector}
         <button id="close-btn" title={isZh ? "关闭播放器并返回终端" : "Close player and return to terminal"} onClick={handleClose}>
           ✕
         </button>

@@ -262,7 +262,7 @@ edl: ./video.edl.json
 
 The companion uses Markcut's Editor Decision Schema v1 (`src/editor-decision/editor-decision.schema.json`). It holds editorial intent and source-grounded per-shot choices: shot ID, original media source ID or path, in/out seconds, optional playback speed, shot purpose, cut rationale, visual relationship, and sound decision. The executable video Markdown remains the authority for the finished film; EDL is not a second editable render definition and no EDL/film version-fingerprint comparison is performed.
 
-The EDL basename defaults to `<video-name>.edl.json` when a companion exists, even without a frontmatter field. A declared missing EDL is an error. The Previewer natively offers Video / Editor Decisions views; the second view uses the original clips and overlays the documented decisions.
+The EDL basename defaults to `<video-name>.edl.json` when a companion exists, even without a frontmatter field. A declared missing EDL is an error. The Previewer has one video selector in the top-right corner: Original, each named Markdown variant, and Editor Decisions. It does not show separate view tabs or a delivery-mode label. The Editor Decisions view uses the original clips and overlays the documented decisions.
 
 Generate a standalone Markcut EDL viewing file:
 

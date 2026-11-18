@@ -37,12 +37,14 @@ const contextTime=(scene:{start:number;end:number}|undefined,time:number)=>
  Math.round(Math.max(scene?.start??0,Math.min(scene?.end??time,time))*10)/10;
 function App(){
  const [revision,setRevision]=React.useState<any>(()=>(window as any).__markcutRevision||null);
- const [editorView,setEditorView]=React.useState(false);
+ const [selectedVideo,setSelectedVideo]=React.useState("default");
+ const [variantTrees,setVariantTrees]=React.useState<Record<string,any>>({});
+ const editorView=selectedVideo==="editor-decisions";
  const [editorTree,setEditorTree]=React.useState<any>(null);
  const [editorError,setEditorError]=React.useState('');
  React.useEffect(()=>{
   let active=true;
-  setEditorView(false);setEditorTree(null);setEditorError('');
+  setEditorTree(null);setEditorError('');
   const direct=revision?.editorDecisions;
   if(direct){setEditorTree(direct.root||direct);return;}
   // Published companions are discoverable by the existing content hash.
@@ -71,9 +73,35 @@ function App(){
   }catch(error){setEditorError(String(error));}
   return ()=>{active=false;};
  },[revision?.revisionId,revision?.edlCompiledUrl,revision?.editorDecisions,revision?.contentHash,revision?.compiledUrl]);
+ React.useEffect(()=>{setSelectedVideo("default");},[revision?.revisionId]);
+ React.useEffect(()=>{
+  // Host and Neo Mobile can provide variants inline. Hosted previews also
+  // discover a published companion when optional revision metadata is omitted.
+  let active=true;setVariantTrees({});
+  if(!revision)return;
+  if(revision.variants && typeof revision.variants==="object"&&!Array.isArray(revision.variants)){
+    setVariantTrees(revision.variants);return;
+  }
+  const hash=revision.contentHash;
+  if(typeof hash!=="string"||!/^[a-f0-9]{64}$/.test(hash)||!revision.compiledUrl)return;
+  try{
+    const base=new URL(revision.compiledUrl);
+    if(!base.pathname.startsWith('/files/_neoy/markcut/cache/'))return;
+    const url=new URL('/files/_neoy/markcut/cache/'+hash+'.variants.json',base.origin);
+    fetch(url.href,{cache:'force-cache'}).then(async response=>{
+      if(response.status===404)return null;
+      if(!response.ok)throw Error('Variant HTTP '+response.status);
+      return response.json();
+    }).then(value=>{
+      if(active&&value&&typeof value==='object'&&!Array.isArray(value))
+        setVariantTrees(value);
+    }).catch(error=>{if(active)console.warn('Video variants unavailable:',error);});
+  }catch{}
+  return ()=>{active=false;};
+ },[revision?.revisionId,revision?.contentHash,revision?.compiledUrl,revision?.variants]);
  React.useEffect(()=>{
   window.dispatchEvent(new CustomEvent('markcut:edl-view',{detail:{active:editorView}}));
- },[revision?.revisionId,editorView]);
+ },[revision?.revisionId,selectedVideo]);
  const ref=React.useRef<PlayerRef|null>(null);
  const [currentTime,setCurrentTime]=React.useState(0);
  const [browserTts,setBrowserTts]=React.useState(true);
@@ -98,7 +126,10 @@ function App(){
   return ()=>window.removeEventListener('markcut:spots-change',listener);
  },[]);
  React.useEffect(()=>{const receive=(e:Event)=>setRevision((e as CustomEvent).detail);window.addEventListener('markcut:revision',receive);return ()=>window.removeEventListener('markcut:revision',receive)},[]);
- const data=editorView&&editorTree?editorTree:(revision?.compiled?.root||revision?.compiled);
+ const data=editorView&&editorTree?editorTree:
+  selectedVideo!=="default"&&variantTrees[selectedVideo]?
+    (variantTrees[selectedVideo].root||variantTrees[selectedVideo]):
+    (revision?.compiled?.root||revision?.compiled);
  const useBrowserTts=browserTts&&Boolean(data?.subtitle?.src);
  const {playbackRoot:generatedRoot}=useWebAudioPreview(data,ref);
  const playbackRoot=React.useMemo(()=>{
@@ -123,7 +154,7 @@ function App(){
   const listener=(e:any)=>{if(typeof e.detail?.frame==='number')setCurrentTime(e.detail.frame/fps);};
   player.addEventListener('frameupdate',listener);
   return ()=>player.removeEventListener('frameupdate',listener);
- },[revision?.revisionId,editorView,playbackRoot,fps]);
+ },[revision?.revisionId,selectedVideo,playbackRoot,fps]);
  React.useEffect(()=>{
   const active=[...scenes].reverse().find(scene=>currentTime>=scene.start);
   (window as any).__markcutPlaybackContext={
@@ -143,10 +174,10 @@ function App(){
   };
   find();timer=window.setInterval(find,150);
   return ()=>window.clearInterval(timer);
- },[revision?.revisionId,editorView]);
+ },[revision?.revisionId,selectedVideo]);
  React.useEffect(()=>{
   window.dispatchEvent(new CustomEvent('markcut:scene-change',{detail:{sceneId:activeScene?.id||null,sceneName:activeScene?.name||null,sceneStart:activeScene?.start||0,timeSeconds:contextTime(activeScene,currentTime)}}));
- },[revision?.revisionId,editorView,activeScene?.id,activeScene?.name]);
+ },[revision?.revisionId,selectedVideo,activeScene?.id,activeScene?.name]);
  React.useEffect(()=>{
   const listener=(event:Event)=>{const context=(event as CustomEvent).detail;const scene=scenes.find((x:{id?:string;name:string;start:number;end:number})=>x.id===context?.sceneId||x.name===context?.sceneName);
    if(scene){const second=Number(context.timeSeconds);const time=Number.isFinite(second)?Math.max(scene.start,Math.min(scene.end,second)):scene.start;ref.current?.seekTo(Math.round(time*fps));setCurrentTime(time);}
@@ -158,23 +189,27 @@ function App(){
  if(!data)return <div>Missing compiled scene tree</div>;
  if(revision.review?.mode==='questions')return <QuestionsPanel key={revision.revisionId} data={data} revisionId={revision.revisionId}/>;
  const videoName=String(revision.title||revision.videoTitle||revision.path?.split('/').pop()?.replace(/\.md$/i,'').replace(/[-_]+/g,' ')||'Video');
+ const variantNames=Object.keys(variantTrees).filter(name=>name!=="default"&&name!=="editor-decisions");
+ const choices=["default",...variantNames,...(editorTree?["editor-decisions"]:[])];
+ const selector=<select id="markcut-video-selector" aria-label="Video selector" title="Select video"
+   value={choices.includes(selectedVideo)?selectedVideo:"default"}
+   onChange={event=>{setSelectedVideo(event.currentTarget.value);setCurrentTime(0);}}
+   style={{minWidth:105,maxWidth:190,padding:"6px 26px 6px 9px",border:"1px solid #a8b3c1",borderRadius:7,
+     background:"var(--markcut-select-bg, #f7f9fc)",color:"var(--markcut-select-fg, #17202a)",
+     font:"inherit",fontSize:12,textOverflow:"ellipsis",cursor:"pointer"}}>
+   {choices.map(name=><option value={name} key={name}>{name==="default"?"Original":name==="editor-decisions"?"Editor Decisions":name}</option>)}
+ </select>;
+ const selectorSlot=document.getElementById("markcut-video-selector-slot");
  return <div id="remotion-preview" data-revision={revision.revisionId}>
-  {Boolean(revision.edlCompiledUrl||revision.editorDecisions||editorTree)&&<div role="tablist" aria-label="Preview view" style={{display:'flex',gap:6,justifyContent:'center',alignItems:'center',margin:'8px 0'}}>
-   <button type="button" role="tab" aria-selected={!editorView} onClick={()=>{setEditorView(false);setCurrentTime(0);}}
-    style={{background:editorView?'#f1f5f9':'#dbeafe',color:editorView?'#475569':'#1d4ed8',border:'1px solid #cbd5e1',fontWeight:600}}>Video</button>
-   <button type="button" role="tab" aria-selected={editorView} disabled={!editorTree} onClick={()=>{setEditorView(true);setCurrentTime(0);}}
-    style={{background:editorView?'#dbeafe':'#f1f5f9',color:editorView?'#1d4ed8':'#475569',border:'1px solid #cbd5e1',fontWeight:600}}>
-    {editorTree?'Editor Decisions':editorError?'EDL unavailable':'Loading EDL…'}</button>
-   {editorError&&<span style={{fontSize:11,color:'#b91c1c'}} title={editorError}>EDL error</span>}
-  </div>}
-  {editorView&&<div role="note" style={{fontSize:12,color:'#64748b',textAlign:'center',marginBottom:5}}>Editorial view · Switch to Video to submit film review</div>}
+  {choices.length>1&&(selectorSlot?createPortal(selector,selectorSlot):
+    <div id="markcut-video-selector-slot" style={{alignSelf:"flex-end",margin:"6px 8px"}}>{selector}</div>)}
   {Boolean(data?.subtitle?.src)&&document.getElementById("header-tts")&&createPortal(
    <label style={{display:"flex",gap:5,alignItems:"center",fontSize:12,whiteSpace:"nowrap",cursor:"pointer"}} title="Use browser narration with captions from the script">
     <input type="checkbox" checked={useBrowserTts} disabled={!data?.subtitle?.src} onChange={e=>setBrowserTts(e.target.checked)}/>
     Browser TTS
    </label>,document.getElementById("header-tts")!)}
   <div id="remotion-canvas" style={{position:'relative',aspectRatio:`${data.width||1080}/${data.height||1920}`,margin:'auto', '--markcut-player-ratio':String((data.width||1080)/(data.height||1920))} as React.CSSProperties}>
-   <SharedPlayer key={revision.revisionId+(editorView?":edl":":video")} root={playbackRoot} playerRef={ref} numberOfSharedAudioTags={0} showPlaybackRateControl={!compact} style={{width:'100%',height:'100%'}} />
+   <SharedPlayer key={revision.revisionId+":"+selectedVideo} root={playbackRoot} playerRef={ref} numberOfSharedAudioTags={0} showPlaybackRateControl={!compact} style={{width:'100%',height:'100%'}} />
    {useBrowserTts&&caption&&<div id="browser-tts-caption" aria-live="off" style={{position:'absolute',bottom:50,left:12,right:12,zIndex:5,pointerEvents:'none',textAlign:'center'}}>
     <span style={{display:'inline-block',maxWidth:'90%',padding:'5px 10px',borderRadius:5,background:'rgba(0,0,0,.72)',color:'#fff',fontSize:'clamp(12px,1.6vw,18px)',lineHeight:1.4,textShadow:'0 1px 2px #000',overflowWrap:'anywhere'}}>{caption}</span>
    </div>}

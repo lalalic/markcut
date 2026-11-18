@@ -522,10 +522,8 @@ function PlayerApp() {
         sseConnected={sseConnected}
         sceneInfo={mode === "label" ? labelSceneInfo : undefined}
         locale={locale}
+        selector={<VariantBar />}
       />
-
-      {/* ── Variant switcher ── */}
-      <VariantBar />
 
       {/* ── Player frame ── */}
       <div id="player-frame" style={{ flex: 1, width: "100%", maxWidth: 480, minHeight: 0 }}>

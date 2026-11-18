@@ -1,8 +1,6 @@
 /**
- * VariantBar — variant switcher bar for the markcut player.
- *
- * Reads available variants from /api/video-info and renders clickable links.
- * Highlights the current variant based on window.VARIANT.
+ * Native preview video selector. All compiled outputs live under one control:
+ * original film, named Markdown variants and the optional Editor Decisions.
  */
 import * as React from "react";
 
@@ -12,28 +10,29 @@ export function VariantBar() {
 
   React.useEffect(() => {
     fetch("/api/video-info")
-      .then((r) => r.json())
+      .then((response) => response.json())
       .then((info) => {
-        if (info.variants && info.variants.length > 1) {
-          setVariants(info.variants);
-        }
+        if (Array.isArray(info.variants) && info.variants.length > 1) setVariants(info.variants);
       })
       .catch(() => {});
   }, []);
 
   if (variants.length <= 1) return null;
 
-  return (
-    <div id="variant-bar">
-      {variants.map((v) => (
-        <a
-          key={v}
-          href={`/${v === "default" ? "" : v}`}
-          className={"variant-link" + (v === currentVariant ? " active" : "")}
-        >
-          {v === "default" ? "Video" : v === "editor-decisions" ? "Editor Decisions" : v}
-        </a>
-      ))}
-    </div>
-  );
+  return <select
+    id="video-selector"
+    aria-label="Video selector"
+    title="Select video"
+    value={currentVariant}
+    onChange={event => {
+      const variant=event.currentTarget.value;
+      window.location.assign(variant==="default"?"/":"/"+encodeURIComponent(variant));
+    }}
+    style={{maxWidth:190,minWidth:110,padding:"6px 28px 6px 10px",background:"#20252e",color:"#eee",
+      border:"1px solid #414955",borderRadius:8,fontSize:12,cursor:"pointer",textOverflow:"ellipsis"}}
+  >
+    {variants.map(variant =>
+      <option value={variant} key={variant}>{variant==="default"?"Original":variant==="editor-decisions"?"Editor Decisions":variant}</option>
+    )}
+  </select>;
 }

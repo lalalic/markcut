@@ -541,6 +541,19 @@ async function compileAllVariants() {
   if (IS_MARKDOWN) {
     const { parseMarkdownVariants } = await import("./pipeline.mjs");
     markdownParsed = parseMarkdownVariants(raw);
+    // With no explicit --variant selection, show every authored video in the
+    // top-right selector. Explicit CLI variant flags retain their old scope.
+    const explicitVariants=process.argv.some(arg=>arg==="--variant"||arg.startsWith("--variant="));
+    if(!explicitVariants){
+      for(const label of markdownParsed.variants.keys()){
+        if(!/^[\p{L}\p{N}][\p{L}\p{N}_-]{0,63}$/u.test(label))continue;
+        if(["default","editor-decisions","__proto__","constructor","prototype"].includes(label))
+          throw Error("Reserved Markcut video variant name: "+label);
+        if(VARIANT_CONFIGS.some(config=>config.label===label))continue;
+        const at=VARIANT_CONFIGS.findIndex(config=>config.label==="editor-decisions");
+        VARIANT_CONFIGS.splice(at<0?VARIANT_CONFIGS.length:at,0,{label,chain:label.split("-")});
+      }
+    }
   }
 
   for (const config of VARIANT_CONFIGS) {
@@ -774,10 +787,6 @@ function getHtml(variantLabel) {
   #header-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
   #close-btn { width: 22px; height: 22px; border-radius: 50%; border: 1px solid rgba(255,255,255,.15); background: rgba(0,0,0,.3); color: rgba(255,255,255,.4); font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all .15s; }
   #close-btn:hover { background: rgba(255,60,60,.4); border-color: rgba(255,60,60,.5); color: #fff; }
-  #variant-bar { display: flex; gap: 4px; align-items: center; width: 100%; max-width: 500px; padding: 6px 12px; flex-shrink: 0; overflow-x: auto; }
-  .variant-link { font-size: 11px; padding: 3px 10px; border-radius: 12px; background: rgba(255,255,255,.06); color: rgba(255,255,255,.4); text-decoration: none; white-space: nowrap; transition: all .15s; }
-  .variant-link:hover { background: rgba(255,255,255,.12); color: rgba(255,255,255,.7); }
-  .variant-link.active { background: rgba(74,158,255,.2); color: #4a9eff; }
   #player-frame { flex: 1; width: 100%; max-width: 480px; min-height: 0; border-radius: 16px; overflow: hidden; border: 1px solid rgba(255,255,255,.08); background: #000; box-shadow: 0 4px 40px rgba(0,0,0,.6); margin: 0 12px; position: relative; }
   #root { width: 100%; height: 100%; }
   #reload-toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(74,158,255,.9); color: #fff; padding: 12px 24px; border-radius: 10px; font-size: 14px; font-weight: 600; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 200; backdrop-filter: blur(8px); }

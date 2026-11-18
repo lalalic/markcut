@@ -13,7 +13,7 @@ export const TOOL_NAME = "markcut.preview";
 // One source of truth for preview resources. Every historical version (and
 // the versionless alias) serves the same current UI and player bundle.
 // Increment the version only to bypass clients that cache an already-open UI.
-export const PREVIEW_VERSION_NUMBER = 54;
+export const PREVIEW_VERSION_NUMBER = 55;
 export const RESOURCE_URI = `ui://markcut/video-preview-v${PREVIEW_VERSION_NUMBER}.html`;
 export const STABLE_RESOURCE_URI = "ui://markcut/video-preview.html";
 const PREVIEW_VERSION = `v${PREVIEW_VERSION_NUMBER}`;
@@ -53,7 +53,11 @@ export function getPreviewMedia(contentHash) {
     const sidecar=resolve(EXPORT_ROOT,"cache",contentHash+".editor-decisions.json");
     const editorDecisions=existsSync(sidecar)
       ? versionPreviewMedia(JSON.parse(readFileSync(sidecar,"utf8"))) : null;
-    return {compiled,...(editorDecisions?{editorDecisions}:{})};
+    const variantsFile=resolve(EXPORT_ROOT,"cache",contentHash+".variants.json");
+    const variants=existsSync(variantsFile)
+      ? Object.fromEntries(Object.entries(JSON.parse(readFileSync(variantsFile,"utf8")))
+          .map(([name,tree])=>[name,versionPreviewMedia(tree)])) : null;
+    return {compiled,...(variants?{variants}:{}),...(editorDecisions?{editorDecisions}:{})};
   } catch {throw new Error("Unknown or expired Markcut compiled scenes");}
 }
 
@@ -160,7 +164,7 @@ export async function ensureVideoPreview(path, options = {}) {
   if(pendingCompiles.has(key))return pendingCompiles.get(key);
   const prior=activeCompilesByPath.get(validatedPath)||Promise.resolve();
   const task=prior.catch(()=>{}).then(async()=>{
-    const {parseMarkdownDescriptive,resolveAll,compileDescriptiveRoot}=await import("../player/pipeline.mjs");
+    const {parseMarkdownDescriptive,parseMarkdownVariants,resolveVariantOverrides,resolveAll,compileDescriptiveRoot}=await import("../player/pipeline.mjs");
     const report=typeof options.onProgress==="function" ? options.onProgress : ()=>{};
     report("checking-cache");
     const baseDir=dirname(validatedPath);
@@ -226,6 +230,43 @@ export async function ensureVideoPreview(path, options = {}) {
     const currentHash=createHash("sha256").update(current.source).update("\0").update(JSON.stringify(current.assets)).digest("hex");
     if(currentHash!==sourceHash)
       throw new Error("Source changed during compilation; retry preview");
+    // Publish every named Markdown variant alongside Original. These use the
+    // same native override semantics as the local Previewer's --variant path.
+    // They are ordinary playable videos, not separate markdown documents.
+    const parsedVariants=parseMarkdownVariants(source);
+    const variantTrees=Object.create(null);
+    for(const [name,rootConfig] of parsedVariants.variants){
+      // Only genuine named headings are variants; reject accidentally parsed
+      // source text such as a literal backslash-n embedded in an H1.
+      if(!/^[\p{L}\p{N}][\p{L}\p{N}_-]{0,63}$/u.test(name))continue;
+      if(["default","editor-decisions","__proto__","constructor","prototype"].includes(name))
+        throw new Error("Reserved Markcut video variant name: "+name);
+      const {children:_unused,...overrides}=rootConfig;
+      const authored={...parsedVariants.base,...overrides};
+      const descriptive=resolveVariantOverrides(authored,[name]);
+      report("compiling-variant:"+name);
+      const resolved=await resolveAll(descriptive,{
+        sourcePath:validatedPath,baseDir,
+        seed:parseInt(sourceHash.slice(0,8),16),
+        scriptOutputDir:resolve(generated,"tts"),
+        mediaOutputDir:resolve(generated,"media"),
+        includeOutputDir:resolve(generated,"includes"),
+        variants:[name],
+      });
+      const built=compileDescriptiveRoot(resolved,{googleMapsApiKey:process.env.GOOGLE_MAPS_API_KEY});
+      const mixed=withPreviewAudio(built,audio.audioSrc);
+      const {renderMapFootage}=await import("./map-footage.mjs");
+      const footage=await renderMapFootage(mixed,{
+        generatedDir:resolve(generated,"map-footage",id+"-"+createHash("sha256").update(name).digest("hex").slice(0,12)),
+        key:process.env.GOOGLE_MAPS_API_KEY,onProgress:report,
+      });
+      const published=externalizePreviewMedia(footage.compiled,id,publicOrigin(),baseDir);
+      variantTrees[name]=versionPreviewMedia(published.compiled);
+    }
+    if(Object.keys(variantTrees).length){
+      await mkdir(resolve(EXPORT_ROOT,"cache"),{recursive:true});
+      await atomicJson(resolve(EXPORT_ROOT,"cache",hash+".variants.json"),variantTrees);
+    }
     // The Editor Decision view is a separate real Markcut compilation, sharing
     // the same source footage but never replacing the authoritative video tree.
     let edlCompiledUrl;
@@ -284,7 +325,7 @@ export function buildPreviewHtml() {
 <style>.comment-marker{position:absolute;top:50%;transform:translate(-50%,-50%);width:20px;height:20px;min-width:20px;padding:0;border:0;border-radius:50%;background:transparent;z-index:10;cursor:pointer;touch-action:none}.comment-marker::after{content:'';display:block;width:14px;height:14px;border-radius:50%;margin:auto;background:#f59e0b;border:2px solid white;box-sizing:border-box}.comment-marker.scope-scene::after{background:#3b82f6}.comment-marker.scope-overall{left:-28px!important}.comment-marker.scope-overall::after{background:#8b5cf6}.comment-marker.scope-overall.placeholder::after{background:transparent;border-color:#8b5cf6}.comment-marker.selected::after,.comment-marker:focus-visible::after{outline:2px solid #2563eb;outline-offset:2px}.comment-marker:hover::after{transform:scale(1.2)}</style>
 <style>#comment-entry{position:relative;display:block}#feedback{display:block;width:100%;height:auto;min-height:76px;max-height:240px;field-sizing:content;resize:none;padding:9px 112px 32px 9px;font:inherit}#comment-tools{position:absolute;bottom:6px;right:8px;display:flex;align-items:center;gap:2px;background:white}#comment-tools>*{width:30px;height:28px;padding:0;border:0;background:transparent;color:#526071;font:inherit;text-align:center}#comment-tools button{font-size:20px}#comment-tools>*:focus-visible{outline:2px solid #408bd7;outline-offset:-2px}#comment-mode{width:70px;max-width:none;font-size:12px;font-weight:650;text-align:center;text-align-last:center;line-height:28px}#comment-mode:has(option[value=spot]:checked){color:#b45309}#comment-mode:has(option[value=scene]:checked){color:#2563eb}#overall-mode{width:70px;height:28px;line-height:28px;text-align:center;font-size:12px;font-weight:650;color:#7c3aed}</style>
 <style>${readFileSync(resolve(moduleDir,'preview-mobile.css'),'utf8').replace(/\/\*[\s\S]*?\*\//g,'')}</style>
-</head><body><main><header style="display:flex;justify-content:space-between;align-items:center"><h1>Markcut · <span id="video-md-version">video</span></h1><div style="display:flex;align-items:center;gap:14px;margin-left:auto"><span id="header-tts"></span><span id="review-delivery-mode" aria-label="Review delivery mode" style="font-size:12px;color:#526071;white-space:nowrap">Text mode</span><span id="player-version" style="font-size:12px;color:#667">${PREVIEW_VERSION}</span></div></header><div class="path" id="path-label" hidden></div><div id="interactive-ui" hidden><div id="remotion-root"></div>
+</head><body><main><header style="display:flex;justify-content:space-between;align-items:center"><h1>Markcut · <span id="video-md-version">video</span></h1><div style="display:flex;align-items:center;gap:14px;margin-left:auto"><span id="header-tts"></span><span id="markcut-video-selector-slot"></span><span id="player-version" style="font-size:12px;color:#667">${PREVIEW_VERSION}</span></div></header><div class="path" id="path-label" hidden></div><div id="interactive-ui" hidden><div id="remotion-root"></div>
 <div id="comment-entry"><textarea id="feedback" rows="3" aria-label="Feedback" placeholder="Add a comment…"></textarea><div id="comment-tools"><select id="comment-mode" aria-label="Comment scope" title="Comment scope"><option value="spot" style="color:#b45309">Spot</option><option value="scene" style="color:#2563eb">Scene</option></select><span id="overall-mode" hidden>Overall</span><button id="save-spot" type="button" title="Add or update comment" aria-label="Add or update comment">+</button><button id="remove-spot" type="button" title="Remove selected comment" aria-label="Remove selected comment" disabled>−</button></div></div>
 <div class="review-actions"><button id="questions-submit" type="button" hidden>Submit</button><button id="changes">Submit feedback</button><span id="status" role="status">Starting preview…</span><button id="approve">Approve</button></div></div></main>
 <script src="${playerScriptUrl}"></script>

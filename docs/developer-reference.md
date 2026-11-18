@@ -12,6 +12,15 @@ npm test                                             # unit + integration tests
 npm run typecheck                                    # TypeScript type check
 ```
 
+## Video selector
+
+Native and hosted Previewers use a single top-right selector for the original film,
+named Markdown variants, and the optional Editor Decision sidecar view.
+Native Preview compiles the named variants automatically unless an explicit
+`--variant` selection limits the compiled set. Hosted and Neo Mobile previews
+include the available variants in the same compiled-media contract. Editor Decisions
+is read-only: review approval remains tied to the original film.
+
 ## Input formats
 
 | Format | CLI | Description |
