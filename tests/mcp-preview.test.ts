@@ -70,8 +70,8 @@ describe('Markcut Remotion MCP App',()=>{
   expect(audio).toContain("p.addEventListener('play',play)");
  });
  it('maps every historical preview version and the stable URI to the latest',()=>{
-  expect(PREVIEW_VERSION_NUMBER).toBe(53);
-  expect(RESOURCE_URI).toBe('ui://markcut/video-preview-v53.html');
+  expect(PREVIEW_VERSION_NUMBER).toBe(54);
+  expect(RESOURCE_URI).toBe('ui://markcut/video-preview-v54.html');
   expect(STABLE_RESOURCE_URI).toBe('ui://markcut/video-preview.html');
   expect(LEGACY_RESOURCE_URIS).toHaveLength(PREVIEW_VERSION_NUMBER);
   expect(new Set([RESOURCE_URI,...LEGACY_RESOURCE_URIS]).size).toBe(PREVIEW_VERSION_NUMBER+1);

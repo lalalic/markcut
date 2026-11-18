@@ -45,21 +45,32 @@ function App(){
   setEditorView(false);setEditorTree(null);setEditorError('');
   const direct=revision?.editorDecisions;
   if(direct){setEditorTree(direct.root||direct);return;}
-  const url=revision?.edlCompiledUrl;
-  if(!url)return;
+  // Published companions are discoverable by the existing content hash.
+  // Some embedded hosts replay only compiledUrl/contentHash and omit optional
+  // revision metadata: do not silently hide the Editor Decisions view.
+  const explicit=revision?.edlCompiledUrl;
   const videoUrl=revision?.compiledUrl;
   try {
-   const candidate=new URL(url),expected=new URL(videoUrl);
-   if(candidate.origin!==expected.origin||!candidate.pathname.startsWith('/files/_neoy/markcut/cache/')||!/^[a-f0-9]{64}(?:-[a-f0-9]{16})?[.]json$/.test((candidate.pathname.split('/').pop()||'')))
+   if(!videoUrl)return;
+   const expected=new URL(videoUrl);
+   if(!expected.pathname.startsWith('/files/_neoy/markcut/cache/'))throw Error('Invalid Video preview URL');
+   const hash=revision?.contentHash;
+   const inferred=!explicit && typeof hash==='string' && /^[a-f0-9]{64}$/.test(hash);
+   const candidate=explicit?new URL(explicit):inferred?new URL('/files/_neoy/markcut/cache/'+hash+'.editor-decisions.json',expected.origin):null;
+   if(!candidate)return;
+   if(candidate.origin!==expected.origin||!candidate.pathname.startsWith('/files/_neoy/markcut/cache/')||
+      !/^[a-f0-9]{64}(?:-[a-f0-9]{16})?[.]json$|^[a-f0-9]{64}[.]editor-decisions[.]json$/.test(candidate.pathname.split('/').pop()||''))
     throw Error('Invalid Editor Decision preview URL');
    fetch(candidate.href,{cache:'force-cache'}).then(async response=>{
-    if(!response.ok)throw Error('Editor Decision HTTP '+response.status);
-    const tree=await response.json();
-    if(active)setEditorTree(tree.root||tree);
-   }).catch(error=>{if(active)setEditorError(String(error));});
+    // The companion is optional for ordinary films, but an explicitly
+    // declared EDL must report a real error if its published asset is missing.
+    if(!response.ok){if(inferred&&response.status===404)return null;throw Error('Editor Decision HTTP '+response.status);}
+    return response.json();
+   }).then(tree=>{if(active&&tree)setEditorTree(tree.root||tree);})
+    .catch(error=>{if(active)setEditorError(String(error));});
   }catch(error){setEditorError(String(error));}
   return ()=>{active=false;};
- },[revision?.revisionId,revision?.edlCompiledUrl,revision?.editorDecisions]);
+ },[revision?.revisionId,revision?.edlCompiledUrl,revision?.editorDecisions,revision?.contentHash,revision?.compiledUrl]);
  React.useEffect(()=>{
   window.dispatchEvent(new CustomEvent('markcut:edl-view',{detail:{active:editorView}}));
  },[revision?.revisionId,editorView]);
@@ -148,14 +159,14 @@ function App(){
  if(revision.review?.mode==='questions')return <QuestionsPanel key={revision.revisionId} data={data} revisionId={revision.revisionId}/>;
  const videoName=String(revision.title||revision.videoTitle||revision.path?.split('/').pop()?.replace(/\.md$/i,'').replace(/[-_]+/g,' ')||'Video');
  return <div id="remotion-preview" data-revision={revision.revisionId}>
-  {Boolean(revision.edlCompiledUrl||revision.editorDecisions)&&<nav aria-label="Preview view" style={{display:'flex',gap:6,justifyContent:'center',alignItems:'center',margin:'8px 0'}}>
-   <button type="button" aria-pressed={!editorView} onClick={()=>{setEditorView(false);setCurrentTime(0);}}
+  {Boolean(revision.edlCompiledUrl||revision.editorDecisions||editorTree)&&<div role="tablist" aria-label="Preview view" style={{display:'flex',gap:6,justifyContent:'center',alignItems:'center',margin:'8px 0'}}>
+   <button type="button" role="tab" aria-selected={!editorView} onClick={()=>{setEditorView(false);setCurrentTime(0);}}
     style={{background:editorView?'#f1f5f9':'#dbeafe',color:editorView?'#475569':'#1d4ed8',border:'1px solid #cbd5e1',fontWeight:600}}>Video</button>
-   <button type="button" aria-pressed={editorView} disabled={!editorTree} onClick={()=>{setEditorView(true);setCurrentTime(0);}}
+   <button type="button" role="tab" aria-selected={editorView} disabled={!editorTree} onClick={()=>{setEditorView(true);setCurrentTime(0);}}
     style={{background:editorView?'#dbeafe':'#f1f5f9',color:editorView?'#1d4ed8':'#475569',border:'1px solid #cbd5e1',fontWeight:600}}>
     {editorTree?'Editor Decisions':editorError?'EDL unavailable':'Loading EDL…'}</button>
    {editorError&&<span style={{fontSize:11,color:'#b91c1c'}} title={editorError}>EDL error</span>}
-  </nav>}
+  </div>}
   {editorView&&<div role="note" style={{fontSize:12,color:'#64748b',textAlign:'center',marginBottom:5}}>Editorial view · Switch to Video to submit film review</div>}
   {Boolean(data?.subtitle?.src)&&document.getElementById("header-tts")&&createPortal(
    <label style={{display:"flex",gap:5,alignItems:"center",fontSize:12,whiteSpace:"nowrap",cursor:"pointer"}} title="Use browser narration with captions from the script">
