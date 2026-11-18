@@ -7,12 +7,13 @@ import { fileURLToPath } from "node:url";
 import { buildPreviewBridgeScript } from "./bridge.mjs";
 import { externalizePreviewMedia, publicOrigin, resolveMountedFile, resolvePreviewPath, publishPlayerBundle, publishCompiledCache, prunePublishedCache, versionPreviewMedia, EXPORT_ROOT } from "./remote-assets.mjs";
 import {fingerprintInputs} from "./source-fingerprint.mjs";
+import {loadEditorDecision,editorDecisionToMarkdown} from "../editor-decision/index.mjs";
 
 export const TOOL_NAME = "markcut.preview";
 // One source of truth for preview resources. Every historical version (and
 // the versionless alias) serves the same current UI and player bundle.
 // Increment the version only to bypass clients that cache an already-open UI.
-export const PREVIEW_VERSION_NUMBER = 52;
+export const PREVIEW_VERSION_NUMBER = 53;
 export const RESOURCE_URI = `ui://markcut/video-preview-v${PREVIEW_VERSION_NUMBER}.html`;
 export const STABLE_RESOURCE_URI = "ui://markcut/video-preview.html";
 const PREVIEW_VERSION = `v${PREVIEW_VERSION_NUMBER}`;
@@ -163,6 +164,7 @@ export async function ensureVideoPreview(path, options = {}) {
     const cacheDir=resolve(outputRoot,"cache");
     const indexFile=resolve(dir,"cache-index.json");
     const audio=await readPreviewAudio(validatedPath);
+    const sidecar=loadEditorDecision(validatedPath,source);
     const referencedAssets=input.assets;
     referencedAssets.sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
     // Compilation generates random scene ids. Identity must be based on inputs,
@@ -218,6 +220,27 @@ export async function ensureVideoPreview(path, options = {}) {
     const currentHash=createHash("sha256").update(current.source).update("\0").update(JSON.stringify(current.assets)).digest("hex");
     if(currentHash!==sourceHash)
       throw new Error("Source changed during compilation; retry preview");
+    // The Editor Decision view is a separate real Markcut compilation, sharing
+    // the same source footage but never replacing the authoritative video tree.
+    let edlCompiledUrl;
+    if(sidecar){
+      report("compiling-editor-decisions");
+      const edlMd=editorDecisionToMarkdown(validatedPath,sidecar.edl,source);
+      const edlInput=parseMarkdownDescriptive(edlMd);
+      const edlResolved=await resolveAll(edlInput,{
+        sourcePath:validatedPath,baseDir,seed:parseInt(sourceHash.slice(0,8),16),
+        scriptOutputDir:resolve(generated,"tts"),
+        mediaOutputDir:resolve(generated,"media"),
+        includeOutputDir:resolve(generated,"includes"),
+      });
+      const edlTree=compileDescriptiveRoot(edlResolved,{googleMapsApiKey:process.env.GOOGLE_MAPS_API_KEY});
+      const edlPublished=externalizePreviewMedia(edlTree,id,publicOrigin(),baseDir);
+      const edlFrozen=versionPreviewMedia(edlPublished.compiled);
+      // Content-addressed output is for immutable preview storage only.
+      // No EDL/video version-fingerprint comparison or synchronization gate.
+      const edlHash=createHash("sha256").update(hash).update(JSON.stringify(sidecar.edl)).digest("hex");
+      edlCompiledUrl=publishCompiledCache(edlHash,edlFrozen);
+    }
     await mkdir(dir,{recursive:true});
     report("publishing-static-preview");
     // Static publication is completed before updating the latest pointer.
@@ -227,7 +250,7 @@ export async function ensureVideoPreview(path, options = {}) {
     await pruneCache(cacheDir,indexFile,index.entries||[],hash);
     const preview={
       id,revisionId:id,contentHash:hash,sourceHash,path:validatedPath,
-      compiledUrl, resourceUri:RESOURCE_URI,
+      compiledUrl, ...(edlCompiledUrl ? {edlCompiledUrl} : {}), resourceUri:RESOURCE_URI,
       assetBaseUrl:publicOrigin()+"/files/_neoy/markcut/generated/"+id+"/",
     };
     return preview;

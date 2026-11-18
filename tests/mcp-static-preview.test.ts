@@ -54,7 +54,7 @@ describe('stateless Markcut MCP cache',()=>{
    await writeFile(media,'# video\nwidth:640 height:480 fps:30 layout:series\n## Photo\n- image src:photo2.png duration:1\n');
    const mediaPreview=await ensureVideoPreview(media);
    const mediaJson=await readFile(join(run,'exports','cache',mediaPreview.contentHash+'.json'),'utf8');
-   expect(mediaJson).toContain('/files/_neoy/markcut/generated/'+mediaPreview.contentHash+'/file-0.png');
+   expect(mediaJson).toContain('/preview-files/_neoy/markcut/generated/'+mediaPreview.contentHash+'/file-0.png');
    expect(await readFile(join(run,'exports','generated',mediaPreview.contentHash,'file-0.png'))).toEqual(await readFile(photo));
    await writeFile(photo,Buffer.from('different-image-payload'));
    const modified=await ensureVideoPreview(media);

@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Markcut Editor Decision List v1",
+  "description": "Optional editable source-linked decisions accompanying an executable Markcut video.md.",
+  "type": "object",
+  "required": ["schema_version", "edits"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "editorial_intent": {"type": "string"},
+    "personal_story_id": {"type": "string"},
+    "edits": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["shot_id", "in_seconds", "out_seconds"],
+        "anyOf": [{"required": ["source_id"]}, {"required": ["source_src"]}],
+        "properties": {
+          "shot_id": {"type": "string", "minLength": 1},
+          "sceneId": {"type": "string"},
+          "source_id": {"type": "string", "minLength": 1},
+          "source_src": {"type": "string", "minLength": 1},
+          "in_seconds": {"type": "number", "minimum": 0},
+          "out_seconds": {"type": "number", "exclusiveMinimum": 0},
+          "playbackSpeed": {"type": "number", "exclusiveMinimum": 0},
+          "timelineDuration": {"type": "number", "exclusiveMinimum": 0},
+          "shot_purpose": {"type": "string"},
+          "editor_reason": {"type": "string"},
+          "cut_reason": {"type": "string"},
+          "visual_relationship": {"type": "string"},
+          "sound_decision": {"type": "string"},
+          "revision_note": {"type": "string"},
+          "beat": {"type": "string"},
+          "story_beat_id": {"type": "string"},
+          "transition": {"type": "string"}
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

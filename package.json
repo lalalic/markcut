@@ -14,7 +14,9 @@
     "./components": "./src/components/index.ts",
     "./descriptive": "./src/descriptive/compiler.ts",
     "./descriptive-markdown": "./src/descriptive/markdown.ts",
-    "./descriptive-resolve": "./src/descriptive/resolve.ts"
+    "./descriptive-resolve": "./src/descriptive/resolve.ts",
+    "./editor-decision": "./src/editor-decision/index.mjs",
+    "./editor-decision/schema": "./src/editor-decision/editor-decision.schema.json"
   },
   "scripts": {
     "render": "node src/render/cli.mjs render",

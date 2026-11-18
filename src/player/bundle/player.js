@@ -315263,7 +315263,7 @@ function VariantBar() {
     {
       href: `/${v6 === "default" ? "" : v6}`,
       className: "variant-link" + (v6 === currentVariant ? " active" : ""),
-      children: v6
+      children: v6 === "default" ? "Video" : v6 === "editor-decisions" ? "Editor Decisions" : v6
     },
     v6
   )) });

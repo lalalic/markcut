@@ -299,6 +299,27 @@ async function renderRevision(data){
   reviewReadonly(true,'Preview unavailable or review state unverified: '+String(e));
  }
 }
+// Editor Decisions are an informational subview, not the film approval target.
+// Hide film-review actions while the editor-decision timeline is active.
+let editorReviewControls=null;
+window.addEventListener('markcut:edl-view',event=>{
+ const edl=Boolean(event.detail?.active);
+ const ids=['approve','changes','comment-entry'];
+ if(edl&&!editorReviewControls){
+  editorReviewControls=ids.map(id=>{
+   const node=document.getElementById(id);
+   return {node,display:node?.style.display,disabled:node?.disabled};
+  });
+  for(const item of editorReviewControls){
+   if(item.node){item.node.style.display='none';if('disabled' in item.node)item.node.disabled=true;}
+  }
+ }else if(!edl&&editorReviewControls){
+  for(const item of editorReviewControls){
+   if(item.node){item.node.style.display=item.display;if('disabled' in item.node)item.node.disabled=item.disabled;}
+  }
+  editorReviewControls=null;
+ }
+});
 window.addEventListener('message',event=>{
  if(event.source!==window.parent)return;
  const message=event.data;

@@ -18,6 +18,7 @@ import { isDescriptiveRoot, resolveAndCompile, resolveAndCompileMarkdown, parseI
 import { bundleFromEntries } from "./bundler.mjs";
 import { extractScenes, MIME, serveFile, handleShutdown } from "./server-shared.mjs";
 import { DEFAULT_EDIT_CLI, DEFAULT_STT_CLI, GOOGLE_MAPS_API_KEY } from "../config.mjs";
+import {loadEditorDecision,editorDecisionToMarkdown} from "../editor-decision/index.mjs";
 
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -74,6 +75,12 @@ function parseVariantConfigs() {
   }));
 }
 const VARIANT_CONFIGS = parseVariantConfigs();
+let editorSidecar=IS_MARKDOWN?loadEditorDecision(VIDEO_JSON):null;
+if (editorSidecar) {
+  if (!VARIANT_CONFIGS.some(c=>c.label==="default")) VARIANT_CONFIGS.unshift({label:"default",chain:[]});
+  if (VARIANT_CONFIGS.some(c=>c.label==="editor-decisions")) throw Error("Reserved variant name: editor-decisions");
+  VARIANT_CONFIGS.push({label:"editor-decisions",chain:[]});
+}
 
 // ─── SSE clients for reload notifications ────────────────────────────────
 const sseClients = new Set();
@@ -423,6 +430,11 @@ async function compileVariant(config, parsed, raw) {
 
   if (IS_MARKDOWN) {
     let descriptive = parsed.base;
+    if (config.label === "editor-decisions") {
+      if (!editorSidecar) throw Error("No Editor Decisions found for this video");
+      const {parseMarkdownDescriptive}=await import("./pipeline.mjs");
+      descriptive=parseMarkdownDescriptive(editorDecisionToMarkdown(VIDEO_JSON,editorSidecar.edl,raw));
+    }
 
     if (config.chain.length > 0) {
       // Merge root config from the first variant's section
@@ -520,6 +532,7 @@ async function compileVariant(config, parsed, raw) {
  */
 async function compileAllVariants() {
   const raw = readFileSync(VIDEO_JSON, "utf-8");
+  if (IS_MARKDOWN) editorSidecar=loadEditorDecision(VIDEO_JSON,raw);
   let markdownParsed = null;
 
   console.log(`  📄 ${VIDEO_JSON.split("/").pop()}`);
@@ -669,33 +682,31 @@ const initScenesPromise = compileAndExtractScenes();
 
 // ─── Watch source file for changes (all modes) ──────────────────────────
 let lastContent = readFileSync(VIDEO_JSON, "utf-8");
-watchFile(VIDEO_JSON, { interval: 1000 }, async (curr, prev) => {
-  if (curr.mtimeMs === prev.mtimeMs) return;
+async function recompileAfterChange() {
   if (pipelineRunning) return;
-  const newContent = readFileSync(VIDEO_JSON, "utf-8");
-  if (newContent === lastContent) return;
-  lastContent = newContent;
   pipelineRunning = true;
-  console.log(`  📁 ${VIDEO_JSON} changed, re-running all variants...`);
-
   try {
     compiledRootCache.clear();
     scenesCache.clear();
     await compileAllVariants();
-
     for (const config of VARIANT_CONFIGS) {
-      try {
-        const root = await loadCompiledRoot(config.label);
-        scenesCache.set(config.label, extractScenes(root));
-      } catch {}
+      const root=await loadCompiledRoot(config.label);
+      scenesCache.set(config.label,extractScenes(root));
     }
-
-    ssePush({ type: "reload" });
-  } catch (e) {
-    console.error("  ⚠️  Failed to re-process after change:", e.message);
-  } finally {
-    pipelineRunning = false;
-  }
+    ssePush({type:"reload"});
+  } catch(e) {
+    console.error("  ⚠️  Failed to re-process after change:",e.message);
+  } finally { pipelineRunning=false; }
+}
+if (editorSidecar) watchFile(editorSidecar.path,{interval:1000},(curr,prev)=>{
+  if(curr.mtimeMs!==prev.mtimeMs)void recompileAfterChange();
+});
+watchFile(VIDEO_JSON, { interval: 1000 }, async (curr, prev) => {
+  if (curr.mtimeMs === prev.mtimeMs) return;
+  const newContent = readFileSync(VIDEO_JSON, "utf-8");
+  if (newContent === lastContent) return;
+  lastContent = newContent;
+  await recompileAfterChange();
 });
 // ─── MIME imported from ./server-shared.mjs ──────────────────────────────
 

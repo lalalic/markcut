@@ -68,7 +68,7 @@ Commands:
     --category <name>                 Filter by category (e.g. map, camera)
     --search <text>                   Search by intent or motion
 
-  verify <file>                         Parse + validate descriptive file
+  verify <file>                         Parse + validate descriptive file and linked EDL\n  edl <video.md> [--output <file>]       Convert Editor Decision sidecar to playable Markcut Markdown
 
   preview <file.json|.md>               Open player with live preview
     --delivery event                 Headless human review via Neo Mobile (requires .md)
@@ -493,6 +493,17 @@ function hasScript(root) {
     emitInfo(`File: ${filePath}`);
     emitInfo(`Format: ${isMarkdown ? "Markdown" : "JSON"}`);
 
+    if (isMarkdown) {
+      // EDL is optional; a declared or present sidecar must be valid and resolvable.
+      const {loadEditorDecision,editorDecisionToMarkdown} = await import("../editor-decision/index.mjs");
+      try {
+        const sidecar=loadEditorDecision(filePath,raw);
+        if (sidecar) {
+          const generated=editorDecisionToMarkdown(filePath,sidecar.edl,raw);
+          if(!generated.includes("# video"))throw Error("Invalid EDL visualization");
+        }
+      } catch(e) { emitError("Editor Decision: "+e.message);process.exit(1); }
+    }
     const { compileDescriptiveRoot, parseMarkdownDescriptive, parseMarkdownVariants, parseImportsBlock } = await import("../player/pipeline.mjs");
 
     try {

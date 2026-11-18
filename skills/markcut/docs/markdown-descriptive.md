@@ -250,6 +250,30 @@ ending: ...
 
 All video configuration comes from the root config line (section 10), NOT from frontmatter.
 
+### Editor Decisions (built-in EDL companion)
+
+A video may link a Markcut Editor Decision List in its YAML frontmatter:
+
+```yaml
+---
+edl: ./video.edl.json
+---
+```
+
+The companion uses Markcut's Editor Decision Schema v1 (`src/editor-decision/editor-decision.schema.json`). It holds editorial intent and source-grounded per-shot choices: shot ID, original media source ID or path, in/out seconds, optional playback speed, shot purpose, cut rationale, visual relationship, and sound decision. The executable video Markdown remains the authority for the finished film; EDL is not a second editable render definition and no EDL/film version-fingerprint comparison is performed.
+
+The EDL basename defaults to `<video-name>.edl.json` when a companion exists, even without a frontmatter field. A declared missing EDL is an error. The Previewer natively offers Video / Editor Decisions views; the second view uses the original clips and overlays the documented decisions.
+
+Generate a standalone Markcut EDL viewing file:
+
+```sh
+markcut edl video.md                    # produces video.edl.md
+markcut verify video.edl.md
+markcut preview video.edl.md
+```
+
+The converter does not change the original video.md or video.edl.json.
+
 ### 12. Minimal Valid Document
 
 ```markdown

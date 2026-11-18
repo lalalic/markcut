@@ -31,7 +31,7 @@ export function VariantBar() {
           href={`/${v === "default" ? "" : v}`}
           className={"variant-link" + (v === currentVariant ? " active" : "")}
         >
-          {v}
+          {v === "default" ? "Video" : v === "editor-decisions" ? "Editor Decisions" : v}
         </a>
       ))}
     </div>
