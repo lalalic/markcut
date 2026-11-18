@@ -1318,7 +1318,7 @@ export async function main(args) {
         maxDimension: image ? MAX_IMAGE_DIMENSION : MAX_VIDEO_DIMENSION });
     }
     writeFileSync(join(folder, 'metadata.json'), JSON.stringify(results, null, 2) + '\n');
-    console.log(JSON.stringify({ status: 'PASS', files }));
+    console.log(JSON.stringify({ status: 'PASS', profile: 'markcut-vision-normalized-v1', usage: 'vision-understanding-only', files }));
     return;
   }
   if (doLabel) {

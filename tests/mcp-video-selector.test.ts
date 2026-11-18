@@ -32,6 +32,12 @@ describe('one video selector for original, named variants, and editor decisions'
    expect(JSON.parse(await readFile(join(root,'exports','cache',preview.contentHash+'.variants.json'),'utf8')))
      .toHaveProperty('landscape');
    expect(await readFile(film,'utf8')).toBe(markdown);
+   // Validate published resource while the test's Neo origin and export directory
+   // are set; CI has no actual NeoY deployment.json.
+   const {buildPreviewHtml}=await import('../src/mcp/preview.mjs');
+   const html=buildPreviewHtml();
+   expect(html).toContain('id="markcut-video-selector-slot"');
+   expect(html).not.toContain('id="review-delivery-mode"');
   } finally {
    if(beforeExport===undefined)delete process.env.MARKCUT_EXPORT_ROOT;else process.env.MARKCUT_EXPORT_ROOT=beforeExport;
    if(beforeOrigin===undefined)delete process.env.NEOY_PUBLIC_ORIGIN;else process.env.NEOY_PUBLIC_ORIGIN=beforeOrigin;
@@ -41,10 +47,6 @@ describe('one video selector for original, named variants, and editor decisions'
  it('ships a right-hand selector without a separate mode label or EDL tab bar',async()=>{
   const {readFileSync}=await import('node:fs');
   const app=readFileSync(new URL('../src/mcp/remotion-app.tsx',import.meta.url),'utf8');
-  const {buildPreviewHtml}=await import('../src/mcp/preview.mjs');
-  const html=buildPreviewHtml();
-  expect(html).toContain('id="markcut-video-selector-slot"');
-  expect(html).not.toContain('id="review-delivery-mode"');
   expect(app).toContain('id="markcut-video-selector"');
   expect(app).toContain('editor-decisions');
   expect(app).not.toContain('role="tablist"');
