@@ -43,6 +43,8 @@ function App(){
  React.useEffect(()=>{
   let active=true;
   setEditorView(false);setEditorTree(null);setEditorError('');
+  const direct=revision?.editorDecisions;
+  if(direct){setEditorTree(direct.root||direct);return;}
   const url=revision?.edlCompiledUrl;
   if(!url)return;
   const videoUrl=revision?.compiledUrl;
@@ -57,7 +59,7 @@ function App(){
    }).catch(error=>{if(active)setEditorError(String(error));});
   }catch(error){setEditorError(String(error));}
   return ()=>{active=false;};
- },[revision?.revisionId,revision?.edlCompiledUrl]);
+ },[revision?.revisionId,revision?.edlCompiledUrl,revision?.editorDecisions]);
  React.useEffect(()=>{
   window.dispatchEvent(new CustomEvent('markcut:edl-view',{detail:{active:editorView}}));
  },[revision?.revisionId,editorView]);
@@ -146,7 +148,7 @@ function App(){
  if(revision.review?.mode==='questions')return <QuestionsPanel key={revision.revisionId} data={data} revisionId={revision.revisionId}/>;
  const videoName=String(revision.title||revision.videoTitle||revision.path?.split('/').pop()?.replace(/\.md$/i,'').replace(/[-_]+/g,' ')||'Video');
  return <div id="remotion-preview" data-revision={revision.revisionId}>
-  {Boolean(revision.edlCompiledUrl)&&<nav aria-label="Preview view" style={{display:'flex',gap:6,justifyContent:'center',alignItems:'center',margin:'8px 0'}}>
+  {Boolean(revision.edlCompiledUrl||revision.editorDecisions)&&<nav aria-label="Preview view" style={{display:'flex',gap:6,justifyContent:'center',alignItems:'center',margin:'8px 0'}}>
    <button type="button" aria-pressed={!editorView} onClick={()=>{setEditorView(false);setCurrentTime(0);}}
     style={{background:editorView?'#f1f5f9':'#dbeafe',color:editorView?'#475569':'#1d4ed8',border:'1px solid #cbd5e1',fontWeight:600}}>Video</button>
    <button type="button" aria-pressed={editorView} disabled={!editorTree} onClick={()=>{setEditorView(true);setCurrentTime(0);}}

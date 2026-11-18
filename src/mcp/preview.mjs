@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { mkdir, writeFile, readdir, rename, rm, stat, utimes } from "node:fs/promises";
 import { access, readFile } from "node:fs/promises";
-import { constants as fsConstants, readFileSync } from "node:fs";
+import { constants as fsConstants, readFileSync, existsSync } from "node:fs";
 import { isAbsolute, extname, dirname, resolve, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildPreviewBridgeScript } from "./bridge.mjs";
@@ -47,7 +47,13 @@ const KEEP = 10;
 export function getPreviewMedia(contentHash) {
   if (!/^[a-f0-9]{64}$/.test(contentHash)) throw new Error("Invalid Markcut content hash");
   try {
-    return {compiled:versionPreviewMedia(JSON.parse(readFileSync(resolve(EXPORT_ROOT,"cache",contentHash+".json"),"utf8")))};
+    const compiled=versionPreviewMedia(JSON.parse(readFileSync(resolve(EXPORT_ROOT,"cache",contentHash+".json"),"utf8")));
+    // A preview may include its independent, playable editorial-decision tree.
+    // The existing app-only media tool returns both trees; no extra MCP tool.
+    const sidecar=resolve(EXPORT_ROOT,"cache",contentHash+".editor-decisions.json");
+    const editorDecisions=existsSync(sidecar)
+      ? versionPreviewMedia(JSON.parse(readFileSync(sidecar,"utf8"))) : null;
+    return {compiled,...(editorDecisions?{editorDecisions}:{})};
   } catch {throw new Error("Unknown or expired Markcut compiled scenes");}
 }
 
@@ -240,6 +246,8 @@ export async function ensureVideoPreview(path, options = {}) {
       // No EDL/video version-fingerprint comparison or synchronization gate.
       const edlHash=createHash("sha256").update(hash).update(JSON.stringify(sidecar.edl)).digest("hex");
       edlCompiledUrl=publishCompiledCache(edlHash,edlFrozen);
+      await mkdir(cacheDir,{recursive:true});
+      await atomicJson(resolve(EXPORT_ROOT,"cache",hash+".editor-decisions.json"),edlFrozen);
     }
     await mkdir(dir,{recursive:true});
     report("publishing-static-preview");
