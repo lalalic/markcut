@@ -231,16 +231,31 @@ export function externalizePreviewMedia(compiled,revisionId,origin=publicOrigin(
   return {compiled:replace(compiled),assets};
 }
 
-// Fallback for hosts that deliver tool-input but omit tool-result notifications.
-export function publishPreviewRevision(requestedPath,payload) {
-  const key=createHash("sha256").update(requestedPath).digest("hex");
-  const dir=join(EXPORT_ROOT,"revisions");
+// The MCP iframe identifies a preview by the requested path. The standalone
+// NeoY viewer identifies the *same* video by its mounted /files/... path.
+// Publish both pointers with identical content, preserving old callers.
+export function publishPreviewRevision(requestedPath,payload,{
+  root=EXPORT_ROOT,origin=publicOrigin(),mount=resolveMountedFile,
+}={}) {
+  const dir=join(root,"revisions");
   mkdirSync(dir,{recursive:true});
-  const target=join(dir,key+".json");
-  const temp=join(dir,key+"."+process.pid+".tmp");
-  writeFileSync(temp,JSON.stringify(payload),{mode:0o644});
-  renameSync(temp,target);
-  return publicOrigin()+"/files/_neoy/markcut/revisions/"+key+".json";
+  function writePointer(identity,data){
+    const key=createHash("sha256").update(identity).digest("hex");
+    const target=join(dir,key+".json");
+    const temp=join(dir,key+"."+process.pid+".tmp");
+    writeFileSync(temp,JSON.stringify(data),{mode:0o644});
+    renameSync(temp,target);
+    return origin+"/files/_neoy/markcut/revisions/"+key+".json";
+  }
+  const url=writePointer(requestedPath,payload);
+  if(typeof payload?.path==="string"){
+    const mounted=mount(payload.path,origin);
+    if(mounted){
+      const canonical=new URL(mounted).pathname;
+      if(canonical!==requestedPath)writePointer(canonical,{...payload,requestedPath:canonical});
+    }
+  }
+  return url;
 }
 
 

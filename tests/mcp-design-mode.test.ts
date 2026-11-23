@@ -4,7 +4,8 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
-import {webcrypto} from 'node:crypto';
+import {webcrypto,createHash} from 'node:crypto';
+import {publishPreviewRevision} from '../src/mcp/remote-assets.mjs';
 import {designViewerUrl,publishDesignViewer} from '../src/mcp/design-viewer.mjs';
 import {buildPreviewBridgeScript} from '../src/mcp/bridge.mjs';
 
@@ -21,6 +22,22 @@ describe('NeoY standalone Markcut design mode',()=>{
   expect(designViewerUrl(file,origin,()=>null)).toBeNull();
   expect(()=>designViewerUrl(file,origin,()=>origin+'/files/_neoy/markcut/cache/evil.md')).toThrow();
   expect(()=>designViewerUrl(file,origin,()=>origin+'/files/vlog/../secret.md')).toThrow();
+ });
+ it('publishes the same revision by both caller path and canonical mounted video.md identity',async()=>{
+  const root=await mkdtemp(join(tmpdir(),'markcut-design-revisions-'));
+  const caller='/home/source/video.md',canonical='/files/vlog/video.md';
+  const payload={requestedPath:caller,path:caller,contentHash:hash,compiledUrl:'https://neoy.example.test/files/_neoy/markcut/cache/'+hash+'.json'};
+  const key=value=>createHash('sha256').update(value).digest('hex');
+  try {
+   const url=publishPreviewRevision(caller,payload,{root,origin:'https://neoy.example.test',
+     mount:()=> 'https://neoy.example.test'+canonical});
+   expect(url).toContain('/revisions/'+key(caller)+'.json');
+   const local=JSON.parse(await readFile(join(root,'revisions',key(caller)+'.json'),'utf8'));
+   const mounted=JSON.parse(await readFile(join(root,'revisions',key(canonical)+'.json'),'utf8'));
+   expect(local.requestedPath).toBe(caller);
+   expect(mounted.requestedPath).toBe(canonical);
+   expect(mounted.compiledUrl).toBe(local.compiledUrl);
+  }finally{await rm(root,{recursive:true,force:true});}
  });
  it('publishes the same player without creating a second viewer',async()=>{
   const root=await mkdtemp(join(tmpdir(),'markcut-design-ui-'));
