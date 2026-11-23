@@ -71,8 +71,6 @@ Commands:
   verify <file>                         Parse + validate descriptive file and linked EDL\n  edl <video.md> [--output <file>]       Convert Editor Decision sidecar to playable Markcut Markdown
 
   preview <file.json|.md>               Open player with live preview
-    --design                          Open NeoY standalone player, live-recompile video.md and split with ChatGPT
-    --no-split                        Open NeoY design viewer without WebHelm Split View
     --delivery event                 Headless human review via Neo Mobile (requires .md)
     --event-template <file.json>     Relay task.interactive_decision envelope from current Task
     (No phone URL)                  Neo Master stores and notifies through APNs

@@ -137,30 +137,26 @@ Two override mechanisms:
 
 ### Interactive NeoY Design Mode (before formal Review)
 
-Open the **existing Markcut Previewer** directly on NeoY with a mounted `video.md`:
+The **existing Markcut Previewer** can be opened as a standalone NeoY view
+using only the mounted source `video.md`. There is no special Markcut CLI mode,
+browser Session ID, revision identity, or file-watcher process.
 
-```sh
-markcut preview /absolute/path/to/video.md --design
-# or only publish/watch the standalone viewer:
-markcut preview /absolute/path/to/video.md --design --no-split
-```
+1. Call `markcut.preview({path: "/absolute/path/video.md", readonly: true})`.
+   Markcut compiles and publishes the latest player assets. For a source in an
+   existing NeoY file mount, the tool result includes `designUrl`, an HTTPS
+   link to the standalone player.
+2. Open `designUrl` in a browser. For interactive side-by-side design, call
+   WebHelm's **independent** `webhelm design start --url '<designUrl>'` while a
+   ChatGPT conversation tab is active. Markcut does not control Split View.
+3. After editing `video.md`, referenced media, or its Editor Decision sidecar,
+   call the same `markcut.preview` tool with `readonly: true` again. The open
+   page polls the published file pointer and updates **Original / variants /
+   Editor Decisions** in place. No user-facing Review or approval is required.
+4. Stop the WebHelm Session through WebHelm. Markcut has no browser lifecycle.
 
-The command compiles the source, publishes the original Markcut player as
-`https://neoy.qili2.com/files/_neoy/markcut/design.html?path=/files/<mount>/.../video.md`
-(the actual URL is printed with its path encoded), and watches source/asset
-changes. The *same browser page* polls the current preview pointer; it retains
-the existing top **Original / named variants / Editor Decisions** selector and
-tries to keep the current seek position. No Review, approval, or immutable
-revision identifier is part of this URL. If `--no-split` is omitted, the
-command also starts WebHelm's native Split View with the currently active
-ChatGPT conversation. Keep the command running while designing; SIGINT/SIGTERM
-ends its WebHelm-owned Session. Comments are drafts in the viewer, readable by
-an Agent via `window.__markcutDesignNotes()`, not formal decisions.
-
-The source must be under an **already configured NeoY file mount**. This mode
-uses the existing read-only public `/files/` transport: do not mount private
-files that should not be accessible from that URL. Formal Review remains the
-existing `markcut.preview` / `--delivery event` workflow.
+The source must be under a configured NeoY file mount. The URL uses the
+existing public, read-only `/files/` transport, so mount only content suitable
+for exposure at that address. This mode does not send review decisions.
 
 ## Multi-Variant Preview Server
 

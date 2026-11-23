@@ -7,6 +7,7 @@ import {normalizeReviewConfig} from "./review-delivery.mjs";
 import {publishPreviewRevision,publishPlayerBundle,publicOrigin} from "./remote-assets.mjs";
 import {fileURLToPath} from "node:url";
 import {startCompileOperation} from "./compile-operation.mjs";
+import {designViewerUrl,publishDesignViewer} from "./design-viewer.mjs";
 import {
   TOOL_NAME, RESOURCE_URI, LEGACY_RESOURCE_URIS, buildPreviewResourceResult, previewCsp, getPreviewMedia, stopManagedVideoPreview,
 } from "./preview.mjs";
@@ -47,7 +48,7 @@ registerAppTool(
   server,
   TOOL_NAME,
   {
-    description: "Compile and publish an immutable Markcut preview revision for this ChatGPT conversation. Review delivery defaults to ui/message, or submits an authorized caller-bound event when explicitly configured. Event-mode decisions use the caller-provided event envelope; Markcut does not interpret the event type or payload.",
+    description: "Compile and publish Markcut preview from video.md. With readonly:true, publish without review; mounted sources return designUrl for a separate NeoY player. WebHelm/browser lifecycle is caller-owned. With review enabled, use ui/message or a caller-bound event envelope; Markcut does not interpret event type or payload.",
     inputSchema: z.object({
       path: z.string().describe("Absolute .md path or NeoY HTTPS mounted file URL; Neo Wrapper also accepts single local image/audio/video files"),
       title: z.string().trim().min(1).max(160).optional().describe("Optional display title for Preview and mobile Review Inbox."),
@@ -66,7 +67,11 @@ registerAppTool(
         throw new Error("Read-only preview cannot request Relay or review delivery");
       const config={...normalizeReviewConfig(review),...(readonly ? {readonly:true} : {}),...(title ? {title} : {}),...(mode ? {mode} : {})};
       const operation=startCompileOperation(path,config);
-      const payload=operation;
+      const designUrl=designViewerUrl(operation.path);
+      // Only publish the standalone HTML when a mounted source needs it;
+      // provider startup and ordinary unmounted previews stay independent.
+      if(designUrl)publishDesignViewer();
+      const payload={...operation,...(designUrl?{designUrl}:{})};
       return {
         content: [{ type: "text", text: `Compilation started: ${operation.path}` }],
         structuredContent: payload,
