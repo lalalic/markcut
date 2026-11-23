@@ -73,7 +73,7 @@ function App(){
   }catch(error){setEditorError(String(error));}
   return ()=>{active=false;};
  },[revision?.revisionId,revision?.edlCompiledUrl,revision?.editorDecisions,revision?.contentHash,revision?.compiledUrl]);
- React.useEffect(()=>{setSelectedVideo("default");},[revision?.revisionId]);
+ React.useEffect(()=>{if(!(window as any).__markcutDesignMode)setSelectedVideo("default");},[revision?.revisionId]);
  React.useEffect(()=>{
   // Host and Neo Mobile can provide variants inline. Hosted previews also
   // discover a published companion when optional revision metadata is omitted.
@@ -104,6 +104,7 @@ function App(){
  },[revision?.revisionId,selectedVideo]);
  const ref=React.useRef<PlayerRef|null>(null);
  const [currentTime,setCurrentTime]=React.useState(0);
+
  const [browserTts,setBrowserTts]=React.useState(true);
  const [compact,setCompact]=React.useState(()=>window.matchMedia('(max-width: 640px), (max-width: 900px) and (max-height: 520px)').matches);
  React.useEffect(()=>{
@@ -138,6 +139,20 @@ function App(){
  },[data,generatedRoot,useBrowserTts]);
  const {caption}=useBrowserSpeechPreview(data,ref,useBrowserTts);
  const fps=data?.fps||30;
+ React.useEffect(()=>{
+  if(!(window as any).__markcutDesignMode || !revision)return;
+  const saved=Number((window as any).__markcutDesignRestoreTime);
+  if(!Number.isFinite(saved) || saved<=0)return;
+  (window as any).__markcutDesignRestoreTime=0;
+  const handle=window.setTimeout(()=>{
+   const total=Math.max(0,Number((playbackRoot as any)?.durationInSeconds)||0);
+   const time=Math.max(0,Math.min(saved,total||saved));
+   ref.current?.seekTo(Math.round(time*(fps)));
+   setCurrentTime(time);
+  },200);
+  return ()=>window.clearTimeout(handle);
+ },[revision?.revisionId,playbackRoot,fps]);
+
  const scenes=React.useMemo(()=>{
   const children=(data?.children||[]).filter((x:any)=>x.type==='scene'&&x.visible!==false);
   const overlap=data?.transition?Math.max(0,Number(data?.transitionTime)||0):0;

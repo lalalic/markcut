@@ -135,7 +135,34 @@ Two override mechanisms:
 - **Variant-prefixed keys**: `zh-src` → `src`, `zh-jsx` → `jsx`, `zh-script` → `script`
 - **Bare variant keys**: `zh:"<h1>你好</h1>"` replaces the node's primary content key (`jsx` for components, `src` for images/video, `script` for audio)
 
-### Multi-Variant Preview Server
+### Interactive NeoY Design Mode (before formal Review)
+
+Open the **existing Markcut Previewer** directly on NeoY with a mounted `video.md`:
+
+```sh
+markcut preview /absolute/path/to/video.md --design
+# or only publish/watch the standalone viewer:
+markcut preview /absolute/path/to/video.md --design --no-split
+```
+
+The command compiles the source, publishes the original Markcut player as
+`https://neoy.qili2.com/files/_neoy/markcut/design.html?path=/files/<mount>/.../video.md`
+(the actual URL is printed with its path encoded), and watches source/asset
+changes. The *same browser page* polls the current preview pointer; it retains
+the existing top **Original / named variants / Editor Decisions** selector and
+tries to keep the current seek position. No Review, approval, or immutable
+revision identifier is part of this URL. If `--no-split` is omitted, the
+command also starts WebHelm's native Split View with the currently active
+ChatGPT conversation. Keep the command running while designing; SIGINT/SIGTERM
+ends its WebHelm-owned Session. Comments are drafts in the viewer, readable by
+an Agent via `window.__markcutDesignNotes()`, not formal decisions.
+
+The source must be under an **already configured NeoY file mount**. This mode
+uses the existing read-only public `/files/` transport: do not mount private
+files that should not be accessible from that URL. Formal Review remains the
+existing `markcut.preview` / `--delivery event` workflow.
+
+## Multi-Variant Preview Server
 
 The `preview` command accepts multiple `--variant` flags, each defining a separate compilation target. Variants are compiled **sequentially** (not in parallel) to avoid resource contention from CLI tools like whisper and ffprobe.
 

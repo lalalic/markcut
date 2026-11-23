@@ -2,6 +2,9 @@ export function buildPreviewBridgeScript() {
 return `
 const feedback=document.getElementById('feedback'),status=document.getElementById('status'),pathLabel=document.getElementById('path-label');
 let nextId=0,identity=null,busy=false,expectedPath=null,activePath=null,activeReview={delivery:"text"},expectedDelivery="text",expectedReadonly=false,submittedRevision=null,submission=null;
+const standaloneDesign=typeof location!=='undefined' && location.pathname.endsWith('/_neoy/markcut/design.html');
+if(standaloneDesign){window.__markcutDesignMode=true;document.body.classList.add('markcut-design-mode');}
+
 const comments=[];
 let questions=[],questionAnswers={};
 const isQuestionMode=()=>activeReview?.mode==='questions';
@@ -257,7 +260,7 @@ function reviewReadonly(readonly,message){
 }
 async function renderRevision(data){
  const generation=++renderGeneration;
- if(identity?.revisionId&&identity.revisionId!==data.revisionId)clearComments();
+ if(!standaloneDesign&&identity?.revisionId&&identity.revisionId!==data.revisionId)clearComments();
  if(data.path){pathLabel.textContent=data.path;showVideoName(data.path,data.title||data.videoTitle);}
  if(!data.compiled&&!data.compiledUrl){status.textContent='Compiled scenes unavailable';return;}
  identity={requestId:data.requestId||data.operationId||data.revisionId,previewId:data.id,revisionId:data.revisionId,contentHash:data.contentHash};
@@ -336,7 +339,7 @@ async function initialize(){
  catch(e){status.textContent=e.message||'MCP initialization failed';}
 }
 async function submit(decision){
- if(busy||isViewOnly())return;
+ if(standaloneDesign||busy||isViewOnly())return;
  if(document.getElementById(isQuestionMode()?'questions-submit':(decision==='approved'?'approve':'changes')).disabled){
   status.textContent='Review disabled for this revision or delivery configuration.';return;
  }
@@ -386,6 +389,46 @@ document.getElementById('approve').onclick=()=>submit('approved');
 document.getElementById('changes').onclick=()=>submit('changes_requested');
 redrawComments();
 updateDeliveryMode();
-initialize();
+if(standaloneDesign){
+ // Agent reads draft notes via WebHelm in the shared tab; design notes are
+ // never published as a review or sent to an MCP host.
+ window.__markcutDesignNotes=()=>allComments();
+ const rawPath=new URLSearchParams(location.search).get('path');
+ // The browser can only address a public, mounted Markdown file. Never
+ // expose a local absolute path, accept another origin, or query _neoy assets.
+ if(!rawPath || !/^\\/files\\/(?!_neoy\\/)[A-Za-z0-9_-]+\\/(?:[^/?#]+\\/)*[^/?#]+\\.md$/i.test(rawPath) ||
+    rawPath.split('/').some(part=>part==='.'||part==='..'||part.startsWith('.'))){
+   status.textContent='Invalid design path: use a mounted /files/<mount>/video.md URL.';
+ } else {
+  expectedPath=rawPath;
+  showVideoName(rawPath);
+  status.textContent='Waiting for Markcut compilation…';
+  const digestPromise=crypto.subtle.digest('SHA-256',new TextEncoder().encode(rawPath))
+   .then(bytes=>Array.from(new Uint8Array(bytes),x=>x.toString(16).padStart(2,'0')).join(''));
+  let loading=false;
+  async function refreshDesign(){
+   if(loading)return;
+   loading=true;
+   try{
+    const hash=await digestPromise;
+    const url=__MARKCUT_ORIGIN__+'/files/_neoy/markcut/revisions/'+hash+'.json?time='+Date.now();
+    const response=await fetch(url,{cache:'no-store'});
+    if(!response.ok){if(!identity)status.textContent='Waiting for Markcut compilation…';return;}
+    const data=await response.json();
+    if(data.requestedPath!==rawPath || !data.compiledUrl || typeof data.contentHash!=='string')return;
+    const changed=!identity || identity.contentHash!==data.contentHash ||
+      window.__markcutRevision?.edlCompiledUrl!==data.edlCompiledUrl;
+    if(changed){
+      // Preserve player context while React's existing player reloads its tree.
+      window.__markcutDesignRestoreTime=Number(window.__markcutPlaybackContext?.timeSeconds)||0;
+      await renderRevision({...data,review:{delivery:'text',readonly:true}});
+    }
+   }catch(error){status.textContent='Preview refresh failed: '+String(error?.message||error);}
+   finally{loading=false;}
+  }
+  refreshDesign();
+  window.setInterval(refreshDesign,2500);
+ }
+} else initialize();
 `;
 }

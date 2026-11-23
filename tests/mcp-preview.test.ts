@@ -35,7 +35,9 @@ describe('Markcut Remotion MCP App',()=>{
 
   expect(html).not.toContain('id="remotion-bundle"');
   // The generic event contract requires client-side identity and reserved-field validation.
-  expect(html.length).toBeLessThan(33000);
+  // Shared Previewer now also handles standalone source-path polling. The
+  // React/Remotion bundle remains a separate, content-addressed HTTPS asset.
+  expect(html.length).toBeLessThan(35000);
   expect(html).not.toContain('<video id="video-player"');
   expect(html).not.toContain('data:video/mp4');
   expect(html).not.toContain('127.0.0.1');
@@ -71,8 +73,8 @@ describe('Markcut Remotion MCP App',()=>{
   expect(audio).toContain("p.addEventListener('play',play)");
  });
  it('maps every historical preview version and the stable URI to the latest',()=>{
-  expect(PREVIEW_VERSION_NUMBER).toBe(55);
-  expect(RESOURCE_URI).toBe('ui://markcut/video-preview-v55.html');
+  expect(PREVIEW_VERSION_NUMBER).toBe(56);
+  expect(RESOURCE_URI).toBe('ui://markcut/video-preview-v56.html');
   expect(STABLE_RESOURCE_URI).toBe('ui://markcut/video-preview.html');
   expect(LEGACY_RESOURCE_URIS).toHaveLength(PREVIEW_VERSION_NUMBER);
   expect(new Set([RESOURCE_URI,...LEGACY_RESOURCE_URIS]).size).toBe(PREVIEW_VERSION_NUMBER+1);
