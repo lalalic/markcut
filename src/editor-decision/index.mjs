@@ -84,21 +84,63 @@ function mediaSrc(videoPath,edit){
  if(candidates.length!==1)throw Error('EDL source_id '+JSON.stringify(id)+' does not uniquely resolve; specify source_src');
  return confinedMediaSrc(videoPath,'input/media/'+candidates[0]);
 }
-const html=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/[\r\n]+/g,' ');
-const short=(s,n=140)=>{const text=String(s??'').trim();return text.length>n?text.slice(0,n-1)+'…':text;};
-function overlay(edit,index,src){
- const fields=[edit.shot_purpose||edit.beat||edit.story_beat_id,edit.editor_reason||edit.cut_reason,edit.visual_relationship,edit.sound_decision||edit.audioIntent,edit.revision_note].filter(nonEmpty).map(s=>short(s));
- const lines=['SOURCE: '+src+' ['+edit.in_seconds.toFixed(2)+'–'+edit.out_seconds.toFixed(2)+'s]',...fields].slice(0,5);
- const body=lines.map((line,i)=>'<div style={{fontSize:'+(i===0?18:24)+',opacity:'+(i===0?0.7:1)+",marginTop:10,overflowWrap:'anywhere'}}>"+html(line)+'</div>').join('');
- return "<div style={{boxSizing:'border-box',width:'100%',height:'100%',display:'flex',flexDirection:'column',justifyContent:'flex-end',padding:'5%',color:'white',fontFamily:'Arial,sans-serif',background:'linear-gradient(0deg,rgba(0,0,0,.94),rgba(0,0,0,.6) 45%,transparent 90%)'}}><div style={{fontSize:33,fontWeight:700}}>SHOT "+(index+1)+' · '+html(edit.shot_id)+'</div>'+body+'</div>';
+// Escape JSX expression delimiters as well as HTML, since EDL strings are
+// inserted into JSX children, not into an ordinary inert HTML document.
+const html=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/{/g,'&#123;').replace(/}/g,'&#125;').replace(/[\r\n]+/g,' ');
+// Keep complete Editorial Decision text in the playable overlay: EDL is the
+// source of truth and should never be silently ellipsized or drop fields.
+// Prefer the large 1080x1920 typography, then decrease type only when the
+// FULL caption needs the space. Unlike a scroll region, these sizes are
+// deterministic Remotion frames and remain visible in exported video.
+function shotTypography(edit,src,sections,width,height){
+ const canvasScale=Math.min(width/1080,height/1920);
+ // CSS percentage padding uses the container WIDTH on all four sides.
+ const usableWidth=width*0.90,usableHeight=height-width*0.10;
+ const glyphWidth=text=>[...String(text)].reduce((sum,ch)=>sum+(
+  /[\u2E80-\u9FFF\uAC00-\uD7AF\uFF01-\uFF60]/u.test(ch)?1:
+  /\s/.test(ch)?.36:/[iIl.,:;!|'`]/.test(ch)?.34:/[MW@#%&]/.test(ch)?.83:.61),0);
+ const estimateLines=(text,font)=>Math.max(1,Math.ceil(glyphWidth(text)*font*1.18/usableWidth));
+ const source=`SOURCE: ${src} [${edit.in_seconds.toFixed(2)}–${edit.out_seconds.toFixed(2)}s]`;
+ const desc=sections.map(([label,text])=>`${label}: ${text}`);
+ for(let n=20;n>=9;n--){
+  const shrink=n/20*canvasScale;
+  const title=68*shrink,sourceFont=38*shrink,body=46*shrink,gap=23*shrink;
+  const needed=estimateLines(`SHOT ${edit.shot_id}`,title)*title*1.14+
+    estimateLines(source,sourceFont)*sourceFont*1.3+
+    desc.reduce((sum,text)=>sum+estimateLines(text,body)*body*1.28,0)+
+    (desc.length+1)*gap;
+  if(needed<=usableHeight*0.95)
+   return {title:Math.round(title*100)/100,source:Math.round(sourceFont*100)/100,body:Math.round(body*100)/100,label:Math.round(34*shrink*100)/100,gap:Math.round(gap*100)/100};
+ }
+ throw Error('EDL Shot '+edit.shot_id+' has too much decision text to fit on one frame; split the decision into separate shots instead of clipping it');
 }
+function overlay(edit,index,src,width,height){
+ const sections=[
+  ['BEAT',edit.shot_purpose],
+  ['STORY',edit.beat],
+  ['STORY BEAT ID',edit.story_beat_id],
+  ['EDITOR REASON',edit.editor_reason],
+  ['CUT REASON',edit.cut_reason],
+  ['VISUAL RELATIONSHIP',edit.visual_relationship],
+  ['SOUND DECISION',edit.sound_decision],
+  ['AUDIO INTENT',edit.audioIntent],
+  ['TRANSITION',edit.transition],
+  ['REVISION NOTE',edit.revision_note],
+ ].filter(([,value])=>nonEmpty(value));
+ const size=shotTypography(edit,src,sections,width,height);
+ const heading=`<div style={{fontSize:${size.title},fontWeight:800,lineHeight:1.14,overflowWrap:'anywhere'}}>SHOT ${index+1} · ${html(edit.shot_id)}</div>`;
+ const source=`<div style={{fontSize:${size.source},fontWeight:600,lineHeight:1.3,opacity:.9,overflowWrap:'anywhere'}}>SOURCE: ${html(src)} [${edit.in_seconds.toFixed(2)}–${edit.out_seconds.toFixed(2)}s]</div>`;
+ const descriptions=sections.map(([label,value])=>`<div style={{fontSize:${size.body},lineHeight:1.28,overflowWrap:'anywhere',whiteSpace:'pre-wrap'}}><span style={{fontSize:${size.label},fontWeight:700,letterSpacing:1,color:'#a5d8ff'}}>${label}:</span> ${html(value)}</div>`).join('');
+ return `<div style={{boxSizing:'border-box',width:'100%',height:'100%',display:'flex',flexDirection:'column',justifyContent:'flex-start',alignItems:'stretch',gap:${size.gap},overflowY:'hidden',padding:'5%',color:'white',fontFamily:'Arial,sans-serif',textShadow:'0 2px 5px rgba(0,0,0,.85)',background:'linear-gradient(180deg,rgba(0,0,0,.94),rgba(0,0,0,.78) 62%,rgba(0,0,0,.34))'}}>${heading}${source}${descriptions}</div>`;
+}
+
 export function editorDecisionToMarkdown(videoPath,edl,markdown=readFileSync(videoPath,'utf8')){
  validateEditorDecision(edl);
  const width=Number(/\bwidth:(\d+)/.exec(markdown)?.[1]||1080),height=Number(/\bheight:(\d+)/.exec(markdown)?.[1]||1920);
  const fps=Number(/\bfps:(\d+)/.exec(markdown)?.[1]||30);
  const out=['# video','width:'+width+' height:'+height+' fps:'+fps+' layout:series'];
  if(nonEmpty(edl.editorial_intent)){
-  const jsx="<div style={{boxSizing:'border-box',width:'100%',height:'100%',background:'#111827',color:'white',display:'flex',alignItems:'center',justifyContent:'center',padding:'10%',fontSize:46,textAlign:'center'}}>"+html(short(edl.editorial_intent,320))+'</div>';
+  const jsx="<div style={{boxSizing:'border-box',width:'100%',height:'100%',background:'#111827',color:'white',display:'flex',alignItems:'center',justifyContent:'center',padding:'10%',fontSize:46,textAlign:'center'}}>"+html(edl.editorial_intent)+'</div>';
   out.push('','## EditorialIntent','layout:parallel','- component duration:3 jsx:'+JSON.stringify(jsx));
  }
  for(const [i,e] of edl.edits.entries()){
@@ -109,7 +151,7 @@ export function editorDecisionToMarkdown(videoPath,edl,markdown=readFileSync(vid
   if(imageExts.has(ext))out.push('- image src:'+src+' duration:'+duration.toFixed(4)+' fit:cover');
   else if(videoExts.has(ext))out.push('- video src:'+src+' startFrom:'+e.in_seconds+' endAt:'+e.out_seconds+' duration:'+duration.toFixed(4)+' playbackRate:'+speed+' volume:1 fit:cover');
   else throw Error('Unsupported EDL media format: '+src);
-  out.push('- component duration:'+duration.toFixed(4)+' jsx:'+JSON.stringify(overlay(e,i,src)));
+  out.push('- component duration:'+duration.toFixed(4)+' jsx:'+JSON.stringify(overlay(e,i,src,width,height)));
  }
  return out.join('\n')+'\n';
 }

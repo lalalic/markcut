@@ -49,6 +49,73 @@ test('converts decisions into playable Markcut Markdown with original source and
  }finally{f.cleanup();}
 });
 
+test('Editor Decisions shot overlay begins at top with larger type and never truncates EDL text',()=>{
+ const f=setup();
+ try{
+  const marker='FULL_REASON_END_987654321';
+  const reason='Narrative continuity, source-grounded editorial intention. '.repeat(8)+marker;
+  const decision={...EDL,edits:[{
+   ...EDL.edits[0],shot_purpose:'Purpose should not replace story beat',
+   editor_reason:reason,
+   visual_relationship:'wide shot to detailed close-up',
+   sound_decision:'preserve natural source audio',audioIntent:'do not duck the recording',
+   revision_note:'keep the original observation',story_beat_id:'story-beat-abc',
+   transition:'match cut from {shot} to <scene>',cut_reason:'Independent cut reason {not_an_expression}'
+  }]};
+  const md=editorDecisionToMarkdown(f.video,decision,'# video\nwidth:1080 height:1920 fps:30 layout:series');
+  const component=md.split('- component duration:1.0000 jsx:')[1];
+  const jsx=JSON.parse(component.trim());
+  assert.match(jsx,/justifyContent:'flex-start'/);
+  assert.doesNotMatch(jsx,/justifyContent:'flex-end'/);
+  const title=Number(jsx.match(/fontSize:([\d.]+)/)[1]);
+  const body=Number(jsx.match(/<div style=\{\{fontSize:([\d.]+),lineHeight:1\.28/)[1]);
+  assert.ok(title>33&&title<=68,`shot title must remain larger than prior 33px, got ${title}`);
+  assert.ok(body>24&&body<=46,`shot body must remain larger than prior 24px, got ${body}`);
+  assert.match(jsx,/overflowY:'hidden'/);
+  assert.match(jsx,/FULL_REASON_END_987654321/);
+  assert.match(jsx,/Independent cut reason/);
+  assert.match(jsx,/Purpose should not replace story beat/);
+  assert.match(jsx,/story-beat-abc/);
+  assert.match(jsx,/wide shot to detailed close-up/);
+  assert.match(jsx,/preserve natural source audio/);
+  assert.match(jsx,/do not duck the recording/);
+  assert.match(jsx,/keep the original observation/);
+  assert.match(jsx,/TRANSITION:/);
+  assert.match(jsx,/match cut from &#123;shot&#125; to &lt;scene&gt;/);
+  assert.match(jsx,/Independent cut reason &#123;not_an_expression&#125;/);
+  assert.doesNotMatch(jsx,/\{not_an_expression\}/);
+  assert.doesNotMatch(jsx,/…/);
+  assert.ok(jsx.indexOf('SHOT 1')<jsx.indexOf('SOURCE:')&&jsx.indexOf('SOURCE:')<jsx.indexOf('EDITOR REASON:'));
+ }finally{f.cleanup();}
+});
+
+test('shot typography scales down if necessary and rejects impossible single-frame content',()=>{
+ const f=setup();
+ try{
+  const run=reason=>editorDecisionToMarkdown(f.video,{...EDL,edits:[{...EDL.edits[0],editor_reason:reason}]},'# video\nwidth:1080 height:1920 fps:30 layout:series');
+  const moderate='Long source-grounded explanation about the observed moments. '.repeat(22);
+  const md=run(moderate),jsx=JSON.parse(md.split('- component duration:1.0000 jsx:')[1].trim());
+  const size=Number(jsx.match(/fontSize:([\d.]+)/)[1]);
+  assert.ok(size<68&&size>=30,`expected fitted title, got ${size}`);
+  assert.ok(jsx.includes(moderate));
+  assert.match(jsx,/overflowY:'hidden'/);
+  assert.throws(()=>run('Very long reason. '.repeat(1500)),/too much decision text to fit on one frame/);
+ }finally{f.cleanup();}
+});
+
+test('editorial intent text is safely escaped as inert JSX content',()=>{
+ const f=setup();
+ try{
+  const md=editorDecisionToMarkdown(f.video,{...EDL,editorial_intent:'Observe {globalThis.alert(1)} <picture> & keep it real'});
+  const first=md.match(/- component duration:3 jsx:([^\n]+)/);
+  assert.ok(first);
+  const jsx=JSON.parse(first[1]);
+  assert.match(jsx,/&#123;globalThis\.alert\(1\)&#125;/);
+  assert.match(jsx,/&lt;picture&gt; &amp; keep it real/);
+  assert.doesNotMatch(jsx,/\{globalThis\.alert\(1\)\}/);
+ }finally{f.cleanup();}
+});
+
 test('refuses malformed timing, duplicate shots and path traversal rather than rendering invented footage',()=>{
  const f=setup();
  try{
