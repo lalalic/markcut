@@ -40,6 +40,9 @@ test('converts decisions into playable Markcut Markdown with original source and
   assert.match(md,/## EditorialIntent/);
   assert.match(md,/## Shot1/);
   assert.match(md,/## Shot2/);
+  const overlay2=JSON.parse(md.match(/## Shot2[\s\S]*?- component duration:[^\n]*?jsx:([^\n]+)/)[1]);
+  assert.match(overlay2,/>SHOT 2<\/div>/);
+  assert.doesNotMatch(overlay2,/SHOT 2 · reaction/);
   assert.match(md,/startFrom:1 endAt:2 duration:1.0000/);
   assert.match(md,/Set geography/);
   assert.match(md,/retain source sound/);
@@ -65,6 +68,9 @@ test('Editor Decisions shot overlay begins at top with larger type and never tru
   const md=editorDecisionToMarkdown(f.video,decision,'# video\nwidth:1080 height:1920 fps:30 layout:series');
   const component=md.split('- component duration:1.0000 jsx:')[1];
   const jsx=JSON.parse(component.trim());
+  assert.match(jsx,/>SHOT 1<\/div>/);
+  assert.doesNotMatch(jsx,/SHOT 1 · wide/);
+  assert.doesNotMatch(jsx,/SHOT 1 ·/);
   assert.match(jsx,/justifyContent:'flex-start'/);
   assert.doesNotMatch(jsx,/justifyContent:'flex-end'/);
   const title=Number(jsx.match(/fontSize:([\d.]+)/)[1]);

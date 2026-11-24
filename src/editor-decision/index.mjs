@@ -92,7 +92,7 @@ const html=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/
 // Prefer the large 1080x1920 typography, then decrease type only when the
 // FULL caption needs the space. Unlike a scroll region, these sizes are
 // deterministic Remotion frames and remain visible in exported video.
-function shotTypography(edit,src,sections,width,height){
+function shotTypography(edit,index,src,sections,width,height){
  const canvasScale=Math.min(width/1080,height/1920);
  // CSS percentage padding uses the container WIDTH on all four sides.
  const usableWidth=width*0.90,usableHeight=height-width*0.10;
@@ -105,7 +105,7 @@ function shotTypography(edit,src,sections,width,height){
  for(let n=20;n>=9;n--){
   const shrink=n/20*canvasScale;
   const title=68*shrink,sourceFont=38*shrink,body=46*shrink,gap=23*shrink;
-  const needed=estimateLines(`SHOT ${edit.shot_id}`,title)*title*1.14+
+  const needed=estimateLines(`SHOT ${index+1}`,title)*title*1.14+
     estimateLines(source,sourceFont)*sourceFont*1.3+
     desc.reduce((sum,text)=>sum+estimateLines(text,body)*body*1.28,0)+
     (desc.length+1)*gap;
@@ -127,8 +127,8 @@ function overlay(edit,index,src,width,height){
   ['TRANSITION',edit.transition],
   ['REVISION NOTE',edit.revision_note],
  ].filter(([,value])=>nonEmpty(value));
- const size=shotTypography(edit,src,sections,width,height);
- const heading=`<div style={{fontSize:${size.title},fontWeight:800,lineHeight:1.14,overflowWrap:'anywhere'}}>SHOT ${index+1} · ${html(edit.shot_id)}</div>`;
+ const size=shotTypography(edit,index,src,sections,width,height);
+ const heading=`<div style={{fontSize:${size.title},fontWeight:800,lineHeight:1.14,overflowWrap:'anywhere'}}>SHOT ${index+1}</div>`;
  const source=`<div style={{fontSize:${size.source},fontWeight:600,lineHeight:1.3,opacity:.9,overflowWrap:'anywhere'}}>SOURCE: ${html(src)} [${edit.in_seconds.toFixed(2)}–${edit.out_seconds.toFixed(2)}s]</div>`;
  const descriptions=sections.map(([label,value])=>`<div style={{fontSize:${size.body},lineHeight:1.28,overflowWrap:'anywhere',whiteSpace:'pre-wrap'}}><span style={{fontSize:${size.label},fontWeight:700,letterSpacing:1,color:'#a5d8ff'}}>${label}:</span> ${html(value)}</div>`).join('');
  return `<div style={{boxSizing:'border-box',width:'100%',height:'100%',display:'flex',flexDirection:'column',justifyContent:'flex-start',alignItems:'stretch',gap:${size.gap},overflowY:'hidden',padding:'5%',color:'white',fontFamily:'Arial,sans-serif',textShadow:'0 2px 5px rgba(0,0,0,.85)',background:'linear-gradient(180deg,rgba(0,0,0,.94),rgba(0,0,0,.78) 62%,rgba(0,0,0,.34))'}}>${heading}${source}${descriptions}</div>`;
