@@ -60,6 +60,21 @@ describe('caller-selected CLI profiles',()=>{
    expect(r.status).not.toBe(0);expect(r.stderr).toMatch(pattern);
   }
  });
+ it('bundled resolve invokes the real queue worker for generation',()=>{
+  const d=fixture();
+  const profile=join(d,'queue.json');
+  writeFileSync(profile,JSON.stringify({extends:'prototype',tts:'ffmpeg -v error -y -f lavfi -i sine=frequency=440:duration=0.3 "{output}"',stt:''}));
+  writeFileSync(join(d,'video.md'),'# video\nseed:1\nwidth:320 height:240 fps:24 layout:series\n## Narration\nlayout:parallel\n- script "Queue smoke"\n');
+  const home=join(d,'queue');
+  try {
+   run(d,['resolve','video.md','--profile',profile,'--output','resolved.json'],{MARKCUT_QUEUE_ENABLED:'1',MARKCUT_QUEUE_ACTIVE:'',MARKCUT_QUEUE_CLI_TEMPLATE:'',MARKCUT_QUEUE_HOME:home});
+   const audio=JSON.parse(readFileSync(join(d,'resolved.json'),'utf8')).children[0].children.find((x:any)=>x.type==='audio');
+   expect(audio?.src).toBeTruthy();expect(existsSync(resolve(d,audio.src))).toBe(true);
+  } finally {
+   const pidFile=join(home,'worker.lock','pid');
+   if(existsSync(pidFile)){const pid=Number(readFileSync(pidFile,'utf8'));if(pid>1)try{process.kill(pid,'SIGTERM')}catch{}}
+  }
+ });
  it('ships a low-resource prototype with valid image and video placeholders',()=>{
   const d=fixture(),profile=resolve(import.meta.dirname,'../profiles/prototype.json');
   const effective=run(d,['--show-clis','--profile',profile]);

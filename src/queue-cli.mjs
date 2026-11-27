@@ -2,9 +2,9 @@
 export function shellQuote(value) {
   return "'" + String(value).replace(/'/g, "'\\''") + "'";
 }
-import { fileURLToPath } from "node:url";
-import { resolve, dirname } from "node:path";
-const queueWorker = resolve(dirname(fileURLToPath(import.meta.url)), "queue-worker.mjs");
+import { join } from "node:path";
+import { MARKCUT_ROOT } from "./cli-profile.mjs";
+const queueWorker = join(MARKCUT_ROOT, "src", "queue-worker.mjs");
 export function queueCommand(command, env = process.env, { timeoutMs } = {}) {
   if (timeoutMs !== undefined && (!Number.isSafeInteger(timeoutMs) || timeoutMs < 0))
     throw Error('Invalid queue timeout');

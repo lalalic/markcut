@@ -1217,50 +1217,28 @@ init_compiler();
 import { execSync as execSync2 } from "node:child_process";
 import { existsSync as existsSync3, mkdirSync as mkdirSync2, readFileSync as readFileSync2, writeFileSync, renameSync } from "node:fs";
 import { createHash as createHash2 } from "node:crypto";
-import { join as join2, dirname as dirname4, resolve as resolvePath, relative } from "node:path";
+import { join as join3, dirname as dirname3, resolve as resolvePath, relative } from "node:path";
 
 // src/render/cli-tools.ts
 import { execSync } from "node:child_process";
 
 // src/queue-cli.mjs
-import { fileURLToPath } from "node:url";
-import { resolve, dirname } from "node:path";
-function shellQuote(value2) {
-  return "'" + String(value2).replace(/'/g, "'\\''") + "'";
-}
-var queueWorker = resolve(dirname(fileURLToPath(import.meta.url)), "queue-worker.mjs");
-function queueCommand(command, env = process.env, { timeoutMs } = {}) {
-  if (timeoutMs !== void 0 && (!Number.isSafeInteger(timeoutMs) || timeoutMs < 0))
-    throw Error("Invalid queue timeout");
-  const template = env.MARKCUT_QUEUE_CLI_TEMPLATE;
-  if (env.MARKCUT_QUEUE_ACTIVE === "1" || env.MARKCUT_QUEUE_ENABLED === "0") return command;
-  if (!template) {
-    return `${shellQuote(process.execPath)} ${shellQuote(queueWorker)} run --queue media-ai${timeoutMs === void 0 ? "" : ` --timeout ${timeoutMs}`} -- /bin/sh -c ${shellQuote(`MARKCUT_QUEUE_ACTIVE=1 ${command}`)}`;
-  }
-  if (!template.includes("{command}")) throw Error("MARKCUT_QUEUE_CLI_TEMPLATE must contain {command}");
-  if (timeoutMs === 0 && !template.includes("{timeout}"))
-    console.warn("Markcut: custom queue template cannot disable its own deadline without {timeout}");
-  return template.replaceAll("{timeout}", String(timeoutMs ?? 3e5)).replaceAll("{command}", shellQuote(`MARKCUT_QUEUE_ACTIVE=1 ${command}`));
-}
-
-// src/render/cli-tools.ts
-import { existsSync as existsSync2, mkdirSync } from "node:fs";
-import { dirname as dirname3 } from "node:path";
+import { join as join2 } from "node:path";
 
 // src/cli-profile.mjs
 import { readFileSync, existsSync, realpathSync } from "node:fs";
-import { resolve as resolve2, dirname as dirname2, join } from "node:path";
-import { fileURLToPath as fileURLToPath2 } from "node:url";
+import { resolve, dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
-var sourceDir = dirname2(fileURLToPath2(import.meta.url));
-var rootCandidates = [resolve2(sourceDir, ".."), resolve2(sourceDir, "../..")];
+var sourceDir = dirname(fileURLToPath(import.meta.url));
+var rootCandidates = [resolve(sourceDir, ".."), resolve(sourceDir, "../..")];
 var MARKCUT_ROOT = rootCandidates.find((root) => existsSync(join(root, "profiles", "default.json"))) ?? rootCandidates[0];
 var DEFAULT_PROFILE_PATH = join(MARKCUT_ROOT, "profiles", "default.json");
 var BUILTIN_PROFILES = Object.freeze({ default: DEFAULT_PROFILE_PATH, prototype: join(MARKCUT_ROOT, "profiles", "prototype.json") });
 function resolveProfileReference(reference, base = process.cwd()) {
   if (typeof reference !== "string" || !reference.trim() || reference.trim() !== reference)
     throw new Error("Invalid Markcut profile reference: expected a built-in name or JSON file path");
-  return Object.hasOwn(BUILTIN_PROFILES, reference) ? BUILTIN_PROFILES[reference] : resolve2(base, reference);
+  return Object.hasOwn(BUILTIN_PROFILES, reference) ? BUILTIN_PROFILES[reference] : resolve(base, reference);
 }
 function expandProfileTemplate(template) {
   const quotedRoot = "'" + MARKCUT_ROOT.replaceAll("'", "'\\''") + "'";
@@ -1299,7 +1277,7 @@ function readCliProfile(reference) {
       if (!CLI_PROFILE_KEYS.includes(key) || typeof value2 !== "string" || !value2.trim() && !(value2 === "" && OPTIONAL_EMPTY.has(key)))
         throw new Error(`Invalid Markcut profile field: ${key} (${path})`);
     }
-    const inherited = Object.hasOwn(profile2, "extends") ? load(resolveProfileReference(parent, dirname2(canonical))) : canonical === root ? {} : load(root);
+    const inherited = Object.hasOwn(profile2, "extends") ? load(resolveProfileReference(parent, dirname(canonical))) : canonical === root ? {} : load(root);
     const effective = { ...inherited, ...fields };
     if (canonical === root && CLI_PROFILE_KEYS.some((key) => !Object.hasOwn(effective, key)))
       throw new Error(`Incomplete Markcut default profile: ${path}`);
@@ -1334,6 +1312,29 @@ function extractProfileArgument(argv, env = process.env) {
 function profileCacheKey(templates, overrides = {}) {
   return createHash("sha256").update(JSON.stringify(CLI_PROFILE_KEYS.map((key) => [key, templates[key], Object.hasOwn(overrides, key)]))).digest("hex").slice(0, 16);
 }
+
+// src/queue-cli.mjs
+function shellQuote(value2) {
+  return "'" + String(value2).replace(/'/g, "'\\''") + "'";
+}
+var queueWorker = join2(MARKCUT_ROOT, "src", "queue-worker.mjs");
+function queueCommand(command, env = process.env, { timeoutMs } = {}) {
+  if (timeoutMs !== void 0 && (!Number.isSafeInteger(timeoutMs) || timeoutMs < 0))
+    throw Error("Invalid queue timeout");
+  const template = env.MARKCUT_QUEUE_CLI_TEMPLATE;
+  if (env.MARKCUT_QUEUE_ACTIVE === "1" || env.MARKCUT_QUEUE_ENABLED === "0") return command;
+  if (!template) {
+    return `${shellQuote(process.execPath)} ${shellQuote(queueWorker)} run --queue media-ai${timeoutMs === void 0 ? "" : ` --timeout ${timeoutMs}`} -- /bin/sh -c ${shellQuote(`MARKCUT_QUEUE_ACTIVE=1 ${command}`)}`;
+  }
+  if (!template.includes("{command}")) throw Error("MARKCUT_QUEUE_CLI_TEMPLATE must contain {command}");
+  if (timeoutMs === 0 && !template.includes("{timeout}"))
+    console.warn("Markcut: custom queue template cannot disable its own deadline without {timeout}");
+  return template.replaceAll("{timeout}", String(timeoutMs ?? 3e5)).replaceAll("{command}", shellQuote(`MARKCUT_QUEUE_ACTIVE=1 ${command}`));
+}
+
+// src/render/cli-tools.ts
+import { existsSync as existsSync2, mkdirSync } from "node:fs";
+import { dirname as dirname2 } from "node:path";
 
 // src/config.mjs
 var selection = extractProfileArgument(process.argv.slice(2));
@@ -1405,7 +1406,7 @@ function substituteCli(template, input, output, seed) {
   return template.replace(/\{input\}/g, safeInput).replace(/\{output\}/g, safeOutput).replace(/\{seed\}/g, safeSeed);
 }
 function generateTTS(text3, outputPath, cli2) {
-  mkdirSync(dirname3(outputPath), { recursive: true });
+  mkdirSync(dirname2(outputPath), { recursive: true });
   const cmd = substituteCli(cli2 ?? DEFAULT_TTS_CLI, text3, outputPath);
   try {
     execSync(queueCommand(cmd), { stdio: "pipe" });
@@ -1424,7 +1425,7 @@ async function generateSTT(audioPath, outputDir, cli2) {
   }
 }
 function generateTTI(prompt, outputPath, cli2, seed) {
-  mkdirSync(dirname3(outputPath), { recursive: true });
+  mkdirSync(dirname2(outputPath), { recursive: true });
   const cmd = substituteCli(cli2 ?? DEFAULT_TTI_CLI, prompt, outputPath, seed);
   try {
     execSync(queueCommand(cmd), {
@@ -1440,7 +1441,7 @@ function generateTTI(prompt, outputPath, cli2, seed) {
   return existsSync2(outputPath) ? outputPath : "";
 }
 function generateTTV(prompt, outputPath, cli2, ttiCmd, seed) {
-  mkdirSync(dirname3(outputPath), { recursive: true });
+  mkdirSync(dirname2(outputPath), { recursive: true });
   if (!cli2) {
     const pngPath = outputPath.replace(/\.mp4$/, ".png");
     const imageResult = generateTTI(prompt, pngPath, ttiCmd, seed);
@@ -1758,7 +1759,7 @@ import { default as default2 } from "node:path";
 import { default as default3 } from "node:process";
 
 // node_modules/vfile/lib/minurl.js
-import { fileURLToPath as fileURLToPath3 } from "node:url";
+import { fileURLToPath as fileURLToPath2 } from "node:url";
 
 // node_modules/vfile/lib/minurl.shared.js
 function isUrl(fileUrlOrPath) {
@@ -1881,9 +1882,9 @@ var VFile = class {
    * @returns {undefined}
    *   Nothing.
    */
-  set dirname(dirname5) {
+  set dirname(dirname4) {
     assertPath(this.basename, "dirname");
-    this.path = default2.join(dirname5 || "", this.basename);
+    this.path = default2.join(dirname4 || "", this.basename);
   }
   /**
    * Get the extname (including dot) (example: `'.js'`).
@@ -1942,7 +1943,7 @@ var VFile = class {
    */
   set path(path) {
     if (isUrl(path)) {
-      path = fileURLToPath3(path);
+      path = fileURLToPath2(path);
     }
     assertNonEmpty(path, "path");
     if (this.path !== path) {
@@ -2482,7 +2483,7 @@ var Processor = class _Processor extends CallableInstance {
     assertParser("process", this.parser || this.Parser);
     assertCompiler("process", this.compiler || this.Compiler);
     return done ? executor(void 0, done) : new Promise(executor);
-    function executor(resolve3, reject) {
+    function executor(resolve2, reject) {
       const realFile = vfile(file);
       const parseTree = (
         /** @type {HeadTree extends undefined ? Node : HeadTree} */
@@ -2513,8 +2514,8 @@ var Processor = class _Processor extends CallableInstance {
       function realDone(error, file2) {
         if (error || !file2) {
           reject(error);
-        } else if (resolve3) {
-          resolve3(file2);
+        } else if (resolve2) {
+          resolve2(file2);
         } else {
           ok(done, "`done` is defined if `resolve` is not");
           done(void 0, file2);
@@ -2616,7 +2617,7 @@ var Processor = class _Processor extends CallableInstance {
       file = void 0;
     }
     return done ? executor(void 0, done) : new Promise(executor);
-    function executor(resolve3, reject) {
+    function executor(resolve2, reject) {
       ok(
         typeof file !== "function",
         "`file` can\u2019t be a `done` anymore, we checked"
@@ -2630,8 +2631,8 @@ var Processor = class _Processor extends CallableInstance {
         );
         if (error) {
           reject(error);
-        } else if (resolve3) {
-          resolve3(resultingTree);
+        } else if (resolve2) {
+          resolve2(resultingTree);
         } else {
           ok(done, "`done` is defined if `resolve` is not");
           done(void 0, resultingTree, file2);
@@ -5459,10 +5460,10 @@ function resolveAll(constructs2, events, context) {
   const called = [];
   let index2 = -1;
   while (++index2 < constructs2.length) {
-    const resolve3 = constructs2[index2].resolveAll;
-    if (resolve3 && !called.includes(resolve3)) {
-      events = resolve3(events, context);
-      called.push(resolve3);
+    const resolve2 = constructs2[index2].resolveAll;
+    if (resolve2 && !called.includes(resolve2)) {
+      events = resolve2(events, context);
+      called.push(resolve2);
     }
   }
   return events;
@@ -11320,7 +11321,7 @@ async function resolveScripts(root, options) {
       }
     }
     const cacheKey = computeCacheKey({ script: node2.script, cli: ttsCli });
-    const audioPath = join2(options.outputDir, `${cacheKey}.mp3`);
+    const audioPath = join3(options.outputDir, `${cacheKey}.mp3`);
     let generated;
     const speakerLabel = node2.speaker ? `${node2.speaker}: ` : "";
     const label = `${speakerLabel}${firstWords(node2.script, 8)}`;
@@ -11403,7 +11404,7 @@ async function resolveSubtitles(root, options) {
     const audioHash = existsSync3(audioSrc) ? createHash2("sha1").update(readFileSync2(audioSrc)).digest("hex").slice(0, 12) : audioSrc;
     const sttCacheKey = computeCacheKey({ audioHash, cli: sttCli });
     const clipName = audioSrc.split("/").pop();
-    const expectedVtt = join2(options.outputDir, `${sttCacheKey}.vtt`);
+    const expectedVtt = join3(options.outputDir, `${sttCacheKey}.vtt`);
     let vttPath = null;
     if (existsSync3(expectedVtt)) {
       vttPath = expectedVtt;
@@ -11412,7 +11413,7 @@ async function resolveSubtitles(root, options) {
         await generateSTT(audioSrc, options.outputDir, sttCli);
         const base = audioSrc.replace(/\.wav$/, "").replace(/\.mp3$/, "");
         const name = base.split("/").pop();
-        const whisperVtt = join2(options.outputDir, `${name}.vtt`);
+        const whisperVtt = join3(options.outputDir, `${name}.vtt`);
         if (existsSync3(whisperVtt)) {
           renameSync(whisperVtt, expectedVtt);
           vttPath = expectedVtt;
@@ -11460,7 +11461,7 @@ async function resolveSubtitles(root, options) {
   if (cueIndex > 1) {
     const mergedDir = options.mergedOutputDir ?? options.outputDir;
     mkdirSync2(mergedDir, { recursive: true });
-    const mergedPath = join2(mergedDir, PROFILE_CACHE_KEY ? `subtitles-${PROFILE_CACHE_KEY}.vtt` : "subtitles.vtt");
+    const mergedPath = join3(mergedDir, PROFILE_CACHE_KEY ? `subtitles-${PROFILE_CACHE_KEY}.vtt` : "subtitles.vtt");
     writeFileSync(mergedPath, mergedLines.join("\n"), "utf-8");
     clone.subtitle = { ...clone.subtitle ?? {}, src: mergedPath };
     console.log(`  \u2705 STT: subtitles ready (${cueIndex - 1} cues)`);
@@ -11500,7 +11501,7 @@ async function resolveGeneratedMedia(root, options) {
     const seed = options.seed;
     const ttiCmd = PROFILE_CLI_OVERRIDES.tti ?? clone.tti ?? options.ttiCli ?? DEFAULT_TTI_CLI;
     const cacheKey = computeCacheKey({ prompt, cli: cli2, type, seed, ...type === "video" ? { ttiCmd } : {} });
-    const outputPath = join2(options.outputDir, `${cacheKey}.${ext}`);
+    const outputPath = join3(options.outputDir, `${cacheKey}.${ext}`);
     const label = type === "image" ? "TTI" : "TTV";
     const labelText = firstWords(prompt, 8);
     if (existsSync3(outputPath)) {
@@ -11632,7 +11633,7 @@ function applyStoryboardOverrides(root, options) {
 async function resolveIncludes(root, options) {
   const clone = JSON.parse(JSON.stringify(root));
   const baseDir = options.baseDir;
-  const outputDir = options.includeOutputDir ?? join2(baseDir, ".markcut", "generated", "includes");
+  const outputDir = options.includeOutputDir ?? join3(baseDir, ".markcut", "generated", "includes");
   mkdirSync2(outputDir, { recursive: true });
   function extractImportEntriesFromRaw(raw) {
     const match = raw.match(/^(```|~~~)\s*js imports\s*\n([\s\S]*?)^\1\s*$/m);
@@ -11669,7 +11670,7 @@ async function resolveIncludes(root, options) {
     const resolved = await resolveAll2(subRoot, {
       ...options,
       includeOutputDir: outputDir,
-      baseDir: dirname4(absPath),
+      baseDir: dirname3(absPath),
       variants: variantChain
     });
     const compiled = compileDescriptiveRoot(resolved);
@@ -11678,8 +11679,8 @@ async function resolveIncludes(root, options) {
       0
     ) ?? 3;
     const hash = createHash2("sha1").update(absPath + (PROFILE_CACHE_KEY ? `\0${PROFILE_CACHE_KEY}` : "")).digest("hex").slice(0, 12);
-    const compiledPath = join2(outputDir, `${hash}.json`);
-    const metaPath = join2(outputDir, `${hash}.meta.json`);
+    const compiledPath = join3(outputDir, `${hash}.json`);
+    const metaPath = join3(outputDir, `${hash}.meta.json`);
     if (importEntries && importEntries.length > 0) {
       const sourceName = absPath.split("/").pop().replace(/\.[^.]+$/, "");
       const meta = { importEntries, extraSpecs, rawSource, sourceName };
