@@ -6,6 +6,7 @@ import { basename, dirname, extname, join, resolve } from "node:path";
 import { z } from "zod";
 import { execSync } from "node:child_process";
 import { queueCommand } from "../queue-cli.mjs";
+import { isLocalModelExecution } from "../config.mjs";
 import { VIDEO_EXTS, DEFAULT_VTT_SAMPLE_INTERVAL } from "../config.mjs";
 
 export const CANDIDATE_CONTRACT_VERSION = 1;
@@ -108,7 +109,8 @@ function shQuote(value) {
 }
 
 function run(command, options = {}) {
-  return execSync(queueCommand(command, process.env, options.timeout === 0 ? {timeoutMs: 0} : {}), {
+  const invoked = isLocalModelExecution("CANDIDATE") ? queueCommand(command, process.env, { timeoutMs: options.timeout ?? 0 }) : command;
+  return execSync(invoked, {
     encoding: "utf-8",
     stdio: ["pipe", "pipe", "pipe"],
     timeout: 300_000,

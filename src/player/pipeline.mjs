@@ -913,9 +913,9 @@ var init_compiler = __esm({
   }
 });
 
-// node_modules/extend/index.js
+// ../../../markcut/node_modules/extend/index.js
 var require_extend = __commonJS({
-  "node_modules/extend/index.js"(exports, module) {
+  "../../../markcut/node_modules/extend/index.js"(exports, module) {
     "use strict";
     var hasOwn = Object.prototype.hasOwnProperty;
     var toStr = Object.prototype.toString;
@@ -1004,9 +1004,9 @@ var require_extend = __commonJS({
   }
 });
 
-// node_modules/format/format.js
+// ../../../markcut/node_modules/format/format.js
 var require_format = __commonJS({
-  "node_modules/format/format.js"(exports, module) {
+  "../../../markcut/node_modules/format/format.js"(exports, module) {
     (function() {
       var namespace;
       if (typeof module !== "undefined") {
@@ -1217,34 +1217,16 @@ init_compiler();
 import { execSync as execSync2 } from "node:child_process";
 import { existsSync as existsSync2, mkdirSync as mkdirSync2, readFileSync, writeFileSync, renameSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { join, dirname as dirname3, resolve as resolvePath, relative } from "node:path";
+import { join, dirname as dirname2, resolve as resolvePath, relative } from "node:path";
 
 // src/render/cli-tools.ts
 import { execSync } from "node:child_process";
-
-// src/queue-cli.mjs
-import { fileURLToPath } from "node:url";
-import { resolve, dirname } from "node:path";
-function shellQuote(value2) {
-  return "'" + String(value2).replace(/'/g, "'\\''") + "'";
-}
-var queueWorker = resolve(dirname(fileURLToPath(import.meta.url)), "queue-worker.mjs");
-function queueCommand(command, env = process.env) {
-  const template = env.MARKCUT_QUEUE_CLI_TEMPLATE;
-  if (env.MARKCUT_QUEUE_ACTIVE === "1" || env.MARKCUT_QUEUE_ENABLED === "0") return command;
-  if (!template) {
-    return `${shellQuote(process.execPath)} ${shellQuote(queueWorker)} run --queue media-ai -- /bin/sh -c ${shellQuote(`MARKCUT_QUEUE_ACTIVE=1 ${command}`)}`;
-  }
-  if (!template.includes("{command}")) throw Error("MARKCUT_QUEUE_CLI_TEMPLATE must contain {command}");
-  return template.replaceAll("{command}", shellQuote(`MARKCUT_QUEUE_ACTIVE=1 ${command}`));
-}
-
-// src/render/cli-tools.ts
+import { queueCommand } from "../queue-cli.mjs";
 import { existsSync, mkdirSync } from "node:fs";
-import { dirname as dirname2 } from "node:path";
+import { dirname } from "node:path";
 
 // src/config.mjs
-import { fileURLToPath as fileURLToPath2 } from "node:url";
+import { fileURLToPath } from "node:url";
 var args = (function parseArgs(argv) {
   const CLI_OVERRIDE_FLAGS = {
     "--itt": "itt",
@@ -1291,13 +1273,22 @@ var MAX_VIDEO_DURATION = Number(process.env.MARKCUT_MAX_VIDEO_DURATION) || 60;
 var MAX_VIDEO_DIMENSION = Number(process.env.MARKCUT_MAX_VIDEO_DIMENSION) || 360;
 var GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY || "";
 var DEFAULT_VTT_SAMPLE_INTERVAL = Number(process.env.MARKCUT_VTT_SAMPLE_INTERVAL) || 5;
+function isLocalModelExecution(kind, bundledLocal = false, env = process.env) {
+  const configured = env[`MARKCUT_${kind}_EXECUTION`];
+  if (!configured) return bundledLocal;
+  if (configured === "local") return true;
+  if (configured === "direct") return false;
+  throw Error(`Invalid MARKCUT_${kind}_EXECUTION: expected local or direct`);
+}
+var DEFAULT_STT_IS_LOCAL_MODEL = !args.cliOverrides.stt && !process.env.MARKCUT_STT_CLI;
+var DEFAULT_TTI_IS_LOCAL_MODEL = !args.cliOverrides.tti && !process.env.MARKCUT_TTI_CLI;
 var DEFAULT_STT_CLI = args.cliOverrides.stt || process.env.MARKCUT_STT_CLI || 'uvx --from openai-whisper whisper "{input}" --output_format vtt --output_dir "{output}" --word_timestamps True --max_line_count 1 --max_line_width 14';
 var DEFAULT_TTS_CLI = args.cliOverrides.tts || process.env.MARKCUT_TTS_CLI || 'uvx edge-tts --voice "zh-CN-YunxiNeural" --text "{input}" --write-media "{output}"';
 var DEFAULT_AGENT_CLI = args.cliOverrides.agent || process.env.MARKCUT_AGENT_CLI || "npx pi -p {prompt}";
 var DEFAULT_EDIT_CLI = args.cliOverrides.editCli || process.env.MARKCUT_EDIT_CLI || "npx pi --session-id {sessionid} --system-prompt {systemprompt} -p {prompt}";
 var DEFAULT_TTI_CLI = args.cliOverrides.tti || process.env.MARKCUT_TTI_CLI || 'uvx --from mflux mflux-generate-flux2 --model flux2-klein-4b --steps 2 --prompt "{input}" --output "{output}" --seed {seed}';
 var DEFAULT_TTV_CLI = args.cliOverrides.ttv || process.env.MARKCUT_TTV_CLI || "";
-var DEFAULT_VISION_INFER = fileURLToPath2(new URL("./vision/default-infer.mjs", import.meta.url));
+var DEFAULT_VISION_INFER = fileURLToPath(new URL("./vision/default-infer.mjs", import.meta.url));
 var DEFAULT_ITT_CLI = args.cliOverrides.itt || process.env.MARKCUT_ITT_CLI || `node ${JSON.stringify(DEFAULT_VISION_INFER)} --prompt "{prompt}" {input}`;
 var DEFAULT_VTT_CLI = args.cliOverrides.vtt || process.env.MARKCUT_VTT_CLI || "";
 
@@ -1320,32 +1311,35 @@ function substituteCli(template, input, output, seed) {
   return template.replace(/\{input\}/g, safeInput).replace(/\{output\}/g, safeOutput).replace(/\{seed\}/g, safeSeed);
 }
 function generateTTS(text3, outputPath, cli) {
-  mkdirSync(dirname2(outputPath), { recursive: true });
+  mkdirSync(dirname(outputPath), { recursive: true });
   const cmd = substituteCli(cli ?? DEFAULT_TTS_CLI, text3, outputPath);
   try {
-    execSync(queueCommand(cmd), { stdio: "pipe" });
+    const localModel = isLocalModelExecution("TTS");
+    execSync(localModel ? queueCommand(cmd, process.env, { timeoutMs: 0 }) : cmd, { stdio: "pipe" });
   } catch (e) {
     console.warn(`  \u26A0 TTS failed: ${e.message}`);
     return "";
   }
   return existsSync(outputPath) ? outputPath : "";
 }
-async function generateSTT(audioPath, outputDir, cli) {
+async function generateSTT(audioPath, outputDir, cli, execution = {}) {
   const cmd = substituteCli(cli ?? DEFAULT_STT_CLI, audioPath, outputDir);
   try {
-    execSync(queueCommand(cmd), { stdio: "pipe" });
+    const localModel = execution.localModel ?? isLocalModelExecution("STT", cli === void 0 && DEFAULT_STT_IS_LOCAL_MODEL);
+    execSync(localModel ? queueCommand(cmd, process.env, { timeoutMs: 0 }) : cmd, { stdio: "pipe" });
   } catch (e) {
     console.warn(`  \u26A0 STT failed: ${e.message}`);
   }
 }
-function generateTTI(prompt, outputPath, cli, seed) {
-  mkdirSync(dirname2(outputPath), { recursive: true });
+function generateTTI(prompt, outputPath, cli, seed, execution = {}) {
+  mkdirSync(dirname(outputPath), { recursive: true });
   const cmd = substituteCli(cli ?? DEFAULT_TTI_CLI, prompt, outputPath, seed);
   try {
-    execSync(queueCommand(cmd), {
+    const localModel = execution.localModel ?? isLocalModelExecution("TTI", cli === void 0 && DEFAULT_TTI_IS_LOCAL_MODEL);
+    execSync(localModel ? queueCommand(cmd, process.env, { timeoutMs: 0 }) : cmd, {
       encoding: "utf-8",
       stdio: ["pipe", "pipe", "pipe"],
-      timeout: 3e5,
+      timeout: 0,
       env: { ...process.env, TTI_CMD: cli ?? DEFAULT_TTI_CLI }
     });
   } catch (e) {
@@ -1354,18 +1348,18 @@ function generateTTI(prompt, outputPath, cli, seed) {
   }
   return existsSync(outputPath) ? outputPath : "";
 }
-function generateTTV(prompt, outputPath, cli, ttiCmd, seed) {
-  mkdirSync(dirname2(outputPath), { recursive: true });
+function generateTTV(prompt, outputPath, cli, ttiCmd, seed, execution = {}) {
+  mkdirSync(dirname(outputPath), { recursive: true });
   if (!cli) {
     const pngPath = outputPath.replace(/\.mp4$/, ".png");
-    const imageResult = generateTTI(prompt, pngPath, ttiCmd, seed);
+    const imageResult = generateTTI(prompt, pngPath, ttiCmd, seed, { localModel: execution.ttiLocalModel });
     if (!imageResult || !existsSync(imageResult)) {
       console.error(`  \u2717 TTV: TTI step produced no image for "${prompt.slice(0, 50)}..."`);
       return "";
     }
     try {
       execSync(
-        queueCommand(`ffmpeg -y -loop 1 -i "${pngPath}" -c:v libx264 -t 3 -pix_fmt yuv420p "${outputPath}"`),
+        `ffmpeg -y -loop 1 -i "${pngPath}" -c:v libx264 -t 3 -pix_fmt yuv420p "${outputPath}"`,
         { stdio: ["pipe", "pipe", "pipe"], timeout: 6e4 }
       );
     } catch (e) {
@@ -1380,10 +1374,11 @@ function generateTTV(prompt, outputPath, cli, ttiCmd, seed) {
   }
   const cmd = substituteCli(cli, prompt, outputPath, seed);
   try {
-    execSync(queueCommand(cmd), {
+    const localModel = isLocalModelExecution("TTV");
+    execSync(localModel ? queueCommand(cmd, process.env, { timeoutMs: 0 }) : cmd, {
       encoding: "utf-8",
       stdio: ["pipe", "pipe", "pipe"],
-      timeout: 3e5,
+      timeout: 0,
       env: { ...process.env, TTI_CMD: ttiCmd ?? DEFAULT_TTI_CLI }
     });
   } catch (e) {
@@ -1397,21 +1392,21 @@ function generateTTV(prompt, outputPath, cli, ttiCmd, seed) {
 init_utils();
 init_compiler();
 
-// node_modules/bail/index.js
+// ../../../markcut/node_modules/bail/index.js
 function bail(error) {
   if (error) {
     throw error;
   }
 }
 
-// node_modules/unified/lib/index.js
+// ../../../markcut/node_modules/unified/lib/index.js
 var import_extend = __toESM(require_extend(), 1);
 
-// node_modules/devlop/lib/default.js
+// ../../../markcut/node_modules/devlop/lib/default.js
 function ok() {
 }
 
-// node_modules/is-plain-obj/index.js
+// ../../../markcut/node_modules/is-plain-obj/index.js
 function isPlainObject(value2) {
   if (typeof value2 !== "object" || value2 === null) {
     return false;
@@ -1420,7 +1415,7 @@ function isPlainObject(value2) {
   return (prototype === null || prototype === Object.prototype || Object.getPrototypeOf(prototype) === null) && !(Symbol.toStringTag in value2) && !(Symbol.iterator in value2);
 }
 
-// node_modules/trough/lib/index.js
+// ../../../markcut/node_modules/trough/lib/index.js
 function trough() {
   const fns = [];
   const pipeline = { run, use };
@@ -1504,7 +1499,7 @@ function wrap(middleware, callback) {
   }
 }
 
-// node_modules/unist-util-stringify-position/lib/index.js
+// ../../../markcut/node_modules/unist-util-stringify-position/lib/index.js
 function stringifyPosition(value2) {
   if (!value2 || typeof value2 !== "object") {
     return "";
@@ -1530,7 +1525,7 @@ function index(value2) {
   return value2 && typeof value2 === "number" ? value2 : 1;
 }
 
-// node_modules/vfile-message/lib/index.js
+// ../../../markcut/node_modules/vfile-message/lib/index.js
 var VFileMessage = class extends Error {
   /**
    * Create a message for `reason`.
@@ -1666,16 +1661,16 @@ VFileMessage.prototype.place = void 0;
 VFileMessage.prototype.ruleId = void 0;
 VFileMessage.prototype.source = void 0;
 
-// node_modules/vfile/lib/minpath.js
+// ../../../markcut/node_modules/vfile/lib/minpath.js
 import { default as default2 } from "node:path";
 
-// node_modules/vfile/lib/minproc.js
+// ../../../markcut/node_modules/vfile/lib/minproc.js
 import { default as default3 } from "node:process";
 
-// node_modules/vfile/lib/minurl.js
-import { fileURLToPath as fileURLToPath3 } from "node:url";
+// ../../../markcut/node_modules/vfile/lib/minurl.js
+import { fileURLToPath as fileURLToPath2 } from "node:url";
 
-// node_modules/vfile/lib/minurl.shared.js
+// ../../../markcut/node_modules/vfile/lib/minurl.shared.js
 function isUrl(fileUrlOrPath) {
   return Boolean(
     fileUrlOrPath !== null && typeof fileUrlOrPath === "object" && "href" in fileUrlOrPath && fileUrlOrPath.href && "protocol" in fileUrlOrPath && fileUrlOrPath.protocol && // @ts-expect-error: indexing is fine.
@@ -1683,7 +1678,7 @@ function isUrl(fileUrlOrPath) {
   );
 }
 
-// node_modules/vfile/lib/index.js
+// ../../../markcut/node_modules/vfile/lib/index.js
 var order = (
   /** @type {const} */
   [
@@ -1796,9 +1791,9 @@ var VFile = class {
    * @returns {undefined}
    *   Nothing.
    */
-  set dirname(dirname4) {
+  set dirname(dirname3) {
     assertPath(this.basename, "dirname");
-    this.path = default2.join(dirname4 || "", this.basename);
+    this.path = default2.join(dirname3 || "", this.basename);
   }
   /**
    * Get the extname (including dot) (example: `'.js'`).
@@ -1857,7 +1852,7 @@ var VFile = class {
    */
   set path(path) {
     if (isUrl(path)) {
-      path = fileURLToPath3(path);
+      path = fileURLToPath2(path);
     }
     assertNonEmpty(path, "path");
     if (this.path !== path) {
@@ -2139,7 +2134,7 @@ function isUint8Array(value2) {
   );
 }
 
-// node_modules/unified/lib/callable-instance.js
+// ../../../markcut/node_modules/unified/lib/callable-instance.js
 var CallableInstance = (
   /**
    * @type {new <Parameters extends Array<unknown>, Result>(property: string | symbol) => (...parameters: Parameters) => Result}
@@ -2168,7 +2163,7 @@ var CallableInstance = (
   })
 );
 
-// node_modules/unified/lib/index.js
+// ../../../markcut/node_modules/unified/lib/index.js
 var own = {}.hasOwnProperty;
 var Processor = class _Processor extends CallableInstance {
   /**
@@ -2397,7 +2392,7 @@ var Processor = class _Processor extends CallableInstance {
     assertParser("process", this.parser || this.Parser);
     assertCompiler("process", this.compiler || this.Compiler);
     return done ? executor(void 0, done) : new Promise(executor);
-    function executor(resolve2, reject) {
+    function executor(resolve, reject) {
       const realFile = vfile(file);
       const parseTree = (
         /** @type {HeadTree extends undefined ? Node : HeadTree} */
@@ -2428,8 +2423,8 @@ var Processor = class _Processor extends CallableInstance {
       function realDone(error, file2) {
         if (error || !file2) {
           reject(error);
-        } else if (resolve2) {
-          resolve2(file2);
+        } else if (resolve) {
+          resolve(file2);
         } else {
           ok(done, "`done` is defined if `resolve` is not");
           done(void 0, file2);
@@ -2531,7 +2526,7 @@ var Processor = class _Processor extends CallableInstance {
       file = void 0;
     }
     return done ? executor(void 0, done) : new Promise(executor);
-    function executor(resolve2, reject) {
+    function executor(resolve, reject) {
       ok(
         typeof file !== "function",
         "`file` can\u2019t be a `done` anymore, we checked"
@@ -2545,8 +2540,8 @@ var Processor = class _Processor extends CallableInstance {
         );
         if (error) {
           reject(error);
-        } else if (resolve2) {
-          resolve2(resultingTree);
+        } else if (resolve) {
+          resolve(resultingTree);
         } else {
           ok(done, "`done` is defined if `resolve` is not");
           done(void 0, resultingTree, file2);
@@ -2804,7 +2799,7 @@ function isUint8Array2(value2) {
   );
 }
 
-// node_modules/mdast-util-to-string/lib/index.js
+// ../../../markcut/node_modules/mdast-util-to-string/lib/index.js
 var emptyOptions = {};
 function toString(value2, options) {
   const settings = options || emptyOptions;
@@ -2841,7 +2836,7 @@ function node(value2) {
   return Boolean(value2 && typeof value2 === "object");
 }
 
-// node_modules/character-entities/index.js
+// ../../../markcut/node_modules/character-entities/index.js
 var characterEntities = {
   AElig: "\xC6",
   AMP: "&",
@@ -4970,13 +4965,13 @@ var characterEntities = {
   zwnj: "\u200C"
 };
 
-// node_modules/decode-named-character-reference/index.js
+// ../../../markcut/node_modules/decode-named-character-reference/index.js
 var own2 = {}.hasOwnProperty;
 function decodeNamedCharacterReference(value2) {
   return own2.call(characterEntities, value2) ? characterEntities[value2] : false;
 }
 
-// node_modules/micromark-util-chunked/index.js
+// ../../../markcut/node_modules/micromark-util-chunked/index.js
 function splice(list2, start, remove, items) {
   const end = list2.length;
   let chunkStart = 0;
@@ -5010,7 +5005,7 @@ function push(list2, items) {
   return items;
 }
 
-// node_modules/micromark-util-combine-extensions/index.js
+// ../../../markcut/node_modules/micromark-util-combine-extensions/index.js
 var hasOwnProperty = {}.hasOwnProperty;
 function combineExtensions(extensions) {
   const all2 = {};
@@ -5050,7 +5045,7 @@ function constructs(existing, list2) {
   splice(existing, 0, 0, before);
 }
 
-// node_modules/micromark-util-decode-numeric-character-reference/index.js
+// ../../../markcut/node_modules/micromark-util-decode-numeric-character-reference/index.js
 function decodeNumericCharacterReference(value2, base) {
   const code = Number.parseInt(value2, base);
   if (
@@ -5068,12 +5063,12 @@ function decodeNumericCharacterReference(value2, base) {
   return String.fromCodePoint(code);
 }
 
-// node_modules/micromark-util-normalize-identifier/index.js
+// ../../../markcut/node_modules/micromark-util-normalize-identifier/index.js
 function normalizeIdentifier(value2) {
   return value2.replace(/[\t\n\r ]+/g, " ").replace(/^ | $/g, "").toLowerCase().toUpperCase();
 }
 
-// node_modules/micromark-util-character/index.js
+// ../../../markcut/node_modules/micromark-util-character/index.js
 var asciiAlpha = regexCheck(/[A-Za-z]/);
 var asciiAlphanumeric = regexCheck(/[\dA-Za-z]/);
 var asciiAtext = regexCheck(/[#-'*+\--9=?A-Z^-~]/);
@@ -5105,7 +5100,7 @@ function regexCheck(regex) {
   }
 }
 
-// node_modules/micromark-factory-space/index.js
+// ../../../markcut/node_modules/micromark-factory-space/index.js
 function factorySpace(effects, ok2, type, max) {
   const limit = max ? max - 1 : Number.POSITIVE_INFINITY;
   let size = 0;
@@ -5127,7 +5122,7 @@ function factorySpace(effects, ok2, type, max) {
   }
 }
 
-// node_modules/micromark/lib/initialize/content.js
+// ../../../markcut/node_modules/micromark/lib/initialize/content.js
 var content = {
   tokenize: initializeContent
 };
@@ -5177,7 +5172,7 @@ function initializeContent(effects) {
   }
 }
 
-// node_modules/micromark/lib/initialize/document.js
+// ../../../markcut/node_modules/micromark/lib/initialize/document.js
 var document = {
   tokenize: initializeDocument
 };
@@ -5359,7 +5354,7 @@ function tokenizeContainer(effects, ok2, nok) {
   return factorySpace(effects, effects.attempt(this.parser.constructs.document, ok2, nok), "linePrefix", this.parser.constructs.disable.null.includes("codeIndented") ? void 0 : 4);
 }
 
-// node_modules/micromark-util-classify-character/index.js
+// ../../../markcut/node_modules/micromark-util-classify-character/index.js
 function classifyCharacter(code) {
   if (code === null || markdownLineEndingOrSpace(code) || unicodeWhitespace(code)) {
     return 1;
@@ -5369,21 +5364,21 @@ function classifyCharacter(code) {
   }
 }
 
-// node_modules/micromark-util-resolve-all/index.js
+// ../../../markcut/node_modules/micromark-util-resolve-all/index.js
 function resolveAll(constructs2, events, context) {
   const called = [];
   let index2 = -1;
   while (++index2 < constructs2.length) {
-    const resolve2 = constructs2[index2].resolveAll;
-    if (resolve2 && !called.includes(resolve2)) {
-      events = resolve2(events, context);
-      called.push(resolve2);
+    const resolve = constructs2[index2].resolveAll;
+    if (resolve && !called.includes(resolve)) {
+      events = resolve(events, context);
+      called.push(resolve);
     }
   }
   return events;
 }
 
-// node_modules/micromark-core-commonmark/lib/attention.js
+// ../../../markcut/node_modules/micromark-core-commonmark/lib/attention.js
 var attention = {
   name: "attention",
   resolveAll: resolveAllAttention,
@@ -5514,7 +5509,7 @@ function movePoint(point3, offset) {
   point3._bufferIndex += offset;
 }
 
-// node_modules/micromark-core-commonmark/lib/autolink.js
+// ../../../markcut/node_modules/micromark-core-commonmark/lib/autolink.js
 var autolink = {
   name: "autolink",
   tokenize: tokenizeAutolink
@@ -5615,7 +5610,7 @@ function tokenizeAutolink(effects, ok2, nok) {
   }
 }
 
-// node_modules/micromark-core-commonmark/lib/blank-line.js
+// ../../../markcut/node_modules/micromark-core-commonmark/lib/blank-line.js
 var blankLine = {
   partial: true,
   tokenize: tokenizeBlankLine
@@ -5630,7 +5625,7 @@ function tokenizeBlankLine(effects, ok2, nok) {
   }
 }
 
-// node_modules/micromark-core-commonmark/lib/block-quote.js
+// ../../../markcut/node_modules/micromark-core-commonmark/lib/block-quote.js
 var blockQuote = {
   continuation: {
     tokenize: tokenizeBlockQuoteContinuation
@@ -5688,7 +5683,7 @@ function exit(effects) {
   effects.exit("blockQuote");
 }
 
-// node_modules/micromark-core-commonmark/lib/character-escape.js
+// ../../../markcut/node_modules/micromark-core-commonmark/lib/character-escape.js
 var characterEscape = {
   name: "characterEscape",
   tokenize: tokenizeCharacterEscape
@@ -5714,7 +5709,7 @@ function tokenizeCharacterEscape(effects, ok2, nok) {
   }
 }
 
-// node_modules/micromark-core-commonmark/lib/character-reference.js
+// ../../../markcut/node_modules/micromark-core-commonmark/lib/character-reference.js
 var characterReference = {
   name: "characterReference",
   tokenize: tokenizeCharacterReference
@@ -5779,7 +5774,7 @@ function tokenizeCharacterReference(effects, ok2, nok) {
   }
 }
 
-// node_modules/micromark-core-commonmark/lib/code-fenced.js
+// ../../../markcut/node_modules/micromark-core-commonmark/lib/code-fenced.js
 var nonLazyContinuation = {
   partial: true,
   tokenize: tokenizeNonLazyContinuation
@@ -5962,7 +5957,7 @@ function tokenizeNonLazyContinuation(effects, ok2, nok) {
   }
 }
 
-// node_modules/micromark-core-commonmark/lib/code-indented.js
+// ../../../markcut/node_modules/micromark-core-commonmark/lib/code-indented.js
 var codeIndented = {
   name: "codeIndented",
   tokenize: tokenizeCodeIndented
@@ -6026,7 +6021,7 @@ function tokenizeFurtherStart(effects, ok2, nok) {
   }
 }
 
-// node_modules/micromark-core-commonmark/lib/code-text.js
+// ../../../markcut/node_modules/micromark-core-commonmark/lib/code-text.js
 var codeText = {
   name: "codeText",
   previous,
@@ -6141,7 +6136,7 @@ function tokenizeCodeText(effects, ok2, nok) {
   }
 }
 
-// node_modules/micromark-util-subtokenize/lib/splice-buffer.js
+// ../../../markcut/node_modules/micromark-util-subtokenize/lib/splice-buffer.js
 var SpliceBuffer = class {
   /**
    * @param {ReadonlyArray<T> | null | undefined} [initial]
@@ -6334,7 +6329,7 @@ function chunkedPush(list2, right) {
   }
 }
 
-// node_modules/micromark-util-subtokenize/index.js
+// ../../../markcut/node_modules/micromark-util-subtokenize/index.js
 function subtokenize(eventsArray) {
   const jumps = {};
   let index2 = -1;
@@ -6487,7 +6482,7 @@ function subcontent(events, eventIndex) {
   return gaps;
 }
 
-// node_modules/micromark-core-commonmark/lib/content.js
+// ../../../markcut/node_modules/micromark-core-commonmark/lib/content.js
 var content2 = {
   resolve: resolveContent,
   tokenize: tokenizeContent
@@ -6558,7 +6553,7 @@ function tokenizeContinuation(effects, ok2, nok) {
   }
 }
 
-// node_modules/micromark-factory-destination/index.js
+// ../../../markcut/node_modules/micromark-factory-destination/index.js
 function factoryDestination(effects, ok2, nok, type, literalType, literalMarkerType, rawType, stringType, max) {
   const limit = max || Number.POSITIVE_INFINITY;
   let balance = 0;
@@ -6650,7 +6645,7 @@ function factoryDestination(effects, ok2, nok, type, literalType, literalMarkerT
   }
 }
 
-// node_modules/micromark-factory-label/index.js
+// ../../../markcut/node_modules/micromark-factory-label/index.js
 function factoryLabel(effects, ok2, nok, type, markerType, stringType) {
   const self = this;
   let size = 0;
@@ -6711,7 +6706,7 @@ function factoryLabel(effects, ok2, nok, type, markerType, stringType) {
   }
 }
 
-// node_modules/micromark-factory-title/index.js
+// ../../../markcut/node_modules/micromark-factory-title/index.js
 function factoryTitle(effects, ok2, nok, type, markerType, stringType) {
   let marker;
   return start;
@@ -6773,7 +6768,7 @@ function factoryTitle(effects, ok2, nok, type, markerType, stringType) {
   }
 }
 
-// node_modules/micromark-factory-whitespace/index.js
+// ../../../markcut/node_modules/micromark-factory-whitespace/index.js
 function factoryWhitespace(effects, ok2) {
   let seen;
   return start;
@@ -6792,7 +6787,7 @@ function factoryWhitespace(effects, ok2) {
   }
 }
 
-// node_modules/micromark-core-commonmark/lib/definition.js
+// ../../../markcut/node_modules/micromark-core-commonmark/lib/definition.js
 var definition = {
   name: "definition",
   tokenize: tokenizeDefinition
@@ -6878,7 +6873,7 @@ function tokenizeTitleBefore(effects, ok2, nok) {
   }
 }
 
-// node_modules/micromark-core-commonmark/lib/hard-break-escape.js
+// ../../../markcut/node_modules/micromark-core-commonmark/lib/hard-break-escape.js
 var hardBreakEscape = {
   name: "hardBreakEscape",
   tokenize: tokenizeHardBreakEscape
@@ -6899,7 +6894,7 @@ function tokenizeHardBreakEscape(effects, ok2, nok) {
   }
 }
 
-// node_modules/micromark-core-commonmark/lib/heading-atx.js
+// ../../../markcut/node_modules/micromark-core-commonmark/lib/heading-atx.js
 var headingAtx = {
   name: "headingAtx",
   resolve: resolveHeadingAtx,
@@ -6990,7 +6985,7 @@ function tokenizeHeadingAtx(effects, ok2, nok) {
   }
 }
 
-// node_modules/micromark-util-html-tag-name/index.js
+// ../../../markcut/node_modules/micromark-util-html-tag-name/index.js
 var htmlBlockNames = [
   "address",
   "article",
@@ -7057,7 +7052,7 @@ var htmlBlockNames = [
 ];
 var htmlRawNames = ["pre", "script", "style", "textarea"];
 
-// node_modules/micromark-core-commonmark/lib/html-flow.js
+// ../../../markcut/node_modules/micromark-core-commonmark/lib/html-flow.js
 var htmlFlow = {
   concrete: true,
   name: "htmlFlow",
@@ -7436,7 +7431,7 @@ function tokenizeBlankLineBefore(effects, ok2, nok) {
   }
 }
 
-// node_modules/micromark-core-commonmark/lib/html-text.js
+// ../../../markcut/node_modules/micromark-core-commonmark/lib/html-text.js
 var htmlText = {
   name: "htmlText",
   tokenize: tokenizeHtmlText
@@ -7742,7 +7737,7 @@ function tokenizeHtmlText(effects, ok2, nok) {
   }
 }
 
-// node_modules/micromark-core-commonmark/lib/label-end.js
+// ../../../markcut/node_modules/micromark-core-commonmark/lib/label-end.js
 var labelEnd = {
   name: "labelEnd",
   resolveAll: resolveAllLabelEnd,
@@ -7968,7 +7963,7 @@ function tokenizeReferenceCollapsed(effects, ok2, nok) {
   }
 }
 
-// node_modules/micromark-core-commonmark/lib/label-start-image.js
+// ../../../markcut/node_modules/micromark-core-commonmark/lib/label-start-image.js
 var labelStartImage = {
   name: "labelStartImage",
   resolveAll: labelEnd.resolveAll,
@@ -7999,7 +7994,7 @@ function tokenizeLabelStartImage(effects, ok2, nok) {
   }
 }
 
-// node_modules/micromark-core-commonmark/lib/label-start-link.js
+// ../../../markcut/node_modules/micromark-core-commonmark/lib/label-start-link.js
 var labelStartLink = {
   name: "labelStartLink",
   resolveAll: labelEnd.resolveAll,
@@ -8021,7 +8016,7 @@ function tokenizeLabelStartLink(effects, ok2, nok) {
   }
 }
 
-// node_modules/micromark-core-commonmark/lib/line-ending.js
+// ../../../markcut/node_modules/micromark-core-commonmark/lib/line-ending.js
 var lineEnding = {
   name: "lineEnding",
   tokenize: tokenizeLineEnding
@@ -8036,7 +8031,7 @@ function tokenizeLineEnding(effects, ok2) {
   }
 }
 
-// node_modules/micromark-core-commonmark/lib/thematic-break.js
+// ../../../markcut/node_modules/micromark-core-commonmark/lib/thematic-break.js
 var thematicBreak = {
   name: "thematicBreak",
   tokenize: tokenizeThematicBreak
@@ -8075,7 +8070,7 @@ function tokenizeThematicBreak(effects, ok2, nok) {
   }
 }
 
-// node_modules/micromark-core-commonmark/lib/list.js
+// ../../../markcut/node_modules/micromark-core-commonmark/lib/list.js
 var list = {
   continuation: {
     tokenize: tokenizeListContinuation
@@ -8205,7 +8200,7 @@ function tokenizeListItemPrefixWhitespace(effects, ok2, nok) {
   }
 }
 
-// node_modules/micromark-core-commonmark/lib/setext-underline.js
+// ../../../markcut/node_modules/micromark-core-commonmark/lib/setext-underline.js
 var setextUnderline = {
   name: "setextUnderline",
   resolveTo: resolveToSetextUnderline,
@@ -8297,7 +8292,7 @@ function tokenizeSetextUnderline(effects, ok2, nok) {
   }
 }
 
-// node_modules/micromark/lib/initialize/flow.js
+// ../../../markcut/node_modules/micromark/lib/initialize/flow.js
 var flow = {
   tokenize: initializeFlow
 };
@@ -8335,7 +8330,7 @@ function initializeFlow(effects) {
   }
 }
 
-// node_modules/micromark/lib/initialize/text.js
+// ../../../markcut/node_modules/micromark/lib/initialize/text.js
 var resolver = {
   resolveAll: createResolver()
 };
@@ -8474,7 +8469,7 @@ function resolveAllLineSuffixes(events, context) {
   return events;
 }
 
-// node_modules/micromark/lib/constructs.js
+// ../../../markcut/node_modules/micromark/lib/constructs.js
 var constructs_exports = {};
 __export(constructs_exports, {
   attentionMarkers: () => attentionMarkers,
@@ -8549,7 +8544,7 @@ var disable = {
   null: []
 };
 
-// node_modules/micromark/lib/create-tokenizer.js
+// ../../../markcut/node_modules/micromark/lib/create-tokenizer.js
 function createTokenizer(parser, initialize, from) {
   let point3 = {
     _bufferIndex: -1,
@@ -8872,7 +8867,7 @@ function serializeChunks(chunks, expandTabs) {
   return result.join("");
 }
 
-// node_modules/micromark/lib/parse.js
+// ../../../markcut/node_modules/micromark/lib/parse.js
 function parse(options) {
   const settings = options || {};
   const constructs2 = (
@@ -8898,14 +8893,14 @@ function parse(options) {
   }
 }
 
-// node_modules/micromark/lib/postprocess.js
+// ../../../markcut/node_modules/micromark/lib/postprocess.js
 function postprocess(events) {
   while (!subtokenize(events)) {
   }
   return events;
 }
 
-// node_modules/micromark/lib/preprocess.js
+// ../../../markcut/node_modules/micromark/lib/preprocess.js
 var search = /[\0\t\n\r]/g;
 function preprocess() {
   let column = 1;
@@ -8984,7 +8979,7 @@ function preprocess() {
   }
 }
 
-// node_modules/micromark-util-decode-string/index.js
+// ../../../markcut/node_modules/micromark-util-decode-string/index.js
 var characterEscapeOrReference = /\\([!-/:-@[-`{-~])|&(#(?:\d{1,7}|x[\da-f]{1,6})|[\da-z]{1,31});/gi;
 function decodeString(value2) {
   return value2.replace(characterEscapeOrReference, decode);
@@ -9002,7 +8997,7 @@ function decode($0, $1, $2) {
   return decodeNamedCharacterReference($2) || $0;
 }
 
-// node_modules/mdast-util-from-markdown/lib/index.js
+// ../../../markcut/node_modules/mdast-util-from-markdown/lib/index.js
 var own3 = {}.hasOwnProperty;
 function fromMarkdown(value2, encoding, options) {
   if (encoding && typeof encoding === "object") {
@@ -9711,7 +9706,7 @@ function defaultOnError(left, right) {
   }
 }
 
-// node_modules/remark-parse/lib/index.js
+// ../../../markcut/node_modules/remark-parse/lib/index.js
 function remarkParse(options) {
   const self = this;
   self.parser = parser;
@@ -9728,7 +9723,7 @@ function remarkParse(options) {
   }
 }
 
-// node_modules/fault/index.js
+// ../../../markcut/node_modules/fault/index.js
 var import_format = __toESM(require_format(), 1);
 var fault = Object.assign(create(Error), {
   eval: create(EvalError),
@@ -9747,7 +9742,7 @@ function create(Constructor) {
   }
 }
 
-// node_modules/micromark-extension-frontmatter/lib/to-matters.js
+// ../../../markcut/node_modules/micromark-extension-frontmatter/lib/to-matters.js
 var own4 = {}.hasOwnProperty;
 var markers = {
   yaml: "-",
@@ -9784,7 +9779,7 @@ function matter(option) {
   return result;
 }
 
-// node_modules/micromark-extension-frontmatter/lib/syntax.js
+// ../../../markcut/node_modules/micromark-extension-frontmatter/lib/syntax.js
 function frontmatter(options) {
   const matters = toMatters(options);
   const flow3 = {};
@@ -9970,7 +9965,7 @@ function pick(schema, prop) {
   return typeof schema === "string" ? schema : schema[prop];
 }
 
-// node_modules/escape-string-regexp/index.js
+// ../../../markcut/node_modules/escape-string-regexp/index.js
 function escapeStringRegexp(string3) {
   if (typeof string3 !== "string") {
     throw new TypeError("Expected a string");
@@ -9978,7 +9973,7 @@ function escapeStringRegexp(string3) {
   return string3.replace(/[|\\{}()[\]^$+*?.]/g, "\\$&").replace(/-/g, "\\x2d");
 }
 
-// node_modules/mdast-util-frontmatter/lib/index.js
+// ../../../markcut/node_modules/mdast-util-frontmatter/lib/index.js
 function frontmatterFromMarkdown(options) {
   const matters = toMatters(options);
   const enter = {};
@@ -10045,7 +10040,7 @@ function pick2(schema, prop) {
   return typeof schema === "string" ? schema : schema[prop];
 }
 
-// node_modules/remark-frontmatter/lib/index.js
+// ../../../markcut/node_modules/remark-frontmatter/lib/index.js
 var emptyOptions2 = "yaml";
 function remarkFrontmatter(options) {
   const self = (
@@ -11324,7 +11319,8 @@ async function resolveSubtitles(root, options) {
       vttPath = expectedVtt;
     } else {
       try {
-        await generateSTT(audioSrc, options.outputDir, sttCli);
+        const localModel = isLocalModelExecution("STT", !clone.stt && !options.sttCli && DEFAULT_STT_IS_LOCAL_MODEL);
+        await generateSTT(audioSrc, options.outputDir, sttCli, { localModel });
         const base = audioSrc.replace(/\.wav$/, "").replace(/\.mp3$/, "");
         const name = base.split("/").pop();
         const whisperVtt = join(options.outputDir, `${name}.vtt`);
@@ -11426,7 +11422,8 @@ async function resolveGeneratedMedia(root, options) {
     try {
       console.log(`  \u{1F50A} ${label} (${done}/${total}): ${labelText}...`);
       const ttiCmd = clone.tti ?? options.ttiCli ?? DEFAULT_TTI_CLI;
-      const result = type === "image" ? generateTTI(prompt, outputPath, cli, seed) : generateTTV(prompt, outputPath, cli, ttiCmd, seed);
+      const ttiLocalModel = isLocalModelExecution("TTI", !clone.tti && !options.ttiCli && DEFAULT_TTI_IS_LOCAL_MODEL);
+      const result = type === "image" ? generateTTI(prompt, outputPath, cli, seed, { localModel: ttiLocalModel }) : generateTTV(prompt, outputPath, cli, ttiCmd, seed, { ttiLocalModel });
       if (result) {
         node2.src = outputPath;
         console.log(`  \u2713 ${label} (${done}/${total}): ${labelText}`);
@@ -11584,7 +11581,7 @@ async function resolveIncludes(root, options) {
     const resolved = await resolveAll2(subRoot, {
       ...options,
       includeOutputDir: outputDir,
-      baseDir: dirname3(absPath),
+      baseDir: dirname2(absPath),
       variants: variantChain
     });
     const compiled = compileDescriptiveRoot(resolved);

@@ -21,6 +21,9 @@ import {
   DEFAULT_STT_CLI,
   DEFAULT_TTI_CLI,
   DEFAULT_TTV_CLI,
+  isLocalModelExecution,
+  DEFAULT_STT_IS_LOCAL_MODEL,
+  DEFAULT_TTI_IS_LOCAL_MODEL,
 } from "../render/cli-tools";
 import { walkDown } from "../utils";
 import type { DescriptiveNode, DescriptiveRoot } from "./compiler";
@@ -596,7 +599,9 @@ export async function resolveSubtitles(
       vttPath = expectedVtt;
     } else {
       try {
-        await generateSTT(audioSrc, options.outputDir, sttCli);
+        // The template is opaque: pass execution metadata from its provider selection.
+        const localModel = isLocalModelExecution('STT', !clone.stt && !options.sttCli && DEFAULT_STT_IS_LOCAL_MODEL);
+        await generateSTT(audioSrc, options.outputDir, sttCli, { localModel });
         // Whisper names VTT after input audio file; rename to hash-based name
         const base = audioSrc.replace(/\.wav$/, "").replace(/\.mp3$/, "");
         const name = base.split("/").pop()!;
@@ -753,9 +758,10 @@ export async function resolveGeneratedMedia(
     try {
       console.log(`  🔊 ${label} (${done}/${total}): ${labelText}...`);
       const ttiCmd = clone.tti ?? options.ttiCli ?? DEFAULT_TTI_CLI;
+      const ttiLocalModel = isLocalModelExecution('TTI', !clone.tti && !options.ttiCli && DEFAULT_TTI_IS_LOCAL_MODEL);
       const result = type === "image"
-        ? generateTTI(prompt, outputPath, cli, seed)
-        : generateTTV(prompt, outputPath, cli, ttiCmd, seed);
+        ? generateTTI(prompt, outputPath, cli, seed, { localModel: ttiLocalModel })
+        : generateTTV(prompt, outputPath, cli, ttiCmd, seed, { ttiLocalModel });
       if (result) {
         node.src = outputPath;
         console.log(`  ✓ ${label} (${done}/${total}): ${labelText}`);

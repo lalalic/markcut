@@ -19,9 +19,12 @@ import {
   DEFAULT_STT_CLI,
   DEFAULT_TTI_CLI,
   DEFAULT_TTV_CLI,
+  DEFAULT_STT_IS_LOCAL_MODEL,
+  DEFAULT_TTI_IS_LOCAL_MODEL,
+  isLocalModelExecution,
 } from "../config.mjs";
 
-export { DEFAULT_TTS_CLI, DEFAULT_STT_CLI, DEFAULT_TTI_CLI, DEFAULT_TTV_CLI };
+export { DEFAULT_TTS_CLI, DEFAULT_STT_CLI, DEFAULT_TTI_CLI, DEFAULT_TTV_CLI, DEFAULT_STT_IS_LOCAL_MODEL, DEFAULT_TTI_IS_LOCAL_MODEL, isLocalModelExecution };
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -90,7 +93,8 @@ export function generateTTS(text: string, outputPath: string, cli?: string): str
   mkdirSync(dirname(outputPath), { recursive: true });
   const cmd = substituteCli(cli ?? DEFAULT_TTS_CLI, text, outputPath);
   try {
-    execSync(queueCommand(cmd), { stdio: "pipe" });
+    const localModel = isLocalModelExecution("TTS");
+    execSync(localModel ? queueCommand(cmd, process.env, {timeoutMs: 0}) : cmd, { stdio: "pipe" });
   } catch (e: any) {
     console.warn(`  ⚠ TTS failed: ${e.message}`);
     return "";
@@ -102,10 +106,11 @@ export function generateTTS(text: string, outputPath: string, cli?: string): str
  * Run STT on an audio file to generate VTT subtitles.
  * Completes when the CLI exits (VTT will be in outputDir).
  */
-export async function generateSTT(audioPath: string, outputDir: string, cli?: string): Promise<void> {
+export async function generateSTT(audioPath: string, outputDir: string, cli?: string, execution: { localModel?: boolean } = {}): Promise<void> {
   const cmd = substituteCli(cli ?? DEFAULT_STT_CLI, audioPath, outputDir);
   try {
-    execSync(queueCommand(cmd), { stdio: "pipe" });
+    const localModel = execution.localModel ?? isLocalModelExecution('STT', cli === undefined && DEFAULT_STT_IS_LOCAL_MODEL);
+    execSync(localModel ? queueCommand(cmd, process.env, {timeoutMs: 0}) : cmd, { stdio: "pipe" });
   } catch (e: any) {
     console.warn(`  ⚠ STT failed: ${e.message}`);
   }
@@ -116,14 +121,15 @@ export async function generateSTT(audioPath: string, outputDir: string, cli?: st
  * @param seed Optional seed for reproducible generation. Substituted into {seed} in the CLI template.
  * @returns output path on success, empty string on failure.
  */
-export function generateTTI(prompt: string, outputPath: string, cli?: string, seed?: number): string {
+export function generateTTI(prompt: string, outputPath: string, cli?: string, seed?: number, execution: { localModel?: boolean } = {}): string {
   mkdirSync(dirname(outputPath), { recursive: true });
   const cmd = substituteCli(cli ?? DEFAULT_TTI_CLI, prompt, outputPath, seed);
   try {
-    execSync(queueCommand(cmd), {
+    const localModel = execution.localModel ?? isLocalModelExecution('TTI', cli === undefined && DEFAULT_TTI_IS_LOCAL_MODEL);
+    execSync(localModel ? queueCommand(cmd, process.env, {timeoutMs: 0}) : cmd, {
       encoding: "utf-8",
       stdio: ["pipe", "pipe", "pipe"],
-      timeout: 300_000,
+      timeout: 0,
       env: { ...process.env, TTI_CMD: cli ?? DEFAULT_TTI_CLI },
     });
   } catch (e: any) {
@@ -150,20 +156,21 @@ export function generateTTV(
   cli?: string,
   ttiCmd?: string,
   seed?: number,
+  execution: { ttiLocalModel?: boolean } = {},
 ): string {
   mkdirSync(dirname(outputPath), { recursive: true });
 
   if (!cli) {
     // Default: use generateTTI to create an image, then ffmpeg to make a 3s MP4
     const pngPath = outputPath.replace(/\.mp4$/, ".png");
-    const imageResult = generateTTI(prompt, pngPath, ttiCmd, seed);
+    const imageResult = generateTTI(prompt, pngPath, ttiCmd, seed, { localModel: execution.ttiLocalModel });
     if (!imageResult || !existsSync(imageResult)) {
       console.error(`  ✗ TTV: TTI step produced no image for "${prompt.slice(0, 50)}..."`);
       return "";
     }
     try {
       execSync(
-        queueCommand(`ffmpeg -y -loop 1 -i "${pngPath}" -c:v libx264 -t 3 -pix_fmt yuv420p "${outputPath}"`),
+        `ffmpeg -y -loop 1 -i "${pngPath}" -c:v libx264 -t 3 -pix_fmt yuv420p "${outputPath}"`,
         { stdio: ["pipe", "pipe", "pipe"], timeout: 60_000 },
       );
     } catch (e: any) {
@@ -178,10 +185,11 @@ export function generateTTV(
   // Custom CLI mode: substitute template and run
   const cmd = substituteCli(cli, prompt, outputPath, seed);
   try {
-    execSync(queueCommand(cmd), {
+    const localModel = isLocalModelExecution('TTV');
+    execSync(localModel ? queueCommand(cmd, process.env, {timeoutMs: 0}) : cmd, {
       encoding: "utf-8",
       stdio: ["pipe", "pipe", "pipe"],
-      timeout: 300_000,
+      timeout: 0,
       env: { ...process.env, TTI_CMD: ttiCmd ?? DEFAULT_TTI_CLI },
     });
   } catch (e: any) {

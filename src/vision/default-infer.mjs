@@ -37,9 +37,11 @@ function configuredInferenceTimeout(name) {
   return timeout;
 }
 
-function run(command, args, options = {}) {
-  const queued = queueArgv(command, args, process.env, options.timeout === 0 ? {timeoutMs: 0} : {});
-  const r = spawnSync(queued.command, queued.argv, { encoding: "utf8", timeout: options.timeout ?? 600_000, env: process.env });
+function run(command, args, { timeout = 600_000, localModel = false } = {}) {
+  const invocation = localModel
+    ? queueArgv(command, args, process.env, { timeoutMs: timeout })
+    : { command, argv: args };
+  const r = spawnSync(invocation.command, invocation.argv, { encoding: "utf8", timeout, env: process.env });
   return { ok: r.status === 0, stdout: (r.stdout || "").trim(), stderr: (r.stderr || "").trim(), status: r.status };
 }
 
@@ -79,7 +81,7 @@ function tryLocal(prompt, inputs) {
   const uvx = which("uvx");
   if (!uvx) return { ok: false, reason: "uvx-unavailable" };
   const args = ["--from", "mlx-vlm", "mlx_vlm.generate", "--model", LOCAL_MODEL, "--max-tokens", "2048", "--prompt", prompt, "--image", ...inputs, "--temperature", "0.0", "--thinking-mode", "disabled"];
-  const r = run(uvx, args, { timeout: configuredInferenceTimeout("MARKCUT_LOCAL_VISION_TIMEOUT_MS") });
+  const r = run(uvx, args, { timeout: configuredInferenceTimeout("MARKCUT_LOCAL_VISION_TIMEOUT_MS"), localModel: true });
   return r.ok && r.stdout ? { ok: true, output: r.stdout } : { ok: false, reason: r.stderr || `local-vlm-exit-${r.status}` };
 }
 

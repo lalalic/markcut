@@ -88,6 +88,21 @@ export const DEFAULT_VTT_SAMPLE_INTERVAL = Number(process.env.MARKCUT_VTT_SAMPLE
  */
 
 
+/**
+ * Execution kind is independent of the CLI template text. Bundled Whisper and
+ * Flux providers are known local; custom templates default to direct execution.
+ * Set MARKCUT_STT_EXECUTION=local or MARKCUT_TTI_EXECUTION=local to opt a
+ * custom provider into the shared local-model queue (direct to opt out).
+ */
+export function isLocalModelExecution(kind, bundledLocal = false, env = process.env) {
+  const configured = env[`MARKCUT_${kind}_EXECUTION`];
+  if (!configured) return bundledLocal;
+  if (configured === 'local') return true;
+  if (configured === 'direct') return false;
+  throw Error(`Invalid MARKCUT_${kind}_EXECUTION: expected local or direct`);
+}
+export const DEFAULT_STT_IS_LOCAL_MODEL = !args.cliOverrides.stt && !process.env.MARKCUT_STT_CLI;
+export const DEFAULT_TTI_IS_LOCAL_MODEL = !args.cliOverrides.tti && !process.env.MARKCUT_TTI_CLI;
 /** Speech-to-text CLI. Override via --stt flag or MARKCUT_STT_CLI env var. */
 export const DEFAULT_STT_CLI = args.cliOverrides.stt || process.env.MARKCUT_STT_CLI || 'uvx --from openai-whisper whisper "{input}" --output_format vtt --output_dir "{output}" --word_timestamps True --max_line_count 1 --max_line_width 14';
 /** Text-to-speech CLI. Override via --tts flag or MARKCUT_TTS_CLI env var. */
