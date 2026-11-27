@@ -24,3 +24,9 @@ Use focused tests first, then regression tests relevant to changed code. Avoid r
 For MCP provider/player/bridge changes: rebuild the relevant bundle, reload **only the Markcut provider** through Neo's supported provider controls, verify the published resource/version, and open a fresh ChatGPT iframe. Do not restart the entire Neo MCP app. Verify scene/timed comments in the real hosted player, not just unit tests. For browser automation follow the separately discovered WebHelm Skill and stop task-owned sessions.
 
 Preserve unrelated worktrees, services, sessions, user media and credentials. Keep private coordinates and media links out of logs/public artifacts. For implementation-specific known regressions and tests, see [docs/developer-reference.md](docs/developer-reference.md).
+
+## Source navigation
+
+Design, Planner, Implementation and Reviewer use this entry and only relevant current references. Use the discovered `code-intelligence` Skill for targeted implementation evidence; use the actual checkout and tests to resolve discrepancies. Do not bulk-read source or historical evidence.
+
+Use the existing developer reference for architecture and implementation. For descriptive Markdown changes consult [Markdown semantics](docs/markdown-strict-descriptive.md); for hosted preview consult [MCP preview](docs/mcp-static-preview.md).
