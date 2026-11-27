@@ -19,3 +19,4 @@ public/.render-assets/
 
 __pycache__
 .deepeval/
+runs/
