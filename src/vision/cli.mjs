@@ -940,14 +940,12 @@ function analyzeVideo(videoPath, normInfo, normDir, prompts, context = "", userH
           }
         }
       }
-      let cursor = 0;
+      // Semantic segments index meaningful source intervals, not a partition.
       for (const range of ranges) {
-        if (range.start !== cursor || range.end <= range.start || range.end > totalDurMs) {
-          throw new Error("Agent segmentation must cover original source without gaps/overlaps");
+        if (range.start < 0 || range.end <= range.start || range.end > totalDurMs) {
+          throw new Error("Agent segment range must be within the original source");
         }
-        cursor = range.end;
       }
-      if (cursor !== totalDurMs) throw new Error("Agent segment timeline is incomplete");
       segments = segParsed;
       emitInfo("  Agent merged into " + Object.keys(segments).length + " source segments");
     } else {

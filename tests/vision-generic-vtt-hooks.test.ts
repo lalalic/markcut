@@ -69,6 +69,35 @@ it('generic --vtt/--itt plus --agent uses the existing STT→semantic segment wo
   ]);
 });
 
+it('accepts sparse and overlapping semantic intervals without requiring full coverage',()=>{
+  const other=join(dir,'sparse-semantic');
+  mkdirSync(other,{recursive:true});
+  execFileSync('cp',[join(media,'clip.mp4'),join(other,'clip.mp4')]);
+  execFileSync('cp',[join(media,'clip.vtt'),join(other,'clip.vtt')]);
+  const sparse=join(dir,'sparse-agent.mjs');
+  writeFileSync(sparse,'console.log(JSON.stringify({"500to1500":{description:"first"},"2000to3000":{description:"second"},"2500to3500":{description:"overlapping moment"}}))');
+  const itm='node '+JSON.stringify(visual)+' --input {input} --prompt {prompt_quoted}';
+  const args=[join(base,'src/render/cli.mjs'),'vision',other,
+    '--vtt',itm,'--itt',itm,'--agent','node '+JSON.stringify(sparse)+' --prompt {prompt}'];
+  execFileSync(process.execPath,args,{cwd:base,timeout:90000,encoding:'utf8',env:queueEnv});
+  const meta=JSON.parse(readFileSync(join(other,'metadata.json'),'utf8'));
+  expect(Object.keys(meta['clip.mp4'].perception.segments)).toEqual(['500to1500','2000to3000','2500to3500']);
+});
+
+it.each(['1000to1000','2000to1000','3000to5000','-100to1000'])('rejects invalid source interval %s',(range)=>{
+  const other=join(dir,'invalid-range-'+range);
+  mkdirSync(other,{recursive:true});
+  execFileSync('cp',[join(media,'clip.mp4'),join(other,'clip.mp4')]);
+  execFileSync('cp',[join(media,'clip.vtt'),join(other,'clip.vtt')]);
+  const invalid=join(other,'invalid-agent.mjs');
+  writeFileSync(invalid,'console.log('+JSON.stringify(JSON.stringify({[range]:{description:'invalid'}}))+')');
+  const itm='node '+JSON.stringify(visual)+' --input {input} --prompt {prompt_quoted}';
+  const args=[join(base,'src/render/cli.mjs'),'vision',other,
+    '--vtt',itm,'--itt',itm,'--agent','node '+JSON.stringify(invalid)+' --prompt {prompt}'];
+  expect(()=>execFileSync(process.execPath,args,{cwd:base,timeout:90000,encoding:'utf8',stdio:'pipe',env:queueEnv}))
+    .toThrow(/Invalid Agent segment entry|Agent segment range must be within the original source/);
+});
+
 it('invalid semantic Agent response does not silently fall back to code-selected boundaries',()=>{
   const other=join(dir,'bad-semantic');
   mkdirSync(other,{recursive:true});
