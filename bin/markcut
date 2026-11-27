@@ -2,6 +2,16 @@
 import { spawnSync } from "node:child_process";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { extractProfileArgument, readCliProfile, templateArguments } from "../src/cli-profile.mjs";
+
+// Normalize once for every dispatch path, including detached preview workers.
+let directTemplates;
+try {
+  const {argv, profilePath, cliOverrides} = extractProfileArgument(process.argv.slice(2));
+  if (profilePath) { readCliProfile(profilePath); process.env.MARKCUT_PROFILE = profilePath; }
+  directTemplates = templateArguments(cliOverrides);
+  process.argv = [...process.argv.slice(0,2), ...argv];
+} catch (error) { console.error(error.message); process.exit(1); }
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -18,7 +28,7 @@ if (process.argv[2] === "preview") {
   // JSON previews retain their existing local-only renderer.
   const markdown=argv[1]?.toLowerCase().endsWith('.md');
   if(explicit || markdown){
-    const eventArgs=explicit ? argv : ['preview',argv[1],'--delivery','text'];
+    const eventArgs=[...(explicit ? argv : ['preview',argv[1],'--delivery','text']), ...directTemplates];
     const entry=resolve(root,'src','mcp','mobile-review-cli.mjs');
     const deliveryResult=spawnSync(process.execPath,[entry,...eventArgs],{stdio:'inherit'});
     if(deliveryResult.error)console.error(deliveryResult.error.message);
@@ -43,7 +53,7 @@ if (process.argv[2] === "queue") {
 }
 const entry = resolve(root, "src", "render", "cli.mjs");
 
-const result = spawnSync(process.execPath, [entry, ...process.argv.slice(2)], {
+const result = spawnSync(process.execPath, [entry, ...process.argv.slice(2), ...directTemplates], {
   stdio: "inherit",
 });
 

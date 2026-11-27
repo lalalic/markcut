@@ -50,9 +50,10 @@ import { fileURLToPath } from "node:url";
 import {
   IMAGE_EXTS, VIDEO_EXTS,
   MAX_IMAGE_DIMENSION, MAX_VIDEO_DURATION, MAX_VIDEO_DIMENSION,
-  DEFAULT_ITT_CLI, DEFAULT_VTT_SAMPLE_INTERVAL, DEFAULT_VTT_CLI, DEFAULT_STT_CLI, DEFAULT_AGENT_CLI,
+  DEFAULT_ITT_CLI, DEFAULT_VTT_SAMPLE_INTERVAL, DEFAULT_VTT_CLI, DEFAULT_STT_CLI, DEFAULT_AGENT_CLI, PROFILE_CACHE_KEY,
 } from "../config.mjs";
 import { runCandidateVision } from "./candidate.mjs";
+import { extractProfileArgument } from "../cli-profile.mjs";
 
 // ── Paths ─────────────────────────────────────────────────────────────────
 
@@ -474,7 +475,11 @@ function runSTT(videoPath, normDir, sttCli) {
   const mediaDir = dirname(videoPath);
   const audioPath = join(normDir, `${base}_audio.mp3`);
   const vttPath = join(mediaDir, `${base}.vtt`);
-  if (existsSync(vttPath)) return `${base}.vtt`;
+  if (existsSync(vttPath)) return `${base}.vtt`; // supplied transcript remains authoritative
+  if (!sttCli) return null;
+  const profileVtt = PROFILE_CACHE_KEY ? join(normDir, `${base}-${perceptionCacheKey(videoPath, sttCli, "stt")}.vtt`) : vttPath;
+  const subtitlePath = PROFILE_CACHE_KEY ? `.normalized/${basename(profileVtt)}` : `${base}.vtt`;
+  if (existsSync(profileVtt)) return subtitlePath;
 
   try { run(`ffmpeg -y -i ${shQuote(videoPath)} -vn -acodec libmp3lame -q:a 2 ${shQuote(audioPath)}`, { timeout: 300_000 }); }
   catch (e) { emitWarn(`Audio extraction failed for ${base}: ${e.message}`); return null; }
@@ -484,8 +489,8 @@ function runSTT(videoPath, normDir, sttCli) {
   try { run(cmd, { timeout: 600_000 }); } catch (e) { emitWarn(`STT failed for ${base}: ${e.message}`); return null; }
 
   const whisperVtt = join(normDir, `${base}_audio.vtt`);
-  if (existsSync(whisperVtt)) renameSync(whisperVtt, vttPath);
-  return existsSync(vttPath) ? `${base}.vtt` : null;
+  if (existsSync(whisperVtt)) renameSync(whisperVtt, profileVtt);
+  return existsSync(profileVtt) ? subtitlePath : null;
 }
 
 function parseVTT(vttPath) {
@@ -1162,7 +1167,7 @@ async function runNormalizeAndPercept(folder, metadataPath, prompts, context, pi
       const framePaths = Array.from({ length: n }, (_, i) => `${basename(normInfo.path, extname(normInfo.path))}_${String(i + 1).padStart(3, "0")}.jpg`);
       vttActualCmd = substituteTemplate(DEFAULT_ITT_CLI, { input: framePaths.map(p => `@${p}`).join(" "), prompt: vidPrompt, prompt_quoted: shQuote(vidPrompt) });
     }
-    cacheKey = perceptionCacheKey(vidPath, vttActualCmd, "video");
+    cacheKey = perceptionCacheKey(vidPath, vttActualCmd + (PROFILE_CACHE_KEY ? `\0${PROFILE_CACHE_KEY}\0${vttSampleInterval}\0${skipSTT}` : ""), "video");
     if (cache[cacheKey]) {
       perception = cache[cacheKey];
       emitInfo(`  (cached)`);
@@ -1214,7 +1219,8 @@ Prompt overrides:
 `);
 }
 
-export async function main(args) {
+export async function main(rawArgs) {
+  const args = [...rawArgs.slice(0,2), ...extractProfileArgument(rawArgs.slice(2)).argv];
   let folder = "";
   let promptsFile = PROMPTS_FILE;
   let context = "";
@@ -1243,7 +1249,6 @@ export async function main(args) {
     if (flag === "--help") { printUsage(); return; }
     else if (flag === "--label") { doLabel = true; }
     else if (flag === "--normalize-only") { normalizeOnly = true; }
-    else if (["--itt", "--vtt", "--agent", "--stt", "--tts", "--tti", "--ttv", "--edit-cli"].includes(flag) && args[i]) { i++; }
     else if (flag === "--candidate") { candidateMode = true; }
     else if (flag === "--output" && args[i]) { output = resolve(args[i++]); }
     else if (flag === "--model-command" && args[i]) { modelCommand = args[i++]; }

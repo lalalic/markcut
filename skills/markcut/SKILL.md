@@ -24,7 +24,7 @@ Markcut turns a Markdown video definition into a compiled stream tree and a play
 | Visualize a route or trip | Use a Markdown `map` stream; load [route/map reference](docs/map-dynamic-camera.md). |
 | Preview or animate a 3D model | Use a `model3d` stream for a GLB/GLTF asset; frame-controlled turntable or orbit can render to MP4. See [3D models](docs/markdown-descriptive.md#native-3d-models-model3d). USDZ needs GLB conversion first. |
 
-`markcut` means the `npx @lalalic/markcut` CLI in the examples below. For supported flags and generation adapters, consult `npx @lalalic/markcut --help`, `npx @lalalic/markcut vision --help`, and `npx @lalalic/markcut --show-clis` rather than guessing. Media generation is handled by the configured Markcut pipeline; this Skill does not select a project's private vision provider.
+`markcut` means the `npx @lalalic/markcut` CLI in the examples below. For supported flags and generation adapters, consult `npx @lalalic/markcut --help`, `npx @lalalic/markcut vision --help`, and `npx @lalalic/markcut --show-clis` rather than guessing. Media generation is handled by the configured Markcut pipeline. If the caller supplies a CLI profile, use `--profile <file.json>` consistently for vision, preview, resolve and render. Do not explore or replace configured providers, machines or commands; report a reproducible provider failure to the caller. See the [profile format](../../README.md#caller-selected-cli-profiles).
 
 ## Author and validate
 

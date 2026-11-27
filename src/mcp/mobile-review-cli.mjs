@@ -6,13 +6,16 @@ import {join,resolve,basename,dirname} from 'node:path';
 import {homedir} from 'node:os';
 import {pathToFileURL} from 'node:url';
 import {normalizeReviewConfig} from './review-delivery.mjs';
+import {extractProfileArgument, readCliProfile} from '../cli-profile.mjs';
 
 const delay = ms => new Promise(done => setTimeout(done,ms));
 
-export function parseEventPreviewOptions(argv) {
+export function parseEventPreviewOptions(input) {
+  const {argv, profilePath, cliOverrides} = extractProfileArgument(input);
+  readCliProfile(profilePath);
   if (argv[0] !== 'preview' || !argv[1] || argv[1].startsWith('--')) throw new Error('Usage: markcut preview <file.md> --delivery event --event-template <file.json>');
   const allowed=new Set(['--delivery','--event-template','--timeout-ms']);
-  const options={file:resolve(argv[1])};
+  const options={file:resolve(argv[1]), profilePath, cliOverrides};
   for(let i=2;i<argv.length;i+=2){
     const flag=argv[i],value=argv[i+1];
     if(!allowed.has(flag) || !value || value.startsWith('--'))throw new Error('Missing or unsupported preview event flag: '+flag);
@@ -89,7 +92,7 @@ export async function runMobilePreview(argv){
   const [{startCompileOperation},{EXPORT_ROOT}]=await Promise.all([
     import('./compile-operation.mjs'),import('./remote-assets.mjs'),
   ]);
-  const operation=startCompileOperation(opts.file,config);
+  const operation=startCompileOperation(opts.file,config,{profilePath:opts.profilePath,cliOverrides:opts.cliOverrides});
   const stateFile=join(EXPORT_ROOT,'operations',operation.operationId+'.json');
   let state;
   const until=Date.now()+opts.timeoutMs;

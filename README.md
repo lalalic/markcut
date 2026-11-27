@@ -394,6 +394,68 @@ export MARKCUT_VTT_CLI='my-video-backend --prompt "{prompt}" {input}'
 
 ## Architecture
 
+### Caller-selected CLI profiles
+
+The repository ships [`profiles/default.json`](profiles/default.json) as the
+source of the original built-in CLI defaults, without changing their provider
+commands. External Python and npm tools use `uvx` and `npx`; bundled adapters
+use `node`. Node/npm, uv, ffmpeg/ffprobe, and any provider credentials still
+need to be available. Copy the default or create a partial trusted local JSON
+file and select it at invocation time. Profiles configure providers, not creative content or output
+resolution; the same Markdown can be used with different profiles.
+
+```json
+{
+  "tts": "uvx edge-tts --voice zh-CN-YunxiNeural --text \"{input}\" --write-media \"{output}\"",
+  "stt": "uvx --from openai-whisper whisper \"{input}\" --model base --output_format vtt --output_dir \"{output}\"",
+  "vtt": ""
+}
+```
+
+```sh
+markcut vision ./input/media --profile ./profiles/prototype.json
+markcut preview video.md --profile ./profiles/prototype.json
+markcut render video.md --profile ./profiles/product.json --output output/video.mp4
+markcut --show-clis --profile ./profiles/product.json
+markcut render video.md --profile ./profiles/product.json --tts 'my-tts "{input}" "{output}"'
+```
+
+Supported optional string keys: `tts`, `stt`, `itt`, `vtt`, `tti`, `ttv`,
+`agent`, `editCli`. Use the existing CLI placeholders for each capability.
+Explicit per-capability flags (including empty `--stt ""`, `--vtt ""` or `--ttv ""`) take precedence over selected profile fields, regardless of argument order. The override applies to that invocation and its child processes; the profile file is not modified.
+Selected fields override authored provider templates, environment defaults and
+the shipped default profile. Missing fields preserve the existing resolution rules. Empty `stt`
+disables transcription; empty `vtt` uses ITT frame sampling; empty `ttv` uses
+the existing TTI/ffmpeg fallback. Explicit source audio, supplied Vision VTT
+files and per-speaker `voices` flags remain authored inputs. Ensure voice
+flags are compatible with the selected engine.
+
+`MARKCUT_PROFILE=/absolute/profile.json` selects a process default, including
+hosted preview workers; `--profile` overrides it. Relative file paths are
+resolved at the caller's working directory. Keep the trusted profile unchanged
+while a command runs; never load executable profiles from untrusted media.
+Invalid files or fields fail before processing. Existing calls without profiles
+retain their legacy defaults unless a direct CLI override is supplied.
+`{markcut_root}` in a CLI template expands to the shell-quoted installed Markcut
+root; use it unquoted when referencing a bundled adapter. Generated media caches use effective command
+identity; preview/subtitle/vision results are isolated by provider configuration.
+Profile-generated Vision subtitles are referenced from `metadata.json` and
+kept in `.normalized/`; existing source-provided `<name>.vtt` files are preserved.
+
+#### Low-resource prototype profile
+
+[`profiles/prototype.json`](profiles/prototype.json) uses Edge TTS, multilingual
+Whisper tiny on CPU (two threads), and Browser ChatGPT/Codex vision with local
+VLM fallback disabled. VTT uses the existing frame-sampling path. TTI creates
+clearly recognizable FFmpeg color-bar placeholders instead of loading an image
+model; TTV uses the same placeholders via the existing three-second MP4 fallback.
+Real source media is unchanged. This profile is for iteration, not final delivery.
+Vision and Agent calls still require a configured remote provider; they can consume
+provider quota. Edge TTS requires network access and Whisper may download weights
+and dependencies on first use. Use `--storyboard` for structure-only preview
+without generated media. Browser speech playback is the existing hosted Preview
+feature, not a new profile option. Render resolution remains authored in the source.
+
 ### Global queue CLI template (opt-in)
 
 By default, Markcut routes generation and vision CLI subprocesses through its built-in SQLite execution queue. The single worker is started automatically on first use; no Neo or PM2 setup is required. Set `MARKCUT_QUEUE_ENABLED=0` to opt out. An explicit `MARKCUT_QUEUE_CLI_TEMPLATE` may override the default. `{command}` is the shell-quoted original command; the queue wrapper sets `MARKCUT_QUEUE_ACTIVE=1` for descendants to prevent re-entrance.

@@ -10,11 +10,12 @@ import { execSync, spawn } from "node:child_process";
 import { readFileSync, writeFileSync, mkdirSync, existsSync, copyFileSync, rmSync } from "node:fs";
 import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { templateArguments } from "../cli-profile.mjs";
 import { googleMapErrorLine, nativeMapMissingKey } from "./google-map-health.mjs";
 import {
   DEFAULT_TTS_CLI, DEFAULT_STT_CLI, DEFAULT_TTI_CLI, DEFAULT_TTV_CLI,
   DEFAULT_ITT_CLI, DEFAULT_VTT_CLI, DEFAULT_AGENT_CLI, DEFAULT_EDIT_CLI,
-  args,
+  args, PROFILE_PATH,
 } from "../config.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -47,7 +48,8 @@ npx @lalalic/markcut <command> [options]
 
 global options:
   --dev                                Use development build (unminified React error messages)
-  --show-clis                          Print all default CLI templates and exit
+  --show-clis                          Print effective CLI templates and exit
+  --profile <file.json>                 Select a trusted local CLI-template profile
 
   --tti <template>                     Override default TTI CLI template
   --tts <template>                     Override default TTS CLI template
@@ -224,7 +226,7 @@ async function main() {
 
   // --show-clis works as a command or a flag
   if (args.showClis || args.command === "--show-clis") {
-    console.log(`Default CLI 
+    console.log(`Default CLI${PROFILE_PATH ? ` (profile: ${PROFILE_PATH})` : ""}
 tti=${DEFAULT_TTI_CLI}
 
 ttv=${DEFAULT_TTV_CLI || "(empty — falls back to TTI + ffmpeg to produce a 3s MP4)"}
@@ -280,7 +282,7 @@ edit=${DEFAULT_EDIT_CLI}`);
       // Pass variant flags to the server
       const variantFlags = args.variant.map(v => `--variant=${v}`);
       const serverArgs = [playerServer, resolve(fileFlag), labelFlag, editFlag, storyboardFlag, portFlag, ...variantFlags].filter(Boolean);
-      const child = spawn("node", serverArgs, { cwd: ROOT, stdio: ["ignore", "pipe", "inherit"] });
+      const child = spawn("node", [...serverArgs, ...templateArguments(args.cliOverrides)], { cwd: ROOT, stdio: ["ignore", "pipe", "inherit"], env: {...process.env, ...(PROFILE_PATH ? {MARKCUT_PROFILE:PROFILE_PATH} : {})} });
       let serverReady = false;
       let stdoutBuffer = "";
       // Forward stdout and open browser once server is ready

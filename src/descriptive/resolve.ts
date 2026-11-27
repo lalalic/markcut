@@ -22,6 +22,7 @@ import {
   DEFAULT_TTI_CLI,
   DEFAULT_TTV_CLI,
 } from "../render/cli-tools";
+import { PROFILE_CLI_OVERRIDES, PROFILE_CACHE_KEY } from "../config.mjs";
 import { walkDown } from "../utils";
 import type { DescriptiveNode, DescriptiveRoot } from "./compiler";
 import { compileDescriptiveRoot, parseImportsBlock, extractDependencySpecs, resolveTemplateVars, resolveVariantOverrides } from "./compiler";
@@ -410,8 +411,8 @@ export async function resolveScripts(
 
   for (const { node, id, ttsOverride } of allScriptNodes) {
     scriptsDone++;
-    // TTS CLI: nearest ancestor `tts` (root.tts by default) → options → default
-    let ttsCli = ttsOverride ?? options.ttsCli ?? DEFAULT_TTS_CLI;
+    // Selected profile → nearest authored tts → options → default
+    let ttsCli = PROFILE_CLI_OVERRIDES.tts ?? ttsOverride ?? options.ttsCli ?? DEFAULT_TTS_CLI;
 
     // Per-speaker voice appends extra CLI flags from root voices config
     if (node.speaker && clone.voices) {
@@ -485,7 +486,7 @@ export async function resolveSubtitles(
   },
 ): Promise<DescriptiveRoot> {
   const clone: DescriptiveRoot = JSON.parse(JSON.stringify(root));
-  const sttCli = clone.stt ?? options.sttCli ?? DEFAULT_STT_CLI;
+  const sttCli = PROFILE_CLI_OVERRIDES.stt ?? clone.stt ?? options.sttCli ?? DEFAULT_STT_CLI;
   if (!sttCli) return clone;
 
   mkdirSync(options.outputDir, { recursive: true });
@@ -652,7 +653,7 @@ export async function resolveSubtitles(
   if (cueIndex > 1) {
     const mergedDir = options.mergedOutputDir ?? options.outputDir;
     mkdirSync(mergedDir, { recursive: true });
-    const mergedPath = join(mergedDir, "subtitles.vtt");
+    const mergedPath = join(mergedDir, PROFILE_CACHE_KEY ? `subtitles-${PROFILE_CACHE_KEY}.vtt` : "subtitles.vtt");
     writeFileSync(mergedPath, mergedLines.join("\n"), "utf-8");
     clone.subtitle = { ...(clone.subtitle ?? {}), src: mergedPath };
     console.log(`  ✅ STT: subtitles ready (${cueIndex - 1} cues)`);
@@ -731,12 +732,13 @@ export async function resolveGeneratedMedia(
     const ext = type === "image" ? "png" : "mp4";
 
     const cli = type === "image"
-      ? (clone.tti ?? options.ttiCli ?? DEFAULT_TTI_CLI)
-      : (clone.ttv ?? options.ttvCli ?? DEFAULT_TTV_CLI);
+      ? (PROFILE_CLI_OVERRIDES.tti ?? clone.tti ?? options.ttiCli ?? DEFAULT_TTI_CLI)
+      : (PROFILE_CLI_OVERRIDES.ttv ?? clone.ttv ?? options.ttvCli ?? DEFAULT_TTV_CLI);
 
     // Use the shared seed (from root, options, or content-derived default).
     const seed = options.seed;
-    const cacheKey = computeCacheKey({ prompt, cli, type, seed });
+    const ttiCmd = PROFILE_CLI_OVERRIDES.tti ?? clone.tti ?? options.ttiCli ?? DEFAULT_TTI_CLI;
+    const cacheKey = computeCacheKey({ prompt, cli, type, seed, ...(type === "video" ? {ttiCmd} : {}) });
     const outputPath = join(options.outputDir, `${cacheKey}.${ext}`);
 
     const label = type === "image" ? "TTI" : "TTV";
@@ -752,7 +754,6 @@ export async function resolveGeneratedMedia(
 
     try {
       console.log(`  🔊 ${label} (${done}/${total}): ${labelText}...`);
-      const ttiCmd = clone.tti ?? options.ttiCli ?? DEFAULT_TTI_CLI;
       const result = type === "image"
         ? generateTTI(prompt, outputPath, cli, seed)
         : generateTTV(prompt, outputPath, cli, ttiCmd, seed);
@@ -1055,7 +1056,7 @@ export async function resolveIncludes(
     ) ?? 3;
 
     // Create a stable filename from the absolute path
-    const hash = createHash("sha1").update(absPath).digest("hex").slice(0, 12);
+    const hash = createHash("sha1").update(absPath + (PROFILE_CACHE_KEY ? `\0${PROFILE_CACHE_KEY}` : "")).digest("hex").slice(0, 12);
     const compiledPath = join(outputDir, `${hash}.json`);
     const metaPath = join(outputDir, `${hash}.meta.json`);
 

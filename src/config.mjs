@@ -1,4 +1,4 @@
-import { fileURLToPath } from "node:url";
+import { extractProfileArgument, readCliProfile, profileCacheKey, DEFAULT_PROFILE_PATH, expandProfileTemplate } from "./cli-profile.mjs";
 
 /**
  * Default CLI templates and constants for the markcut pipeline.
@@ -13,18 +13,12 @@ import { fileURLToPath } from "node:url";
  */
 
 
+const selection = extractProfileArgument(process.argv.slice(2));
+export const PROFILE_PATH = selection.profilePath;
+const profile = readCliProfile(PROFILE_PATH);
+const defaults = readCliProfile(DEFAULT_PROFILE_PATH);
 export const args=(function parseArgs(argv) {
-  const CLI_OVERRIDE_FLAGS = {
-    "--itt": "itt",
-    "--vtt": "vtt",
-    "--stt": "stt",
-    "--tts": "tts",
-    "--agent": "agent",
-    "--edit-cli": "editCli",
-    "--tti": "tti",
-    "--ttv": "ttv"
-  };
-  const args = { command: "", file: "", output: "", forceNew: false, verbose: false, dev: false, label: false, edit: false, storyboard: false, noBrowser: false, chat: false, port: 3001, compile: false, cli: false, showClis: false, scriptOutputDir: "", mediaOutputDir: "", variant: [], cliOverrides: {} };
+  const args = { command: "", file: "", output: "", forceNew: false, verbose: false, dev: false, label: false, edit: false, storyboard: false, noBrowser: false, chat: false, port: 3001, compile: false, cli: false, showClis: false, scriptOutputDir: "", mediaOutputDir: "", variant: [], cliOverrides: selection.cliOverrides };
   let i = 2;
   if (argv[i]) args.command = argv[i++];
   if (argv[i] && !argv[i].startsWith("--")) args.file = argv[i++];
@@ -47,13 +41,16 @@ export const args=(function parseArgs(argv) {
     else if (flag.startsWith("--port=")) args.port = parseInt(flag.split("=")[1], 10);
     else if (flag === "--variant" && argv[i]) args.variant.push(argv[i++]);
     else if (flag.startsWith("--variant=")) args.variant.push(flag.split("=")[1]);
-    else if (CLI_OVERRIDE_FLAGS[flag] && argv[i]) {
-      const key = CLI_OVERRIDE_FLAGS[flag];
-      args.cliOverrides[key] = argv[i++];
-    }
   }
   return args;
-})(process.argv);
+})([...process.argv.slice(0,2), ...selection.argv]);
+
+// Explicit caller profile fields win over authored provider templates.
+// Unspecified fields retain legacy behavior; direct flags win over a selected profile.
+export const PROFILE_CLI_OVERRIDES = Object.fromEntries(Object.entries({...profile, ...args.cliOverrides}).map(([key,value])=>[key,expandProfileTemplate(value)]));
+function cli(key, env) {
+  return PROFILE_CLI_OVERRIDES[key] ?? expandProfileTemplate(process.env[env] || defaults[key]);
+}
 
 
 // ── Media type sets ───────────────────────────────────────────────────────
@@ -88,20 +85,17 @@ export const DEFAULT_VTT_SAMPLE_INTERVAL = Number(process.env.MARKCUT_VTT_SAMPLE
  */
 
 
-/** Speech-to-text CLI. Override via --stt flag or MARKCUT_STT_CLI env var. */
-export const DEFAULT_STT_CLI = args.cliOverrides.stt || process.env.MARKCUT_STT_CLI || 'uvx --from openai-whisper whisper "{input}" --output_format vtt --output_dir "{output}" --word_timestamps True --max_line_count 1 --max_line_width 14';
-/** Text-to-speech CLI. Override via --tts flag or MARKCUT_TTS_CLI env var. */
-export const DEFAULT_TTS_CLI = args.cliOverrides.tts || process.env.MARKCUT_TTS_CLI || 'uvx edge-tts --voice "zh-CN-YunxiNeural" --text "{input}" --write-media "{output}"';
-/** Default agent CLI. Override via --agent flag or MARKCUT_AGENT_CLI env var. */
-export const DEFAULT_AGENT_CLI = args.cliOverrides.agent || process.env.MARKCUT_AGENT_CLI || 'npx pi -p {prompt}';
-/** Default edit agent CLI. Override via --edit-cli flag or MARKCUT_EDIT_CLI env var. */
-export const DEFAULT_EDIT_CLI = args.cliOverrides.editCli || process.env.MARKCUT_EDIT_CLI || 'npx pi --session-id {sessionid} --system-prompt {systemprompt} -p {prompt}';
-/** Text-to-image CLI. Override via --tti flag or MARKCUT_TTI_CLI env var. */
-export const DEFAULT_TTI_CLI = args.cliOverrides.tti || process.env.MARKCUT_TTI_CLI || 'uvx --from mflux mflux-generate-flux2 --model flux2-klein-4b --steps 2 --prompt "{input}" --output "{output}" --seed {seed}';
-/** Text-to-video CLI. Override via --ttv flag or MARKCUT_TTV_CLI env var. */
-export const DEFAULT_TTV_CLI = args.cliOverrides.ttv || process.env.MARKCUT_TTV_CLI || '';
-const DEFAULT_VISION_INFER = fileURLToPath(new URL("./vision/default-infer.mjs", import.meta.url));
-/** Image-to-text CLI. Override via --itt flag or MARKCUT_ITT_CLI env var. */
-export const DEFAULT_ITT_CLI = args.cliOverrides.itt || process.env.MARKCUT_ITT_CLI || `node ${JSON.stringify(DEFAULT_VISION_INFER)} --prompt "{prompt}" {input}`;
-/** Video-to-text CLI. Override via --vtt flag or MARKCUT_VTT_CLI env var. Empty by default so Vision uses chronological frame extraction through ITT. */
-export const DEFAULT_VTT_CLI = args.cliOverrides.vtt || process.env.MARKCUT_VTT_CLI || '';
+// Fallback templates are owned by profiles/default.json; environment and caller
+// selections override them without editing the shipped file.
+export const DEFAULT_STT_CLI = cli("stt", "MARKCUT_STT_CLI");
+export const DEFAULT_TTS_CLI = cli("tts", "MARKCUT_TTS_CLI");
+export const DEFAULT_AGENT_CLI = cli("agent", "MARKCUT_AGENT_CLI");
+export const DEFAULT_EDIT_CLI = cli("editCli", "MARKCUT_EDIT_CLI");
+export const DEFAULT_TTI_CLI = cli("tti", "MARKCUT_TTI_CLI");
+export const DEFAULT_TTV_CLI = cli("ttv", "MARKCUT_TTV_CLI");
+export const DEFAULT_ITT_CLI = cli("itt", "MARKCUT_ITT_CLI");
+export const DEFAULT_VTT_CLI = cli("vtt", "MARKCUT_VTT_CLI");
+
+// Explicit caller configuration includes the override mask, since an authored
+// template can differ even when an explicit value equals a fallback value.
+export const PROFILE_CACHE_KEY = PROFILE_PATH || Object.keys(PROFILE_CLI_OVERRIDES).length ? profileCacheKey({tts:DEFAULT_TTS_CLI, stt:DEFAULT_STT_CLI, itt:DEFAULT_ITT_CLI, vtt:DEFAULT_VTT_CLI, tti:DEFAULT_TTI_CLI, ttv:DEFAULT_TTV_CLI, agent:DEFAULT_AGENT_CLI, editCli:DEFAULT_EDIT_CLI}, PROFILE_CLI_OVERRIDES) : "";

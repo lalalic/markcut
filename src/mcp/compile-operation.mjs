@@ -6,6 +6,7 @@ import {fileURLToPath} from "node:url";
 import {EXPORT_ROOT,publicOrigin,resolvePreviewPath} from "./remote-assets.mjs";
 import {validateMarkdownPath} from "./preview.mjs";
 import {fingerprintInputs} from "./source-fingerprint.mjs";
+import {templateArguments} from "../cli-profile.mjs";
 const folder=join(EXPORT_ROOT,"operations");
 const RETAIN_MS=24*60*60*1000;
 function cleanupOldOperations(){
@@ -27,7 +28,7 @@ export function writeOperation(id,data){
  writeFileSync(temp,JSON.stringify(data),{mode:0o644});
  renameSync(temp,join(folder,id+".json"));
 }
-export function startCompileOperation(path,review={delivery:"text"}){
+export function startCompileOperation(path,review={delivery:"text"},selection={}){
  const valid=validateMarkdownPath(resolvePreviewPath(path));
  if(!statSync(valid).isFile())throw new Error("Preview source must be a Markdown file");
  const input=fingerprintInputs(valid);
@@ -36,7 +37,7 @@ export function startCompileOperation(path,review={delivery:"text"}){
  const id=randomUUID(),startedAt=Date.now();
   writeOperation(id,{id,state:"compiling",stage:"queued",startedAt,requestedPath:path});
  const worker=fileURLToPath(new URL("./compile-worker.mjs",import.meta.url));
-  const child=spawn(process.execPath,[worker,id,valid,path,sourceHash,JSON.stringify(review)],{detached:true,stdio:"ignore"});
+  const child=spawn(process.execPath,[worker,id,valid,path,sourceHash,JSON.stringify(review),...(selection.profilePath ? ["--profile",selection.profilePath] : []),...templateArguments(selection.cliOverrides)],{detached:true,stdio:"ignore"});
  child.on("error",e=>{
   writeOperation(id,{id,state:"failed",stage:"failed",startedAt,requestedPath:path,error:e.message});
  });

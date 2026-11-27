@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { PROFILE_CACHE_KEY } from "../config.mjs";
 import { mkdir, writeFile, readdir, rename, rm, stat, utimes } from "node:fs/promises";
 import { access, readFile } from "node:fs/promises";
 import { constants as fsConstants, readFileSync, existsSync } from "node:fs";
@@ -160,7 +161,7 @@ export async function ensureVideoPreview(path, options = {}) {
   const input=fingerprintInputs(validatedPath);
   const source=input.source.toString("utf8");
   const sourceHash=createHash("sha256").update(input.source).update("\0").update(JSON.stringify(input.assets)).digest("hex");
-  const key=validatedPath+"\0"+sourceHash;
+  const key=validatedPath+"\0"+sourceHash+"\0"+PROFILE_CACHE_KEY;
   if(pendingCompiles.has(key))return pendingCompiles.get(key);
   const prior=activeCompilesByPath.get(validatedPath)||Promise.resolve();
   const task=prior.catch(()=>{}).then(async()=>{
@@ -186,7 +187,7 @@ export async function ensureVideoPreview(path, options = {}) {
     const hash=createHash("sha256").update(validatedPath).update("\0")
       .update(source).update("\0").update(JSON.stringify(referencedAssets)).update("\0").update(audio.audioSrc||"")
       .update("\0").update(process.env.GOOGLE_MAPS_API_KEY||"")
-      .update("\0").update("map-footage-v4-custom-route-marker").digest("hex");
+      .update("\0").update("map-footage-v4-custom-route-marker").update(PROFILE_CACHE_KEY ? "\0"+PROFILE_CACHE_KEY : "").digest("hex");
     const id=hash;
     let index={entries:[]};
     try {index=JSON.parse(await readFile(indexFile,"utf8"));} catch{}

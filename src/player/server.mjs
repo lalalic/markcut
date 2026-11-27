@@ -17,7 +17,7 @@ import { fileURLToPath } from "node:url";
 import { isDescriptiveRoot, resolveAndCompile, resolveAndCompileMarkdown, parseImportsBlock, extractDependencySpecs } from "./pipeline.mjs";
 import { bundleFromEntries } from "./bundler.mjs";
 import { extractScenes, MIME, serveFile, handleShutdown } from "./server-shared.mjs";
-import { DEFAULT_EDIT_CLI, DEFAULT_STT_CLI, GOOGLE_MAPS_API_KEY } from "../config.mjs";
+import { DEFAULT_EDIT_CLI, DEFAULT_STT_CLI, GOOGLE_MAPS_API_KEY, PROFILE_CACHE_KEY } from "../config.mjs";
 import {loadEditorDecision,editorDecisionToMarkdown} from "../editor-decision/index.mjs";
 
 
@@ -176,7 +176,7 @@ function handleAgentLine(obj) {
 function startAgentProcess() {
   if (!MODE_EDIT) return;
 
-  const agentCli = process.env.MARKCUT_EDIT_CLI || DEFAULT_EDIT_CLI;
+  const agentCli = DEFAULT_EDIT_CLI;
 
   const fileLabel = VIDEO_JSON.split("/").pop();
   const sessionId = VIDEO_JSON.replace(/[^a-zA-Z0-9\-_.]/g, "_").replace(/^[^a-zA-Z0-9]+/, "").replace(/[^a-zA-Z0-9]+$/, "");
@@ -303,7 +303,7 @@ const INCLUDE_CACHE_DIR = join(MARKCUT_DIR, "includes");
 const COMPONENT_OUTPUT_DIR = join(MARKCUT_DIR, "components");
 /** Get the per-variant directory under .markcut/<basename>/<label>/ */
 function variantDir(label) {
-  return join(MARKCUT_BASE, BASENAME, label);
+  return join(MARKCUT_BASE, BASENAME, label, ...(PROFILE_CACHE_KEY ? [PROFILE_CACHE_KEY] : []));
 }
 
 /** Get the compiled.json path for a given variant */

@@ -1215,9 +1215,9 @@ init_compiler();
 
 // src/descriptive/resolve.ts
 import { execSync as execSync2 } from "node:child_process";
-import { existsSync as existsSync2, mkdirSync as mkdirSync2, readFileSync, writeFileSync, renameSync } from "node:fs";
-import { createHash } from "node:crypto";
-import { join, dirname as dirname3, resolve as resolvePath, relative } from "node:path";
+import { existsSync as existsSync3, mkdirSync as mkdirSync2, readFileSync as readFileSync2, writeFileSync, renameSync } from "node:fs";
+import { createHash as createHash2 } from "node:crypto";
+import { join as join2, dirname as dirname4, resolve as resolvePath, relative } from "node:path";
 
 // src/render/cli-tools.ts
 import { execSync } from "node:child_process";
@@ -1229,34 +1229,97 @@ function shellQuote(value2) {
   return "'" + String(value2).replace(/'/g, "'\\''") + "'";
 }
 var queueWorker = resolve(dirname(fileURLToPath(import.meta.url)), "queue-worker.mjs");
-function queueCommand(command, env = process.env) {
+function queueCommand(command, env = process.env, { timeoutMs } = {}) {
+  if (timeoutMs !== void 0 && (!Number.isSafeInteger(timeoutMs) || timeoutMs < 0))
+    throw Error("Invalid queue timeout");
   const template = env.MARKCUT_QUEUE_CLI_TEMPLATE;
   if (env.MARKCUT_QUEUE_ACTIVE === "1" || env.MARKCUT_QUEUE_ENABLED === "0") return command;
   if (!template) {
-    return `${shellQuote(process.execPath)} ${shellQuote(queueWorker)} run --queue media-ai -- /bin/sh -c ${shellQuote(`MARKCUT_QUEUE_ACTIVE=1 ${command}`)}`;
+    return `${shellQuote(process.execPath)} ${shellQuote(queueWorker)} run --queue media-ai${timeoutMs === void 0 ? "" : ` --timeout ${timeoutMs}`} -- /bin/sh -c ${shellQuote(`MARKCUT_QUEUE_ACTIVE=1 ${command}`)}`;
   }
   if (!template.includes("{command}")) throw Error("MARKCUT_QUEUE_CLI_TEMPLATE must contain {command}");
-  return template.replaceAll("{command}", shellQuote(`MARKCUT_QUEUE_ACTIVE=1 ${command}`));
+  if (timeoutMs === 0 && !template.includes("{timeout}"))
+    console.warn("Markcut: custom queue template cannot disable its own deadline without {timeout}");
+  return template.replaceAll("{timeout}", String(timeoutMs ?? 3e5)).replaceAll("{command}", shellQuote(`MARKCUT_QUEUE_ACTIVE=1 ${command}`));
 }
 
 // src/render/cli-tools.ts
-import { existsSync, mkdirSync } from "node:fs";
-import { dirname as dirname2 } from "node:path";
+import { existsSync as existsSync2, mkdirSync } from "node:fs";
+import { dirname as dirname3 } from "node:path";
+
+// src/cli-profile.mjs
+import { readFileSync, existsSync } from "node:fs";
+import { resolve as resolve2, dirname as dirname2, join } from "node:path";
+import { fileURLToPath as fileURLToPath2 } from "node:url";
+import { createHash } from "node:crypto";
+var sourceDir = dirname2(fileURLToPath2(import.meta.url));
+var rootCandidates = [resolve2(sourceDir, ".."), resolve2(sourceDir, "../..")];
+var MARKCUT_ROOT = rootCandidates.find((root) => existsSync(join(root, "profiles", "default.json"))) ?? rootCandidates[0];
+var DEFAULT_PROFILE_PATH = join(MARKCUT_ROOT, "profiles", "default.json");
+function expandProfileTemplate(template) {
+  const quotedRoot = "'" + MARKCUT_ROOT.replaceAll("'", "'\\''") + "'";
+  return template.replaceAll("{markcut_root}", () => quotedRoot);
+}
+var CLI_PROFILE_KEYS = Object.freeze(["tts", "stt", "itt", "vtt", "tti", "ttv", "agent", "editCli"]);
+var OPTIONAL_EMPTY = /* @__PURE__ */ new Set(["stt", "vtt", "ttv"]);
+var TEMPLATE_FLAGS = Object.fromEntries(CLI_PROFILE_KEYS.map((key) => [key === "editCli" ? "--edit-cli" : `--${key}`, key]));
+function validateTemplate(key, value2) {
+  if (typeof value2 !== "string" || !value2.trim() && !(value2 === "" && OPTIONAL_EMPTY.has(key)))
+    throw new Error(`Invalid Markcut CLI template: ${key}`);
+}
+function readCliProfile(path) {
+  if (!path) return {};
+  let profile2;
+  try {
+    profile2 = JSON.parse(readFileSync(path, "utf8"));
+  } catch (error) {
+    throw new Error(`Invalid Markcut profile ${path}: ${error.message}`);
+  }
+  if (!profile2 || typeof profile2 !== "object" || Array.isArray(profile2))
+    throw new Error(`Markcut profile must be a JSON object: ${path}`);
+  for (const [key, value2] of Object.entries(profile2)) {
+    if (!CLI_PROFILE_KEYS.includes(key) || typeof value2 !== "string" || !value2.trim() && !(value2 === "" && OPTIONAL_EMPTY.has(key)))
+      throw new Error(`Invalid Markcut profile field: ${key}`);
+  }
+  if (path === DEFAULT_PROFILE_PATH && CLI_PROFILE_KEYS.some((key) => !Object.hasOwn(profile2, key)))
+    throw new Error(`Incomplete Markcut default profile: ${path}`);
+  return profile2;
+}
+function extractProfileArgument(argv, env = process.env) {
+  const rest = [], cliOverrides = {};
+  let selected;
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    if (arg === "--profile" || arg.startsWith("--profile=")) {
+      if (selected !== void 0) throw new Error("Duplicate --profile");
+      selected = arg === "--profile" ? argv[++i] : arg.slice("--profile=".length);
+      if (!selected || selected.startsWith("--")) throw new Error("--profile requires a JSON file path");
+    } else {
+      const equals = arg.indexOf("=");
+      const flag = equals < 0 ? arg : arg.slice(0, equals);
+      if (Object.hasOwn(TEMPLATE_FLAGS, flag)) {
+        const key = TEMPLATE_FLAGS[flag];
+        const value2 = equals < 0 ? argv[++i] : arg.slice(equals + 1);
+        if (value2 === void 0 || equals < 0 && value2.startsWith("--")) throw new Error(`${flag} requires a CLI template`);
+        validateTemplate(key, value2);
+        cliOverrides[key] = value2;
+      } else rest.push(arg);
+    }
+  }
+  const path = selected ?? env.MARKCUT_PROFILE;
+  return { argv: rest, profilePath: path ? resolve2(path) : "", cliOverrides };
+}
+function profileCacheKey(templates, overrides = {}) {
+  return createHash("sha256").update(JSON.stringify(CLI_PROFILE_KEYS.map((key) => [key, templates[key], Object.hasOwn(overrides, key)]))).digest("hex").slice(0, 16);
+}
 
 // src/config.mjs
-import { fileURLToPath as fileURLToPath2 } from "node:url";
+var selection = extractProfileArgument(process.argv.slice(2));
+var PROFILE_PATH = selection.profilePath;
+var profile = readCliProfile(PROFILE_PATH);
+var defaults = readCliProfile(DEFAULT_PROFILE_PATH);
 var args = (function parseArgs(argv) {
-  const CLI_OVERRIDE_FLAGS = {
-    "--itt": "itt",
-    "--vtt": "vtt",
-    "--stt": "stt",
-    "--tts": "tts",
-    "--agent": "agent",
-    "--edit-cli": "editCli",
-    "--tti": "tti",
-    "--ttv": "ttv"
-  };
-  const args2 = { command: "", file: "", output: "", forceNew: false, verbose: false, dev: false, label: false, edit: false, storyboard: false, noBrowser: false, chat: false, port: 3001, compile: false, cli: false, showClis: false, scriptOutputDir: "", mediaOutputDir: "", variant: [], cliOverrides: {} };
+  const args2 = { command: "", file: "", output: "", forceNew: false, verbose: false, dev: false, label: false, edit: false, storyboard: false, noBrowser: false, chat: false, port: 3001, compile: false, cli: false, showClis: false, scriptOutputDir: "", mediaOutputDir: "", variant: [], cliOverrides: selection.cliOverrides };
   let i = 2;
   if (argv[i]) args2.command = argv[i++];
   if (argv[i] && !argv[i].startsWith("--")) args2.file = argv[i++];
@@ -1279,27 +1342,27 @@ var args = (function parseArgs(argv) {
     else if (flag.startsWith("--port=")) args2.port = parseInt(flag.split("=")[1], 10);
     else if (flag === "--variant" && argv[i]) args2.variant.push(argv[i++]);
     else if (flag.startsWith("--variant=")) args2.variant.push(flag.split("=")[1]);
-    else if (CLI_OVERRIDE_FLAGS[flag] && argv[i]) {
-      const key = CLI_OVERRIDE_FLAGS[flag];
-      args2.cliOverrides[key] = argv[i++];
-    }
   }
   return args2;
-})(process.argv);
+})([...process.argv.slice(0, 2), ...selection.argv]);
+var PROFILE_CLI_OVERRIDES = Object.fromEntries(Object.entries({ ...profile, ...args.cliOverrides }).map(([key, value2]) => [key, expandProfileTemplate(value2)]));
+function cli(key, env) {
+  return PROFILE_CLI_OVERRIDES[key] ?? expandProfileTemplate(process.env[env] || defaults[key]);
+}
 var MAX_IMAGE_DIMENSION = Number(process.env.MARKCUT_MAX_IMAGE_DIMENSION) || 384;
 var MAX_VIDEO_DURATION = Number(process.env.MARKCUT_MAX_VIDEO_DURATION) || 60;
 var MAX_VIDEO_DIMENSION = Number(process.env.MARKCUT_MAX_VIDEO_DIMENSION) || 360;
 var GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY || "";
 var DEFAULT_VTT_SAMPLE_INTERVAL = Number(process.env.MARKCUT_VTT_SAMPLE_INTERVAL) || 5;
-var DEFAULT_STT_CLI = args.cliOverrides.stt || process.env.MARKCUT_STT_CLI || 'uvx --from openai-whisper whisper "{input}" --output_format vtt --output_dir "{output}" --word_timestamps True --max_line_count 1 --max_line_width 14';
-var DEFAULT_TTS_CLI = args.cliOverrides.tts || process.env.MARKCUT_TTS_CLI || 'uvx edge-tts --voice "zh-CN-YunxiNeural" --text "{input}" --write-media "{output}"';
-var DEFAULT_AGENT_CLI = args.cliOverrides.agent || process.env.MARKCUT_AGENT_CLI || "npx pi -p {prompt}";
-var DEFAULT_EDIT_CLI = args.cliOverrides.editCli || process.env.MARKCUT_EDIT_CLI || "npx pi --session-id {sessionid} --system-prompt {systemprompt} -p {prompt}";
-var DEFAULT_TTI_CLI = args.cliOverrides.tti || process.env.MARKCUT_TTI_CLI || 'uvx --from mflux mflux-generate-flux2 --model flux2-klein-4b --steps 2 --prompt "{input}" --output "{output}" --seed {seed}';
-var DEFAULT_TTV_CLI = args.cliOverrides.ttv || process.env.MARKCUT_TTV_CLI || "";
-var DEFAULT_VISION_INFER = fileURLToPath2(new URL("./vision/default-infer.mjs", import.meta.url));
-var DEFAULT_ITT_CLI = args.cliOverrides.itt || process.env.MARKCUT_ITT_CLI || `node ${JSON.stringify(DEFAULT_VISION_INFER)} --prompt "{prompt}" {input}`;
-var DEFAULT_VTT_CLI = args.cliOverrides.vtt || process.env.MARKCUT_VTT_CLI || "";
+var DEFAULT_STT_CLI = cli("stt", "MARKCUT_STT_CLI");
+var DEFAULT_TTS_CLI = cli("tts", "MARKCUT_TTS_CLI");
+var DEFAULT_AGENT_CLI = cli("agent", "MARKCUT_AGENT_CLI");
+var DEFAULT_EDIT_CLI = cli("editCli", "MARKCUT_EDIT_CLI");
+var DEFAULT_TTI_CLI = cli("tti", "MARKCUT_TTI_CLI");
+var DEFAULT_TTV_CLI = cli("ttv", "MARKCUT_TTV_CLI");
+var DEFAULT_ITT_CLI = cli("itt", "MARKCUT_ITT_CLI");
+var DEFAULT_VTT_CLI = cli("vtt", "MARKCUT_VTT_CLI");
+var PROFILE_CACHE_KEY = PROFILE_PATH || Object.keys(PROFILE_CLI_OVERRIDES).length ? profileCacheKey({ tts: DEFAULT_TTS_CLI, stt: DEFAULT_STT_CLI, itt: DEFAULT_ITT_CLI, vtt: DEFAULT_VTT_CLI, tti: DEFAULT_TTI_CLI, ttv: DEFAULT_TTV_CLI, agent: DEFAULT_AGENT_CLI, editCli: DEFAULT_EDIT_CLI }, PROFILE_CLI_OVERRIDES) : "";
 
 // src/render/cli-tools.ts
 function substituteCli(template, input, output, seed) {
@@ -1319,47 +1382,47 @@ function substituteCli(template, input, output, seed) {
   const safeSeed = seed !== void 0 ? String(seed) : "";
   return template.replace(/\{input\}/g, safeInput).replace(/\{output\}/g, safeOutput).replace(/\{seed\}/g, safeSeed);
 }
-function generateTTS(text3, outputPath, cli) {
-  mkdirSync(dirname2(outputPath), { recursive: true });
-  const cmd = substituteCli(cli ?? DEFAULT_TTS_CLI, text3, outputPath);
+function generateTTS(text3, outputPath, cli2) {
+  mkdirSync(dirname3(outputPath), { recursive: true });
+  const cmd = substituteCli(cli2 ?? DEFAULT_TTS_CLI, text3, outputPath);
   try {
     execSync(queueCommand(cmd), { stdio: "pipe" });
   } catch (e) {
     console.warn(`  \u26A0 TTS failed: ${e.message}`);
     return "";
   }
-  return existsSync(outputPath) ? outputPath : "";
+  return existsSync2(outputPath) ? outputPath : "";
 }
-async function generateSTT(audioPath, outputDir, cli) {
-  const cmd = substituteCli(cli ?? DEFAULT_STT_CLI, audioPath, outputDir);
+async function generateSTT(audioPath, outputDir, cli2) {
+  const cmd = substituteCli(cli2 ?? DEFAULT_STT_CLI, audioPath, outputDir);
   try {
     execSync(queueCommand(cmd), { stdio: "pipe" });
   } catch (e) {
     console.warn(`  \u26A0 STT failed: ${e.message}`);
   }
 }
-function generateTTI(prompt, outputPath, cli, seed) {
-  mkdirSync(dirname2(outputPath), { recursive: true });
-  const cmd = substituteCli(cli ?? DEFAULT_TTI_CLI, prompt, outputPath, seed);
+function generateTTI(prompt, outputPath, cli2, seed) {
+  mkdirSync(dirname3(outputPath), { recursive: true });
+  const cmd = substituteCli(cli2 ?? DEFAULT_TTI_CLI, prompt, outputPath, seed);
   try {
     execSync(queueCommand(cmd), {
       encoding: "utf-8",
       stdio: ["pipe", "pipe", "pipe"],
       timeout: 3e5,
-      env: { ...process.env, TTI_CMD: cli ?? DEFAULT_TTI_CLI }
+      env: { ...process.env, TTI_CMD: cli2 ?? DEFAULT_TTI_CLI }
     });
   } catch (e) {
     console.error(`  \u2717 TTI failed: ${e.message}`);
     return "";
   }
-  return existsSync(outputPath) ? outputPath : "";
+  return existsSync2(outputPath) ? outputPath : "";
 }
-function generateTTV(prompt, outputPath, cli, ttiCmd, seed) {
-  mkdirSync(dirname2(outputPath), { recursive: true });
-  if (!cli) {
+function generateTTV(prompt, outputPath, cli2, ttiCmd, seed) {
+  mkdirSync(dirname3(outputPath), { recursive: true });
+  if (!cli2) {
     const pngPath = outputPath.replace(/\.mp4$/, ".png");
     const imageResult = generateTTI(prompt, pngPath, ttiCmd, seed);
-    if (!imageResult || !existsSync(imageResult)) {
+    if (!imageResult || !existsSync2(imageResult)) {
       console.error(`  \u2717 TTV: TTI step produced no image for "${prompt.slice(0, 50)}..."`);
       return "";
     }
@@ -1376,9 +1439,9 @@ function generateTTV(prompt, outputPath, cli, ttiCmd, seed) {
       execSync(`rm "${pngPath}"`, { stdio: "pipe" });
     } catch {
     }
-    return existsSync(outputPath) ? outputPath : "";
+    return existsSync2(outputPath) ? outputPath : "";
   }
-  const cmd = substituteCli(cli, prompt, outputPath, seed);
+  const cmd = substituteCli(cli2, prompt, outputPath, seed);
   try {
     execSync(queueCommand(cmd), {
       encoding: "utf-8",
@@ -1390,7 +1453,7 @@ function generateTTV(prompt, outputPath, cli, ttiCmd, seed) {
     console.error(`  \u2717 TTV failed: ${e.message}`);
     return "";
   }
-  return existsSync(outputPath) ? outputPath : "";
+  return existsSync2(outputPath) ? outputPath : "";
 }
 
 // src/descriptive/resolve.ts
@@ -1796,9 +1859,9 @@ var VFile = class {
    * @returns {undefined}
    *   Nothing.
    */
-  set dirname(dirname4) {
+  set dirname(dirname5) {
     assertPath(this.basename, "dirname");
-    this.path = default2.join(dirname4 || "", this.basename);
+    this.path = default2.join(dirname5 || "", this.basename);
   }
   /**
    * Get the extname (including dot) (example: `'.js'`).
@@ -2397,7 +2460,7 @@ var Processor = class _Processor extends CallableInstance {
     assertParser("process", this.parser || this.Parser);
     assertCompiler("process", this.compiler || this.Compiler);
     return done ? executor(void 0, done) : new Promise(executor);
-    function executor(resolve2, reject) {
+    function executor(resolve3, reject) {
       const realFile = vfile(file);
       const parseTree = (
         /** @type {HeadTree extends undefined ? Node : HeadTree} */
@@ -2428,8 +2491,8 @@ var Processor = class _Processor extends CallableInstance {
       function realDone(error, file2) {
         if (error || !file2) {
           reject(error);
-        } else if (resolve2) {
-          resolve2(file2);
+        } else if (resolve3) {
+          resolve3(file2);
         } else {
           ok(done, "`done` is defined if `resolve` is not");
           done(void 0, file2);
@@ -2531,7 +2594,7 @@ var Processor = class _Processor extends CallableInstance {
       file = void 0;
     }
     return done ? executor(void 0, done) : new Promise(executor);
-    function executor(resolve2, reject) {
+    function executor(resolve3, reject) {
       ok(
         typeof file !== "function",
         "`file` can\u2019t be a `done` anymore, we checked"
@@ -2545,8 +2608,8 @@ var Processor = class _Processor extends CallableInstance {
         );
         if (error) {
           reject(error);
-        } else if (resolve2) {
-          resolve2(resultingTree);
+        } else if (resolve3) {
+          resolve3(resultingTree);
         } else {
           ok(done, "`done` is defined if `resolve` is not");
           done(void 0, resultingTree, file2);
@@ -5374,10 +5437,10 @@ function resolveAll(constructs2, events, context) {
   const called = [];
   let index2 = -1;
   while (++index2 < constructs2.length) {
-    const resolve2 = constructs2[index2].resolveAll;
-    if (resolve2 && !called.includes(resolve2)) {
-      events = resolve2(events, context);
-      called.push(resolve2);
+    const resolve3 = constructs2[index2].resolveAll;
+    if (resolve3 && !called.includes(resolve3)) {
+      events = resolve3(events, context);
+      called.push(resolve3);
     }
   }
   return events;
@@ -11027,7 +11090,7 @@ function applyRootAttrs(root, attrs) {
 // src/descriptive/resolve.ts
 function computeCacheKey(parts) {
   const json = JSON.stringify(parts);
-  return createHash("sha1").update(json).digest("hex").slice(0, 12);
+  return createHash2("sha1").update(json).digest("hex").slice(0, 12);
 }
 function firstWords(text3, n) {
   if (!text3) return "";
@@ -11088,7 +11151,7 @@ function resolveMediaSrc(src, targetWidth, targetHeight, baseDir) {
   const ctx = { width: targetWidth, height: targetHeight, fps: 30, variant: "video" };
   const exactPath = resolveTemplateVars(src, ctx);
   const exactAbs = resolveSrc(exactPath, baseDir);
-  if (existsSync2(exactAbs)) {
+  if (existsSync3(exactAbs)) {
     return exactAbs;
   }
   const targetRatio = targetWidth / targetHeight;
@@ -11100,7 +11163,7 @@ function resolveMediaSrc(src, targetWidth, targetHeight, baseDir) {
   for (const res of scored) {
     const candidate = resolveTemplateVars(src, { width: res.width, height: res.height, fps: 30, variant: "video" });
     const candidateAbs = resolveSrc(candidate, baseDir);
-    if (existsSync2(candidateAbs)) {
+    if (existsSync3(candidateAbs)) {
       console.log(`  \u{1F4D0} Media src matched: ${candidate} (${res.width}x${res.height}) for target ${targetWidth}x${targetHeight}`);
       return candidateAbs;
     }
@@ -11227,7 +11290,7 @@ async function resolveScripts(root, options) {
   }
   for (const { node: node2, id, ttsOverride } of allScriptNodes) {
     scriptsDone++;
-    let ttsCli = ttsOverride ?? options.ttsCli ?? DEFAULT_TTS_CLI;
+    let ttsCli = PROFILE_CLI_OVERRIDES.tts ?? ttsOverride ?? options.ttsCli ?? DEFAULT_TTS_CLI;
     if (node2.speaker && clone.voices) {
       const speakerVoice = clone.voices[node2.speaker];
       if (speakerVoice) {
@@ -11235,11 +11298,11 @@ async function resolveScripts(root, options) {
       }
     }
     const cacheKey = computeCacheKey({ script: node2.script, cli: ttsCli });
-    const audioPath = join(options.outputDir, `${cacheKey}.mp3`);
+    const audioPath = join2(options.outputDir, `${cacheKey}.mp3`);
     let generated;
     const speakerLabel = node2.speaker ? `${node2.speaker}: ` : "";
     const label = `${speakerLabel}${firstWords(node2.script, 8)}`;
-    if (existsSync2(audioPath)) {
+    if (existsSync3(audioPath)) {
       generated = audioPath;
       cacheHits++;
       console.log(`  \u2713 TTS: ${label} (cached)`);
@@ -11266,7 +11329,7 @@ async function resolveScripts(root, options) {
 }
 async function resolveSubtitles(root, options) {
   const clone = JSON.parse(JSON.stringify(root));
-  const sttCli = clone.stt ?? options.sttCli ?? DEFAULT_STT_CLI;
+  const sttCli = PROFILE_CLI_OVERRIDES.stt ?? clone.stt ?? options.sttCli ?? DEFAULT_STT_CLI;
   if (!sttCli) return clone;
   mkdirSync2(options.outputDir, { recursive: true });
   const clips = [];
@@ -11315,20 +11378,20 @@ async function resolveSubtitles(root, options) {
   let cueIndex = 1;
   let sttFailedCount = 0;
   for (const { audioSrc, offset, speaker } of clips) {
-    const audioHash = existsSync2(audioSrc) ? createHash("sha1").update(readFileSync(audioSrc)).digest("hex").slice(0, 12) : audioSrc;
+    const audioHash = existsSync3(audioSrc) ? createHash2("sha1").update(readFileSync2(audioSrc)).digest("hex").slice(0, 12) : audioSrc;
     const sttCacheKey = computeCacheKey({ audioHash, cli: sttCli });
     const clipName = audioSrc.split("/").pop();
-    const expectedVtt = join(options.outputDir, `${sttCacheKey}.vtt`);
+    const expectedVtt = join2(options.outputDir, `${sttCacheKey}.vtt`);
     let vttPath = null;
-    if (existsSync2(expectedVtt)) {
+    if (existsSync3(expectedVtt)) {
       vttPath = expectedVtt;
     } else {
       try {
         await generateSTT(audioSrc, options.outputDir, sttCli);
         const base = audioSrc.replace(/\.wav$/, "").replace(/\.mp3$/, "");
         const name = base.split("/").pop();
-        const whisperVtt = join(options.outputDir, `${name}.vtt`);
-        if (existsSync2(whisperVtt)) {
+        const whisperVtt = join2(options.outputDir, `${name}.vtt`);
+        if (existsSync3(whisperVtt)) {
           renameSync(whisperVtt, expectedVtt);
           vttPath = expectedVtt;
         }
@@ -11337,8 +11400,8 @@ async function resolveSubtitles(root, options) {
         sttFailedCount++;
       }
     }
-    if (!vttPath || !existsSync2(vttPath)) continue;
-    const vttText = readFileSync(vttPath, "utf-8");
+    if (!vttPath || !existsSync3(vttPath)) continue;
+    const vttText = readFileSync2(vttPath, "utf-8");
     const blocks = vttText.replace(/\r\n/g, "\n").split(/\n\n+/);
     for (const block of blocks) {
       const lines = block.split("\n").filter(Boolean);
@@ -11375,7 +11438,7 @@ async function resolveSubtitles(root, options) {
   if (cueIndex > 1) {
     const mergedDir = options.mergedOutputDir ?? options.outputDir;
     mkdirSync2(mergedDir, { recursive: true });
-    const mergedPath = join(mergedDir, "subtitles.vtt");
+    const mergedPath = join2(mergedDir, PROFILE_CACHE_KEY ? `subtitles-${PROFILE_CACHE_KEY}.vtt` : "subtitles.vtt");
     writeFileSync(mergedPath, mergedLines.join("\n"), "utf-8");
     clone.subtitle = { ...clone.subtitle ?? {}, src: mergedPath };
     console.log(`  \u2705 STT: subtitles ready (${cueIndex - 1} cues)`);
@@ -11411,13 +11474,14 @@ async function resolveGeneratedMedia(root, options) {
   for (const { node: node2, id, type, prompt } of genNodes) {
     done++;
     const ext = type === "image" ? "png" : "mp4";
-    const cli = type === "image" ? clone.tti ?? options.ttiCli ?? DEFAULT_TTI_CLI : clone.ttv ?? options.ttvCli ?? DEFAULT_TTV_CLI;
+    const cli2 = type === "image" ? PROFILE_CLI_OVERRIDES.tti ?? clone.tti ?? options.ttiCli ?? DEFAULT_TTI_CLI : PROFILE_CLI_OVERRIDES.ttv ?? clone.ttv ?? options.ttvCli ?? DEFAULT_TTV_CLI;
     const seed = options.seed;
-    const cacheKey = computeCacheKey({ prompt, cli, type, seed });
-    const outputPath = join(options.outputDir, `${cacheKey}.${ext}`);
+    const ttiCmd = PROFILE_CLI_OVERRIDES.tti ?? clone.tti ?? options.ttiCli ?? DEFAULT_TTI_CLI;
+    const cacheKey = computeCacheKey({ prompt, cli: cli2, type, seed, ...type === "video" ? { ttiCmd } : {} });
+    const outputPath = join2(options.outputDir, `${cacheKey}.${ext}`);
     const label = type === "image" ? "TTI" : "TTV";
     const labelText = firstWords(prompt, 8);
-    if (existsSync2(outputPath)) {
+    if (existsSync3(outputPath)) {
       node2.src = resolvePath(outputPath);
       cacheHits++;
       if (done % 5 === 0 || done === total) console.log(progressLine());
@@ -11425,18 +11489,17 @@ async function resolveGeneratedMedia(root, options) {
     }
     try {
       console.log(`  \u{1F50A} ${label} (${done}/${total}): ${labelText}...`);
-      const ttiCmd = clone.tti ?? options.ttiCli ?? DEFAULT_TTI_CLI;
-      const result = type === "image" ? generateTTI(prompt, outputPath, cli, seed) : generateTTV(prompt, outputPath, cli, ttiCmd, seed);
+      const result = type === "image" ? generateTTI(prompt, outputPath, cli2, seed) : generateTTV(prompt, outputPath, cli2, ttiCmd, seed);
       if (result) {
         node2.src = outputPath;
         console.log(`  \u2713 ${label} (${done}/${total}): ${labelText}`);
         if (done % 3 === 0 || done === total) console.log(progressLine());
       } else {
-        const hint = cli.includes("echo") ? `No ${label} tool installed. The default CLI just echoes a message \u2014 set root.${type === "image" ? "tti" : "ttv"} to a real generation command.` : `The command ran but produced no output file. Check the CLI template or run the script manually to debug.`;
+        const hint = cli2.includes("echo") ? `No ${label} tool installed. The default CLI just echoes a message \u2014 set root.${type === "image" ? "tti" : "ttv"} to a real generation command.` : `The command ran but produced no output file. Check the CLI template or run the script manually to debug.`;
         console.error(`  \u26A0 ${label}: "${labelText}" produced no output. ${hint}`);
       }
     } catch (err) {
-      const hint = err?.stderr?.toString()?.includes("not found") ? `${label} tool not found. Install the required CLI or configure root.${type === "image" ? "tti" : "ttv"}.` : `Command failed. Try running the CLI template directly to debug: ${cli}`;
+      const hint = err?.stderr?.toString()?.includes("not found") ? `${label} tool not found. Install the required CLI or configure root.${type === "image" ? "tti" : "ttv"}.` : `Command failed. Try running the CLI template directly to debug: ${cli2}`;
       console.error(`  \u2717 ${label}: "${labelText}" failed \u2014 ${err.message}. ${hint}`);
     }
   }
@@ -11547,7 +11610,7 @@ function applyStoryboardOverrides(root, options) {
 async function resolveIncludes(root, options) {
   const clone = JSON.parse(JSON.stringify(root));
   const baseDir = options.baseDir;
-  const outputDir = options.includeOutputDir ?? join(baseDir, ".markcut", "generated", "includes");
+  const outputDir = options.includeOutputDir ?? join2(baseDir, ".markcut", "generated", "includes");
   mkdirSync2(outputDir, { recursive: true });
   function extractImportEntriesFromRaw(raw) {
     const match = raw.match(/^(```|~~~)\s*js imports\s*\n([\s\S]*?)^\1\s*$/m);
@@ -11563,11 +11626,11 @@ async function resolveIncludes(root, options) {
     const src = n.src;
     if (!src || !src.endsWith(".md")) return;
     const absPath = src.startsWith("/") ? src : resolvePath(parentBaseDir, src);
-    if (!existsSync2(absPath)) {
+    if (!existsSync3(absPath)) {
       console.warn(`  \u26A0 Include "${src}" not found at ${absPath}`);
       return;
     }
-    const raw = readFileSync(absPath, "utf-8");
+    const raw = readFileSync2(absPath, "utf-8");
     let subRoot = parseMarkdownDescriptive(raw);
     const variantChain = options.variants;
     if (variantChain && variantChain.length > 0) {
@@ -11584,7 +11647,7 @@ async function resolveIncludes(root, options) {
     const resolved = await resolveAll2(subRoot, {
       ...options,
       includeOutputDir: outputDir,
-      baseDir: dirname3(absPath),
+      baseDir: dirname4(absPath),
       variants: variantChain
     });
     const compiled = compileDescriptiveRoot(resolved);
@@ -11592,9 +11655,9 @@ async function resolveIncludes(root, options) {
       (max, c) => Math.max(max, c.durationInSeconds ?? 0),
       0
     ) ?? 3;
-    const hash = createHash("sha1").update(absPath).digest("hex").slice(0, 12);
-    const compiledPath = join(outputDir, `${hash}.json`);
-    const metaPath = join(outputDir, `${hash}.meta.json`);
+    const hash = createHash2("sha1").update(absPath + (PROFILE_CACHE_KEY ? `\0${PROFILE_CACHE_KEY}` : "")).digest("hex").slice(0, 12);
+    const compiledPath = join2(outputDir, `${hash}.json`);
+    const metaPath = join2(outputDir, `${hash}.meta.json`);
     if (importEntries && importEntries.length > 0) {
       const sourceName = absPath.split("/").pop().replace(/\.[^.]+$/, "");
       const meta = { importEntries, extraSpecs, rawSource, sourceName };
@@ -11631,7 +11694,7 @@ async function resolveAll2(root, options) {
     const autoSeed = parseInt(computeCacheKey(result).slice(0, 8), 16);
     result = { ...result, seed: autoSeed };
     try {
-      const raw = readFileSync(options.sourcePath, "utf-8");
+      const raw = readFileSync2(options.sourcePath, "utf-8");
       if (options.sourcePath.endsWith(".md")) {
         const lines = raw.split("\n");
         const videoIdx = lines.findIndex((l) => l.trim().startsWith("# video"));

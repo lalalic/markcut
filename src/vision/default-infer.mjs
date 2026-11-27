@@ -90,7 +90,7 @@ export function infer({ prompt, inputs }) {
   const attempts = [
     ["browser-chatgpt", () => tryBrowser(prompt, inputs)],
     ["codex", () => tryCodex(prompt, inputs)],
-    ["local-vlm", () => tryLocal(prompt, inputs)],
+    ...(process.env.MARKCUT_VISION_DISABLE_LOCAL === "1" ? [] : [["local-vlm", () => tryLocal(prompt, inputs)]]),
   ];
   const failures = [];
   for (const [name, fn] of attempts) {

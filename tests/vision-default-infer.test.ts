@@ -22,7 +22,7 @@ function script(dir: string, name: string, body: string) {
   return path;
 }
 
-function runHelper(bin: string) {
+function runHelper(bin: string, overrides = {}) {
   return spawnSync(process.execPath, [HELPER, "--prompt", "describe", "/tmp/a.jpg"], {
     encoding: "utf8",
     env: {
@@ -33,6 +33,8 @@ function runHelper(bin: string) {
       // This suite tests fallback order, not queue supervision. Keep it independent
       // of the host's long-lived media-ai worker version.
       MARKCUT_QUEUE_ENABLED: "0",
+      MARKCUT_VISION_DISABLE_LOCAL: "0",
+      ...overrides,
     },
   });
 }
@@ -80,6 +82,17 @@ describe("default vision inference priority", () => {
     expect(r.stdout.trim()).toBe("local-result");
   });
 
+  it("prototype vision never downloads or invokes a local VLM", () => {
+    const bin = tempBin();
+    script(bin, "chatgpt-browser-infer", 'exit 2');
+    script(bin, "codex", 'exit 3');
+    const marker = join(bin, 'local-ran');
+    script(bin, "uvx", `touch '${marker}'; echo local-result`);
+    const r = runHelper(bin, {MARKCUT_VISION_DISABLE_LOCAL:'1'});
+    expect(r.status).not.toBe(0);
+    expect(r.stderr).toContain('all vision backends failed');
+    expect(existsSync(marker)).toBe(false);
+  });
   it("records no inference deadline in the real queue and exits after result", async () => {
     const bin = tempBin();
     const queueHome=join(bin,'queue');
