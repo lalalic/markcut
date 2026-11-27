@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, rmSync, writeFileSync, readFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { spawnSync } from "node:child_process";
+import { spawnSync, execFileSync } from "node:child_process";
 
 const ROOT = resolve(fileURLToPath(import.meta.url), "..", "..");
 const HELPER = join(ROOT, "src", "vision", "default-infer.mjs");
@@ -30,12 +30,23 @@ function runHelper(bin: string) {
       PATH: `${bin}:/bin:/usr/bin`,
       MARKCUT_CHATGPT_BROWSER_INFER_CLI: "",
       MARKCUT_CODEX_VISION_PROFILES: "zai,default",
+      // This suite tests fallback order, not queue supervision. Keep it independent
+      // of the host's long-lived media-ai worker version.
+      MARKCUT_QUEUE_ENABLED: "0",
     },
   });
 }
 
-afterEach(() => {
-  for (const dir of tempDirs.splice(0)) rmSync(dir, { recursive: true, force: true });
+afterEach(async () => {
+  for (const dir of tempDirs.splice(0)) {
+    const pidPath=join(dir,'queue','worker.lock','pid');
+    if(existsSync(pidPath)) {
+      const pid=Number(readFileSync(pidPath,'utf8'));
+      if(pid>1)try{process.kill(pid,'SIGTERM');}catch{}
+      await new Promise(resolve=>setTimeout(resolve,200));
+    }
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 describe("default vision inference priority", () => {
@@ -69,6 +80,20 @@ describe("default vision inference priority", () => {
     expect(r.stdout.trim()).toBe("local-result");
   });
 
+  it("records no inference deadline in the real queue and exits after result", async () => {
+    const bin = tempBin();
+    const queueHome=join(bin,'queue');
+    script(bin,'chatgpt-browser-infer','echo browser-result');
+    const result=spawnSync(process.execPath,[HELPER,'--prompt','describe','/tmp/a.jpg'],{
+      encoding:'utf8',timeout:14000,
+      env:{...process.env,PATH:`${bin}:/bin:/usr/bin`,MARKCUT_CHATGPT_BROWSER_INFER_CLI:'',MARKCUT_QUEUE_HOME:queueHome,MARKCUT_QUEUE_ENABLED:'1'},
+    });
+    expect(result.status).toBe(0);
+    expect(result.stdout.trim()).toBe('browser-result');
+    const code='const {DatabaseSync}=require("node:sqlite");const db=new DatabaseSync(process.argv[1],{readOnly:true});console.log(JSON.stringify(db.prepare("SELECT status,timeout FROM jobs LIMIT 1").get()));db.close()';
+    const row=JSON.parse(execFileSync(process.execPath,['-e',code,join(queueHome,'queue.sqlite')],{encoding:'utf8'}));
+    expect(row).toMatchObject({status:'completed',timeout:0});
+  });
   it("config defaults ITT to the policy helper and VTT to frame-based ITT", () => {
     const code = 'import("./src/config.mjs").then(m => console.log(JSON.stringify({itt:m.DEFAULT_ITT_CLI,vtt:m.DEFAULT_VTT_CLI})))';
     const env = { ...process.env } as Record<string, string>;

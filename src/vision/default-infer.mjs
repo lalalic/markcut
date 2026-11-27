@@ -28,9 +28,18 @@ function which(name) {
   return "";
 }
 
+function configuredInferenceTimeout(name) {
+  const configured = process.env[name];
+  if (configured === undefined || configured === '') return 0;
+  const timeout = Number(configured);
+  if (!Number.isSafeInteger(timeout) || timeout < 0)
+    throw Error(`Invalid ${name}: expected non-negative milliseconds`);
+  return timeout;
+}
+
 function run(command, args, options = {}) {
-  const queued = queueArgv(command, args);
-  const r = spawnSync(queued.command, queued.argv, { encoding: "utf8", timeout: options.timeout || 600_000, env: process.env });
+  const queued = queueArgv(command, args, process.env, options.timeout === 0 ? {timeoutMs: 0} : {});
+  const r = spawnSync(queued.command, queued.argv, { encoding: "utf8", timeout: options.timeout ?? 600_000, env: process.env });
   return { ok: r.status === 0, stdout: (r.stdout || "").trim(), stderr: (r.stderr || "").trim(), status: r.status };
 }
 
@@ -40,7 +49,7 @@ function tryBrowser(prompt, inputs) {
   if (!command) return { ok: false, reason: "browser-infer-unavailable" };
   const args = ["--prompt", prompt];
   for (const input of inputs) args.push("--file", input);
-  const r = run(command, args, { timeout: Number(process.env.MARKCUT_CHATGPT_VISION_TIMEOUT_MS) || 600_000 });
+  const r = run(command, args, { timeout: configuredInferenceTimeout("MARKCUT_CHATGPT_VISION_TIMEOUT_MS") });
   return r.ok && r.stdout ? { ok: true, output: r.stdout } : { ok: false, reason: r.stderr || `browser-infer-exit-${r.status}` };
 }
 
@@ -56,7 +65,7 @@ function tryCodex(prompt, inputs) {
     if (profile !== "default") args.push("-p", profile);
     if (inputs.length) args.push("-i", ...inputs);
     args.push("-o", output, prompt);
-    const r = run(codex, args, { timeout: Number(process.env.MARKCUT_CODEX_VISION_TIMEOUT_MS) || 600_000 });
+    const r = run(codex, args, { timeout: configuredInferenceTimeout("MARKCUT_CODEX_VISION_TIMEOUT_MS") });
     let text = "";
     if (existsSync(output)) text = readFileSync(output, "utf8").trim();
     rmSync(dir, { recursive: true, force: true });
@@ -70,7 +79,7 @@ function tryLocal(prompt, inputs) {
   const uvx = which("uvx");
   if (!uvx) return { ok: false, reason: "uvx-unavailable" };
   const args = ["--from", "mlx-vlm", "mlx_vlm.generate", "--model", LOCAL_MODEL, "--max-tokens", "2048", "--prompt", prompt, "--image", ...inputs, "--temperature", "0.0", "--thinking-mode", "disabled"];
-  const r = run(uvx, args, { timeout: Number(process.env.MARKCUT_LOCAL_VISION_TIMEOUT_MS) || 600_000 });
+  const r = run(uvx, args, { timeout: configuredInferenceTimeout("MARKCUT_LOCAL_VISION_TIMEOUT_MS") });
   return r.ok && r.stdout ? { ok: true, output: r.stdout } : { ok: false, reason: r.stderr || `local-vlm-exit-${r.status}` };
 }
 

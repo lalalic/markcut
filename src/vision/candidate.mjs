@@ -108,7 +108,7 @@ function shQuote(value) {
 }
 
 function run(command, options = {}) {
-  return execSync(queueCommand(command), {
+  return execSync(queueCommand(command, process.env, options.timeout === 0 ? {timeoutMs: 0} : {}), {
     encoding: "utf-8",
     stdio: ["pipe", "pipe", "pipe"],
     timeout: 300_000,
@@ -368,7 +368,7 @@ export async function runCandidateVision(inputPath, options) {
     emitInfo(`Analyzing candidate ${prepared.candidate.id}...`);
     let raw;
     try {
-      raw = run(substituted, { timeout: 600_000 }).trim();
+      raw = run(substituted, { timeout: 0 }).trim();
     } catch (error) {
       throw new Error(`candidate vision model failed: ${error.message}`);
     }

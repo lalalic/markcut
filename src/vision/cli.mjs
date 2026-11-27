@@ -71,7 +71,9 @@ function emitWarn(msg) { console.error(`⚠️  ${msg}`); }
 function emitError(msg) { console.error(`❌ ${msg}`); }
 
 function run(cmd, opts = {}) {
-  return execSync(queueCommand(cmd), {
+  // Zero timeout disables the default queue deadline as well as execSync's.
+  const queueOptions = opts.timeout === 0 ? { timeoutMs: 0 } : {};
+  return execSync(queueCommand(cmd, process.env, queueOptions), {
     encoding: "utf-8",
     stdio: ["pipe", "pipe", "pipe"],
     timeout: 300_000,
@@ -395,7 +397,7 @@ function runITT(inputPaths, promptText, ittCli) {
     input: inputStr, prompt: promptText, prompt_quoted: shQuote(promptText),
   });
   try {
-    const text = run(cmd).trim();
+    const text = run(cmd, { timeout: 0 }).trim();
     if (!text) throw new Error("Empty visual inference response");
     return text;
   } catch (e) {
@@ -430,7 +432,7 @@ function runVTT(videoPath, promptText, vttCli, ittCli, sampleInterval = DEFAULT_
     const tryRun = () => { const cmd = substituteTemplate(vttCli, {
       input: shQuote(videoPath), prompt: promptText, prompt_quoted: shQuote(promptText),
       sample_interval: String(sampleInterval),
-    }); return run(cmd, { timeout: 600_000 }).trim(); };
+    }); return run(cmd, { timeout: 0 }).trim(); };
     for (let attempt = 0; attempt < 2; attempt++) {
       try { return tryRun(); } catch (e) {
         const msg = e.message || "";
@@ -463,7 +465,7 @@ function runAgent(clipPath, promptText, agentCli) {
   const tmpl = agentCli || DEFAULT_AGENT_CLI;
   // Always quote the prompt text to avoid shell injection from multi-line content
   const cmd = substituteTemplate(tmpl, { input: shQuote(clipPath), prompt: shQuote(promptText) });
-  try { return run(cmd, { timeout: 300_000 }).trim(); }
+  try { return run(cmd, { timeout: 0 }).trim(); }
   catch (e) { throw new Error("Semantic segmentation Agent failed for " + basename(clipPath) + ": " + e.message); }
 }
 
@@ -529,7 +531,7 @@ function queryLLM(promptText) {
     writeFileSync(dummyPng, Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==", "base64"));
   }
   const cmd = `uvx --from mlx-vlm mlx_vlm.generate --model mlx-community/Qwen2.5-VL-7B-Instruct-4bit --max-tokens 2048 --prompt ${shQuote(promptText)} --image ${shQuote(dummyPng)}`;
-  try { return run(cmd, { timeout: 300_000 }).trim(); }
+  try { return run(cmd, { timeout: 0 }).trim(); }
   catch (e) { emitWarn(`LLM query failed: ${e.message}`); return ""; }
 }
 

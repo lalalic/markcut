@@ -43,7 +43,7 @@ function enqueue() {
   const cut=args.indexOf('--');
   if(cut<0 || !args[cut+1]) throw Error('Usage: markcut queue run|submit --queue NAME [--timeout MS] [--dedupe KEY] -- COMMAND [ARGS...]');
   const queue=flag('--queue', 'media-ai'), timeout=Number(flag('--timeout','300000')), retries=Number(flag('--retries','0'));
-  if(!/^[a-z0-9][\w-]*$/.test(queue) || !Number.isSafeInteger(timeout) || timeout<1 || !Number.isSafeInteger(retries) || retries<0 || retries>10) throw Error('Invalid queue or timeout');
+  if(!/^[a-z0-9][\w-]*$/.test(queue) || !Number.isSafeInteger(timeout) || timeout<0 || !Number.isSafeInteger(retries) || retries<0 || retries>10) throw Error('Invalid queue or timeout');
   const id=randomUUID(), command=JSON.stringify(args.slice(cut+1));
   const dedupe=flag('--dedupe',null);
   const insert=db.prepare('INSERT INTO jobs (id,queue,status,command,cwd,created,timeout,dedupe,retries) VALUES (?,?,?,?,?,?,?,?,?)');
@@ -105,7 +105,7 @@ async function executeJob(job) {
       child.once('close',(c,s)=>resolve({code:c,signal:s}));
       const timer=setInterval(()=>{
         const latest=get(job.id);
-        if(latest.status==='cancelling'||Date.now()-latest.started>=job.timeout) {
+        if(latest.status==='cancelling'||(job.timeout>0 && Date.now()-latest.started>=job.timeout)) {
           clearInterval(timer);
           reason=latest.status==='cancelling'?'cancelled':'timeout';
           try{process.kill(-child.pid,'SIGTERM');}catch{}

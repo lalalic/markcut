@@ -260,7 +260,7 @@ describe("candidate-only vision", () => {
     const metadataPath = join(SKIP_STT_ROOT, "metadata.json");
     expect(existsSync(metadataPath)).toBe(true);
     const metadata = JSON.parse(readFileSync(metadataPath, "utf-8"));
-    const entry = metadata.long;
+    const entry = metadata["long.mp4"];
     expect(entry.perception.desc).toContain("whole video");
     expect(entry.perception.subtitle).toBeNull();
 
