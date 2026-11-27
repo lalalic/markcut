@@ -18,6 +18,10 @@ function stopQueue() {
   }
 }
 afterAll(async()=>{stopQueue();await new Promise(r=>setTimeout(r,300));rmSync(dir,{force:true,recursive:true});});
+function queueJobs() {
+  const code='const {DatabaseSync}=require("node:sqlite");const db=new DatabaseSync(process.argv[1],{readOnly:true});console.log(JSON.stringify(db.prepare("SELECT command,timeout,status FROM jobs").all()));db.close()';
+  return JSON.parse(execFileSync(process.execPath,['-e',code,join(queueHome,'queue.sqlite')],{encoding:'utf8'}));
+}
 it('generic --vtt/--itt plus --agent uses the existing STT→semantic segment workflow, no backend flag',()=>{
   mkdirSync(media,{recursive:true});
   execFileSync('ffmpeg',['-hide_banner','-loglevel','error','-y','-f','lavfi',
@@ -50,8 +54,10 @@ it('generic --vtt/--itt plus --agent uses the existing STT→semantic segment wo
     '--instruct','请按嘿 Neo 规则理解语义，并保留原视频时点。',
     '--vtt-sample-interval','2'];
   execFileSync(process.execPath,args,{cwd:base,timeout:200000,encoding:'utf8',env:queueEnv});
-  // User-supplied visual/semantic Agent CLIs run directly, not through the local-model queue.
-  expect(existsSync(join(queueHome,'queue.sqlite'))).toBe(false);
+  const inference=queueJobs().filter((job:any)=>job.command.includes('mock-visual.mjs')||job.command.includes('mock-segment-agent.mjs'));
+  expect(inference.length).toBeGreaterThanOrEqual(3);
+  expect(inference.every((job:any)=>job.timeout===0&&job.status==='completed')).toBe(true);
+  expect(queueJobs().some((job:any)=>job.timeout>0)).toBe(true);
   const meta=JSON.parse(readFileSync(join(media,'metadata.json'),'utf8'));
   expect(meta['photo.png'].perception.desc).toContain('Recognized landscape');
   expect(meta['clip.mp4'].perception.subtitle).toBe('clip.vtt');

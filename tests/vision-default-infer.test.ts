@@ -80,30 +80,16 @@ describe("default vision inference priority", () => {
     expect(r.stdout.trim()).toBe("local-result");
   });
 
-  it("runs remote Browser inference directly without creating a queue", () => {
-    const bin=tempBin();
+  it("records no inference deadline in the real queue and exits after result", async () => {
+    const bin = tempBin();
     const queueHome=join(bin,'queue');
     script(bin,'chatgpt-browser-infer','echo browser-result');
-    const result=spawnSync(process.execPath,[HELPER,'--prompt','describe','/tmp/a.jpg'],{
-      encoding:'utf8',timeout:12000,
-      env:{...process.env,PATH:`${bin}:/bin:/usr/bin`,MARKCUT_CHATGPT_BROWSER_INFER_CLI:'',MARKCUT_QUEUE_HOME:queueHome,MARKCUT_QUEUE_ENABLED:'1'},
-    });
-    expect(result.status).toBe(0);
-    expect(result.stdout.trim()).toBe('browser-result');
-    expect(existsSync(join(queueHome,'queue.sqlite'))).toBe(false);
-  });
-  it("serializes local VLM fallback with unlimited inference time", () => {
-    const bin=tempBin();
-    const queueHome=join(bin,'queue');
-    script(bin,'chatgpt-browser-infer','exit 2');
-    script(bin,'codex','exit 3');
-    script(bin,'uvx','echo local-result');
     const result=spawnSync(process.execPath,[HELPER,'--prompt','describe','/tmp/a.jpg'],{
       encoding:'utf8',timeout:14000,
       env:{...process.env,PATH:`${bin}:/bin:/usr/bin`,MARKCUT_CHATGPT_BROWSER_INFER_CLI:'',MARKCUT_QUEUE_HOME:queueHome,MARKCUT_QUEUE_ENABLED:'1'},
     });
     expect(result.status).toBe(0);
-    expect(result.stdout.trim()).toBe('local-result');
+    expect(result.stdout.trim()).toBe('browser-result');
     const code='const {DatabaseSync}=require("node:sqlite");const db=new DatabaseSync(process.argv[1],{readOnly:true});console.log(JSON.stringify(db.prepare("SELECT status,timeout FROM jobs LIMIT 1").get()));db.close()';
     const row=JSON.parse(execFileSync(process.execPath,['-e',code,join(queueHome,'queue.sqlite')],{encoding:'utf8'}));
     expect(row).toMatchObject({status:'completed',timeout:0});

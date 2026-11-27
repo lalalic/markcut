@@ -50,7 +50,7 @@ import { fileURLToPath } from "node:url";
 import {
   IMAGE_EXTS, VIDEO_EXTS,
   MAX_IMAGE_DIMENSION, MAX_VIDEO_DURATION, MAX_VIDEO_DIMENSION,
-  DEFAULT_ITT_CLI, DEFAULT_VTT_SAMPLE_INTERVAL, DEFAULT_VTT_CLI, DEFAULT_STT_CLI, DEFAULT_STT_IS_LOCAL_MODEL, isLocalModelExecution, DEFAULT_AGENT_CLI,
+  DEFAULT_ITT_CLI, DEFAULT_VTT_SAMPLE_INTERVAL, DEFAULT_VTT_CLI, DEFAULT_STT_CLI, DEFAULT_AGENT_CLI,
 } from "../config.mjs";
 import { runCandidateVision } from "./candidate.mjs";
 
@@ -70,11 +70,10 @@ function emitSuccess(msg) { console.error(`✅ ${msg}`); }
 function emitWarn(msg) { console.error(`⚠️  ${msg}`); }
 function emitError(msg) { console.error(`❌ ${msg}`); }
 
-function run(cmd, { localModel = false, ...opts } = {}) {
-  // Queue only explicitly selected local models; remote Agent/API and media commands
-  // run directly and complete when their own subprocess exits.
-  const command = localModel ? queueCommand(cmd, process.env, { timeoutMs: opts.timeout ?? 300_000 }) : cmd;
-  return execSync(command, {
+function run(cmd, opts = {}) {
+  // Zero timeout disables the default queue deadline as well as execSync's.
+  const queueOptions = opts.timeout === 0 ? { timeoutMs: 0 } : {};
+  return execSync(queueCommand(cmd, process.env, queueOptions), {
     encoding: "utf-8",
     stdio: ["pipe", "pipe", "pipe"],
     timeout: 300_000,
@@ -398,7 +397,7 @@ function runITT(inputPaths, promptText, ittCli) {
     input: inputStr, prompt: promptText, prompt_quoted: shQuote(promptText),
   });
   try {
-    const text = run(cmd, { timeout: 0, localModel: isLocalModelExecution("ITT") }).trim();
+    const text = run(cmd, { timeout: 0 }).trim();
     if (!text) throw new Error("Empty visual inference response");
     return text;
   } catch (e) {
@@ -433,7 +432,7 @@ function runVTT(videoPath, promptText, vttCli, ittCli, sampleInterval = DEFAULT_
     const tryRun = () => { const cmd = substituteTemplate(vttCli, {
       input: shQuote(videoPath), prompt: promptText, prompt_quoted: shQuote(promptText),
       sample_interval: String(sampleInterval),
-    }); return run(cmd, { timeout: 0, localModel: isLocalModelExecution("VTT") }).trim(); };
+    }); return run(cmd, { timeout: 0 }).trim(); };
     for (let attempt = 0; attempt < 2; attempt++) {
       try { return tryRun(); } catch (e) {
         const msg = e.message || "";
@@ -466,7 +465,7 @@ function runAgent(clipPath, promptText, agentCli) {
   const tmpl = agentCli || DEFAULT_AGENT_CLI;
   // Always quote the prompt text to avoid shell injection from multi-line content
   const cmd = substituteTemplate(tmpl, { input: shQuote(clipPath), prompt: shQuote(promptText) });
-  try { return run(cmd, { timeout: 0, localModel: isLocalModelExecution("AGENT") }).trim(); }
+  try { return run(cmd, { timeout: 0 }).trim(); }
   catch (e) { throw new Error("Semantic segmentation Agent failed for " + basename(clipPath) + ": " + e.message); }
 }
 
@@ -482,7 +481,7 @@ function runSTT(videoPath, normDir, sttCli) {
 
   const tmpl = sttCli || DEFAULT_STT_CLI;
   const cmd = substituteTemplate(tmpl, { input: audioPath, output: normDir });
-  try { run(cmd, { timeout: 600_000, localModel: isLocalModelExecution("STT", DEFAULT_STT_IS_LOCAL_MODEL) }); } catch (e) { emitWarn(`STT failed for ${base}: ${e.message}`); return null; }
+  try { run(cmd, { timeout: 600_000 }); } catch (e) { emitWarn(`STT failed for ${base}: ${e.message}`); return null; }
 
   const whisperVtt = join(normDir, `${base}_audio.vtt`);
   if (existsSync(whisperVtt)) renameSync(whisperVtt, vttPath);
@@ -532,7 +531,7 @@ function queryLLM(promptText) {
     writeFileSync(dummyPng, Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==", "base64"));
   }
   const cmd = `uvx --from mlx-vlm mlx_vlm.generate --model mlx-community/Qwen2.5-VL-7B-Instruct-4bit --max-tokens 2048 --prompt ${shQuote(promptText)} --image ${shQuote(dummyPng)}`;
-  try { return run(cmd, { timeout: 0, localModel: true }).trim(); }
+  try { return run(cmd, { timeout: 0 }).trim(); }
   catch (e) { emitWarn(`LLM query failed: ${e.message}`); return ""; }
 }
 

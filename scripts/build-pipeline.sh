@@ -14,7 +14,6 @@ npx esbuild src/player/pipeline.ts \
   --format=esm \
   --platform=node \
   --target=node18 \
-  --external:../queue-cli.mjs \
   2>&1
 
 echo "Done → $OUT_FILE ($(wc -c < "$OUT_FILE") bytes)"
