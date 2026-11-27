@@ -1248,7 +1248,7 @@ import { existsSync as existsSync2, mkdirSync } from "node:fs";
 import { dirname as dirname3 } from "node:path";
 
 // src/cli-profile.mjs
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, realpathSync } from "node:fs";
 import { resolve as resolve2, dirname as dirname2, join } from "node:path";
 import { fileURLToPath as fileURLToPath2 } from "node:url";
 import { createHash } from "node:crypto";
@@ -1256,6 +1256,12 @@ var sourceDir = dirname2(fileURLToPath2(import.meta.url));
 var rootCandidates = [resolve2(sourceDir, ".."), resolve2(sourceDir, "../..")];
 var MARKCUT_ROOT = rootCandidates.find((root) => existsSync(join(root, "profiles", "default.json"))) ?? rootCandidates[0];
 var DEFAULT_PROFILE_PATH = join(MARKCUT_ROOT, "profiles", "default.json");
+var BUILTIN_PROFILES = Object.freeze({ default: DEFAULT_PROFILE_PATH, prototype: join(MARKCUT_ROOT, "profiles", "prototype.json") });
+function resolveProfileReference(reference, base = process.cwd()) {
+  if (typeof reference !== "string" || !reference.trim() || reference.trim() !== reference)
+    throw new Error("Invalid Markcut profile reference: expected a built-in name or JSON file path");
+  return Object.hasOwn(BUILTIN_PROFILES, reference) ? BUILTIN_PROFILES[reference] : resolve2(base, reference);
+}
 function expandProfileTemplate(template) {
   const quotedRoot = "'" + MARKCUT_ROOT.replaceAll("'", "'\\''") + "'";
   return template.replaceAll("{markcut_root}", () => quotedRoot);
@@ -1267,23 +1273,39 @@ function validateTemplate(key, value2) {
   if (typeof value2 !== "string" || !value2.trim() && !(value2 === "" && OPTIONAL_EMPTY.has(key)))
     throw new Error(`Invalid Markcut CLI template: ${key}`);
 }
-function readCliProfile(path) {
-  if (!path) return {};
-  let profile2;
-  try {
-    profile2 = JSON.parse(readFileSync(path, "utf8"));
-  } catch (error) {
-    throw new Error(`Invalid Markcut profile ${path}: ${error.message}`);
-  }
-  if (!profile2 || typeof profile2 !== "object" || Array.isArray(profile2))
-    throw new Error(`Markcut profile must be a JSON object: ${path}`);
-  for (const [key, value2] of Object.entries(profile2)) {
-    if (!CLI_PROFILE_KEYS.includes(key) || typeof value2 !== "string" || !value2.trim() && !(value2 === "" && OPTIONAL_EMPTY.has(key)))
-      throw new Error(`Invalid Markcut profile field: ${key}`);
-  }
-  if (path === DEFAULT_PROFILE_PATH && CLI_PROFILE_KEYS.some((key) => !Object.hasOwn(profile2, key)))
-    throw new Error(`Incomplete Markcut default profile: ${path}`);
-  return profile2;
+function readCliProfile(reference) {
+  if (!reference) return {};
+  const seen = /* @__PURE__ */ new Set();
+  const root = realpathSync(DEFAULT_PROFILE_PATH);
+  const load = (path) => {
+    let canonical, profile2;
+    try {
+      canonical = realpathSync(path);
+    } catch (error) {
+      throw new Error(`Invalid Markcut profile ${path}: ${error.message}`);
+    }
+    if (seen.has(canonical)) throw new Error(`Circular Markcut profile inheritance: ${[...seen, canonical].join(" -> ")}`);
+    if (seen.size >= 32) throw new Error("Markcut profile inheritance exceeds 32 files");
+    seen.add(canonical);
+    try {
+      profile2 = JSON.parse(readFileSync(canonical, "utf8"));
+    } catch (error) {
+      throw new Error(`Invalid Markcut profile ${path}: ${error.message}`);
+    }
+    if (!profile2 || typeof profile2 !== "object" || Array.isArray(profile2))
+      throw new Error(`Markcut profile must be a JSON object: ${path}`);
+    const { extends: parent, ...fields } = profile2;
+    for (const [key, value2] of Object.entries(fields)) {
+      if (!CLI_PROFILE_KEYS.includes(key) || typeof value2 !== "string" || !value2.trim() && !(value2 === "" && OPTIONAL_EMPTY.has(key)))
+        throw new Error(`Invalid Markcut profile field: ${key} (${path})`);
+    }
+    const inherited = Object.hasOwn(profile2, "extends") ? load(resolveProfileReference(parent, dirname2(canonical))) : canonical === root ? {} : load(root);
+    const effective = { ...inherited, ...fields };
+    if (canonical === root && CLI_PROFILE_KEYS.some((key) => !Object.hasOwn(effective, key)))
+      throw new Error(`Incomplete Markcut default profile: ${path}`);
+    return effective;
+  };
+  return load(resolveProfileReference(reference));
 }
 function extractProfileArgument(argv, env = process.env) {
   const rest = [], cliOverrides = {};
@@ -1293,7 +1315,7 @@ function extractProfileArgument(argv, env = process.env) {
     if (arg === "--profile" || arg.startsWith("--profile=")) {
       if (selected !== void 0) throw new Error("Duplicate --profile");
       selected = arg === "--profile" ? argv[++i] : arg.slice("--profile=".length);
-      if (!selected || selected.startsWith("--")) throw new Error("--profile requires a JSON file path");
+      if (!selected || selected.startsWith("--")) throw new Error("--profile requires a built-in name or JSON file path");
     } else {
       const equals = arg.indexOf("=");
       const flag = equals < 0 ? arg : arg.slice(0, equals);
@@ -1307,7 +1329,7 @@ function extractProfileArgument(argv, env = process.env) {
     }
   }
   const path = selected ?? env.MARKCUT_PROFILE;
-  return { argv: rest, profilePath: path ? resolve2(path) : "", cliOverrides };
+  return { argv: rest, profilePath: path ? resolveProfileReference(path) : "", cliOverrides };
 }
 function profileCacheKey(templates, overrides = {}) {
   return createHash("sha256").update(JSON.stringify(CLI_PROFILE_KEYS.map((key) => [key, templates[key], Object.hasOwn(overrides, key)]))).digest("hex").slice(0, 16);

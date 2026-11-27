@@ -401,11 +401,12 @@ source of the original built-in CLI defaults, without changing their provider
 commands. External Python and npm tools use `uvx` and `npx`; bundled adapters
 use `node`. Node/npm, uv, ffmpeg/ffprobe, and any provider credentials still
 need to be available. Copy the default or create a partial trusted local JSON
-file and select it at invocation time. Profiles configure providers, not creative content or output
+file and select it at invocation time. Built-in profiles can be selected by name (`default`, `prototype`) from any working directory. Profiles configure providers, not creative content or output
 resolution; the same Markdown can be used with different profiles.
 
 ```json
 {
+  "extends": "default",
   "tts": "uvx edge-tts --voice zh-CN-YunxiNeural --text \"{input}\" --write-media \"{output}\"",
   "stt": "uvx --from openai-whisper whisper \"{input}\" --model base --output_format vtt --output_dir \"{output}\"",
   "vtt": ""
@@ -413,24 +414,33 @@ resolution; the same Markdown can be used with different profiles.
 ```
 
 ```sh
-markcut vision ./input/media --profile ./profiles/prototype.json
-markcut preview video.md --profile ./profiles/prototype.json
+markcut vision ./input/media --profile default
+markcut preview video.md --profile prototype
 markcut render video.md --profile ./profiles/product.json --output output/video.mp4
 markcut --show-clis --profile ./profiles/product.json
 markcut render video.md --profile ./profiles/product.json --tts 'my-tts "{input}" "{output}"'
 ```
 
+A profile may declare one optional `extends` string naming a built-in profile
+or a JSON file. Relative parent paths are resolved against the declaring file,
+not the caller. When `extends` is omitted, the profile inherits `default` implicitly; the shipped default itself is the root. Use `./default.json` or `./prototype.json` for local files with
+those names; bare built-in names are reserved. Parent fields are inherited
+recursively, child fields override parent fields, and direct CLI flags override
+the resolved profile. No `extends` field is forwarded to the media pipeline.
+Missing parents, invalid fields, cycles (including symlinks), and chains over
+32 files fail before processing. Effective template changes in a parent invalidate
+the same caches as direct profile changes.
+
 Supported optional string keys: `tts`, `stt`, `itt`, `vtt`, `tti`, `ttv`,
 `agent`, `editCli`. Use the existing CLI placeholders for each capability.
 Explicit per-capability flags (including empty `--stt ""`, `--vtt ""` or `--ttv ""`) take precedence over selected profile fields, regardless of argument order. The override applies to that invocation and its child processes; the profile file is not modified.
-Selected fields override authored provider templates, environment defaults and
-the shipped default profile. Missing fields preserve the existing resolution rules. Empty `stt`
+Selected profiles, including their inherited fields, override authored provider templates and environment defaults. Without a selected profile, the existing environment and authored-template precedence is unchanged. Empty `stt`
 disables transcription; empty `vtt` uses ITT frame sampling; empty `ttv` uses
 the existing TTI/ffmpeg fallback. Explicit source audio, supplied Vision VTT
 files and per-speaker `voices` flags remain authored inputs. Ensure voice
 flags are compatible with the selected engine.
 
-`MARKCUT_PROFILE=/absolute/profile.json` selects a process default, including
+`MARKCUT_PROFILE=prototype` or `MARKCUT_PROFILE=/absolute/profile.json` selects a process default, including
 hosted preview workers; `--profile` overrides it. Relative file paths are
 resolved at the caller's working directory. Keep the trusted profile unchanged
 while a command runs; never load executable profiles from untrusted media.

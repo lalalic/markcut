@@ -49,7 +49,7 @@ npx @lalalic/markcut <command> [options]
 global options:
   --dev                                Use development build (unminified React error messages)
   --show-clis                          Print effective CLI templates and exit
-  --profile <file.json>                 Select a trusted local CLI-template profile
+  --profile <name|file.json>            Select a built-in (default, prototype) or trusted local profile
 
   --tti <template>                     Override default TTI CLI template
   --tts <template>                     Override default TTS CLI template

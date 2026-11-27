@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync, readFileSync, rmSync, realpathSync, mkdirSync, existsSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, readFileSync, rmSync, realpathSync, mkdirSync, existsSync, symlinkSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -19,7 +19,7 @@ describe('caller-selected CLI profiles',()=>{
   const out=run(d,['--show-clis','--profile','prototype.json','--tts','caller-tts'],{MARKCUT_PROFILE:join(d,'product.json'),MARKCUT_TTS_CLI:'env-tts',MARKCUT_STT_CLI:'env-stt'});
   expect(out).toContain('tts=caller-tts');expect(out).toContain('stt=\n');expect(out).toContain('itt=prototype-itt');expect(out).toContain('tti=prototype-tti');expect(out).toContain('ttv=prototype-ttv');expect(out).toContain('agent=prototype-agent');expect(out).toContain('edit=prototype-edit');
   const product=run(d,['--show-clis'],{MARKCUT_PROFILE:join(d,'product.json'),MARKCUT_STT_CLI:'env-stt'});
-  expect(product).toContain('tts=product-tts');expect(product).toContain('stt=env-stt');
+  expect(product).toContain('tts=product-tts');expect(product).toContain('stt='+JSON.parse(readFileSync(resolve(import.meta.dirname,'../profiles/default.json'),'utf8')).stt);
   expect(run(d,['--show-clis'],{MARKCUT_TTS_CLI:'legacy-tts'})).toContain('tts=legacy-tts');
  });
  it('loads the shipped default from an arbitrary working directory and supports direct overrides',()=>{
@@ -30,6 +30,35 @@ describe('caller-selected CLI profiles',()=>{
   expect(run(d,['--show-clis','--profile',shipped],clean).split('\n').slice(1)).toEqual(normal.split('\n').slice(1));
   expect(normal).toContain('tts='+defaults.tts);expect(normal).toContain('default-infer.mjs');expect(normal).toContain('agent=npx pi -p {prompt}');expect(normal).toContain('edit=npx pi --session-id {sessionid} --system-prompt {systemprompt} -p {prompt}');
   expect(run(d,['--show-clis','--tts=direct','--stt=','--profile',shipped],clean)).toContain('tts=direct\n\nstt=\n');
+ });
+ it('resolves built-in names and relative parents, defaults omitted extends, and honors direct flags',()=>{
+  const d=fixture();mkdirSync(join(d,'nested'));
+  writeFileSync(join(d,'prototype'),JSON.stringify({tts:'local-name'}));
+  writeFileSync(join(d,'parent.json'),JSON.stringify({extends:'prototype',tts:'parent-tts',stt:''}));
+  writeFileSync(join(d,'nested','child.json'),JSON.stringify({extends:'../parent.json',tts:'child-tts',agent:'child-agent'}));
+  const builtin=run(d,['--show-clis','--profile','prototype']);
+  expect(builtin).toEqual(run(d,['--show-clis','--profile',resolve(import.meta.dirname,'../profiles/prototype.json')]));
+  expect(run(d,['--show-clis'],{MARKCUT_PROFILE:'prototype'})).toEqual(builtin);
+  expect(run(d,['--show-clis','--profile','./prototype'])).toContain('tts=local-name');
+  const out=run(d,['--show-clis','--profile','nested/child.json','--tts=direct-tts']);
+  expect(out).toContain('tts=direct-tts');expect(out).toContain('stt=\n');expect(out).toContain('agent=child-agent');expect(out).toContain('smptebars=size=512x512');
+  expect(run(d,['--show-clis','--profile','nested/child.json'])).toContain('tts=child-tts');
+  writeFileSync(join(d,'implicit.json'),'{}');
+  writeFileSync(join(d,'explicit.json'),JSON.stringify({extends:'default'}));
+  const show=(name:string)=>run(d,['--show-clis','--profile',name],{MARKCUT_TTS_CLI:'not-selected'}).split('\n').slice(1);
+  expect(show('implicit.json')).toEqual(show('default'));expect(show('implicit.json')).toEqual(show('explicit.json'));
+ });
+ it('rejects invalid, missing and cyclic parent references before processing',()=>{
+  const d=fixture();
+  const write=(name:string,profile:any)=>writeFileSync(join(d,name),JSON.stringify(profile));
+  write('a.json',{extends:'b.json'});write('b.json',{extends:'a.json'});
+  write('self.json',{extends:'alias.json'});symlinkSync('self.json',join(d,'alias.json'));
+  write('invalid-parent.json',{extends:['default']});write('missing-parent.json',{extends:'missing.json'});
+  write('invalid-field.json',{extends:'default',unknown:'x'});
+  for(const [name,pattern] of [['a.json',/Circular/],['self.json',/Circular/],['invalid-parent.json',/profile reference/],['missing-parent.json',/Invalid Markcut profile/],['invalid-field.json',/Invalid Markcut profile field/]] as const){
+   const r=spawnSync(process.execPath,[bin,'--show-clis','--profile',name],{cwd:d,env,encoding:'utf8'});
+   expect(r.status).not.toBe(0);expect(r.stderr).toMatch(pattern);
+  }
  });
  it('ships a low-resource prototype with valid image and video placeholders',()=>{
   const d=fixture(),profile=resolve(import.meta.dirname,'../profiles/prototype.json');
@@ -59,7 +88,8 @@ describe('caller-selected CLI profiles',()=>{
   const adapter=join(d,'adapter.mjs');
   writeFileSync(adapter,`import {execFileSync} from 'node:child_process';import {appendFileSync,writeFileSync} from 'node:fs';import {join,basename,extname} from 'node:path';const [kind,tag,input,output]=process.argv.slice(2);appendFileSync(${JSON.stringify(join(d,'calls.log'))},kind+':'+tag+'\\n');if(kind==='tts')execFileSync('ffmpeg',['-hide_banner','-loglevel','error','-y','-f','lavfi','-i','sine=frequency='+tag+':duration=0.5',output]);else writeFileSync(join(output,basename(input,extname(input))+'.vtt'),'WEBVTT\\n\\n00:00.000 --> 00:00.500\\n'+tag+'\\n');`);
   const makeProfile=(name:string,frequency:string)=>writeFileSync(join(d,name+'.json'),JSON.stringify({tts:`node "${adapter}" tts ${frequency} "{input}" "{output}"`,stt:`node "${adapter}" stt ${name} "{input}" "{output}"`}));
-  makeProfile('prototype','440');makeProfile('product','880');
+  makeProfile('prototype-parent','440');makeProfile('product','880');
+  writeFileSync(join(d,'prototype.json'),JSON.stringify({extends:'./prototype-parent.json'}));
   writeFileSync(join(d,'video.md'),'# video\nseed:1\nwidth:320 height:240 fps:24 layout:series tts:"exit 99" stt:"exit 99"\n\n## Narration\nlayout:parallel\n- script "Hello world"\n');
   const resolveVideo=(profile:string)=>{run(d,['resolve','video.md','--profile',profile+'.json','--output',profile+'.resolved.json']);return JSON.parse(readFileSync(join(d,profile+'.resolved.json'),'utf8'));};
   const prototype=resolveVideo('prototype');const product=resolveVideo('product');
@@ -67,7 +97,9 @@ describe('caller-selected CLI profiles',()=>{
   const p=paths(prototype),q=paths(product);expect(p[0]).not.toBe(q[0]);expect(p[1]).not.toBe(q[1]);
   expect(readFileSync(resolve(d,p[1]),'utf8')).toContain('prototype');expect(readFileSync(resolve(d,q[1]),'utf8')).toContain('product');
   expect(paths(resolveVideo('prototype'))).toEqual(p);
-  expect(readFileSync(join(d,'calls.log'),'utf8').trim().split('\n')).toEqual(['tts:440','stt:prototype','tts:880','stt:product']);
+  expect(readFileSync(join(d,'calls.log'),'utf8').trim().split('\n')).toEqual(['tts:440','stt:prototype-parent','tts:880','stt:product']);
+  makeProfile('prototype-parent','660');
+  const changed=paths(resolveVideo('prototype'));expect(changed[0]).not.toBe(p[0]);expect(changed[1]).not.toBe(p[1]);
  });
  it('runs Vision profile adapters and keeps generated transcripts separate from canonical source VTT',()=>{
   const d=fixture(),media=join(d,'media');mkdirSync(media);
