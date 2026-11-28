@@ -1,0 +1,32 @@
+import {it as test, afterEach} from 'vitest';
+import assert from 'node:assert/strict';
+import {mkdtempSync,realpathSync,writeFileSync,readFileSync,rmSync,mkdirSync,existsSync,linkSync,copyFileSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {execFileSync} from 'node:child_process';
+import {createHash} from 'node:crypto';
+import {orientationDecision,correctOrientations} from '../src/vision/orientation.mjs';
+const digest=p=>createHash('sha256').update(readFileSync(p)).digest('hex');
+const mark=(angle,confidence='high')=>`ORIENTATION_CW=${angle}; CONFIDENCE=${confidence}\nVisible orientation evidence.`;
+const image=(angle,confidence)=>({normalized:null,perception:{desc:mark(angle,confidence)}});
+const video=angle=>({duration:1,normalized:null,perception:{desc:mark(angle),segments:{'0to1000':{vision:mark(angle),description:'Source'}}}});
+const ff=args=>execFileSync('ffmpeg',['-v','error','-y',...args],{stdio:'pipe'});
+const folders=[];
+const fixture=()=>{const folder=realpathSync(mkdtempSync(join(tmpdir(),'vision-orientation-')));folders.push(folder);return folder;};
+afterEach(()=>{for(const folder of folders.splice(0))rmSync(folder,{recursive:true,force:true});});
+test('orientation evidence is conservative, and mixed video is never globally rotated',()=>{
+ assert.deepEqual(orientationDecision(image(180),false),{status:'correction-required',clockwise:180});
+ assert.equal(orientationDecision(image(0),false).status,'upright');
+ assert.equal(orientationDecision(image(90,'low'),false).status,'uncertain');
+ assert.equal(orientationDecision({perception:{desc:'Old evidence'}},false).status,'uncertain');
+ const v=video(90);v.perception.segments['1000to2000']={vision:mark(270)};
+ assert.equal(orientationDecision(v,true).status,'uncertain');
+ assert.equal(orientationDecision(video(270),true).clockwise,270);
+});
+test('pending journal recovers staged transform without rotating twice; linked files refused',async ()=>{
+ const folder=fixture(),src=join(folder,'a.jpg');ff(['-f','lavfi','-i','testsrc2=size=320x240','-frames:v','1',src]);
+ const before=digest(src),dir=join(folder,'.orientation-work');mkdirSync(dir);const temp='.orientation-work/abcd.jpg';ff(['-i',src,'-vf','transpose=clock','-frames:v','1',join(folder,temp)]);
+ const item=image(90);item.orientation={status:'pending',clockwise:90,beforeSha256:before,sha256:digest(join(folder,temp)),temp,width:240,height:320};const m={'a.jpg':item};writeFileSync(join(folder,'metadata.json'),JSON.stringify(m));
+ assert.equal(await correctOrientations(folder,['a.jpg'],m),true);assert.equal(digest(src),item.orientation.sha256);assert.equal(item.orientation.status,'corrected');assert.equal(existsSync(dir),false);item.normalized=null;assert.equal(await correctOrientations(folder,['a.jpg'],m),false);
+ linkSync(src,join(folder,'b.jpg'));const linked={'b.jpg':image(90)};await assert.rejects(correctOrientations(folder,['b.jpg'],linked),/independent regular source/);
+});

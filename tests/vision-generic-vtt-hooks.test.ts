@@ -98,6 +98,36 @@ it.each(['1000to1000','2000to1000','3000to5000','-100to1000'])('rejects invalid 
     .toThrow(/Invalid Agent segment entry|Agent segment range must be within the original source/);
 });
 
+it('full Vision corrects confirmed source orientation without an opt-in and refreshes proxies',()=>{
+  const other=join(dir,'orientation');
+  mkdirSync(other,{recursive:true});
+  const movie=join(other,'clip.mp4'), photo=join(other,'photo.png');
+  execFileSync('cp',[join(media,'clip.mp4'),movie]);
+  execFileSync('cp',[join(media,'clip.vtt'),join(other,'clip.vtt')]);
+  execFileSync('ffmpeg',['-v','error','-y','-f','lavfi','-i','testsrc2=size=160x80','-frames:v','1',photo]);
+  const model=join(dir,'orientation-model.mjs');
+  writeFileSync(model,'const p=process.argv[process.argv.indexOf("--prompt")+1];if(!p.includes("ORIENTATION_CW"))process.exit(10);console.log("ORIENTATION_CW=90; CONFIDENCE=high\\nA clear asymmetric landscape.");');
+  const itm='node '+JSON.stringify(model)+' --input {input} --prompt {prompt_quoted}';
+  const agent='node '+JSON.stringify(semantic)+' --prompt {prompt}';
+  const args=[join(base,'src/render/cli.mjs'),'vision',other,'--vtt',itm,'--itt',itm,'--agent',agent,'--instruct','嘿 Neo'];
+  const audio=(p:string)=>execFileSync('ffmpeg',['-v','error','-i',p,'-map','0:a:0','-c','copy','-f','md5','-'],{encoding:'utf8'});
+  const dims=(p:string)=>execFileSync('ffprobe',['-v','error','-select_streams','v:0','-show_entries','stream=width,height','-of','csv=p=0',p],{encoding:'utf8'}).trim();
+  const beforeAudio=audio(movie);
+  execFileSync(process.execPath,args,{cwd:base,timeout:90000,encoding:'utf8',env:queueEnv});
+  const meta=JSON.parse(readFileSync(join(other,'metadata.json'),'utf8'));
+  expect(meta['photo.png'].orientation.status).toBe('corrected');
+  expect(meta['clip.mp4'].orientation.status).toBe('corrected');
+  expect(dims(photo)).toBe('80,160');
+  expect(dims(movie)).toBe('240,320');
+  expect(dims(join(other,meta['clip.mp4'].normalized))).toBe('240,320');
+  expect(meta['clip.mp4'].duration).toBe(4);
+  expect(audio(movie)).toBe(beforeAudio);
+  expect(meta['clip.mp4'].perception.desc).not.toContain('ORIENTATION_CW');
+  const after=readFileSync(movie);
+  execFileSync(process.execPath,args,{cwd:base,timeout:90000,encoding:'utf8',env:queueEnv});
+  expect(readFileSync(movie).equals(after)).toBe(true);
+});
+
 it('invalid semantic Agent response does not silently fall back to code-selected boundaries',()=>{
   const other=join(dir,'bad-semantic');
   mkdirSync(other,{recursive:true});

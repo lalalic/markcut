@@ -280,6 +280,8 @@ npm test            # run unit + integration tests
 
 ## Vision Pipeline
 
+Full Vision automatically corrects confidently detected accidental sideways or upside-down media **in place** and refreshes the normalized proxies. Pass independent working copies, not capture archives. Ambiguous or mixed orientations remain unchanged. Candidate inspection and `--normalize-only` do not change the source.
+
 ```bash
 # Full pipeline: extract metadata → normalize → AI perception (images & videos)
 npx markcut vision <folder>

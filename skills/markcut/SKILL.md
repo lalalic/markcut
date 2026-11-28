@@ -11,7 +11,7 @@ Markcut turns a Markdown video definition into a compiled stream tree and a play
 
 | User goal | Agent action |
 |---|---|
-| Understand a folder of photos or clips | Inspect the files; use `markcut vision <folder>` if scene selection needs visual/media understanding. |
+| Understand a folder of photos or clips | Use `markcut vision <folder>` on authorized independent working copies when visual/media understanding is needed; full Vision also corrects confirmed accidental source orientation in place. Candidate inspection and `--normalize-only` do not modify sources. |
 | Make or revise a video | Load the project-selected template, author/edit its Markdown scenes, run `markcut verify <file>`, and **inspect real playback before claiming a finished video**. |
 | Browse reusable motion/map recipes | Use `markcut recipes list --json` to see both Markcut-owned native scenes and installed Shotcraft reference cards; `markcut recipes show <qualified-id>` to inspect the selected card. Only `executable:true` cards provide ready-to-customize Markcut snippets. Read [Recipe catalog](docs/recipes.md) for source ownership, parameters and selection rules. |
 | Quickly assess story structure | `markcut preview <file> --storyboard` (placeholder media, not a final-video quality check). |

@@ -53,6 +53,7 @@ import {
   DEFAULT_ITT_CLI, DEFAULT_VTT_SAMPLE_INTERVAL, DEFAULT_VTT_CLI, DEFAULT_STT_CLI, DEFAULT_AGENT_CLI, PROFILE_CACHE_KEY,
 } from "../config.mjs";
 import { runCandidateVision } from "./candidate.mjs";
+import { orientationInstructions, correctOrientations } from "./orientation.mjs";
 import { extractProfileArgument } from "../cli-profile.mjs";
 
 // ── Paths ─────────────────────────────────────────────────────────────────
@@ -1077,6 +1078,10 @@ async function runFullPipeline(folder, prompts, context, pickSet, vttSampleInter
 
 async function runNormalizeAndPercept(folder, metadataPath, prompts, context, pickSet, vttSampleInterval, skipSTT) {
   const { results, cacheMap } = loadMetadata(folder);
+  // Recover an interrupted atomic orientation replacement before reading pixels.
+  const pending = Object.keys(results).filter(name => results[name].orientation?.status === "pending" &&
+    (pickSet.size === 0 || pickSet.has(name)));
+  if (pending.length) await correctOrientations(folder, pending, results);
   const cache = { ...cacheMap };
   const normDir = join(folder, ".normalized");
   mkdirSync(normDir, { recursive: true });
@@ -1087,6 +1092,26 @@ async function runNormalizeAndPercept(folder, metadataPath, prompts, context, pi
 
   emitInfo(`\n🔧 Normalizing + perceiving: ${folder}`);
   emitInfo(`  ${imageFiles.length} images, ${videoFiles.length} videos`);
+
+  // Orientation is part of full Vision, not an option or a downstream gate.
+  // Keep original source time ranges; refresh only proxies after a correction.
+  async function finishOrientation(base, original, type, duration, command, cached) {
+    const item = results[base];
+    if (!cached || !["upright", "corrected", "uncertain"].includes(item.orientation?.status)) {
+      await correctOrientations(folder, [base], results);
+    }
+    if (item.orientation?.status === "corrected") {
+      const proxy = type === "image" ? normalizeImage(original, normDir)
+        : normalizeVideo(original, normDir, duration).path;
+      item.normalized = proxy !== original ? ".normalized/" + basename(proxy) : null;
+      item._cache = perceptionCacheKey(original, command, type);
+    }
+    // The machine marker is input evidence, not a downstream edit instruction.
+    const clean = text => typeof text === "string" ? text.replace(/^\s*ORIENTATION_CW=(?:0|90|180|270|uncertain);\s*CONFIDENCE=(?:high|low)[^\S\n]*\n?/i, "").trim() : text;
+    item.perception.desc = clean(item.perception.desc);
+    for (const seg of Object.values(item.perception.segments || {})) seg.vision = clean(seg.vision);
+    writeFileSync(metadataPath, JSON.stringify(results, null, 2), "utf-8");
+  }
 
   // Process images
   for (const fileName of imageFiles) {
@@ -1119,7 +1144,7 @@ async function runNormalizeAndPercept(folder, metadataPath, prompts, context, pi
       emitInfo(`  ${perception.desc?.slice(0, 80)}...`);
     }
     results[base] = { ...meta, normalized: normPath !== imgPath ? ".normalized/" + basename(normPath) : null, perception, _cache: cacheKey };
-    writeFileSync(metadataPath, JSON.stringify(results, null, 2), "utf-8");
+    await finishOrientation(base, imgPath, "image", null, imgCmd, !!cacheMap[cacheKey]);
 
     // Enrich location for images too
     let location = meta.location;
@@ -1165,7 +1190,8 @@ async function runNormalizeAndPercept(folder, metadataPath, prompts, context, pi
       const framePaths = Array.from({ length: n }, (_, i) => `${basename(normInfo.path, extname(normInfo.path))}_${String(i + 1).padStart(3, "0")}.jpg`);
       vttActualCmd = substituteTemplate(DEFAULT_ITT_CLI, { input: framePaths.map(p => `@${p}`).join(" "), prompt: vidPrompt, prompt_quoted: shQuote(vidPrompt) });
     }
-    cacheKey = perceptionCacheKey(vidPath, vttActualCmd + (PROFILE_CACHE_KEY ? `\0${PROFILE_CACHE_KEY}\0${vttSampleInterval}\0${skipSTT}` : ""), "video");
+    const cacheCommand = vttActualCmd + (PROFILE_CACHE_KEY ? `\0${PROFILE_CACHE_KEY}\0${vttSampleInterval}\0${skipSTT}` : "");
+    cacheKey = perceptionCacheKey(vidPath, cacheCommand, "video");
     if (cache[cacheKey]) {
       perception = cache[cacheKey];
       emitInfo(`  (cached)`);
@@ -1178,7 +1204,7 @@ async function runNormalizeAndPercept(folder, metadataPath, prompts, context, pi
     if (location) location = await enrichLocation(location);
 
     results[base] = { ...meta, location, normalized: normInfo.path !== vidPath ? ".normalized/" + basename(normInfo.path) : null, perception, _cache: cacheKey };
-    writeFileSync(metadataPath, JSON.stringify(results, null, 2), "utf-8");
+    await finishOrientation(base, vidPath, "video", originalDuration, cacheCommand, !!cacheMap[cacheKey]);
   }
 
   emitInfo(`\n✅ Pipeline complete: ${Object.keys(results).length} files → metadata.json`);
@@ -1193,7 +1219,7 @@ function printUsage() {
 markcut vision — Analyze images and videos in a folder for video generation
 
 Usage:
-  markcut vision <folder>                Full pipeline: extract → normalize → percept → segments
+  markcut vision <folder>                Full pipeline: extract → normalize → percept → segments → correct confirmed source orientation in place
   markcut vision <folder> --label        Same as default, plus interactive labeling step before AI
   markcut vision <folder> --normalize-only  Produce token-efficient Vision Understanding inputs without AI
 
@@ -1325,6 +1351,10 @@ export async function main(rawArgs) {
     writeFileSync(join(folder, 'metadata.json'), JSON.stringify(results, null, 2) + '\n');
     console.log(JSON.stringify({ status: 'PASS', profile: 'markcut-vision-normalized-v1', usage: 'vision-understanding-only', files }));
     return;
+  }
+  // The required orientation evidence is appended even to caller prompt overrides.
+  for (const name of ["image-perception", "video-perception"]) {
+    prompts.set(name, getPrompt(prompts, name) + "\n\n" + orientationInstructions);
   }
   if (doLabel) {
     // Full pipeline with interactive labeling
